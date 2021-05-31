@@ -83,6 +83,15 @@ func (self *LogParser) GetInviteInfo() (info *InviteInfo, err error) {
 	return
 }
 
+func getNodeIdFromPdr() {
+
+}
+
+// todo
+// pdr搜索
+// [2021-05-31 23:20:18.672][Trace][24719][733g0873] HTTP #0 127.0.0.1:12660 GET http://42.123.110.67:1985/api/v1/gb28181?action=create_channel&app=3nm4x0ulb1fl0&g7112aac_enable=go&id=31011500991180001563_34020000001310000111&port_mode=fixed&protocol=udp&push=42.123.110.67&real=222.208.242.45&token=CZsxhjEqdmcNMrSQfUqM, content-length=-1
+// 这个日志，去获取rtp node id
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	logPath := flag.String("logpath", "~/qvs-sip/_package/run/", "log file path")
