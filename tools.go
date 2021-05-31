@@ -3,16 +3,11 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os/exec"
 	"strings"
 )
-
-type ConsoleParams struct {
-	logPath string
-	gbid    string
-	chid    string
-}
 
 func Exec(cmdstr string) (string, error) {
 	cmd := exec.Command("bash", "-c", cmdstr)
@@ -24,8 +19,8 @@ func Exec(cmdstr string) (string, error) {
 	return string(b), err
 }
 
-func GetLatestLogFile(path string) (string, error) {
-	cmdstr := "ls -t " + path + "qvs-sip.log* | head -n 1"
+func (self *LogManager) GetLatestLogFile() (string, error) {
+	cmdstr := "ls -t " + self.logPath + "/qvs-sip.log* | head -n 1"
 	logFile, err := Exec(cmdstr)
 	if err != nil {
 		return "", err
@@ -37,10 +32,15 @@ type LogParser struct {
 	logFile string
 	gbid    string
 	chid    string
+	logPath string
 }
 
-func NewLogParser(logFile, gbid, chid string) *LogParser {
-	return &LogParser{logFile: logFile, gbid: gbid, chid: chid}
+func NewLogParser(logFile, gbid, chid, logPath string) *LogParser {
+	return &LogParser{
+		logFile: logFile,
+		gbid:    gbid,
+		chid:    chid,
+		logPath: logPath}
 }
 
 type InviteInfo struct {
@@ -51,6 +51,11 @@ type InviteInfo struct {
 
 func (self *LogParser) getLastInviteLog() (string, error) {
 	cmdstr := "tac " + self.logFile + " | grep \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
+	return Exec(cmdstr)
+}
+
+func (self *LogManager) GetLogsFromJJh1445() (string, error) {
+	cmdstr := "qscp qboxserver@jjh1445:/home/qboxserver/qvs-sip/_package/run/qvs-sip.log* " + self.logPath
 	return Exec(cmdstr)
 }
 
@@ -83,6 +88,14 @@ func (self *LogParser) GetInviteInfo() (info *InviteInfo, err error) {
 	return
 }
 
+type LogManager struct {
+	logPath string
+}
+
+func NewLogManager(logPath string) *LogManager {
+	return &LogManager{logPath: logPath}
+}
+
 func getNodeIdFromPdr() {
 
 }
@@ -94,13 +107,20 @@ func getNodeIdFromPdr() {
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	logPath := flag.String("logpath", "~/qvs-sip/_package/run/", "log file path")
+	logPath := flag.String("logpath", "~/logs", "log file path")
 	gbid := flag.String("gbid", "", "gbid")
 	chid := flag.String("chid", "", "chid")
 	flag.Parse()
-	logFile, _ := GetLatestLogFile(*logPath)
+	logMgr := NewLogManager(*logPath)
+	res, err := logMgr.GetLogsFromJJh1445()
+	fmt.Println(res)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	logFile, _ := logMgr.GetLatestLogFile()
 	log.Println(logFile)
-	parser := NewLogParser(logFile, *gbid, *chid)
+	parser := NewLogParser(logFile, *gbid, *chid, *logPath)
 	inviteInfo, err := parser.GetInviteInfo()
 	if err != nil {
 		return
