@@ -96,7 +96,7 @@ func NewLogManager(logPath string) *LogManager {
 	return &LogManager{logPath: logPath}
 }
 
-func getNodeIdFromPdr() {
+func (self *LogParser) GetNodeIdFromPdr() {
 
 }
 
@@ -111,6 +111,10 @@ func main() {
 	gbid := flag.String("gbid", "", "gbid")
 	chid := flag.String("chid", "", "chid")
 	flag.Parse()
+	if *gbid == "" || *chid == "" {
+		log.Println("must pass gbid and chid")
+		return
+	}
 	logMgr := NewLogManager(*logPath)
 	res, err := logMgr.GetLogsFromJJh1445()
 	fmt.Println(res)
