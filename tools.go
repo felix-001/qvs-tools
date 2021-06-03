@@ -120,6 +120,9 @@ func (self *LogParser) GetNodeIdFromPdr(rtpIp string) (string, error) {
 // 3.tcp/udp有没有收到包
 // 4.connect reset by peer?
 // 5.ssrc illegal?
+// 6.tcp attach
+
+// grep sip_invite logs/qvs-sip.log-0528101425 -m 4 | tail -1
 
 func main() {
 	log.SetFlags(log.Lshortfile)
