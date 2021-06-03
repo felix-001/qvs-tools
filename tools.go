@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"log"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 func Exec(cmdstr string) (string, error) {
@@ -27,6 +29,15 @@ func (self *LogManager) GetLatestSipLogFile() (string, error) {
 	return logFile[:len(logFile)-1], err
 }
 
+func (self *LogManager) GetLatestRtpLogFile() (string, error) {
+	cmdstr := "ls -t " + self.logPath + "/qvs-rtp.log* | head -n 1"
+	logFile, err := Exec(cmdstr)
+	if err != nil {
+		return "", err
+	}
+	return logFile[:len(logFile)-1], err
+}
+
 func (self *LogManager) GetRtpLogFromNode(rtpNode string) error {
 	cmdstr := "qscp qboxserver@" + rtpNode + ":/home/qboxserver/qvs-rtp/_package/run/qvs-rtp.log* ~/logs/"
 	_, err := Exec(cmdstr)
@@ -34,10 +45,12 @@ func (self *LogManager) GetRtpLogFromNode(rtpNode string) error {
 }
 
 type LogParser struct {
-	logFile string
-	gbid    string
-	chid    string
-	logPath string
+	inviteTime string
+	logFile    string
+	gbid       string
+	chid       string
+	logPath    string
+	logMgr     *LogManager
 }
 
 func NewLogParser(logFile, gbid, chid, logPath string) *LogParser {
@@ -114,6 +127,84 @@ func (self *LogParser) GetNodeIdFromPdr(rtpIp string) (string, error) {
 	return res[:len(res)-1], nil
 }
 
+func (self *LogParser) GetCreateChannelLogs(rtpLogFile string) (string, error) {
+	cmdstr := "tac " + rtpLogFile +
+		" | grep \"action=create_channel.*id=" +
+		self.gbid + "_" + self.chid + "\" -m 10 "
+	return Exec(cmdstr)
+}
+
+func (self *LogParser) GetTimeFromLog(line string) (string, error) {
+	start := strings.Index(line, "[2021")
+	if start == -1 {
+		log.Println("get start error")
+		return "", errors.New("get start error")
+	}
+	end := strings.Index(line, "]")
+	if end == -1 {
+		log.Println("get end error")
+		return "", errors.New("get end error")
+	}
+	time := line[start+1 : end]
+	return time, nil
+}
+
+var timeLayoutStr = "2006-01-02 15:04:05"
+
+func TimeStr2ts(timeStr string) (int64, error) {
+	loc, _ := time.LoadLocation("Local")
+	res, err := time.ParseInLocation(timeLayoutStr, timeStr, loc)
+	if err != nil {
+		return 0, err
+	}
+	return res.UnixNano() / 1e6, nil
+}
+
+func (self *LogParser) getLogs(logFile, pattern string) (string, error) {
+	cmdstr := "tac " + logFile +
+		" | grep " + pattern +
+		"\" -m 10"
+	return Exec(cmdstr)
+}
+
+// 从指定行向下搜索日志
+// tail -n 100 qvs-sip.log-0528101425 | grep qvs-sip | head -n 1
+func (self *LogParser) SearchLog(logFile, pattern string, lineNo int) (string, error) {
+
+}
+
+// 搜索10行是否需要可配置
+func (self *LogParser) GetCreateChannelTime(rtpLogFile string) (string, error) {
+	logs, err := self.GetCreateChannelLogs(rtpLogFile)
+	if err != nil {
+		return "", err
+	}
+	scanner := bufio.NewScanner(strings.NewReader(logs))
+	inviteTimeStamp, err := TimeStr2ts(self.inviteTime)
+	if err != nil {
+		return "", err
+	}
+	for scanner.Scan() {
+		time, err := self.GetTimeFromLog(scanner.Text())
+		if err != nil {
+			return "", err
+		}
+		ts, err := TimeStr2ts(time)
+		if err != nil {
+			return "", err
+		}
+		if ts > inviteTimeStamp {
+			log.Println("skip", ts, time)
+			continue
+		}
+		if inviteTimeStamp-ts < 1000 {
+			return time, nil
+		}
+	}
+	log.Println("create_channel not found")
+	return "", errors.New("create_channel not found")
+}
+
 // 拉流失败
 // 1.有没有503
 // 2.有没有inviting
@@ -121,8 +212,8 @@ func (self *LogParser) GetNodeIdFromPdr(rtpIp string) (string, error) {
 // 4.connect reset by peer?
 // 5.ssrc illegal?
 // 6.tcp attach
-
-// grep sip_invite logs/qvs-sip.log-0528101425 -m 4 | tail -1
+// 7.是否有第二个create_channel
+// 8.是否有delete channel
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -154,6 +245,7 @@ func main() {
 		return
 	}
 	log.Printf("%+v\n", inviteInfo)
+	parser.inviteTime = inviteInfo.time
 	nodeId, err := parser.GetNodeIdFromPdr(inviteInfo.rtpIp)
 	if err != nil {
 		return
@@ -165,4 +257,15 @@ func main() {
 		return
 	}
 	log.Println("fetch qvs-rtp log done")
+	rtpLogFile, err := logMgr.GetLatestRtpLogFile()
+	if err != nil {
+		return
+	}
+	log.Println("rtp log file:", rtpLogFile)
+	createChannelTime, err := parser.GetCreateChannelTime(rtpLogFile)
+	if err != nil {
+		return
+	}
+	log.Println("create channel time:", createChannelTime)
+
 }
