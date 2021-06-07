@@ -93,11 +93,12 @@ func (self *LogParser) GetInviteInfo() (info *InviteInfo, err error) {
 		err = _err
 		return
 	}
-	logInfo, err := self.ParseLog(inviteLog, self.sipLogFile, "down")
+	logInfo, err := self.ParseLog(inviteLog, self.sipLogFile, "up")
 	if err != nil {
 		return nil, err
 	}
 	log.Println("sip session id:", logInfo.sessionId)
+	log.Println("sip invite line no:", logInfo.lineNo)
 	self.sipSessionId = logInfo.sessionId
 	self.sipInviteLineNo = logInfo.lineNo
 	info = &InviteInfo{}
@@ -283,7 +284,7 @@ func (self *LogParser) SearchSipLog(pattern string) (*LogInfo, error) {
 }
 
 func (self *LogParser) SearchInviteRespLog() (*LogInfo, error) {
-	pattern := "[" + self.sipSessionId + "] " + "INVITE response " + self.chid + "client status="
+	pattern := "INVITE response " + self.chid + "client status="
 	return self.SearchSipLog(pattern)
 }
 
@@ -403,13 +404,13 @@ func (self *LogParser) GetLogs() {
 	if err == nil {
 		log.Println("tcp attach line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
-		//log.Println("tcp attach not found")
+		log.Println("没有收到tcp连接")
 	}
 	logInfo, err = self.SearchUdpPktLog()
 	if err == nil {
 		log.Println("got udp pkt line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
-		//log.Println("not got udp pkt")
+		log.Println("没有收到rtp over udp包")
 	}
 	logInfo, err = self.SearchSsrcIllegalLog()
 	if err == nil {
