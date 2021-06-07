@@ -170,7 +170,7 @@ func (self *LogParser) GetLineNoFromLog(line, logFile, direction string) (int, e
 func (self *LogParser) GetTimeFromLog(line, rtpLogFile, direction string) (string, error) {
 	start := strings.Index(line, "[2021")
 	if start == -1 {
-		log.Println("get start error")
+		log.Println("get start error, line:", line)
 		return "", errors.New("get start error")
 	}
 	end := strings.Index(line, "]")
@@ -183,20 +183,26 @@ func (self *LogParser) GetTimeFromLog(line, rtpLogFile, direction string) (strin
 }
 
 func (self *LogParser) GetSessionIdFromLog(line, rtpLogFile, direction string) (string, error) {
-	start := 0
+	// 过滤掉非法字符
+	//log.Println("line:", line)
+	pos := strings.Index(line, "[2021")
+	start := pos + 1
 	for i := 0; i < 3; i++ {
-		start = strings.Index(line[start+1:], "[")
+		pos = strings.Index(line[start:], "[")
+		if pos == -1 {
+			log.Println("get start error, line:", line)
+			return "", errors.New("get start error")
+		}
+		start += 1 + pos
+		//log.Println("start:", start)
 	}
-	if start == -1 {
-		log.Println("get start error")
-		return "", errors.New("get start error")
-	}
-	end := strings.Index(line[start+1:], "]")
+	//start += 1 + pos
+	end := strings.Index(line[start:], "]")
 	if end == -1 {
-		log.Println("get end error")
+		log.Println("get end error, line:", line, "start:", start)
 		return "", errors.New("get end error")
 	}
-	sessionId := line[start+1 : end]
+	sessionId := line[start : start+end]
 	return sessionId, nil
 }
 
@@ -469,7 +475,7 @@ func (self *LogParser) GetLogs() {
 // 10. 丢包？ --- ok
 // 11. device offline --- ok
 // 12. 丢包率
-// 13. 拉流慢， rtmp connect
+// 13. 拉流慢， rtmp connect --- ok
 
 func main() {
 	log.SetFlags(log.Lshortfile)
