@@ -335,7 +335,7 @@ func (self *LogParser) SearchLostPktLog() (*LogInfo, error) {
 }
 
 func (self *LogParser) SearchRtmpConnect() (*LogInfo, error) {
-	pattern := "rtmp connect ok url=rtmp*" + self.streamId
+	pattern := "rtmp connect ok url=rtmp.*" + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
