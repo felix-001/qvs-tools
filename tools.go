@@ -373,6 +373,7 @@ func (self *LogParser) GetLogs() {
 // 10. 丢包？ --- ok
 // 11. device offline
 // 12. 丢包率
+// 13. 拉流慢， rtmp connect
 
 func main() {
 	log.SetFlags(log.Lshortfile)
