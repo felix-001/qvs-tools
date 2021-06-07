@@ -218,8 +218,7 @@ func (self *LogParser) SearchRtpLog(pattern string) (int, string, error) {
 
 func (self *LogParser) SearchTcpAttachLog() (int, string, error) {
 	pattern := "gb28181: tcp attach new stream channel id:" + self.streamId +
-		" ssrs: " + self.ssrc
-	log.Println(pattern)
+		" ssrs:" + self.ssrc
 	return self.SearchRtpLog(pattern)
 }
 
