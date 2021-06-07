@@ -227,6 +227,31 @@ func (self *LogParser) SearchUdpPktLog() (int, string, error) {
 	return self.SearchRtpLog(pattern)
 }
 
+func (self *LogParser) SearchSsrcIllegalLog() (int, string, error) {
+	pattern := "ssrc illegal on tcp payload chaanellid:" + self.streamId
+	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogParser) SearchConnectionResetByPeerLog() (int, string, error) {
+	pattern := "read() [src/protocol/srs_service_st.cpp:524][errno=104] chid: " + self.streamId
+	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogParser) SearchDeleteChannelLog() (int, string, error) {
+	pattern := "action=delete_channel&id=" + self.streamId
+	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogParser) SearchStreamH265Log() (int, string, error) {
+	pattern := "gb28181 gbId " + self.streamId + ", ps map video es_type=h265"
+	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogParser) SearchLostPktLog() (int, string, error) {
+	pattern := "gb28181: client_id " + self.streamId + " decode ps packet"
+	return self.SearchRtpLog(pattern)
+}
+
 // 搜索10行是否需要可配置
 func (self *LogParser) GetCreateChannelTimeLine(rtpLogFile string) (int, string, error) {
 	logs, err := self.GetCreateChannelLogs(rtpLogFile)
@@ -282,15 +307,66 @@ func (self *LogParser) SaveStreamId(gbid, chid string) {
 	}
 }
 
+func (self *LogParser) GetLogs() {
+	lineNo, time, err := self.SearchTcpAttachLog()
+	if err == nil {
+		log.Println("tcp attach line no:", lineNo, "time:", time)
+	} else {
+		log.Println("tcp attach not found")
+	}
+	lineNo, time, err = self.SearchUdpPktLog()
+	if err == nil {
+		log.Println("got udp pkt line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got udp pkt")
+	}
+	lineNo, time, err = self.SearchSsrcIllegalLog()
+	if err == nil {
+		log.Println("got ssrc illegal line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got ssrc illegal log")
+	}
+	lineNo, time, err = self.SearchConnectionResetByPeerLog()
+	if err == nil {
+		log.Println("got connection reset by peer line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got connection by peer log")
+	}
+	lineNo, time, err = self.SearchDeleteChannelLog()
+	if err == nil {
+		log.Println("got delete channel line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got delete channel log")
+	}
+	lineNo, time, err = self.SearchStreamH265Log()
+	if err == nil {
+		log.Println("got stream h265 line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got stream h265 log")
+	}
+	lineNo, time, err = self.SearchLostPktLog()
+	if err == nil {
+		log.Println("got lost pkt line no:", lineNo, "time:", time)
+	} else {
+		log.Println("not got lost pkt log")
+	}
+}
+
+// todo
+// 1.解析线程id
+
 // 拉流失败
 // 1.有没有503
-// 2.有没有inviting
-// 3.tcp/udp有没有收到包
-// 4.connect reset by peer?
-// 5.ssrc illegal?
-// 6.tcp attach
+// 2.有没有inviting, err state=3
+// 3.tcp/udp有没有收到包 --- ok
+// 4.connect reset by peer? --- ok
+// 5.ssrc illegal? --- ok
+// 6.tcp attach --- ok
 // 7.是否有第二个create_channel
-// 8.是否有delete channel
+// 8.是否有delete channel  --- ok
+// 9.h265? --- ok
+// 10. 丢包？ --- ok
+// 11. device offline
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -352,16 +428,5 @@ func main() {
 	}
 	parser.createChannelLineNo = lineNo
 	log.Println("create channel time:", createChannelTime, "lineNo:", lineNo)
-	lineNo, time, err := parser.SearchTcpAttachLog()
-	if err == nil {
-		log.Println("tcp attach line no:", lineNo, "time:", time)
-	} else {
-		log.Println("tcp attach not found")
-	}
-	lineNo, time, err = parser.SearchUdpPktLog()
-	if err == nil {
-		log.Println("got udp pkt line no:", lineNo, "time:", time)
-	} else {
-		log.Println("not got udp pkt")
-	}
+	parser.GetLogs()
 }
