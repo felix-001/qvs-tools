@@ -142,7 +142,7 @@ func (self *LogParser) GetCreateChannelLogs(rtpLogFile string) (string, error) {
 }
 
 func (self *LogParser) GetTimeLineFromLog(line, rtpLogFile, direction string) (int, string, error) {
-	log.Println("line:", line)
+	//log.Println("line:", line)
 	end := strings.Index(line, ":")
 	if end == -1 {
 		return 0, "", errors.New("get : error")
@@ -206,7 +206,7 @@ func (self *LogParser) SearchLog(logFile, pattern string, startLineNo int) (stri
 func (self *LogParser) SearchRtpLog(pattern string) (int, string, error) {
 	_log, err := self.SearchLog(self.rtpLogFile, pattern, self.createChannelLineNo)
 	if len(_log) == 0 {
-		log.Println("search", pattern, "not found")
+		//log.Println("search", pattern, "not found")
 		return 0, "", errors.New("not found")
 	}
 	lineNo, time, err := self.GetTimeLineFromLog(_log, self.rtpLogFile, "down")
@@ -250,6 +250,11 @@ func (self *LogParser) SearchStreamH265Log() (int, string, error) {
 func (self *LogParser) SearchLostPktLog() (int, string, error) {
 	pattern := "gb28181: client_id " + self.streamId + " decode ps packet"
 	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogManager) DeleteOldLogs() {
+	cmdstr := "rm -rf ~/logs/*"
+	Exec(cmdstr)
 }
 
 // 搜索10行是否需要可配置
@@ -312,43 +317,43 @@ func (self *LogParser) GetLogs() {
 	if err == nil {
 		log.Println("tcp attach line no:", lineNo, "time:", time)
 	} else {
-		log.Println("tcp attach not found")
+		//log.Println("tcp attach not found")
 	}
 	lineNo, time, err = self.SearchUdpPktLog()
 	if err == nil {
 		log.Println("got udp pkt line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got udp pkt")
+		//log.Println("not got udp pkt")
 	}
 	lineNo, time, err = self.SearchSsrcIllegalLog()
 	if err == nil {
 		log.Println("got ssrc illegal line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got ssrc illegal log")
+		//log.Println("not got ssrc illegal log")
 	}
 	lineNo, time, err = self.SearchConnectionResetByPeerLog()
 	if err == nil {
 		log.Println("got connection reset by peer line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got connection by peer log")
+		//log.Println("not got connection by peer log")
 	}
 	lineNo, time, err = self.SearchDeleteChannelLog()
 	if err == nil {
 		log.Println("got delete channel line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got delete channel log")
+		//log.Println("not got delete channel log")
 	}
 	lineNo, time, err = self.SearchStreamH265Log()
 	if err == nil {
 		log.Println("got stream h265 line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got stream h265 log")
+		//log.Println("not got stream h265 log")
 	}
 	lineNo, time, err = self.SearchLostPktLog()
 	if err == nil {
 		log.Println("got lost pkt line no:", lineNo, "time:", time)
 	} else {
-		log.Println("not got lost pkt log")
+		//log.Println("not got lost pkt log")
 	}
 }
 
@@ -379,6 +384,7 @@ func main() {
 		return
 	}
 	logMgr := NewLogManager(*logPath)
+	logMgr.DeleteOldLogs()
 	log.Println("start to fetch log file from jjh1445 ~/qvs-sip/_package/run")
 	_, err := logMgr.GetLogsFromJJh1445()
 	//fmt.Println(res)
