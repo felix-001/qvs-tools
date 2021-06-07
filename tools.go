@@ -372,6 +372,7 @@ func (self *LogParser) GetLogs() {
 // 9.h265? --- ok
 // 10. 丢包？ --- ok
 // 11. device offline
+// 12. 丢包率
 
 func main() {
 	log.SetFlags(log.Lshortfile)
