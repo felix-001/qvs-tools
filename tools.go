@@ -58,6 +58,8 @@ type LogParser struct {
 	createChannelLineNo int
 	ssrc                string
 	streamId            string
+	sipSessionId        string
+	sipInviteLineNo     int
 }
 
 func NewLogParser(logFile, gbid, chid, logPath string) *LogParser {
@@ -75,7 +77,7 @@ type InviteInfo struct {
 }
 
 func (self *LogParser) getLastInviteLog() (string, error) {
-	cmdstr := "tac " + self.sipLogFile + " | grep \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
+	cmdstr := "tac " + self.sipLogFile + " | grep -n \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
 	s, err := Exec(cmdstr)
 	return s, err
 }
@@ -95,6 +97,9 @@ func (self *LogParser) GetInviteInfo() (info *InviteInfo, err error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("sip session id:", logInfo.sessionId)
+	self.sipSessionId = logInfo.sessionId
+	self.sipInviteLineNo = logInfo.lineNo
 	info = &InviteInfo{}
 	info.time = logInfo.time
 
@@ -178,12 +183,15 @@ func (self *LogParser) GetTimeFromLog(line, rtpLogFile, direction string) (strin
 }
 
 func (self *LogParser) GetSessionIdFromLog(line, rtpLogFile, direction string) (string, error) {
-	start := strings.LastIndex(line, "[")
+	start := 0
+	for i := 0; i < 3; i++ {
+		start = strings.Index(line[start+1:], "[")
+	}
 	if start == -1 {
 		log.Println("get start error")
 		return "", errors.New("get start error")
 	}
-	end := strings.LastIndex(line, "]")
+	end := strings.Index(line[start+1:], "]")
 	if end == -1 {
 		log.Println("get end error")
 		return "", errors.New("get end error")
@@ -255,6 +263,34 @@ func (self *LogParser) SearchRtpLog(pattern string) (*LogInfo, error) {
 	return logInfo, nil
 }
 
+func (self *LogParser) SearchSipLog(pattern string) (*LogInfo, error) {
+	_log, err := self.SearchLog(self.sipLogFile, pattern, self.sipInviteLineNo)
+	if len(_log) == 0 {
+		//log.Println("search", pattern, "not found")
+		return nil, errors.New("not found")
+	}
+	logInfo, err := self.ParseLog(_log, self.sipLogFile, "down")
+	if err != nil {
+		return nil, err
+	}
+	return logInfo, nil
+}
+
+func (self *LogParser) SearchInviteRespLog() (*LogInfo, error) {
+	pattern := "[" + self.sipSessionId + "] " + "INVITE response " + self.chid + "client status="
+	return self.SearchSipLog(pattern)
+}
+
+func (self *LogParser) SearchInviteErrStateLog() (*LogInfo, error) {
+	pattern := "error device->invite sipid =" + self.gbid + " " + self.chid + " state:"
+	return self.SearchSipLog(pattern)
+}
+
+func (self *LogParser) SearchInviteDeviceOfflineLog() (*LogInfo, error) {
+	pattern := "device " + self.chid + " offline"
+	return self.SearchSipLog(pattern)
+}
+
 func (self *LogParser) SearchTcpAttachLog() (*LogInfo, error) {
 	pattern := "gb28181: tcp attach new stream channel id:" + self.streamId +
 		" ssrs:" + self.ssrc
@@ -288,6 +324,11 @@ func (self *LogParser) SearchStreamH265Log() (*LogInfo, error) {
 
 func (self *LogParser) SearchLostPktLog() (*LogInfo, error) {
 	pattern := "gb28181: client_id " + self.streamId + " decode ps packet"
+	return self.SearchRtpLog(pattern)
+}
+
+func (self *LogParser) SearchRtmpConnect() (*LogInfo, error) {
+	pattern := "rtmp connect ok url=rtmp*" + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
@@ -394,14 +435,30 @@ func (self *LogParser) GetLogs() {
 	} else {
 		//log.Println("not got lost pkt log")
 	}
+	logInfo, err = self.SearchInviteRespLog()
+	if err == nil {
+		log.Println("got invite resp log line no:", logInfo.lineNo, "time:", logInfo.time)
+	}
+	logInfo, err = self.SearchInviteErrStateLog()
+	if err == nil {
+		log.Println("got invite err state line no:", logInfo.lineNo, "time:", logInfo.time)
+	}
+	logInfo, err = self.SearchInviteDeviceOfflineLog()
+	if err == nil {
+		log.Println("got invite device offline line no:", logInfo.lineNo, "time:", logInfo.time)
+	}
+	logInfo, err = self.SearchRtmpConnect()
+	if err == nil {
+		log.Println("got rtmp connect line no:", logInfo.lineNo, "time:", logInfo.time)
+	}
 }
 
 // todo
 // 1.解析线程id
 
 // 拉流失败
-// 1.有没有503
-// 2.有没有inviting, err state=3
+// 1.有没有503 --- ok
+// 2.有没有inviting, err state=3 --- ok
 // 3.tcp/udp有没有收到包 --- ok
 // 4.connect reset by peer? --- ok
 // 5.ssrc illegal? --- ok
@@ -410,7 +467,7 @@ func (self *LogParser) GetLogs() {
 // 8.是否有delete channel  --- ok
 // 9.h265? --- ok
 // 10. 丢包？ --- ok
-// 11. device offline
+// 11. device offline --- ok
 // 12. 丢包率
 // 13. 拉流慢， rtmp connect
 
