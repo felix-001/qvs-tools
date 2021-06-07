@@ -461,7 +461,7 @@ func (self *LogParser) GetLogs() {
 }
 
 // todo
-// 1.解析线程id
+// 1.解析线程id --- ok
 
 // 拉流失败
 // 1.有没有503 --- ok
