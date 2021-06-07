@@ -50,7 +50,7 @@ func (self *LogManager) GetRtpLogFromNode(rtpNode string) error {
 type LogParser struct {
 	logMgr              *LogManager
 	inviteTime          string
-	logFile             string
+	sipLogFile          string
 	gbid                string
 	chid                string
 	logPath             string
@@ -62,10 +62,10 @@ type LogParser struct {
 
 func NewLogParser(logFile, gbid, chid, logPath string) *LogParser {
 	return &LogParser{
-		logFile: logFile,
-		gbid:    gbid,
-		chid:    chid,
-		logPath: logPath}
+		sipLogFile: logFile,
+		gbid:       gbid,
+		chid:       chid,
+		logPath:    logPath}
 }
 
 type InviteInfo struct {
@@ -75,7 +75,7 @@ type InviteInfo struct {
 }
 
 func (self *LogParser) getLastInviteLog() (string, error) {
-	cmdstr := "tac " + self.logFile + " | grep \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
+	cmdstr := "tac " + self.sipLogFile + " | grep \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
 	s, err := Exec(cmdstr)
 	return s, err
 }
@@ -91,23 +91,15 @@ func (self *LogParser) GetInviteInfo() (info *InviteInfo, err error) {
 		err = _err
 		return
 	}
-	start := strings.Index(inviteLog, "[2021")
-	if start == -1 {
-		log.Println("get start error")
-		err = errors.New("get start error")
-		return
-	}
-	end := strings.Index(inviteLog, "]")
-	if end == -1 {
-		log.Println("get end error")
-		err = errors.New("get end error")
-		return
+	logInfo, err := self.ParseLog(inviteLog, self.sipLogFile, "down")
+	if err != nil {
+		return nil, err
 	}
 	info = &InviteInfo{}
-	info.time = inviteLog[start+1 : end]
+	info.time = logInfo.time
 
-	start = strings.Index(inviteLog, "ip=")
-	end = strings.Index(inviteLog, "&rtp_por")
+	start := strings.Index(inviteLog, "ip=")
+	end := strings.Index(inviteLog, "&rtp_por")
 	info.rtpIp = inviteLog[start+3 : end]
 
 	start = strings.Index(inviteLog, "ssrc=")
@@ -141,31 +133,25 @@ func (self *LogParser) GetCreateChannelLogs(rtpLogFile string) (string, error) {
 	return Exec(cmdstr)
 }
 
-func (self *LogParser) GetTimeLineFromLog(line, rtpLogFile, direction string) (int, string, error) {
-	//log.Println("line:", line)
+type LogInfo struct {
+	lineNo    int
+	time      string
+	sessionId string
+}
+
+func (self *LogParser) GetLineNoFromLog(line, logFile, direction string) (int, error) {
 	end := strings.Index(line, ":")
 	if end == -1 {
-		return 0, "", errors.New("get : error")
+		return 0, errors.New("get : error")
 	}
 	lineNoStr := line[:end]
-	start := strings.Index(line, "[2021")
-	if start == -1 {
-		log.Println("get start error")
-		return 0, "", errors.New("get start error")
-	}
-	end = strings.Index(line, "]")
-	if end == -1 {
-		log.Println("get end error")
-		return 0, "", errors.New("get end error")
-	}
-	time := line[start+1 : end]
-	maxLine, err := self.GetMaxLineNumOfFile(rtpLogFile)
+	maxLine, err := self.GetMaxLineNumOfFile(logFile)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 	lineNo, err := strconv.Atoi(lineNoStr)
 	if err != nil {
-		return 0, "", errors.New("str to int error")
+		err = errors.New("str to int error")
 	}
 	//log.Println("maxLine:", maxLine)
 	if direction == "up" { // up/down
@@ -173,7 +159,60 @@ func (self *LogParser) GetTimeLineFromLog(line, rtpLogFile, direction string) (i
 	} else {
 		lineNo = lineNo - 1
 	}
-	return lineNo, time, nil
+	return lineNo, nil
+}
+
+func (self *LogParser) GetTimeFromLog(line, rtpLogFile, direction string) (string, error) {
+	start := strings.Index(line, "[2021")
+	if start == -1 {
+		log.Println("get start error")
+		return "", errors.New("get start error")
+	}
+	end := strings.Index(line, "]")
+	if end == -1 {
+		log.Println("get end error")
+		return "", errors.New("get end error")
+	}
+	time := line[start+1 : end]
+	return time, nil
+}
+
+func (self *LogParser) GetSessionIdFromLog(line, rtpLogFile, direction string) (string, error) {
+	start := strings.LastIndex(line, "[")
+	if start == -1 {
+		log.Println("get start error")
+		return "", errors.New("get start error")
+	}
+	end := strings.LastIndex(line, "]")
+	if end == -1 {
+		log.Println("get end error")
+		return "", errors.New("get end error")
+	}
+	sessionId := line[start+1 : end]
+	return sessionId, nil
+}
+
+func (self *LogParser) ParseLog(line, logFile, direction string) (logInfo *LogInfo, err error) {
+	//log.Println("line:", line)
+	logInfo = &LogInfo{}
+	lineNo, err := self.GetLineNoFromLog(line, logFile, direction)
+	if err != nil {
+		return
+	}
+	logInfo.lineNo = lineNo
+
+	time, err := self.GetTimeFromLog(line, logFile, direction)
+	if err != nil {
+		return
+	}
+	logInfo.time = time
+
+	sessionId, err := self.GetSessionIdFromLog(line, logFile, direction)
+	if err != nil {
+		return
+	}
+	logInfo.sessionId = sessionId
+	return
 }
 
 var timeLayoutStr = "2006-01-02 15:04:05"
@@ -203,51 +242,51 @@ func (self *LogParser) SearchLog(logFile, pattern string, startLineNo int) (stri
 	return Exec(cmdstr)
 }
 
-func (self *LogParser) SearchRtpLog(pattern string) (int, string, error) {
+func (self *LogParser) SearchRtpLog(pattern string) (*LogInfo, error) {
 	_log, err := self.SearchLog(self.rtpLogFile, pattern, self.createChannelLineNo)
 	if len(_log) == 0 {
 		//log.Println("search", pattern, "not found")
-		return 0, "", errors.New("not found")
+		return nil, errors.New("not found")
 	}
-	lineNo, time, err := self.GetTimeLineFromLog(_log, self.rtpLogFile, "down")
+	logInfo, err := self.ParseLog(_log, self.rtpLogFile, "down")
 	if err != nil {
-		return 0, "", err
+		return nil, err
 	}
-	return lineNo, time, nil
+	return logInfo, nil
 }
 
-func (self *LogParser) SearchTcpAttachLog() (int, string, error) {
+func (self *LogParser) SearchTcpAttachLog() (*LogInfo, error) {
 	pattern := "gb28181: tcp attach new stream channel id:" + self.streamId +
 		" ssrs:" + self.ssrc
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchUdpPktLog() (int, string, error) {
+func (self *LogParser) SearchUdpPktLog() (*LogInfo, error) {
 	pattern := "gb28181 rtp enqueue : client_id " + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchSsrcIllegalLog() (int, string, error) {
+func (self *LogParser) SearchSsrcIllegalLog() (*LogInfo, error) {
 	pattern := "ssrc illegal on tcp payload chaanellid:" + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchConnectionResetByPeerLog() (int, string, error) {
+func (self *LogParser) SearchConnectionResetByPeerLog() (*LogInfo, error) {
 	pattern := "read() [src/protocol/srs_service_st.cpp:524][errno=104] chid: " + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchDeleteChannelLog() (int, string, error) {
+func (self *LogParser) SearchDeleteChannelLog() (*LogInfo, error) {
 	pattern := "action=delete_channel&id=" + self.streamId
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchStreamH265Log() (int, string, error) {
+func (self *LogParser) SearchStreamH265Log() (*LogInfo, error) {
 	pattern := "gb28181 gbId " + self.streamId + ", ps map video es_type=h265"
 	return self.SearchRtpLog(pattern)
 }
 
-func (self *LogParser) SearchLostPktLog() (int, string, error) {
+func (self *LogParser) SearchLostPktLog() (*LogInfo, error) {
 	pattern := "gb28181: client_id " + self.streamId + " decode ps packet"
 	return self.SearchRtpLog(pattern)
 }
@@ -258,36 +297,36 @@ func (self *LogManager) DeleteOldLogs() {
 }
 
 // 搜索10行是否需要可配置
-func (self *LogParser) GetCreateChannelTimeLine(rtpLogFile string) (int, string, error) {
+func (self *LogParser) GetCreateChannelInfo(rtpLogFile string) (*LogInfo, error) {
 	logs, err := self.GetCreateChannelLogs(rtpLogFile)
 	//log.Println(logs)
 	if err != nil {
-		return 0, "", err
+		return nil, err
 	}
 	scanner := bufio.NewScanner(strings.NewReader(logs))
 	inviteTimeStamp, err := TimeStr2ts(self.inviteTime)
 	if err != nil {
-		return 0, "", err
+		return nil, err
 	}
 	for scanner.Scan() {
-		line, time, err := self.GetTimeLineFromLog(scanner.Text(), rtpLogFile, "up")
+		logInfo, err := self.ParseLog(scanner.Text(), rtpLogFile, "up")
 		if err != nil {
-			return 0, "", err
+			return nil, err
 		}
-		ts, err := TimeStr2ts(time)
+		ts, err := TimeStr2ts(logInfo.time)
 		if err != nil {
-			return 0, "", err
+			return nil, err
 		}
 		if ts > inviteTimeStamp {
-			log.Println("skip", ts, time)
+			log.Println("skip", ts, logInfo.time)
 			continue
 		}
 		if inviteTimeStamp-ts < 1000 {
-			return line, time, nil
+			return logInfo, nil
 		}
 	}
 	log.Println("create_channel not found")
-	return 0, "", errors.New("create_channel not found")
+	return nil, errors.New("create_channel not found")
 }
 
 func (self *LogParser) GetMaxLineNumOfFile(file string) (int, error) {
@@ -313,45 +352,45 @@ func (self *LogParser) SaveStreamId(gbid, chid string) {
 }
 
 func (self *LogParser) GetLogs() {
-	lineNo, time, err := self.SearchTcpAttachLog()
+	logInfo, err := self.SearchTcpAttachLog()
 	if err == nil {
-		log.Println("tcp attach line no:", lineNo, "time:", time)
+		log.Println("tcp attach line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("tcp attach not found")
 	}
-	lineNo, time, err = self.SearchUdpPktLog()
+	logInfo, err = self.SearchUdpPktLog()
 	if err == nil {
-		log.Println("got udp pkt line no:", lineNo, "time:", time)
+		log.Println("got udp pkt line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got udp pkt")
 	}
-	lineNo, time, err = self.SearchSsrcIllegalLog()
+	logInfo, err = self.SearchSsrcIllegalLog()
 	if err == nil {
-		log.Println("got ssrc illegal line no:", lineNo, "time:", time)
+		log.Println("got ssrc illegal line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got ssrc illegal log")
 	}
-	lineNo, time, err = self.SearchConnectionResetByPeerLog()
+	logInfo, err = self.SearchConnectionResetByPeerLog()
 	if err == nil {
-		log.Println("got connection reset by peer line no:", lineNo, "time:", time)
+		log.Println("got connection reset by peer line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got connection by peer log")
 	}
-	lineNo, time, err = self.SearchDeleteChannelLog()
+	logInfo, err = self.SearchDeleteChannelLog()
 	if err == nil {
-		log.Println("got delete channel line no:", lineNo, "time:", time)
+		log.Println("got delete channel line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got delete channel log")
 	}
-	lineNo, time, err = self.SearchStreamH265Log()
+	logInfo, err = self.SearchStreamH265Log()
 	if err == nil {
-		log.Println("got stream h265 line no:", lineNo, "time:", time)
+		log.Println("got stream h265 line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got stream h265 log")
 	}
-	lineNo, time, err = self.SearchLostPktLog()
+	logInfo, err = self.SearchLostPktLog()
 	if err == nil {
-		log.Println("got lost pkt line no:", lineNo, "time:", time)
+		log.Println("got lost pkt line no:", logInfo.lineNo, "time:", logInfo.time)
 	} else {
 		//log.Println("not got lost pkt log")
 	}
@@ -430,11 +469,11 @@ func main() {
 	}
 	log.Println("rtp log file:", rtpLogFile)
 	parser.rtpLogFile = rtpLogFile
-	lineNo, createChannelTime, err := parser.GetCreateChannelTimeLine(rtpLogFile)
+	logInfo, err := parser.GetCreateChannelInfo(rtpLogFile)
 	if err != nil {
 		return
 	}
-	parser.createChannelLineNo = lineNo
-	log.Println("create channel time:", createChannelTime, "lineNo:", lineNo)
+	parser.createChannelLineNo = logInfo.lineNo
+	log.Println("create channel time:", logInfo.time, "lineNo:", logInfo.lineNo)
 	parser.GetLogs()
 }
