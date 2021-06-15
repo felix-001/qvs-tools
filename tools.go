@@ -416,68 +416,73 @@ func (self *LogParser) SaveStreamId(gbid, chid string) {
 	}
 }
 
+func (self *LogParser) printSearchRes(logInfo *LogInfo, text string) {
+	log.Println("after", logInfo.duration, "ms", text, "line num:",
+		logInfo.lineNo, "time:", logInfo.time)
+}
+
 func (self *LogParser) GetLogs() {
 	logInfo, err := self.SearchTcpAttachLog()
 	if err == nil {
-		log.Println("tcp attach line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "tcp attach")
 	} else {
 		log.Println("没有收到tcp连接")
 	}
 	logInfo, err = self.SearchSsrcIllegalLog()
 	if err == nil {
-		log.Println("got ssrc illegal line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "ssrc illegal")
 	} else {
 		//log.Println("not got ssrc illegal log")
 	}
 	logInfo, err = self.SearchConnectionResetByPeerLog()
 	if err == nil {
-		log.Println("got connection reset by peer line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "connection reset by peer")
 	} else {
 		//log.Println("not got connection by peer log")
 	}
 	logInfo, err = self.SearchDeleteChannelLog()
 	if err == nil {
-		log.Println("got delete channel line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "delete channel")
 	} else {
 		//log.Println("not got delete channel log")
 	}
 	logInfo, err = self.SearchStreamH265Log()
 	if err == nil {
-		log.Println("got stream h265 line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "stream h265")
 	} else {
 		//log.Println("not got stream h265 log")
 	}
 	logInfo, err = self.SearchLostPktLog()
 	if err == nil {
-		log.Println("got lost pkt line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "lost pkt")
 	} else {
 		//log.Println("not got lost pkt log")
 	}
 	logInfo, err = self.SearchInviteRespLog()
 	if err == nil {
-		log.Println("got invite resp log line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "invite resp")
 	}
 	logInfo, err = self.SearchInviteErrStateLog()
 	if err == nil {
-		log.Println("got invite err state line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "invite err state")
 	}
 	logInfo, err = self.SearchInviteDeviceOfflineLog()
 	if err == nil && logInfo.sessionId == self.sipSessionId {
-		log.Println("after", logInfo.duration, "ms got invite device offline line num:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "invite device offline")
 	}
 	logInfo, err = self.SearchRtmpConnect()
 	if err == nil {
-		log.Println("after", logInfo.duration, "ms got rtmp connect line num:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "rtmp connect")
 	}
 	logInfo, err = self.SearchDecodePs()
 	if err == nil {
-		log.Println("after", logInfo.duration, "ms got decode ps line number:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "decode ps")
 		log.Println("收到rtp over udp 包")
 		return
 	}
 	logInfo, err = self.SearchUdpPktLog()
 	if err == nil {
-		log.Println("got udp pkt line no:", logInfo.lineNo, "time:", logInfo.time)
+		self.printSearchRes(logInfo, "udp pkt")
 	} else {
 		log.Println("没有收到rtp over udp包")
 	}
@@ -553,9 +558,9 @@ func main() {
 	}
 	if nodeId == "Not found" {
 		log.Println("rtp ip:", inviteInfo.rtpIp, "not found nodeId")
-		return
+	} else {
+		log.Println("rtp NodeId:", nodeId)
 	}
-	log.Println("rtp NodeId:", nodeId)
 	if *reFetchLog {
 		log.Println("start to fetch qvs-rtp log from", nodeId)
 		err = logMgr.GetRtpLogFromNode(nodeId)
