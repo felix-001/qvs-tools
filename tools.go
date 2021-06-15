@@ -505,8 +505,8 @@ func main() {
 	chid := flag.String("chid", "", "chid")
 	reFetchLog := flag.Bool("refetch", false, "refetch log")
 	flag.Parse()
-	if *gbid == "" || *chid == "" {
-		log.Println("must pass gbid and chid")
+	if *gbid == "" {
+		log.Println("must pass gbid")
 		return
 	}
 	logMgr := NewLogManager(*logPath)
