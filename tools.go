@@ -484,6 +484,7 @@ func (self *LogParser) GetLogs() {
 // 13. 拉流慢， rtmp connect --- ok
 // 14. tcp gb281 create channel fail channelid:31011500991180000953_34020000001320000007 has exists(Resource temporarily unavailable)
 // 15. 搜索日志重构
+// 16. publish/check获取推流ado拉流节点请求themisd推流注册时间点，这个时候说明流已经推到拉流节点了
 
 func (self *LogManager) fetchSipLogs() error {
 	self.DeleteOldLogs()
