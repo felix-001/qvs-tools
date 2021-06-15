@@ -478,11 +478,12 @@ func (self *LogParser) GetLogs() {
 	}
 }
 
-// todo
+// todo list
 // 7.是否有第二个create_channel
 // 12. 丢包率
 // 13. 拉流慢， rtmp connect --- ok
 // 14. tcp gb281 create channel fail channelid:31011500991180000953_34020000001320000007 has exists(Resource temporarily unavailable)
+// 15. 搜索日志重构
 
 func (self *LogManager) fetchSipLogs() error {
 	self.DeleteOldLogs()
