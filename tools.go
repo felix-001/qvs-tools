@@ -431,32 +431,22 @@ func (self *LogParser) GetLogs() {
 	logInfo, err = self.SearchSsrcIllegalLog()
 	if err == nil {
 		self.printSearchRes(logInfo, "ssrc illegal")
-	} else {
-		//log.Println("not got ssrc illegal log")
 	}
 	logInfo, err = self.SearchConnectionResetByPeerLog()
 	if err == nil {
 		self.printSearchRes(logInfo, "connection reset by peer")
-	} else {
-		//log.Println("not got connection by peer log")
 	}
 	logInfo, err = self.SearchDeleteChannelLog()
 	if err == nil {
 		self.printSearchRes(logInfo, "delete channel")
-	} else {
-		//log.Println("not got delete channel log")
 	}
 	logInfo, err = self.SearchStreamH265Log()
 	if err == nil {
 		self.printSearchRes(logInfo, "stream h265")
-	} else {
-		//log.Println("not got stream h265 log")
 	}
 	logInfo, err = self.SearchLostPktLog()
 	if err == nil {
 		self.printSearchRes(logInfo, "lost pkt")
-	} else {
-		//log.Println("not got lost pkt log")
 	}
 	logInfo, err = self.SearchInviteRespLog()
 	if err == nil {
@@ -489,18 +479,7 @@ func (self *LogParser) GetLogs() {
 }
 
 // todo
-// 拉流失败
-// 1.有没有503 --- ok
-// 2.有没有inviting, err state=3 --- ok
-// 3.tcp/udp有没有收到包 --- ok
-// 4.connect reset by peer? --- ok
-// 5.ssrc illegal? --- ok
-// 6.tcp attach --- ok
 // 7.是否有第二个create_channel
-// 8.是否有delete channel  --- ok
-// 9.h265? --- ok
-// 10. 丢包？ --- ok
-// 11. device offline --- ok
 // 12. 丢包率
 // 13. 拉流慢， rtmp connect --- ok
 // 14. tcp gb281 create channel fail channelid:31011500991180000953_34020000001320000007 has exists(Resource temporarily unavailable)
