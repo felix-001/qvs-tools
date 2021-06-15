@@ -140,7 +140,7 @@ func (self *LogParser) GetNodeIdFromPdr(rtpIp string) (string, error) {
 func (self *LogParser) GetCreateChannelLogs(rtpLogFile string) (string, error) {
 	cmdstr := "tac " + rtpLogFile +
 		" | grep -n \"action=create_channel.*id=" +
-		self.gbid + "_" + self.chid + "\" -m 10 "
+		self.streamId + "\" -m 10 "
 	return Exec(cmdstr)
 }
 
@@ -154,6 +154,7 @@ type LogInfo struct {
 func (self *LogParser) GetLineNoFromLog(line, logFile, direction string) (int, error) {
 	end := strings.Index(line, ":")
 	if end == -1 {
+		log.Println("get end err")
 		return 0, errors.New("get : error")
 	}
 	lineNoStr := line[:end]
@@ -300,7 +301,11 @@ func (self *LogParser) SearchSipLog(pattern string) (*LogInfo, error) {
 }
 
 func (self *LogParser) SearchInviteRespLog() (*LogInfo, error) {
-	pattern := "INVITE response " + self.chid + "client status="
+	chid := self.chid
+	if chid == "" {
+		chid = self.gbid
+	}
+	pattern := "INVITE response " + chid + "client status="
 	return self.SearchSipLog(pattern)
 }
 
