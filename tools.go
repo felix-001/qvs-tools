@@ -78,7 +78,11 @@ type InviteInfo struct {
 }
 
 func (self *LogParser) getLastInviteLog() (string, error) {
-	cmdstr := "tac " + self.sipLogFile + " | grep -n \"sip_invite&chid=" + self.chid + "&id=" + self.gbid + "\" -m 1"
+	chid := self.chid
+	if chid == "" {
+		chid = self.gbid
+	}
+	cmdstr := "tac " + self.sipLogFile + " | grep -n \"sip_invite&chid=" + chid + "&id=" + self.gbid + "\" -m 1"
 	s, err := Exec(cmdstr)
 	return s, err
 }
