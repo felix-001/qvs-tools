@@ -158,6 +158,8 @@ func (self *LogParser) GetLineNoFromLog(line, logFile, direction string) (int, e
 		return 0, errors.New("get : error")
 	}
 	lineNoStr := line[:end]
+	//log.Println(line)
+	//log.Println(lineNoStr)
 	maxLine, err := self.GetMaxLineNumOfFile(logFile)
 	if err != nil {
 		return 0, err
@@ -262,9 +264,9 @@ func (self *LogParser) getLogs(logFile, pattern string) (string, error) {
 }
 
 // 从指定行向下搜索日志
-// tail -n 100 qvs-sip.log-0528101425 | grep qvs-sip | head -n 1
+// tail -n +100 qvs-sip.log-0528101425 | grep qvs-sip | head -n 1
 func (self *LogParser) SearchLog(logFile, pattern string, startLineNo int) (string, error) {
-	cmdstr := "tail -n " + strconv.Itoa(startLineNo) + " " +
+	cmdstr := "tail -n +" + strconv.Itoa(startLineNo) + " " +
 		logFile + " | grep -n \"" + pattern + "\" | head -n 1"
 	//log.Println(cmdstr)
 	return Exec(cmdstr)
@@ -305,7 +307,7 @@ func (self *LogParser) SearchInviteRespLog() (*LogInfo, error) {
 	if chid == "" {
 		chid = self.gbid
 	}
-	pattern := "INVITE response " + chid + "client status="
+	pattern := "INVITE response " + chid + " client status="
 	return self.SearchSipLog(pattern)
 }
 
