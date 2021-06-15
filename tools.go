@@ -253,7 +253,7 @@ func (self *LogParser) getLogs(logFile, pattern string) (string, error) {
 func (self *LogParser) SearchLog(logFile, pattern string, startLineNo int) (string, error) {
 	cmdstr := "tail -n " + strconv.Itoa(startLineNo) + " " +
 		logFile + " | grep -n \"" + pattern + "\" | head -n 1"
-	//log.Println(cmdstr)
+	log.Println(cmdstr)
 	return Exec(cmdstr)
 }
 
@@ -264,6 +264,7 @@ func (self *LogParser) SearchRtpLog(pattern string) (*LogInfo, error) {
 		return nil, errors.New("not found")
 	}
 	logInfo, err := self.ParseLog(_log, self.rtpLogFile, "down")
+	logInfo.lineNo += self.createChannelLineNo
 	if err != nil {
 		return nil, err
 	}
@@ -461,8 +462,6 @@ func (self *LogParser) GetLogs() {
 }
 
 // todo
-// 1.解析线程id --- ok
-
 // 拉流失败
 // 1.有没有503 --- ok
 // 2.有没有inviting, err state=3 --- ok
@@ -477,6 +476,7 @@ func (self *LogParser) GetLogs() {
 // 11. device offline --- ok
 // 12. 丢包率
 // 13. 拉流慢， rtmp connect --- ok
+// 14. tcp gb281 create channel fail channelid:31011500991180000953_34020000001320000007 has exists(Resource temporarily unavailable)
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -509,7 +509,9 @@ func main() {
 		log.Println("get invite log err")
 		return
 	}
-	log.Printf("%+v\n", inviteInfo)
+	log.Println("ssrc:", inviteInfo.ssrc)
+	log.Println("rtp ip:", inviteInfo.rtpIp)
+	log.Println("invite time:", inviteInfo.time)
 	parser.inviteTime = inviteInfo.time
 	parser.ssrc = inviteInfo.ssrc
 	nodeId, err := parser.GetNodeIdFromPdr(inviteInfo.rtpIp)
