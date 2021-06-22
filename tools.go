@@ -476,8 +476,8 @@ func (self *LogParser) GetLogs() {
 	} else {
 		logInfo, err = self.SearchInviteRespLog()
 		raw := logInfo.raw
-		pos := strings.Index(raw, "clients status=")
-		status := raw[pos+len("clients status="):]
+		pos := strings.Index(raw, "client status=")
+		status := raw[pos+len("clients status=")-1 : len(raw)-1]
 		log.Println("invite status:", status)
 	}
 	logInfo, err = self.SearchInviteErrStateLog()
@@ -494,8 +494,7 @@ func (self *LogParser) GetLogs() {
 	}
 	logInfo, err = self.SearchDecodePs()
 	if err == nil {
-		self.printSearchRes(logInfo, "decode ps")
-		log.Println("收到rtp over udp 包")
+		self.printSearchRes(logInfo, "got psm from peer, rtp over udp")
 		return
 	}
 	logInfo, err = self.SearchUdpPktLog()
