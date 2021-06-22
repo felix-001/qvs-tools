@@ -149,6 +149,7 @@ type LogInfo struct {
 	time      string
 	sessionId string
 	duration  int64
+	raw       string
 }
 
 func (self *LogParser) GetLineNoFromLog(line, logFile, direction string) (int, error) {
@@ -219,6 +220,7 @@ func (self *LogParser) GetSessionIdFromLog(line, rtpLogFile, direction string) (
 func (self *LogParser) ParseLog(line, logFile, direction string) (logInfo *LogInfo, err error) {
 	//log.Println("line:", line)
 	logInfo = &LogInfo{}
+	logInfo.raw = line
 	lineNo, err := self.GetLineNoFromLog(line, logFile, direction)
 	if err != nil {
 		return
@@ -300,6 +302,15 @@ func (self *LogParser) SearchSipLog(pattern string) (*LogInfo, error) {
 	logInfo.lineNo += self.sipInviteLineNo
 	logInfo.duration = GetDuration(self.inviteTime, logInfo.time)
 	return logInfo, nil
+}
+
+func (self *LogParser) SearchInviteResp200Log() (*LogInfo, error) {
+	chid := self.chid
+	if chid == "" {
+		chid = self.gbid
+	}
+	pattern := "INVITE response " + chid + " client status=200"
+	return self.SearchSipLog(pattern)
 }
 
 func (self *LogParser) SearchInviteRespLog() (*LogInfo, error) {
@@ -459,9 +470,15 @@ func (self *LogParser) GetLogs() {
 	if err == nil {
 		self.printSearchRes(logInfo, "lost pkt")
 	}
-	logInfo, err = self.SearchInviteRespLog()
+	logInfo, err = self.SearchInviteResp200Log()
 	if err == nil {
-		self.printSearchRes(logInfo, "invite resp")
+		self.printSearchRes(logInfo, "invite resp 200")
+	} else {
+		logInfo, err = self.SearchInviteRespLog()
+		raw := logInfo.raw
+		pos := strings.Index(raw, "clients status=")
+		status := raw[pos+len("clients status="):]
+		log.Println("invite status:", status)
 	}
 	logInfo, err = self.SearchInviteErrStateLog()
 	if err == nil {
@@ -496,6 +513,7 @@ func (self *LogParser) GetLogs() {
 // 14. tcp gb281 create channel fail channelid:31011500991180000953_34020000001320000007 has exists(Resource temporarily unavailable)
 // 15. 搜索日志重构
 // 16. publish/check获取推流ado拉流节点请求themisd推流注册时间点，这个时候说明流已经推到拉流节点了
+// 17. 打印reponse 503
 
 func (self *LogManager) fetchSipLogs() error {
 	self.DeleteOldLogs()
