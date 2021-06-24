@@ -475,10 +475,12 @@ func (self *LogParser) GetLogs() {
 		self.printSearchRes(logInfo, "invite resp 200")
 	} else {
 		logInfo, err = self.SearchInviteRespLog()
-		raw := logInfo.raw
-		pos := strings.Index(raw, "client status=")
-		status := raw[pos+len("clients status=")-1 : len(raw)-1]
-		log.Println("invite status:", status)
+		if err == nil {
+			raw := logInfo.raw
+			pos := strings.Index(raw, "client status=")
+			status := raw[pos+len("clients status=")-1 : len(raw)-1]
+			log.Println("invite status:", status)
+		}
 	}
 	logInfo, err = self.SearchInviteErrStateLog()
 	if err == nil {
