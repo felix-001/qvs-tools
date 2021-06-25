@@ -533,6 +533,7 @@ func main() {
 	logPath := flag.String("logpath", "~/logs", "log file path")
 	gbid := flag.String("gbid", "", "gbid")
 	chid := flag.String("chid", "", "chid")
+	_nodeId := flag.String("nodeid", "", "node id")
 	reFetchLog := flag.Bool("refetch", false, "refetch log")
 	flag.Parse()
 	if *gbid == "" {
@@ -569,6 +570,10 @@ func main() {
 	}
 	if nodeId == "Not found" {
 		log.Println("rtp ip:", inviteInfo.rtpIp, "not found nodeId")
+		if *_nodeId == "" {
+			return
+		}
+		nodeId = *_nodeId
 	} else {
 		log.Println("rtp NodeId:", nodeId)
 	}
