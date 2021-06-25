@@ -120,6 +120,7 @@ func main() {
 		blk := pcm[pos : pos+blkLen]
 		ssrc := SendBlk(blk)
 		if !alreadyInvite {
+			log.Println("ssrc", ssrc)
 			callid = InviteAudio(ssrc)
 			alreadyInvite = true
 		}
