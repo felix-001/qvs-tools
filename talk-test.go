@@ -25,7 +25,7 @@ const InviteUrl = SipBasePath + "action=sip_invite&chid=" + chid + "&id=" + gbId
 const ByeUrl = SipBasePath + "action=sip_bye&chid=" + chid + "&id=" + gbId + "&is_talk=true&call_id="
 const DeleteChUrl = StreamBasePath + "action=delete_audio_stream&id=" + gbId
 const QueryChUrl = StreamBasePath + "action=query_audio_channel&id=" + gbId
-const AppendPcmUrl = StreamBasePath + "action=append_audio_pcm&id=" + gbId + "base64_pcm="
+const AppendPcmUrl = StreamBasePath + "action=append_audio_pcm&id=" + gbId + "&base64_pcm="
 const BlkLen = 5 * 1024
 
 type CreateStreamResp struct {
@@ -68,34 +68,20 @@ func InviteAudio(ssrc int) string {
 	return inviteResp.Callid
 }
 
-func SendBlk(blk []byte, is_first bool) int {
+func SendBlk(blk []byte) error {
 	base64Blk := base64.RawURLEncoding.EncodeToString(blk)
 	streamUrl := AppendPcmUrl + base64Blk
-	if is_first {
-		streamUrl += "&is_new=true"
-	}
 	resp, err := http.Get(streamUrl)
 	if err != nil {
 		log.Println(err)
-		return 0
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Println("not 200")
-		return 0
+		return err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		return 0
-	}
-	streamResp := &CreateStreamResp{}
-	err = json.Unmarshal(body, streamResp)
-	if err != nil {
-		log.Println(err)
-		return 0
-	}
-	return streamResp.Ssrc
+	return nil
 }
 
 func SendBye(callid string) {
@@ -121,17 +107,18 @@ func CalcBlkLen(len, pos int) int {
 	return blkLen
 }
 
-func DeleteAudioStream() {
+func DeleteAudioStream() error {
 	resp, err := http.Get(DeleteChUrl)
 	if err != nil {
 		log.Println(err)
-		return
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		log.Println("not 200")
-		return
+		return err
 	}
+	return nil
 }
 
 type Channel struct {
@@ -176,6 +163,31 @@ func IsAudioChExist() bool {
 	return false
 }
 
+func CreateAudioCh() (error, int) {
+	resp, err := http.Get(CreateChUrl)
+	if err != nil {
+		log.Println(err)
+		return err, 0
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Println("not 200")
+		return err, 0
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return err, 0
+	}
+	streamResp := &CreateStreamResp{}
+	err = json.Unmarshal(body, streamResp)
+	if err != nil {
+		log.Println(err)
+		return err, 0
+	}
+	return nil, streamResp.Ssrc
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	pcm, err := ioutil.ReadFile("/Users/rigensen/workspace/tmp/test.pcma")
@@ -183,23 +195,26 @@ func main() {
 		log.Println(err)
 		return
 	}
+	if IsAudioChExist() {
+		err := DeleteAudioStream()
+		if err != nil {
+			return
+		}
+	}
+	err, ssrc := CreateAudioCh()
+	if err != nil {
+		return
+	}
+	log.Println("ssrc", ssrc)
+	callid := InviteAudio(ssrc)
+	log.Println("callid:", callid)
 	pos := 0
-	callid := ""
-	is_first := true
 	for pos < len(pcm) {
 		blkLen := CalcBlkLen(len(pcm), pos)
 		blk := pcm[pos : pos+blkLen]
-		if is_first {
-			if IsAudioChExist() {
-				DeleteAudioStream()
-			}
-			ssrc := SendBlk(blk, true)
-			log.Println("ssrc", ssrc)
-			callid = InviteAudio(ssrc)
-			log.Println("callid:", callid)
-			is_first = false
-		} else {
-			SendBlk(blk, false)
+		err := SendBlk(blk)
+		if err != nil {
+			return
 		}
 		pos += BlkLen
 	}
