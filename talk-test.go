@@ -10,10 +10,22 @@ import (
 	"time"
 )
 
+const gbId = "31010403001370002272"
+const chid = "31010403001370002272"
 const RtpIp = "192.168.1.5"
-const StreamUrl = "http://localhost:1985/api/v1/gb28181?action=talk&id=31010403001370002272&base64_pcm="
-const InviteUrl = "http://localhost:7279/api/v1/gb28181?action=sip_invite&chid=31010403001370002272&id=31010403001370002272&ip=" + RtpIp + "&rtp_port=9001&rtp_proto=udp&is_talk=true&ssrc="
-const ByeUrl = "http://localhost:7279/api/v1/gb28181?action=sip_bye&chid=31010403001370002272&id=31010403001370002272&&is_talk=true&call_id="
+const Host = "localhost"
+const StreamPort = "1985"
+const SipPort = "7279"
+const BasePath = "api/v1/gb28181?"
+const StreamBasePath = "http://" + Host + ":" + StreamPort + "/" + BasePath
+const SipBasePath = "http://" + Host + ":" + SipPort + "/" + BasePath
+
+const CreateChUrl = StreamBasePath + "action=create_audio_stream&id=" + gbId
+const InviteUrl = SipBasePath + "action=sip_invite&chid=" + chid + "&id=" + gbId + "&ip=" + RtpIp + "&rtp_port=9001&rtp_proto=udp&is_talk=true&ssrc="
+const ByeUrl = SipBasePath + "action=sip_bye&chid=" + chid + "&id=" + gbId + "&is_talk=true&call_id="
+const DeleteChUrl = StreamBasePath + "action=delete_audio_stream&id=" + gbId
+const QueryChUrl = StreamBasePath + "action=query_audio_channel&id=" + gbId
+const AppendPcmUrl = StreamBasePath + "action=append_audio_pcm&id=" + gbId + "base64_pcm="
 const BlkLen = 5 * 1024
 
 type CreateStreamResp struct {
@@ -58,7 +70,7 @@ func InviteAudio(ssrc int) string {
 
 func SendBlk(blk []byte, is_first bool) int {
 	base64Blk := base64.RawURLEncoding.EncodeToString(blk)
-	streamUrl := StreamUrl + base64Blk
+	streamUrl := AppendPcmUrl + base64Blk
 	if is_first {
 		streamUrl += "&is_new=true"
 	}
@@ -109,6 +121,61 @@ func CalcBlkLen(len, pos int) int {
 	return blkLen
 }
 
+func DeleteAudioStream() {
+	resp, err := http.Get(DeleteChUrl)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Println("not 200")
+		return
+	}
+}
+
+type Channel struct {
+	Id   string `json:"id"`
+	Ssrc int    `json:"ssrc"`
+}
+
+type Data struct {
+	Channels []Channel `json:"channels,omitempty"`
+}
+
+type QueryChResp struct {
+	Code int  `json:"code"`
+	Data Data `json:"data"`
+}
+
+func IsAudioChExist() bool {
+	resp, err := http.Get(QueryChUrl)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.Println("not 200")
+		return false
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	queryResp := &QueryChResp{}
+	err = json.Unmarshal(body, queryResp)
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	if len(queryResp.Data.Channels) > 0 {
+		return true
+	}
+	return false
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	pcm, err := ioutil.ReadFile("/Users/rigensen/workspace/tmp/test.pcma")
@@ -123,9 +190,13 @@ func main() {
 		blkLen := CalcBlkLen(len(pcm), pos)
 		blk := pcm[pos : pos+blkLen]
 		if is_first {
+			if IsAudioChExist() {
+				DeleteAudioStream()
+			}
 			ssrc := SendBlk(blk, true)
 			log.Println("ssrc", ssrc)
 			callid = InviteAudio(ssrc)
+			log.Println("callid:", callid)
 			is_first = false
 		} else {
 			SendBlk(blk, false)
