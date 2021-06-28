@@ -12,7 +12,7 @@ import (
 
 const gbId = "31010403001370002272"
 const chid = "31010403001370002272"
-const RtpIp = "192.168.1.5"
+const RtpIp = "100.100.81.214"
 const Host = "localhost"
 const StreamPort = "1985"
 const SipPort = "7279"
