@@ -87,8 +87,8 @@ func (self *LogParser) getLastInviteLog() (string, error) {
 	return s, err
 }
 
-func (self *LogManager) GetLogsFromJJh1445() (string, error) {
-	cmdstr := "qscp qboxserver@jjh1445:/home/qboxserver/qvs-sip/_package/run/qvs-sip.log* " + self.logPath
+func (self *LogManager) getSipLogs(sipNodeId string) (string, error) {
+	cmdstr := "qscp qboxserver@" + sipNodeId + ":/home/qboxserver/qvs-sip/_package/run/qvs-sip.log* " + self.logPath
 	return Exec(cmdstr)
 }
 
@@ -516,10 +516,10 @@ func (self *LogParser) GetLogs() {
 // 16. publish/check获取推流ado拉流节点请求themisd推流注册时间点，这个时候说明流已经推到拉流节点了
 // 17. 打印reponse 503
 
-func (self *LogManager) fetchSipLogs() error {
+func (self *LogManager) fetchSipLogs(sipNodeId string) error {
 	self.DeleteOldLogs()
-	log.Println("start to fetch log file from jjh1445 ~/qvs-sip/_package/run")
-	_, err := self.GetLogsFromJJh1445()
+	log.Println("start to fetch log file from" + sipNodeId + "~/qvs-sip/_package/run")
+	_, err := self.getSipLogs(sipNodeId)
 	//fmt.Println(res)
 	if err != nil {
 		log.Println(err)
@@ -533,6 +533,7 @@ func main() {
 	logPath := flag.String("logpath", "~/logs", "log file path")
 	gbid := flag.String("gbid", "", "gbid")
 	chid := flag.String("chid", "", "chid")
+	sipNodeId := flag.String("sip_nodeid", "", "sip node id")
 	_nodeId := flag.String("nodeid", "", "node id")
 	reFetchLog := flag.Bool("refetch", false, "refetch log")
 	flag.Parse()
@@ -542,7 +543,7 @@ func main() {
 	}
 	logMgr := NewLogManager(*logPath)
 	if *reFetchLog {
-		err := logMgr.fetchSipLogs()
+		err := logMgr.fetchSipLogs(*sipNodeId)
 		if err != nil {
 			return
 		}
