@@ -50,19 +50,6 @@ func httpPost(ak, sk, host, path string, body []byte, headers map[string]string)
 }
 
 func main() {
-	/*
-		host := "qvs.qiniuapi.com"
-		path := "/v1/namespaces/3nm4x0vyz7xlu/devices/31011500991320002638/start"
-		ak := "JAwTPb8dmrbiwt89Eaxa4VsL4_xSIYJoJh4rQfOQ"
-		sk := "G5mtjT3QzG4Lf7jpCAN5PZHrGeoSH9jRdC96ecYS"
-		headers := map[string]string{"Content-Type": "application/json"}
-		resp, err := httpPost(ak, sk, host, path, []byte(""), headers)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		log.Println(string(resp))
-	*/
 	log.SetFlags(log.Lshortfile)
 	ak := flag.String("ak", "", "ak")
 	sk := flag.String("sk", "", "sk")
