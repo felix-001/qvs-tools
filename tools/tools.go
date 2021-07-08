@@ -534,7 +534,7 @@ func main() {
 	gbid := flag.String("gbid", "", "gbid")
 	chid := flag.String("chid", "", "chid")
 	sipNodeId := flag.String("sip_nodeid", "", "sip node id")
-	_nodeId := flag.String("nodeid", "", "node id")
+	_nodeId := flag.String("rtp_nodeid", "", "rtp node id")
 	reFetchLog := flag.Bool("refetch", false, "refetch log")
 	flag.Parse()
 	if *gbid == "" {
