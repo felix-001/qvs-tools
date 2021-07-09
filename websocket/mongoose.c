@@ -21,6 +21,8 @@
 #line 1 "src/private.h"
 #endif
 void mg_connect_resolved(struct mg_connection *);
+struct mg_connection *mg_new_connection(struct mg_mgr *mgr, int fd, struct sockaddr_in *peer_addr,
+                                mg_event_handler_t fn, void *fn_data);
 
 #ifdef MG_ENABLE_LINES
 #line 1 "src/base64.c"
@@ -1480,6 +1482,13 @@ struct mg_connection *mg_http_connect(struct mg_mgr *mgr, const char *url,
 struct mg_connection *mg_http_listen(struct mg_mgr *mgr, const char *url,
                                      mg_event_handler_t fn, void *fn_data) {
   struct mg_connection *c = mg_listen(mgr, url, fn, fn_data);
+  if (c != NULL) c->pfn = http_cb;
+  return c;
+}
+
+struct mg_connection *mg_http_new_connection(struct mg_mgr *mgr, int fd, struct sockaddr_in *peer_addr,
+                                     mg_event_handler_t fn, void *fn_data) {
+  struct mg_connection *c = mg_new_connection(mgr, fd, peer_addr, fn, fn_data);
   if (c != NULL) c->pfn = http_cb;
   return c;
 }
@@ -2966,6 +2975,48 @@ struct mg_connection *mg_connect(struct mg_mgr *mgr, const char *url,
     c->fn_data = fn_data;
     LOG(LL_DEBUG, ("%lu -> %s", c->id, url));
     mg_resolve(c, &host, mgr->dnstimeout);
+  }
+  return c;
+}
+
+struct mg_connection *mg_new_connection(struct mg_mgr *mgr, int fd, struct sockaddr_in *peer_addr,
+                                mg_event_handler_t fn, void *fn_data) {
+  struct mg_connection *c = NULL;
+  if (fd == INVALID_SOCKET || !peer_addr) {
+    return NULL;
+  } else if ((c = alloc_conn(mgr, 0, fd)) == NULL) {
+    LOG(LL_ERROR, ("OOM %d", fd));
+    closesocket(fd);
+  } else {
+    char buf[40];
+    c->peer.port = peer_addr->sin_port;
+    memcpy(&c->peer.ip, &peer_addr->sin_addr, sizeof(c->peer.ip));
+#if MG_ENABLE_IPV6
+  // FIXME: 暂不考虑IPV6
+    if (sa_len == sizeof(usa.sin6)) {
+      memcpy(c->peer.ip6, &usa.sin6.sin6_addr, sizeof(c->peer.ip6));
+      c->peer.port = usa.sin6.sin6_port;
+      c->peer.is_ip6 = 1;
+    }
+#endif
+    mg_straddr(c, buf, sizeof(buf));
+    LOG(LL_DEBUG, ("%lu accepted %s", c->id, buf));
+    mg_set_non_blocking_mode(FD(c));
+    setsockopts(c);
+    LIST_ADD_HEAD(struct mg_connection, &mgr->conns, c);
+    c->is_accepted = 1;
+    c->is_hexdumping = 0;
+    c->pfn_data = NULL;
+    c->fn = fn;
+    c->fn_data = fn_data;
+    mg_call(c, MG_EV_ACCEPT, NULL);
+    c->fd = sock2ptr(fd);
+    c->is_listening = 1;
+    c->is_udp = false;
+    LIST_ADD_HEAD(struct mg_connection, &mgr->conns, c);
+    c->fn = fn;
+    c->fn_data = fn_data;
+    LOG(LL_INFO, ("%lu accepting on %d", c->id, fd));
   }
   return c;
 }
