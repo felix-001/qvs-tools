@@ -107,5 +107,7 @@ int main(void) {
   while (!conn->is_closing) mg_mgr_poll(&mgr, 1000);             // Infinite event loop
   mg_mgr_free(&mgr);
   // FIXME: 是否需要close fd, mongoose有没有close
+  // 结束时client会发送一个opcode为WEBSOCKET_OP_CLOSE
+  // mongoose会close掉socket
   return 0;
 }
