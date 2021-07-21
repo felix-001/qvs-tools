@@ -522,7 +522,7 @@ func (self *LogParser) GetLogs() {
 
 func (self *LogManager) fetchSipLogs(sipNodeId string) error {
 	self.DeleteOldLogs()
-	log.Println("start to fetch log file from " + sipNodeId + "~/qvs-sip/_package/run")
+	log.Println("start to fetch log file from " + sipNodeId + " ~/qvs-sip/_package/run")
 	_, err := self.getSipLogs(sipNodeId)
 	//fmt.Println(res)
 	if err != nil {
