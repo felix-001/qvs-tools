@@ -3010,12 +3010,6 @@ struct mg_connection *mg_new_connection(struct mg_mgr *mgr, int fd, struct socka
     c->fn = fn;
     c->fn_data = fn_data;
     mg_call(c, MG_EV_ACCEPT, NULL);
-    c->fd = sock2ptr(fd);
-    c->is_listening = 1;
-    c->is_udp = false;
-    LIST_ADD_HEAD(struct mg_connection, &mgr->conns, c);
-    c->fn = fn;
-    c->fn_data = fn_data;
     LOG(LL_INFO, ("%lu accepting on %d", c->id, fd));
   }
   return c;
