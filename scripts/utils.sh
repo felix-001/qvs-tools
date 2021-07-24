@@ -91,4 +91,46 @@ MonitorRtpLog() {
 	TraceServiceLogById qvs-rtp $id
 }
 
+MonitorSipLog() {
+	id=$1
+	TraceServiceLogById qvs-sip $id
+}
 
+MonitorServerLog() {
+	id=$1
+	TraceServiceLogById qvs-sip $id
+}
+
+traceLog() {
+	service=$1
+	gbid=`cat ~/liyq/etc/gbid.conf`
+	if [ $# != 2 ];then
+		gbid=$2
+	fi
+	TraceServiceLogById $service $gbid	
+
+}
+
+siplog() {
+	if [ $# != 0 ];then
+		traceLog qvs-sip $1
+	else
+		traceLog qvs-sip
+	fi
+}
+
+rtplog() {
+	if [ $# != 0 ];then
+		traceLog qvs-rtp $1
+	else
+		traceLog qvs-rtp
+	fi
+}
+
+srvlog() {
+	if [ $# != 0 ];then
+		traceLog qvs-server $1
+	else
+		traceLog qvs-server
+	fi
+}
