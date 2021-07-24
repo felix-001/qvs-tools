@@ -104,7 +104,7 @@ MonitorServerLog() {
 traceLog() {
 	service=$1
 	gbid=`cat ~/liyq/etc/gbid.conf`
-	if [ $# != 2 ];then
+	if [ $# == 2 ];then
 		gbid=$2
 	fi
 	TraceServiceLogById $service $gbid	
