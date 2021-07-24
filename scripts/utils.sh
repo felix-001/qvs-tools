@@ -81,24 +81,8 @@ TraceServiceLogById() {
 	id=$2
 
 	latestLog=`GetLatestLogOfService $service`
-	echo "logfile: ~/qvs-rtp/_package/run/$latestLog"
-	tail -f ~/qvs-rtp/_package/run/$latestLog | grep $id
-}
-
-# 监控qvs-rtp日志，过滤gbid
-MonitorRtpLog() {
-	id=$1
-	TraceServiceLogById qvs-rtp $id
-}
-
-MonitorSipLog() {
-	id=$1
-	TraceServiceLogById qvs-sip $id
-}
-
-MonitorServerLog() {
-	id=$1
-	TraceServiceLogById qvs-sip $id
+	echo "logfile: ~/$service/_package/run/$latestLog"
+	tail -f ~/$service/_package/run/$latestLog | grep $id
 }
 
 traceLog() {
