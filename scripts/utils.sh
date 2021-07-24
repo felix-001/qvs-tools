@@ -43,7 +43,7 @@ FindLatestLogFromFolder() {
 	path=$1
 	prefix=$2
 
-	fileList=`cd $path;ls $preifx*`
+	fileList=`cd $path;ls $prefix*`
 	sep=" "
 	latestLog=`FindLatestLogFile "$sep" "$fileList" "$prefix"`
 	echo $latestLog
