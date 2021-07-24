@@ -328,7 +328,11 @@ func (self *LogParser) SearchInviteErrStateLog() (*LogInfo, error) {
 }
 
 func (self *LogParser) SearchInviteDeviceOfflineLog() (*LogInfo, error) {
-	pattern := "device " + self.chid + " offline"
+	chid := self.chid
+	if chid == "" {
+		chid = self.gbid
+	}
+	pattern := "device " + chid + " offline"
 	return self.SearchSipLog(pattern)
 }
 
@@ -488,7 +492,7 @@ func (self *LogParser) GetLogs() {
 	}
 	logInfo, err = self.SearchInviteDeviceOfflineLog()
 	if err == nil && logInfo.sessionId == self.sipSessionId {
-		self.printSearchRes(logInfo, "invite device offline")
+		self.printSearchRes(logInfo, "设备离线")
 	}
 	logInfo, err = self.SearchRtmpConnect()
 	if err == nil {
@@ -518,7 +522,7 @@ func (self *LogParser) GetLogs() {
 
 func (self *LogManager) fetchSipLogs(sipNodeId string) error {
 	self.DeleteOldLogs()
-	log.Println("start to fetch log file from " + sipNodeId + "~/qvs-sip/_package/run")
+	log.Println("start to fetch log file from " + sipNodeId + " ~/qvs-sip/_package/run")
 	_, err := self.getSipLogs(sipNodeId)
 	//fmt.Println(res)
 	if err != nil {
