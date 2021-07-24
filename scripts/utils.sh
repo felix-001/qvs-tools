@@ -60,21 +60,6 @@ GetLatestLogOfService() {
 	echo $latestLog
 }
 
-GetLatestQvsRtpLog() {
-	latestLog=`GetLatestLogOfService qvs-rtp`
-	echo $latestLog
-}
-
-GetLatestQvsSipLog() {
-	latestLog=`GetLatestLogOfService qvs-sip`
-	echo $latestLog
-}
-
-GetLatestQvsServerLog() {
-	latestLog=`GetLatestLogOfService qvs-server`
-	echo $latestLog
-}
-
 # 实时查看服务日志，过滤gbid
 TraceServiceLogById() {
 	service=$1
