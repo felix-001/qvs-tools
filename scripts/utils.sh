@@ -91,5 +91,4 @@ MonitorRtpLog() {
 	TraceServiceLogById qvs-rtp $id
 }
 
-MonitorRtpLog 123
 
