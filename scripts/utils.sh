@@ -81,7 +81,7 @@ TraceServiceLogById() {
 	id=$2
 
 	latestLog=`GetLatestLogOfService $service`
-	echo "logfile:$latestLog"
+	echo "logfile: ~/qvs-rtp/_package/run/$latestLog"
 	tail -f ~/qvs-rtp/_package/run/$latestLog | grep $id
 }
 
