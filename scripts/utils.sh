@@ -112,7 +112,7 @@ srvlog() {
 
 srvApiBasePath="http://localhost:7275/v1"
 
-func deviceReq() {
+deviceReq() {
 	uid=$1
 	nsid=$2
 	gbid=$3
