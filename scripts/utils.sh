@@ -168,6 +168,14 @@ invite() {
 	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
+# 停止拉流
+# $1 - uid
+# $2 - nsid
+# $3 - gbid
+stopgb() {
+	deviceReq $uid $nsid $gbid "stop" ""
+}
+
 sipBaseUrl="http://localhost:2985/api/v1/gb28181?action="
 
 # $1 - action
@@ -183,3 +191,4 @@ sipReq() {
 dump() {
 	sipReq "dump_stream" $1 "&dump_ps=true"
 }
+
