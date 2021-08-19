@@ -147,7 +147,7 @@ talk() {
 		\"version\":\"$version\",
 		\"base64Audio\":\"$pcmaB64\"
 	}"
-	deviceReq $uid $nsid $gbid "talk" $data
+	deviceReq $uid $nsid $gbid "talk" "$data"
 }
 
 # 发起拉流
@@ -165,7 +165,7 @@ invite() {
 		\"rtpAccessIp\":\"14.29.108.156\",
 		\"rtpProto\":\"$protocol\"
 	}"
-	deviceReq $uid $nsid $gbid "start" $data
+	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
 sipBaseUrl="http://localhost:2985/api/v1/gb28181?action="
