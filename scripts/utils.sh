@@ -129,7 +129,7 @@ talk() {
 	url="$srvApiBasePath/namespaces/$nsid/devices/$gbid/talk"
 	curl --location --request POST $url \
 		--header "authorization: QiniuStub uid=$uid" \
-		--dara-raw "{
+		-d "{
 			\"rtpAccessIp\":\"14.29.108.156\",
     			\"transProtocol\":\"$protocol\",
     			\"tcpModel\":\"sendrecv\",
