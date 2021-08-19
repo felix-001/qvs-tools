@@ -80,6 +80,8 @@ traceLog() {
 
 }
 
+# 查看qvs-sip日志，grep gbid
+# 参数为gbid, 如果不传，默认gbid在配置文件
 siplog() {
 	if [ $# != 0 ];then
 		traceLog qvs-sip $1
@@ -88,6 +90,8 @@ siplog() {
 	fi
 }
 
+# 查看qvs-rtp日志，grep gbid
+# 参数为gbid, 如果不传，默认gbid在配置文件
 rtplog() {
 	if [ $# != 0 ];then
 		traceLog qvs-rtp $1
@@ -96,10 +100,40 @@ rtplog() {
 	fi
 }
 
+# 查看qvs-server日志，grep gbid
+# 参数为gbid, 如果不传，默认gbid在配置文件
 srvlog() {
 	if [ $# != 0 ];then
 		traceLog qvs-server $1
 	else
 		traceLog qvs-server
 	fi
+}
+
+srvApiBasePath="http://localhost:7275/v1"
+
+# 发起语音对讲
+# $1 - uid
+# $2 - nsid
+# $3 - gbid
+# $4 - 传输模式tcp/udp
+# $5 - 对讲协议版本2014/2016
+talk() {
+	uid=$1
+	nsid=$2
+	gbid=$3
+	protocol=$4
+	version=$5
+
+	pcmaB64=`cat ~/liyq/etc/pcma.b64`
+	url="$srvApiBasePath/namespaces/$nsid/devices/$gbid/talk"
+	curl --location --request POST $url \
+		--header "authorization: QiniuStub uid=$uid" \
+		--dara-raw "{
+			\"rtpAccessIp\":\"14.29.108.156\",
+    			\"transProtocol\":\"$protocol\",
+    			\"tcpModel\":\"sendrecv\",
+    			\"version\":\"$version\",
+			\"base64Audio\":\"$pcmaB64\"
+		}"
 }
