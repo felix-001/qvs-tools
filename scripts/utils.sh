@@ -112,6 +112,20 @@ srvlog() {
 
 srvApiBasePath="http://localhost:7275/v1"
 
+func deviceReq() {
+	uid=$1
+	nsid=$2
+	gbid=$3
+	cmd=$4
+	data=$5
+
+	url="$srvApiBasePath/namespaces/$nsid/devices/$gbid/$cmd"
+	curl --location --request POST $url \
+		--header "authorization: QiniuStub uid=$uid" \
+		--header "Content-Type: application/json" \
+		-d "$data"
+}
+
 # 发起语音对讲
 # $1 - uid
 # $2 - nsid
@@ -126,15 +140,46 @@ talk() {
 	version=$5
 
 	pcmaB64=`cat ~/liyq/etc/pcma.b64`
-	url="$srvApiBasePath/namespaces/$nsid/devices/$gbid/talk"
-	curl --location --request POST $url \
-		--header "authorization: QiniuStub uid=$uid" \
-		--header "Content-Type: application/json" \
-		-d "{
-			\"rtpAccessIp\":\"14.29.108.156\",
-    			\"transProtocol\":\"$protocol\",
-    			\"tcpModel\":\"sendrecv\",
-    			\"version\":\"$version\",
-			\"base64Audio\":\"$pcmaB64\"
-		}"
+	data="{
+		\"rtpAccessIp\":\"14.29.108.156\",
+		\"transProtocol\":\"$protocol\",
+		\"tcpModel\":\"sendrecv\",
+		\"version\":\"$version\",
+		\"base64Audio\":\"$pcmaB64\"
+	}"
+	deviceReq $uid $nsid $gbid "talk" $data
+}
+
+# 发起拉流
+# $1 - uid
+# $2 - nsid
+# $3 - gbid
+# $4 - 传输模式tcp/udp
+invite() {
+	uid=$1
+	nsid=$2
+	gbid=$3
+	protocol=$4
+
+	data="{
+		\"rtpAccessIp\":\"14.29.108.156\",
+		\"rtpProto\":\"$protocol\"
+	}"
+	deviceReq $uid $nsid $gbid "start" $data
+}
+
+sipBaseUrl="http://localhost:2985/api/v1/gb28181?action="
+
+# $1 - action
+# $2 - id
+# $3 - querys
+sipReq() {
+	url="$sipBaseUrl$1&id=$2$3"
+	curl $url
+}
+
+# dump ps流 
+# $1 - 流id
+dump() {
+	sipReq "dump_stream" $1 "&dump_ps=true"
 }
