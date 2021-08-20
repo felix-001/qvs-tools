@@ -135,7 +135,7 @@ deviceReq() {
 talk() {
 	if [ $# != 5 ];then
 		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016>"
-		exit 0
+		return 0
 	fi
 	uid=$1
 	nsid=$2
@@ -162,7 +162,7 @@ talk() {
 invite() {
 	if [ $# != 5 ];then
 		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp>"
-		exit 0
+		return 0
 	fi
 	uid=$1
 	nsid=$2
