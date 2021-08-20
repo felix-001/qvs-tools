@@ -119,6 +119,8 @@ srvApiBasePath="http://localhost:7275/v1"
 # $4 - 传输模式tcp/udp
 # $5 - 对讲协议版本2014/2016
 talk() {
+	if [ $# != 5 ];then
+		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016>"
 	uid=$1
 	nsid=$2
 	gbid=$3
