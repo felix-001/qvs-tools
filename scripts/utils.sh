@@ -135,6 +135,8 @@ deviceReq() {
 talk() {
 	if [ $# != 5 ];then
 		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016>"
+		exit 0
+	fi
 	uid=$1
 	nsid=$2
 	gbid=$3
@@ -158,6 +160,10 @@ talk() {
 # $3 - gbid
 # $4 - 传输模式tcp/udp
 invite() {
+	if [ $# != 5 ];then
+		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp>"
+		exit 0
+	fi
 	uid=$1
 	nsid=$2
 	gbid=$3
