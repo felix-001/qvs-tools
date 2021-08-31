@@ -126,6 +126,28 @@ deviceReq() {
 		-d "$data"
 }
 
+streamGetReq() {
+	uid=$1
+	nsid=$2
+	streamId=$3
+	cmd=$4
+	query=$5
+
+	url="$srvApiBasePath/namespaces/$nsid/streams/$streamId/$cmd?$query"
+	curl --location --request GET $url \
+		--header "authorization: QiniuStub uid=$uid"
+}
+
+# 查询录制记录
+# $1 - uid
+# $2 - nsid
+# $3 - streamId
+# $4 - start
+# $5 - end
+record-playback() {
+	streamGetReq $1 $2 $3 recordhistories "start=$4&end=$5&line=30&marker="
+}
+
 # 发起语音对讲
 # $1 - uid
 # $2 - nsid
