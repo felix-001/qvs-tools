@@ -227,7 +227,7 @@ sipApiBasePath="http://localhost:7279/api/v1/gb28181?action="
 # $2 - id
 # $3 - querys
 sipReq() {
-	url="$sipBaseUrl$1&id=$2$3"
+	url="$sipApiBasePath$1&id=$2$3"
 	curl $url
 }
 
