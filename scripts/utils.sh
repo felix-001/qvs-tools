@@ -138,6 +138,25 @@ streamGetReq() {
 		--header "authorization: QiniuStub uid=$uid"
 }
 
+streamPostReq() {
+	uid=$1
+	nsid=$2
+	gbid=$3
+	cmd=$4
+	data=$5
+
+	url="$srvApiBasePath/namespaces/$nsid/streams/$gbid/$cmd"
+	curl --location --request POST $url \
+		--header "authorization: QiniuStub uid=$uid" \
+		--header "Content-Type: application/json" \
+		-d "$data"
+}
+
+# 历史流控制
+playback-control() {
+	
+}
+
 # 查询录制记录
 # $1 - uid
 # $2 - nsid
