@@ -206,8 +206,23 @@ stopgb() {
 	deviceReq $uid $nsid $gbid "stop" ""
 }
 
-sipBaseUrl="http://localhost:2985/api/v1/gb28181?action="
+rtpBaseUrl="http://localhost:2985/api/v1/gb28181?action="
 
+# $1 - action
+# $2 - id
+# $3 - querys
+rtpReq() {
+	url="$sipBaseUrl$1&id=$2$3"
+	curl $url
+}
+
+# dump ps流 
+# $1 - 流id
+dump() {
+	rtpReq "dump_stream" $1 "&dump_ps=true"
+}
+
+sipApiBasePath="http://localhost:7279/api/v1/gb28181?action="
 # $1 - action
 # $2 - id
 # $3 - querys
@@ -216,9 +231,9 @@ sipReq() {
 	curl $url
 }
 
-# dump ps流 
-# $1 - 流id
-dump() {
-	sipReq "dump_stream" $1 "&dump_ps=true"
+# 查询sip会话列表
+# $1 - id
+query-sess() {
+	sipReq sip_query_session $1 ""
 }
 
