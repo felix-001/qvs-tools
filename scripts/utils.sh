@@ -201,7 +201,7 @@ talk() {
 # $3 - gbid
 # $4 - 传输模式tcp/udp
 invite() {
-	if [ $# != 5 ];then
+	if [ $# != 4 ];then
 		echo "usage: invite <uid> <nsid> <gbid> <tcp/udp>"
 		return 0
 	fi
