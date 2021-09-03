@@ -153,9 +153,6 @@ streamPostReq() {
 }
 
 # 历史流控制
-playback-control() {
-	
-}
 
 # 查询录制记录
 # $1 - uid
