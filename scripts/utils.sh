@@ -199,7 +199,7 @@ talk() {
 # $3 - 对讲协议版本，2014/2016
 talk-internal() {
 	if [ $# != 5 ];then
-		echo "usage: talk <gbid> <tcp/udp> <2014/2016>"
+		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
