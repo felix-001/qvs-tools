@@ -268,7 +268,7 @@ invite-history() {
 # $3 - chid
 # $4 - start
 # $5 - end
-invite-internal() {
+invite-history-internal() {
 	if [ $# != 5 ];then
 		echo "usage: invite <gbid> <tcp/udp> <chid> <start> <end>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
