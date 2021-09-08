@@ -228,6 +228,18 @@ invite() {
 	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
+# 内部账号发起拉流
+# $1 - gbid
+# $2 传输模式tcp/udp
+invite-internal() {
+	if [ $# != 2 ];then
+		echo "usage: invite <gbid> <tcp/udp>"
+		echo "       默认调度到vdn-gdgzh-dls-1-11"
+		return 0
+	fi
+	invite 1381539624 2xenzw72izhqy $1 $2
+}
+
 # 停止拉流
 # $1 - uid
 # $2 - nsid
