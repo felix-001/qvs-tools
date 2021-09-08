@@ -231,6 +231,52 @@ invite() {
 	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
+# 发起拉历史流
+# $1 - uid
+# $2 - nsid
+# $3 - gbid
+# $4 - 传输模式tcp/udp
+# $5 - chid, 不需要传是传""
+# $6 - startTime
+# $7 - endTime
+invite-history() {
+	if [ $# != 7 ];then
+		echo "usage: invite <uid> <nsid> <gbid> <tcp/udp> <chid> <startTime> <endTime>"
+		return 0
+	fi
+	uid=$1
+	nsid=$2
+	gbid=$3
+	protocol=$4
+	chid=$5
+	start=$6
+	end=$7
+
+	data="{
+		\"rtpAccessIp\":\"14.29.108.156\",
+		\"rtpProto\":\"$protocol\",
+		\"channels\":[\"$chid\"],
+		\"start\":$start,
+		\"end\":$end
+	}"
+	deviceReq $uid $nsid $gbid "start" "$data"
+}
+
+# 内部账号发起拉历史流
+# $1 - gbid
+# $2 - chid 传输模式tcp/udp
+# $3 - chid
+# $4 - start
+# $5 - end
+invite-internal() {
+	if [ $# != 5 ];then
+		echo "usage: invite <gbid> <tcp/udp> <chid> <start> <end>"
+		echo "       默认调度到vdn-gdgzh-dls-1-11"
+		return 0
+	fi
+	invite-history 1381539624 2xenzw72izhqy $1 $2 $3 $4 $5
+}
+
 # 内部账号发起拉流
 # $1 - gbid
 # $2 - chid 传输模式tcp/udp
