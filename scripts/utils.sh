@@ -193,6 +193,19 @@ talk() {
 	deviceReq $uid $nsid $gbid "talk" "$data"
 }
 
+# 自己的portal账户请求语音对讲
+# $1 - gbid
+# $2 - 传输模式，tcp/udp
+# $3 - 对讲协议版本，2014/2016
+talk-internal() {
+	if [ $# != 5 ];then
+		echo "usage: talk <gbid> <tcp/udp> <2014/2016>"
+		echo "       默认调度到vdn-gdgzh-dls-1-11"
+		return 0
+	fi
+	talk 1381539624 2xenzw72izhqy $1 $2 $3
+}
+
 # 发起拉流
 # $1 - uid
 # $2 - nsid
