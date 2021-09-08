@@ -173,6 +173,7 @@ record-playback() {
 talk() {
 	if [ $# != 5 ];then
 		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016>"
+		echo "\t默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
 	uid=$1
