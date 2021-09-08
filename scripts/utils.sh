@@ -211,33 +211,37 @@ talk-internal() {
 # $2 - nsid
 # $3 - gbid
 # $4 - 传输模式tcp/udp
+# $5 - chid, 不需要传是传""
 invite() {
-	if [ $# != 4 ];then
-		echo "usage: invite <uid> <nsid> <gbid> <tcp/udp>"
+	if [ $# != 5 ];then
+		echo "usage: invite <uid> <nsid> <gbid> <tcp/udp> <chid>"
 		return 0
 	fi
 	uid=$1
 	nsid=$2
 	gbid=$3
 	protocol=$4
+	chid=$5
 
 	data="{
 		\"rtpAccessIp\":\"14.29.108.156\",
-		\"rtpProto\":\"$protocol\"
+		\"rtpProto\":\"$protocol\",
+		\"channels\":[\"$chid\"]
 	}"
 	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
 # 内部账号发起拉流
 # $1 - gbid
-# $2 传输模式tcp/udp
+# $2 - chid 传输模式tcp/udp
+# $3 - chid
 invite-internal() {
-	if [ $# != 2 ];then
-		echo "usage: invite <gbid> <tcp/udp>"
+	if [ $# != 3 ];then
+		echo "usage: invite <gbid> <tcp/udp> <chid>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
-	invite 1381539624 2xenzw72izhqy $1 $2
+	invite 1381539624 2xenzw72izhqy $1 $2 $3
 }
 
 # 停止拉流
