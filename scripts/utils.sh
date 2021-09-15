@@ -329,3 +329,129 @@ query-sess() {
 	sipReq sip_query_session $1 ""
 }
 
+# 发布版本
+# $1 - service name
+publish() {
+	if [ $# != 1 ];then
+		echo "usage: publish <service>"
+		echo "       qvs-server/qvs-sip/qvs-rtp/pili-flowd"
+		return 0
+	fi
+	floy push $1
+	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _
+	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy run $1 restart.sh
+}
+
+# cpfrom 从节点拷贝到跳板机
+# $1 - ndoeId
+# $2 - file
+cpf() {
+	if [ $# != 2 ];then
+        	echo "args <nodeId> <file>"
+        exit 0
+	fi
+
+	qscp qboxserver@$1:/home/qboxserver/liyq/$2 .
+}
+
+# cpto 从跳板机拷贝到节点
+# $1 - ndoeId
+# $2 - file
+cpt() {
+	if [ $# != 2 ];then
+		echo "args <file> <node>"
+		exit 0
+	fi
+
+	qscp -r $1 qboxserver@$2:/home/qboxserver/liyq/
+}
+
+export gray='vdn-gdgzh-dls-1-11'
+
+# 发布灰度环境
+# $1 - service name
+# $2 - node
+pubish-gray() {
+	if [ $# != 2 ];then
+		echo "args <service> <node>"
+		exit 0
+	fi
+	floy push $1 $2
+	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _ $2 
+	floy run $1 restart.sh $2
+}
+
+publish-gray-srv() {
+	publish-gray qvs-server jjh1449
+}
+
+publish-gray-sip() {
+	publish-gray qvs-sip jjh1449
+}
+
+pubish-gray-rtp() {
+	pubish-gray qvs-rtp $gray
+}
+
+# $1 - node
+build-srs-cpto() {
+	if [ $# != 1 ];then
+		echo "args <node>"
+		exit 0
+	fi
+	cd ~/linking/srs/trunk
+	git pull
+	make -j8
+	qscp -r objs/srs qboxserver@$1:/home/qboxserver/liyq/
+}
+
+build-srs-cpto-cs6() {
+	build-srs-cpto cs6
+	cs 6
+}
+
+build-srs-cpto-gray() {
+	build-srs-cpto $gray
+	qssh $gray
+}
+
+cp-flowd-to-gray() {
+	cpt pili-flowd $gray
+}
+
+cp-srv-to-gray() {
+	cpt qvs-server jjh1449
+}
+
+cp-srv-to-cs6() {
+	cpt qvs-server cs6
+}
+
+cp-srs-to-jjh1449() {
+	cpt srs jjh1449
+}
+
+cp-srs-to-gray() {
+	cpt srs $gray
+}
+ 
+cp-srs-to-cs6() {
+	cpt srs cs6
+}
+
+# 从一个节点拷贝到另一个节点
+# $1 - file
+# $2 - src node id
+# $3 - dst node id
+p2p() {
+	if [ $# != 3 ];then
+		echo "args <file> <src node id> <dst node id>"
+		exit 0
+	fi
+
+	file=$1
+	srcNode=$2
+	dstNode=$3
+	qscp qboxserver@$srcNode:/home/qboxserver/liyq/$file .
+	qscp $file qboxserver@$dstNode:/home/qboxserver/liyq/
+}
