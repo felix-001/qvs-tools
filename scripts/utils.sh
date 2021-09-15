@@ -348,7 +348,7 @@ publish() {
 cpf() {
 	if [ $# != 2 ];then
         	echo "args <nodeId> <file>"
-        exit 0
+		return 0
 	fi
 
 	qscp qboxserver@$1:/home/qboxserver/liyq/$2 .
@@ -360,7 +360,7 @@ cpf() {
 cpt() {
 	if [ $# != 2 ];then
 		echo "args <file> <node>"
-		exit 0
+		return 0
 	fi
 
 	qscp -r $1 qboxserver@$2:/home/qboxserver/liyq/
@@ -374,7 +374,7 @@ export gray='vdn-gdgzh-dls-1-11'
 pubish-gray() {
 	if [ $# != 2 ];then
 		echo "args <service> <node>"
-		exit 0
+		return 0
 	fi
 	floy push $1 $2
 	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _ $2 
@@ -397,7 +397,7 @@ pubish-gray-rtp() {
 build-srs-cpto() {
 	if [ $# != 1 ];then
 		echo "args <node>"
-		exit 0
+		return 0
 	fi
 	cd ~/linking/srs/trunk
 	git pull
@@ -446,7 +446,7 @@ cp-srs-to-cs6() {
 p2p() {
 	if [ $# != 3 ];then
 		echo "args <file> <src node id> <dst node id>"
-		exit 0
+		return 0
 	fi
 
 	file=$1
