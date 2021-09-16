@@ -415,6 +415,11 @@ build-srs-cpto-gray() {
 	qssh $gray
 }
 
+build-srs-cpto-jjh1449() {
+	build-srs-cpto jjh1449
+	qssh jjh1449
+}
+
 cp-flowd-to-gray() {
 	cpt pili-flowd $gray
 }
