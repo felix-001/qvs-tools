@@ -460,3 +460,5 @@ p2p() {
 	qscp qboxserver@$srcNode:/home/qboxserver/liyq/$file .
 	qscp $file qboxserver@$dstNode:/home/qboxserver/liyq/
 }
+
+export talk-node='vdn-tz-tel-1-1'
