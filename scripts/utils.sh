@@ -391,7 +391,7 @@ pubish-gray() {
 		return 0
 	fi
 	floy push $1 $2
-	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _ $2 
+	floy version $1 $2 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _ $2 
 	floy run $1 restart.sh $2
 }
 
