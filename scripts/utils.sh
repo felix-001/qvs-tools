@@ -342,6 +342,20 @@ publish() {
 	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy run $1 restart.sh
 }
 
+# 发布版本指定node
+# $1 - service name
+# $2 - node
+publish-node() {
+	if [ $# != 2 ];then
+		echo "usage: publish <service> <node>"
+		echo "       qvs-server/qvs-sip/qvs-rtp/pili-flowd"
+		return 0
+	fi
+	floy push $1 $2
+	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy switch -f $1 _ $2
+	floy version $1 | grep $1: | awk -F ',' '{print $1}' | xargs floy run $1 restart.sh $2
+}
+
 # cpfrom 从节点拷贝到跳板机
 # $1 - ndoeId
 # $2 - file
