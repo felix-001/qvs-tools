@@ -476,3 +476,7 @@ p2p() {
 }
 
 export talknode='vdn-tz-tel-1-1'
+
+srvconf() {
+	vi ~/qvs-server/_package/qvs-server.conf
+}
