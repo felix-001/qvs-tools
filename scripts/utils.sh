@@ -195,9 +195,10 @@ substr() {
 # $4 - 传输模式tcp/udp
 # $5 - 对讲协议版本2014/2016
 # $6 - isV2, 是否使用v2版接口true/false
+# $7 - protocol http/https
 talk() {
-	if [ $# != 6 ];then
-		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016> <isV2:true/false>"
+	if [ $# != 7 ];then
+		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016> <isV2:true/false> <protocol:http/https>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
@@ -215,7 +216,15 @@ talk() {
 	echo $resp
 	if [[ "x$resp" != "x" ]];then
 		http=`echo $resp | jq -r '.audioSendAddrForHttp'`
-		echo $http
+		https=`echo $resp | jq -r '.audioSendAddrForHttps'`
+		url=$http
+		if [[ "$7" == "https" ]];then
+			url=$https
+		fi
+		curl --location --request POST $url \
+			--header "authorization: QiniuStub uid=$1" \
+			--header "Content-Type: application/json" \
+			-d "\"base64_pcm\": \"$data\""
 	fi
 }
 
