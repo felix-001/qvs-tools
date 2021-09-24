@@ -197,7 +197,7 @@ talk() {
 # $3 - 对讲协议版本，2014/2016
 # $4 - isV2, 是否使用v2版接口true/false
 talk-internal() {
-	if [ $# != 5 ];then
+	if [ $# != 4 ];then
 		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016> <isV2:true/false>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
