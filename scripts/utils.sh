@@ -187,7 +187,7 @@ talk() {
 		\"isV2\":\"$6\",
 		\"base64Audio\":\"$pcmaB64\"
 	}"
-	resp=`deviceReq $1 $2 $3 $cmd "$data"`
+	resp=`deviceReq $1 $2 $3 "talk" "$data"`
 	echo $resp
 }
 
