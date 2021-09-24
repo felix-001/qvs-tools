@@ -184,7 +184,7 @@ talk() {
 		\"transProtocol\":\"$4\",
 		\"tcpModel\":\"sendrecv\",
 		\"version\":\"$5\",
-		\"isV2\":\"$6\",
+		\"isV2\":$6,
 		\"base64Audio\":\"$pcmaB64\"
 	}"
 	resp=`deviceReq $1 $2 $3 "talk" "$data"`
