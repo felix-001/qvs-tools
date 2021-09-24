@@ -221,7 +221,7 @@ talk() {
 		if [[ "$7" == "https" ]];then
 			url=$https
 		fi
-		curl --location --request POST $url \
+		curl -v --location --request POST $url \
 			--header "authorization: QiniuStub uid=$1" \
 			--header "Content-Type: application/json" \
 			-d "\"base64_pcm\": \"$data\""
