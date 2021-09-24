@@ -182,9 +182,7 @@ strindex() {
 substr() {
 	start=`strindex "$1" "$2"`
 	start=$((start+${#2}))
-	echo $start
 	end=`strindex "$1" "$3"`
-	echo $end
 	length=$((end-start))
 	res=${1:$start:$length}
 	echo $res
