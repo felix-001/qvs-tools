@@ -170,27 +170,25 @@ record-playback() {
 # $3 - gbid
 # $4 - 传输模式tcp/udp
 # $5 - 对讲协议版本2014/2016
+# $6 - isV2, 是否使用v2版接口true/false
 talk() {
-	if [ $# != 5 ];then
-		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016>"
+	if [ $# != 6 ];then
+		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016> <isV2:true/false>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
-	uid=$1
-	nsid=$2
-	gbid=$3
-	protocol=$4
-	version=$5
 
 	pcmaB64=`cat ~/liyq/etc/pcma.b64`
 	data="{
 		\"rtpAccessIp\":\"14.29.108.156\",
-		\"transProtocol\":\"$protocol\",
+		\"transProtocol\":\"$4\",
 		\"tcpModel\":\"sendrecv\",
-		\"version\":\"$version\",
+		\"version\":\"$5\",
+		\"isV2\":\"$6\",
 		\"base64Audio\":\"$pcmaB64\"
 	}"
-	deviceReq $uid $nsid $gbid "talk" "$data"
+	resp=`deviceReq $1 $2 $3 $cmd "$data"`
+	echo $resp
 }
 
 # 自己的portal账户请求语音对讲
