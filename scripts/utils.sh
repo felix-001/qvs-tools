@@ -214,7 +214,8 @@ talk() {
 	resp=`deviceReq $1 $2 $3 "talk" "$data"`
 	echo $resp
 	if [[ "x$resp" != "x" ]];then
-		echo "hello"
+		http=`echo $resp | jq -r '.audioSendAddrForHttp'`
+		echo $http
 	fi
 }
 
