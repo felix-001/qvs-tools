@@ -195,13 +195,14 @@ talk() {
 # $1 - gbid
 # $2 - 传输模式，tcp/udp
 # $3 - 对讲协议版本，2014/2016
+# $4 - isV2, 是否使用v2版接口true/false
 talk-internal() {
-	if [ $# != 3 ];then
-		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016>"
+	if [ $# != 5 ];then
+		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016> <isV2:true/false>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
-	talk 1381539624 2xenzw72izhqy $1 $2 $3
+	talk 1381539624 2xenzw72izhqy $1 $2 $3 $4
 }
 
 # 发起拉流
