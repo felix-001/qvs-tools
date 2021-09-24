@@ -205,7 +205,7 @@ talk() {
 
 	pcmaB64=`cat ~/liyq/etc/pcma.b64`
 	data="{
-		\"rtpAccessIp\":\"14.29.108.156\",
+		\"rtpAccessIp\":\"115.238.200.14\",
 		\"transProtocol\":\"$4\",
 		\"tcpModel\":\"sendrecv\",
 		\"version\":\"$5\",
