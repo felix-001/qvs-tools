@@ -164,6 +164,32 @@ record-playback() {
 	streamGetReq $1 $2 $3 recordhistories "start=$4&end=$5&line=30&marker="
 }
 
+# 获取某一个子串在字符串中的位置
+# $1 - 原始字符串
+# $2 - 子串
+strindex() {
+	x="${1%%$2*}"
+	[[ "$x" = "$1" ]] && echo -1 || echo "${#x}"
+}
+
+# 指定首位限定字符串，获取子串
+# $1 - 原始字符串
+# $2 - 开始限定字符串
+# $3 - 结尾限定字符串
+# ex:
+#     $1 = 111hello333 $2 = 111 $3 = 333
+#     输出: hello
+substr() {
+	start=`strindex "$1" "$2"`
+	start=$((start+${#2}))
+	echo $start
+	end=`strindex "$1" "$3"`
+	echo $end
+	length=$((end-start))
+	res=${1:$start:$length}
+	echo $res
+}
+
 # 发起语音对讲
 # $1 - uid
 # $2 - nsid
@@ -189,6 +215,8 @@ talk() {
 	}"
 	resp=`deviceReq $1 $2 $3 "talk" "$data"`
 	echo $resp
+	if [[ "x$resp" != "x" ]];then
+	fi
 }
 
 # 自己的portal账户请求语音对讲
