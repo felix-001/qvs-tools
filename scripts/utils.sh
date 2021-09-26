@@ -224,7 +224,7 @@ talk() {
 		curl -v --location --request POST $url \
 			--header "authorization: QiniuStub uid=$1" \
 			--header "Content-Type: application/json" \
-			-d "\"base64_pcm\": \"$data\""
+			-d "\"base64_pcm\": \"$pcmaB64\""
 	fi
 }
 
