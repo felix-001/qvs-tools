@@ -440,7 +440,7 @@ publish-gray-sip() {
 	publish-gray qvs-sip jjh1449
 }
 
-pubish-gray-rtp() {
+publish-gray-rtp() {
 	pubish-gray qvs-rtp $gray
 }
 
