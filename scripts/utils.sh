@@ -422,7 +422,7 @@ export gray='vdn-gdgzh-dls-1-11'
 # 发布灰度环境
 # $1 - service name
 # $2 - node
-pubish-gray() {
+publish-gray() {
 	if [ $# != 2 ];then
 		echo "args <service> <node>"
 		return 0
