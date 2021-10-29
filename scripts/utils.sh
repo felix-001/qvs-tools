@@ -441,7 +441,7 @@ publish-gray-sip() {
 }
 
 publish-gray-rtp() {
-	pubish-gray qvs-rtp $gray
+	publish-gray qvs-rtp $gray
 }
 
 # $1 - node
