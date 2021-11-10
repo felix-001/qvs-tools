@@ -277,7 +277,7 @@ invite() {
 # $6 - endTime
 # $7 - 传输模式tcp/udp
 download() {
-	if [ $# != 6 ];then
+	if [ $# != 7 ];then
 		echo "usage: download <uid> <nsid> <gbid> <chid> <startTime> <endTime> <tcp/udp>"
 		return 0
 	fi	
