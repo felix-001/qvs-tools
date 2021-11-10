@@ -278,7 +278,7 @@ invite() {
 # $7 - 传输模式tcp/udp
 download() {
 	if [ $# != 6 ];then
-		echo "usage: invite <uid> <nsid> <gbid> <chid> <startTime> <endTime> <tcp/udp>"
+		echo "usage: download <uid> <nsid> <gbid> <chid> <startTime> <endTime> <tcp/udp>"
 		return 0
 	fi	
     	data="{
@@ -299,7 +299,7 @@ download() {
 # $5 - 传输模式tcp/udp
 download-inernal() {
 	if [ $# != 5 ];then
-		echo "usage: invite <gbid> <chid> <startTime> <endTime> <tcp/udp>"
+		echo "usage: download-internal <gbid> <chid> <startTime> <endTime> <tcp/udp>"
 		return 0
 	fi
 	download 1381539624 2xenzw72izhqy $1 $2 $3 $4 $5
