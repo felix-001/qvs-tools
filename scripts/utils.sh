@@ -268,6 +268,43 @@ invite() {
 	deviceReq $uid $nsid $gbid "start" "$data"
 }
 
+# 请求下载历史录像文件
+# $1 - uid
+# $2 - nsid
+# $3 - gbid
+# $4 - chid
+# $5 - startTime
+# $6 - endTime
+# $7 - 传输模式tcp/udp
+download() {
+	if [ $# != 6 ];then
+		echo "usage: invite <uid> <nsid> <gbid> <chid> <startTime> <endTime> <tcp/udp>"
+		return 0
+	fi	
+    	data="{
+		\"channelId\":\"$4\",
+    		\"start\":$5,
+    		\"end\":$6,
+    		\"rtpProto\":\"$7\",
+		\"rtpAccessIp\":\"14.29.108.156\"
+	}"
+	deviceReq $1 $2 $3 "download" "$data"
+}
+
+# 自己的portal账户请求下载历史录像文件
+# $1 - gbid
+# $2 - chid
+# $3 - startTime
+# $4 - endTime
+# $5 - 传输模式tcp/udp
+download-inernal() {
+	if [ $# != 5 ];then
+		echo "usage: invite <gbid> <chid> <startTime> <endTime> <tcp/udp>"
+		return 0
+	fi
+	download 1381539624 2xenzw72izhqy $1 $2 $3 $4 $5
+}
+
 # 发起拉历史流
 # $1 - uid
 # $2 - nsid
