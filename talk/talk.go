@@ -30,7 +30,9 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
+	log.Println("data:", data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
+	log.Println("token:", token)
 	return token
 }
 
@@ -61,16 +63,19 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	audio, err := ioutil.ReadFile(*audioFile)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	jsonBody := "{\"base64Audio\":\"" + string(audio[:len(audio)-1]) + "\"}"
-	host := "qvs-test.qiniuapi.com"
+	/*
+		audio, err := ioutil.ReadFile(*audioFile)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		jsonBody := "{\"base64Audio\":\"" + string(audio[:len(audio)-1]) + "\"}"
+	*/
+	body := "{\"isV2\":true}"
+	host := "qvs.qiniuapi.com"
 	headers := map[string]string{"Content-Type": "application/json"}
 	path := fmt.Sprintf("/v1/namespaces/%s/devices/%s/talk", *nsid, *gbid)
-	resp, err := httpPost(*ak, *sk, host, path, []byte(jsonBody), headers)
+	resp, err := httpPost(*ak, *sk, host, path, []byte(body), headers)
 	if err != nil {
 		log.Println(err)
 		return
