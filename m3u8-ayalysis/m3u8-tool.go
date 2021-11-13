@@ -110,7 +110,16 @@ func (self *M3u8Parser) check(line string) {
 			"lastEnd:", self.lastEnd, "start:", self.start)
 	}
 	if self.lastEnd != 0 {
-		self.totalGap += (self.start - self.lastEnd)
+		gap := self.start - self.lastEnd
+		self.totalGap += gap
+		if self.maxGap < gap {
+			self.maxGap = gap
+		}
+		if self.minGap == 0 {
+			self.minGap = gap
+		} else if self.minGap > gap {
+			self.minGap = gap
+		}
 	}
 	self.lastEnd = self.end
 	self.start = 0
@@ -159,6 +168,8 @@ func (self *M3u8Parser) dump() {
 	fmt.Println("real total duration:", self.realTotalDuration)
 	fmt.Println("gap duraion:", self.realTotalDuration-self.totalDuration)
 	fmt.Println("total gap:", self.totalGap)
+	fmt.Println("min gap:", self.minGap)
+	fmt.Println("max gap:", self.maxGap)
 }
 
 func main() {
