@@ -43,12 +43,14 @@ type M3u8Parser struct {
 	tsSavePath        string
 	needDownload      bool
 	parseJson         bool
+	tsDurations       map[string]float64
 }
 
 type M []map[string]interface{}
 
 func New(tsSavePath string, parseJson bool) *M3u8Parser {
 	return &M3u8Parser{
+		tsDurations:   map[string]float64{},
 		parseJson:     parseJson,
 		tsSavePath:    tsSavePath,
 		lastEnd:       0,
@@ -143,6 +145,20 @@ func (self *M3u8Parser) check(line string) {
 	self.duration = 0
 }
 
+func (self *M3u8Parser) saveTSDurations() error {
+	csv := ""
+	for k, v := range self.tsDurations {
+		csv += fmt.Sprintf("%s, %f\n", k, v)
+	}
+	file := fmt.Sprintf("%sts-durations.csv", self.tsSavePath)
+	err := ioutil.WriteFile(file, []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func (self *M3u8Parser) parseFrameInfo(start, end int64) error {
 	tsfile := self.tsFile(start, end)
 	jsonfile := self.jsonFile(start, end)
@@ -161,6 +177,7 @@ func (self *M3u8Parser) parseFrameInfo(start, end int64) error {
 	lastFramePts := frames[len(frames)-1]["pkt_pts"].(float64)
 	tsDuration := lastFramePts - firstFramePts
 	self.totalDurationF += tsDuration
+	self.tsDurations[tsfile] = tsDuration
 	log.Println(tsfile, "parse done")
 	return nil
 }
@@ -327,6 +344,7 @@ func main() {
 		}
 		parser.analysis(string(b))
 		parser.dump()
+		parser.saveTSDurations()
 	}
 	if *url != "" {
 		parser.downloadAllTS(*url)
