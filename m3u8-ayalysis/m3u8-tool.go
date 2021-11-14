@@ -2,13 +2,18 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -16,25 +21,36 @@ const (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound   = errors.New("not found")
+	ErrStatusCode = errors.New("http status code err")
 )
 
 type M3u8Parser struct {
+	lineNum           int
 	lastEnd           int64
 	start             int64
 	end               int64
 	duration          int64
 	totalDuration     int64
+	totalDurationF    float64
 	realTotalDuration int64
 	firstTSStart      int64
 	totalGap          int64
 	maxGap            int64
 	minGap            int64
-	lineNum           int
+	host              string
+	scheme            string
+	tsSavePath        string
+	needDownload      bool
+	parseJson         bool
 }
 
-func New() *M3u8Parser {
+type M []map[string]interface{}
+
+func New(tsSavePath string, parseJson bool) *M3u8Parser {
 	return &M3u8Parser{
+		parseJson:     parseJson,
+		tsSavePath:    tsSavePath,
 		lastEnd:       0,
 		lineNum:       1,
 		totalDuration: 0,
@@ -127,6 +143,93 @@ func (self *M3u8Parser) check(line string) {
 	self.duration = 0
 }
 
+func (self *M3u8Parser) parseFrameInfo(start, end int64) error {
+	tsfile := self.tsFile(start, end)
+	jsonfile := self.jsonFile(start, end)
+	b, err := ioutil.ReadFile(jsonfile)
+	if err != nil {
+		log.Println("read fail", jsonfile, err)
+		return err
+	}
+	m := make(map[string]M)
+	if err := json.Unmarshal(b, &m); err != nil {
+		log.Println(err)
+		return err
+	}
+	frames := m["frames"]
+	firstFramePts := frames[0]["pkt_pts"].(float64)
+	lastFramePts := frames[len(frames)-1]["pkt_pts"].(float64)
+	tsDuration := lastFramePts - firstFramePts
+	self.totalDurationF += tsDuration
+	log.Println(tsfile, "parse done")
+	return nil
+}
+
+func (self *M3u8Parser) tsFile(start, end int64) string {
+	return fmt.Sprintf("%s%d-%d.ts", self.tsSavePath, start, end)
+}
+
+func (self *M3u8Parser) jsonFile(start, end int64) string {
+	return fmt.Sprintf("%s%d-%d.json", self.tsSavePath, start, end)
+}
+
+func (self *M3u8Parser) dumpTSToJson(start, end int64) error {
+	tsfile := self.tsFile(start, end)
+	jsonFile := self.jsonFile(start, end)
+	cmdstr := fmt.Sprintf("ffprobe -show_frames -of json %s > %s",
+		tsfile, jsonFile)
+	cmd := exec.Command("bash", "-c", cmdstr)
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println("cmd:", cmdstr, "err:", err)
+		return err
+	}
+	return nil
+}
+
+func (self *M3u8Parser) downloadTS(path string, start, end int64) error {
+	log.Println("start to download", path)
+	addr := self.scheme + "://" + self.host + path
+	ts, err := httpGet(addr)
+	if err != nil {
+		return err
+	}
+	log.Println(path, "download done")
+	file := fmt.Sprintf("%s%d-%d.ts", self.tsSavePath, start, end)
+	err = ioutil.WriteFile(file, []byte(ts), 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+func (self *M3u8Parser) handleNewTS(line string) error {
+	var err error
+	self.start, self.end, err = self.getTimestamp(line)
+	if err != nil {
+		return err
+	}
+	if self.firstTSStart == 0 {
+		self.firstTSStart = self.start
+	}
+	self.realTotalDuration = self.end - self.firstTSStart
+	if self.needDownload {
+		if err := self.downloadTS(line, self.start, self.end); err != nil {
+			return err
+		}
+		if err := self.dumpTSToJson(self.start, self.end); err != nil {
+			return err
+		}
+	}
+	if self.parseJson {
+		if err := self.parseFrameInfo(self.start, self.end); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (self *M3u8Parser) parseLine(line string) error {
 	if strings.Contains(line, extinf) {
 		var err error
@@ -137,15 +240,9 @@ func (self *M3u8Parser) parseLine(line string) error {
 		self.totalDuration += self.duration
 	}
 	if strings.Contains(line, "/v1/record/ts/") {
-		var err error
-		self.start, self.end, err = self.getTimestamp(line)
-		if err != nil {
+		if err := self.handleNewTS(line); err != nil {
 			return err
 		}
-		if self.firstTSStart == 0 {
-			self.firstTSStart = self.start
-		}
-		self.realTotalDuration = self.end - self.firstTSStart
 	}
 	self.check(line)
 
@@ -163,8 +260,49 @@ func (self *M3u8Parser) analysis(m3u8 string) error {
 	return nil
 }
 
+func httpGet(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	if resp.StatusCode != 200 {
+		log.Println("http read body err", resp.StatusCode)
+		return "", ErrStatusCode
+	}
+	return string(body), nil
+}
+
+func (self *M3u8Parser) downloadAllTS(addr string) error {
+	self.needDownload = true
+	u, err := url.Parse(addr)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	self.host = u.Host
+	self.scheme = u.Scheme
+	m3u8, err := httpGet(addr)
+	if err != nil {
+		return err
+	}
+	file := fmt.Sprintf("%splayback.m3u8", self.tsSavePath)
+	if err := ioutil.WriteFile(file, []byte(m3u8), 0644); err != nil {
+		log.Println(err)
+		return err
+	}
+	return self.analysis(m3u8)
+}
+
 func (self *M3u8Parser) dump() {
 	fmt.Println("total duration:", self.totalDuration)
+	fmt.Println("total duration float:", self.totalDurationF)
 	fmt.Println("real total duration:", self.realTotalDuration)
 	fmt.Println("gap duraion:", self.realTotalDuration-self.totalDuration)
 	fmt.Println("total gap:", self.totalGap)
@@ -174,18 +312,28 @@ func (self *M3u8Parser) dump() {
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	file := flag.String("file", "", "input file")
+	file := flag.String("file", "", "input .m3u8 file")
+	url := flag.String("url", "", "hls playback url")
+	// json文件已经存在
+	parseJson := flag.Bool("parse-json", false, "hls playback url")
+	tsSavePath := flag.String("ts-save-path", "./", "ts save path")
 	flag.Parse()
-	if *file == "" {
-		log.Println("no input file")
-		return
+	parser := New(*tsSavePath, *parseJson)
+	if *file != "" {
+		b, err := ioutil.ReadFile(*file)
+		if err != nil {
+			log.Println("open file", *file, "err", err)
+			return
+		}
+		parser.analysis(string(b))
+		parser.dump()
 	}
-	b, err := ioutil.ReadFile(*file)
-	if err != nil {
-		log.Println("open file", *file, "err", err)
-		return
+	if *url != "" {
+		parser.downloadAllTS(*url)
+		log.Println("all ts download done")
+		parser.dump()
 	}
-	parser := New()
-	parser.analysis(string(b))
-	parser.dump()
+	for {
+		time.Sleep(3 * time.Second)
+	}
 }
