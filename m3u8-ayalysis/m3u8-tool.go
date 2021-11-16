@@ -43,14 +43,14 @@ type M3u8Parser struct {
 	tsSavePath        string
 	needDownload      bool
 	parseJson         bool
-	tsDurations       map[string]float64
+	tsDurations       map[string]DurationInfo
 }
 
 type M []map[string]interface{}
 
 func New(tsSavePath string, parseJson bool) *M3u8Parser {
 	return &M3u8Parser{
-		tsDurations:   map[string]float64{},
+		tsDurations:   map[string]DurationInfo{},
 		parseJson:     parseJson,
 		tsSavePath:    tsSavePath,
 		lastEnd:       0,
@@ -145,10 +145,10 @@ func (self *M3u8Parser) check(line string) {
 	self.duration = 0
 }
 
-func (self *M3u8Parser) saveTSDurations() error {
-	csv := ""
+func (self *M3u8Parser) durationsToCsv() error {
+	csv := "file, duration from ts, duration from file name, duration from extinf\n"
 	for k, v := range self.tsDurations {
-		csv += fmt.Sprintf("%s, %f\n", k, v)
+		csv += fmt.Sprintf("%s, %f, %d, %d\n", k, v.durationFromTs/90, v.durationFromFileName, v.durationFromExtinf)
 	}
 	file := fmt.Sprintf("%sts-durations.csv", self.tsSavePath)
 	err := ioutil.WriteFile(file, []byte(csv), 0644)
@@ -159,27 +159,41 @@ func (self *M3u8Parser) saveTSDurations() error {
 	return nil
 }
 
-func (self *M3u8Parser) parseFrameInfo(start, end int64) error {
+type DurationInfo struct {
+	durationFromTs       float64
+	durationFromFileName int64
+	durationFromExtinf   int64
+}
+
+func (self *M3u8Parser) saveDurations(tsDuration float64) {
+	durationInfo := DurationInfo{
+		durationFromTs:       tsDuration,
+		durationFromFileName: self.end - self.start,
+		durationFromExtinf:   self.duration,
+	}
+	self.tsDurations[self.tsFile(self.start, self.end)] = durationInfo
+}
+
+func (self *M3u8Parser) parseFrameInfo(start, end int64) (float64, error) {
 	tsfile := self.tsFile(start, end)
 	jsonfile := self.jsonFile(start, end)
 	b, err := ioutil.ReadFile(jsonfile)
 	if err != nil {
 		log.Println("read fail", jsonfile, err)
-		return err
+		return 0, err
 	}
 	m := make(map[string]M)
 	if err := json.Unmarshal(b, &m); err != nil {
 		log.Println(err)
-		return err
+		return 0, err
 	}
 	frames := m["frames"]
 	firstFramePts := frames[0]["pkt_pts"].(float64)
 	lastFramePts := frames[len(frames)-1]["pkt_pts"].(float64)
 	tsDuration := lastFramePts - firstFramePts
 	self.totalDurationF += tsDuration
-	self.tsDurations[tsfile] = tsDuration
 	log.Println(tsfile, "parse done")
-	return nil
+	return tsDuration, nil
 }
 
 func (self *M3u8Parser) tsFile(start, end int64) string {
@@ -240,9 +254,11 @@ func (self *M3u8Parser) handleNewTS(line string) error {
 		}
 	}
 	if self.parseJson {
-		if err := self.parseFrameInfo(self.start, self.end); err != nil {
+		tsDuration, err := self.parseFrameInfo(self.start, self.end)
+		if err != nil {
 			return err
 		}
+		self.saveDurations(tsDuration)
 	}
 	return nil
 }
@@ -267,6 +283,7 @@ func (self *M3u8Parser) parseLine(line string) error {
 }
 
 func (self *M3u8Parser) analysis(m3u8 string) error {
+	self.parseJson = true
 	scanner := bufio.NewScanner(strings.NewReader(m3u8))
 	for scanner.Scan() {
 		if err := self.parseLine(scanner.Text()); err != nil {
@@ -319,9 +336,9 @@ func (self *M3u8Parser) downloadAllTS(addr string) error {
 }
 
 func (self *M3u8Parser) dump() {
-	fmt.Println("total duration:", self.totalDuration)
-	fmt.Println("total duration float:", self.totalDurationF)
-	fmt.Println("real total duration:", self.realTotalDuration)
+	fmt.Println("total duration from extinf:", self.totalDuration)
+	fmt.Println("total duration from ts parse:", self.totalDurationF)
+	fmt.Println("total duration from file name:", self.realTotalDuration)
 	fmt.Println("gap duraion:", self.realTotalDuration-self.totalDuration)
 	fmt.Println("total gap:", self.totalGap)
 	fmt.Println("min gap:", self.minGap)
@@ -345,7 +362,7 @@ func main() {
 		}
 		parser.analysis(string(b))
 		parser.dump()
-		parser.saveTSDurations()
+		parser.durationsToCsv()
 	}
 	if *url != "" {
 		parser.downloadAllTS(*url)
