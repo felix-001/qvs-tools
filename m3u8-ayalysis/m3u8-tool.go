@@ -298,6 +298,7 @@ func httpGet(url string) (string, error) {
 
 func (self *M3u8Parser) downloadAllTS(addr string) error {
 	self.needDownload = true
+	self.parseJson = true
 	u, err := url.Parse(addr)
 	if err != nil {
 		log.Println(err)
