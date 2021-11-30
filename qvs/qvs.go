@@ -17,6 +17,7 @@ var ak, sk *string
 var nsid, gbid *string
 var audioFile *string
 var addr *string
+var gbids *string
 
 func hmacSha1(key, data string) string {
 	mac := hmac.New(sha1.New, []byte(key))
@@ -44,22 +45,19 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	return token
 }
 
-func qvsHttpReq(method, addr, body string, headers map[string]string) (string, error) {
-	u, err := url.Parse(addr)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-	token := signToken(*ak, *sk, method, u.Path, u.Host, body, headers)
+func httpReq(method, addr, body string, headers map[string]string) (string, error) {
 	client := &http.Client{}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
 		req.Header.Add(key, value)
 	}
-	req.Header.Add("Authorization", token)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
+		return "", err
+	}
+	if resp.StatusCode != 200 {
+		log.Println("not 200")
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -71,8 +69,24 @@ func qvsHttpReq(method, addr, body string, headers map[string]string) (string, e
 	return string(resp_body), err
 }
 
+func qvsHttpReq(method, addr, body string, headers map[string]string) (string, error) {
+	u, err := url.Parse(addr)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	token := signToken(*ak, *sk, method, u.Path, u.Host, body, headers)
+	headers["Authorization"] = token
+	return httpReq(method, addr, body, headers)
+}
+
 func qvsHttpGet(addr string) (string, error) {
 	return qvsHttpReq("GET", addr, "", nil)
+}
+
+func httpPost(addr, body string) (string, error) {
+	headers := map[string]string{"Content-Type": "application/json"}
+	return httpReq("POST", addr, body, headers)
 }
 
 func qvsHttpPost(addr, body string) (string, error) {
@@ -102,6 +116,7 @@ func parseConsole() {
 	sk = flag.String("sk", "", "sk")
 	nsid = flag.String("nsid", "", "namespace id")
 	gbid = flag.String("gbid", "", "gbid")
+	gbids = flag.String("gbids", "", "gbids")
 	addr = flag.String("url", "", "pm3u8 url")
 	audioFile = flag.String("audiofile", "", "audio file")
 	flag.Parse()
@@ -126,8 +141,45 @@ func qvsTestPost(path, body string) {
 
 }
 
+const BlkLen = 5 * 1024
+
+func calcBlkLen(len, pos int) int {
+	blkLen := BlkLen
+	left := len - pos
+	if left < BlkLen {
+		blkLen = left
+	}
+	return blkLen
+}
+
+func sendBlk(blk []byte, addr string) error {
+	base64Blk := base64.RawURLEncoding.EncodeToString(blk)
+	body := fmt.Sprintf("{\"append_audio_pcm\":%s}", base64Blk)
+	resp, err := httpPost(addr, body)
+	if err != nil {
+		return err
+	}
+	log.Println(resp)
+	return nil
+}
+
 func broadcast() {
 	qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid))
+	pcm, err := ioutil.ReadFile(*audioFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	pos := 0
+	for pos < len(pcm) {
+		blkLen := calcBlkLen(len(pcm), pos)
+		blk := pcm[pos : pos+blkLen]
+		err := sendBlk(blk)
+		if err != nil {
+			return
+		}
+		pos += BlkLen
+	}
 }
 
 func main() {
