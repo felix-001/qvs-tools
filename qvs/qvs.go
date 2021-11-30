@@ -5,12 +5,15 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 var ak, sk *string
@@ -18,6 +21,10 @@ var nsid, gbid *string
 var audioFile *string
 var addr *string
 var gbids *string
+
+var (
+	errHttpStatusCode = errors.New("http status code err")
+)
 
 func hmacSha1(key, data string) string {
 	mac := hmac.New(sha1.New, []byte(key))
@@ -39,7 +46,8 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
-	log.Println("data:", data)
+	log.Println("data:")
+	fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
 	log.Println("token:", token)
 	return token
@@ -57,8 +65,8 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 		return "", err
 	}
 	if resp.StatusCode != 200 {
-		log.Println("not 200")
-		return "", err
+		log.Println("status code", resp.StatusCode)
+		return "", errHttpStatusCode
 	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
@@ -131,14 +139,9 @@ func qvsTestGet(path string) {
 	log.Println(resp)
 }
 
-func qvsTestPost(path, body string) {
+func qvsTestPost(path, body string) (string, error) {
 	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
-	resp, err := qvsHttpPost(addr, body)
-	if err != nil {
-		return
-	}
-	log.Println(resp)
-
+	return qvsHttpPost(addr, body)
 }
 
 const BlkLen = 5 * 1024
@@ -163,27 +166,64 @@ func sendBlk(blk []byte, addr string) error {
 	return nil
 }
 
+type TalkBody struct {
+	TcpModel string   `json:"tcpModel`
+	Gbids    []string `json:"gbids"`
+}
+
+type TalksResp struct {
+	AudioSendAddrForHttp  string `json:"audioSendAddrForHttp"`
+	AudioSendAddrForHttps string `json:"audioSendAddrForHttps"`
+	Gbid                  string `json:"gbid"`
+}
+
 func broadcast() {
-	qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid))
+	if *gbids == "" || *audioFile == "" || *nsid == "" || *ak == "" || *sk == "" {
+		flag.PrintDefaults()
+		return
+	}
+	res := strings.Split(*gbids, " ")
+	talkbody := TalkBody{TcpModel: "sendrecv", Gbids: []string{}}
+	for _, gbid := range res {
+		talkbody.Gbids = append(talkbody.Gbids, gbid)
+	}
+	jsonbody, err := json.Marshal(talkbody)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	resp, err := qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid), string(jsonbody))
+	if err != nil {
+		return
+	}
+	talkresps := []TalksResp{}
+	err = json.Unmarshal([]byte(resp), &talkresps)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	pcm, err := ioutil.ReadFile(*audioFile)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	pos := 0
-	for pos < len(pcm) {
-		blkLen := calcBlkLen(len(pcm), pos)
-		blk := pcm[pos : pos+blkLen]
-		err := sendBlk(blk)
-		if err != nil {
-			return
+	for _, talkresp := range talkresps {
+		pos := 0
+		for pos < len(pcm) {
+			blkLen := calcBlkLen(len(pcm), pos)
+			blk := pcm[pos : pos+blkLen]
+			err := sendBlk(blk, talkresp.AudioSendAddrForHttp)
+			if err != nil {
+				return
+			}
+			pos += BlkLen
 		}
-		pos += BlkLen
 	}
 }
 
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
-	qvsTestGet(fmt.Sprintf("namespaces/%s/baches", *nsid))
+	broadcast()
 }
