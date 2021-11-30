@@ -144,7 +144,7 @@ func qvsTestPost(path, body string) (string, error) {
 	return qvsHttpPost(addr, body)
 }
 
-const BlkLen = 5 * 1024
+const BlkLen = 10 * 1024
 
 func calcBlkLen(len, pos int) int {
 	blkLen := BlkLen
@@ -156,8 +156,8 @@ func calcBlkLen(len, pos int) int {
 }
 
 func sendBlk(blk []byte, addr string) error {
-	base64Blk := base64.RawURLEncoding.EncodeToString(blk)
-	body := fmt.Sprintf("{\"append_audio_pcm\":%s}", base64Blk)
+	base64Blk := base64.StdEncoding.EncodeToString(blk)
+	body := fmt.Sprintf("{\"base64_pcm\":\"%s\"}", base64Blk)
 	resp, err := httpPost(addr, body)
 	if err != nil {
 		return err
