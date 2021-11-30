@@ -144,7 +144,7 @@ func qvsTestPost(path, body string) (string, error) {
 	return qvsHttpPost(addr, body)
 }
 
-const BlkLen = 10 * 1024
+const BlkLen = 20 * 1024
 
 func calcBlkLen(len, pos int) int {
 	blkLen := BlkLen
