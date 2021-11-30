@@ -44,22 +44,7 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	return token
 }
 
-func httpPost(ak, sk, host, path, body string, headers map[string]string) ([]byte, error) {
-	method := "POST"
-	token := signToken(ak, sk, method, path, host, string(body), headers)
-	client := &http.Client{}
-	req, _ := http.NewRequest(method, "http://"+host+path, bytes.NewBuffer([]byte(body)))
-	for key, value := range headers {
-		req.Header.Add(key, value)
-	}
-	req.Header.Add("Authorization", token)
-	resp, err := client.Do(req)
-	defer resp.Body.Close()
-	resp_body, err := ioutil.ReadAll(resp.Body)
-	return resp_body, err
-}
-
-func httpReq(method, addr, body string, headers map[string]string) (string, error) {
+func qvsHttpReq(method, addr, body string, headers map[string]string) (string, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		log.Println(err)
@@ -86,33 +71,18 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 	return string(resp_body), err
 }
 
-func httpGet(addr string) (string, error) {
-	return httpReq("GET", addr, "", nil)
+func qvsHttpGet(addr string) (string, error) {
+	return qvsHttpReq("GET", addr, "", nil)
 }
 
-func talk() {
-	if *ak == "" || *sk == "" || *nsid == "" || *gbid == "" || *audioFile == "" {
-		flag.PrintDefaults()
-		return
-	}
-	/*
-		audio, err := ioutil.ReadFile(*audioFile)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		jsonBody := "{\"base64Audio\":\"" + string(audio[:len(audio)-1]) + "\"}"
-	*/
-	body := "{\"isV2\":true}"
-	host := "qvs.qiniuapi.com"
+func qvsHttpPost(addr, body string) (string, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
-	path := fmt.Sprintf("/v1/namespaces/%s/devices/%s/talk", *nsid, *gbid)
-	resp, err := httpPost(*ak, *sk, host, path, body, headers)
+	resp, err := qvsHttpReq("POST", addr, body, headers)
 	if err != nil {
 		log.Println(err)
-		return
+		return "", err
 	}
-	log.Println(string(resp))
+	return resp, nil
 }
 
 func pm3u8() {
@@ -120,7 +90,7 @@ func pm3u8() {
 		flag.PrintDefaults()
 		return
 	}
-	resp, err := httpGet(*addr)
+	resp, err := qvsHttpGet(*addr)
 	if err != nil {
 		return
 	}
@@ -139,16 +109,29 @@ func parseConsole() {
 
 func qvsTestGet(path string) {
 	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
-	resp, err := httpGet(addr)
+	resp, err := qvsHttpGet(addr)
 	if err != nil {
 		return
 	}
 	log.Println(resp)
 }
 
+func qvsTestPost(path, body string) {
+	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
+	resp, err := qvsHttpPost(addr, body)
+	if err != nil {
+		return
+	}
+	log.Println(resp)
+
+}
+
+func broadcast() {
+	qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid))
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
-	//pm3u8()
 	qvsTestGet(fmt.Sprintf("namespaces/%s/baches", *nsid))
 }
