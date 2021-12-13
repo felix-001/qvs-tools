@@ -317,6 +317,13 @@ class Parser:
         ret = self.getLatestLog(param.ResetByPeer[0])
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " 设备tcp连接过来之后又被设备关闭了,可能是由于平台发送了bye")
+    
+    # 设备离线
+    def getDeviceOffline(self):
+        ret = self.getLatestLog(param.DeviceOffline[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " 设备离线")
+
 
     def run(self):
         self.getInviteReq()
@@ -329,6 +336,7 @@ class Parser:
         self.getH265()
         self.getIllegalSSRC()
         self.getConnectionByPeer()
+        self.getDeviceOffline()
 
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
