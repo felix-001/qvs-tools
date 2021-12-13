@@ -31,7 +31,7 @@ class Query:
             streamId = gbid
         self.streamId = streamId
         self.TcpAttach = 'gb28181: tcp attach new stream channel id:' + streamId
-        self.InviteResp = 'gb28181: INVITE response ' + chid + ' client status='
+        self.InviteResp = 'gb28181 request client id=' + chid + ' response invite'
         self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
         if gbid == chid:
             self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + chid
@@ -220,14 +220,14 @@ class Parser:
     def sipProc(self):
         line, num = self.searchLine(0, self.query.InviteResp)
         if line is None:
-            log.info('INVITE 信令没有收到response')
+            log.info('[error] INVITE 信令没有收到response')
             return
-        pos = line.find('status=')
+        pos = line.find('status:')
         if pos == -1:
-            log.info('get invite status error')
+            log.info('[error] get invite status error')
             return -1
         dateTime, taskId = self.getLogMeta(line)
-        code = line[pos+len('status=') : pos+len('status=')+3]
+        code = line[pos+len('status:') : pos+len('status:')+3]
         log.info("%s invite %s resp: %s", dateTime, self.gbid ,code)
 
     def analysis(self):
@@ -247,7 +247,7 @@ class Parser:
         if not line is None:
             self.udpProc(line, num)
             return
-        log.info('UDP和TCP都没有收到RTP包')
+        log.info('[error] UDP和TCP都没有收到RTP包')
         self.sipProc()
         ssrc = self.getSsrc()
         log.info('ssrc: %s', ssrc)
@@ -259,10 +259,8 @@ def main(gbid, chid, duration):
     query = Query(gbid, chid)
     pdr = Pdr(query)
     minus = 30
-    log.info(duration)
     if duration != "":
         minus = int(duration)
-    log.info(minus)
     raw, rtpnode = pdr.getPullStreamLog(minus)
     log.info('rtpnode: %s', rtpnode)
     parser = Parser(query, gbid)
