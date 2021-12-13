@@ -15,34 +15,49 @@ sys.setdefaultencoding('utf8')
 
 conf = "/usr/local/etc/pdr.conf"
 logfile = "/tmp/sip_invite.log"
+gbid = ''
+chid = ''
+duration = 0
 
-class Query:
+class Param:
     def __init__(self, gbid, chid):
+        streamId = gbid
+        if gbid == chid:
+            streamId += '_' + chid
+        self.streamId = streamId
         self.InviteReq = 'action=sip_invite&chid=' + chid + '&id=' + gbid
         self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
         self.H265 = 'gb28181 gbId ' + chid + ', ps map video es_type=h265'
         self.DeviceOffline = 'device ' + chid + ' offline'
         self.UdpRtp = 'gb28181 rtp enqueue : client_id ' + chid
         self.ResetByPeer = 'read() [src/protocol/srs_service_st.cpp:524][errno=104](Connection reset by peer)'
-        streamId = ''
-        if gbid != chid:
-            streamId = gbid + '_' + chid 
-        else:
-            streamId = gbid
-        self.streamId = streamId
         self.TcpAttach = 'gb28181: tcp attach new stream channel id:' + streamId
         self.InviteResp = 'gb28181 request client id=' + chid + ' response invite'
         self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
-        if gbid == chid:
-            self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + chid
-        else:
-            self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + gbid + "_" + chid
+        self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + streamId 
         self.CreateChannel = "id=" + streamId + "&port_mode=fixed"
         self.MediaInfo = "gb28181 gbId " + streamId + ", ps map video es_type="
         self.LostPkt = "gb28181: client_id " + streamId + " decode ps packet"
 
+param = Param("", "")
+
+def wrapKeyword(keyword, isEnd = False):
+    if isEnd:
+        return '(\"' + keyword + '\")'
+    else:
+        return '(\"' + keyword + '\") or '
+
+def fmtQuery(query):
+    query = wrapKeyword(query, True) + ' repo=logs | sort 1000000 by _time asc'
+    return query
+
+def saveFile(name, buf):
+        with open(name, mode='w') as f:
+            f.write(buf)
+            f.close
+
 class Pdr:
-    def __init__(self, query):
+    def __init__(self, query=""):
         token = self.getToken()
         self.baseUrl = 'http://qvs-pdr.qnlinking.com/api/v1/jobs'
         self.headers = {'content-type': 'application/json', 'Authorization': token[:len(token) - 1]}
@@ -90,6 +105,7 @@ class Pdr:
         return jres
 
     def getLog(self, query, minus=60):
+        log.info(query)
         jobId = self.createJob(query, minus)
         if jobId is None:
             return None
@@ -114,26 +130,22 @@ class Pdr:
             f.write(buf)
             f.close
 
-    def wrapKeyword(self, keyword, isEnd = False):
-        if isEnd:
-            return '(\"' + keyword + '\")'
-        else:
-            return '(\"' + keyword + '\") or '
+    
 
     def getPullStreamLog(self, minus=60):
-        query = self.wrapKeyword(self.query.InviteReq) \
-            + self.wrapKeyword(self.query.IllegalSsrc) \
-            + self.wrapKeyword(self.query.DeviceOffline) \
-            + self.wrapKeyword(self.query.InviteCheck) \
-            + self.wrapKeyword(self.query.InviteResp) \
-            + self.wrapKeyword(self.query.TcpAttach) \
-            + self.wrapKeyword(self.query.UdpRtp) \
-            + self.wrapKeyword(self.query.H265) \
-            + self.wrapKeyword(self.query.LostPkt) \
-            + self.wrapKeyword(self.query.CreateChannel) \
-            + "\"rtmp connect ok url=rtmp\"*" + self.query.streamId + "* or " \
-            + self.wrapKeyword(self.query.MediaInfo) \
-            + self.wrapKeyword(self.query.ResetByPeer, True) \
+        query = wrapKeyword(InviteReq) \
+            + wrapKeyword(IllegalSsrc) \
+            + wrapKeyword(DeviceOffline) \
+            + wrapKeyword(InviteCheck) \
+            + wrapKeyword(InviteResp) \
+            + wrapKeyword(TcpAttach) \
+            + wrapKeyword(UdpRtp) \
+            + wrapKeyword(H265) \
+            + wrapKeyword(LostPkt) \
+            + wrapKeyword(CreateChannel) \
+            + "\"rtmp connect ok url=rtmp\"*" + streamId + "* or " \
+            + wrapKeyword(MediaInfo) \
+            + wrapKeyword(ResetByPeer, True) \
             + ' repo=logs' + "| sort 1000000 by _time asc"
         log.info("query: %s", query)
         rawlog,rtpnode = self.getLog(query, minus)
@@ -266,10 +278,23 @@ def main(gbid, chid, duration):
     parser = Parser(query, gbid)
     parser.analysis()
 
+def getInviteLog():
+    pdr = Pdr()
+    raw, rtpNode = pdr.getLog(fmtQuery(param.InviteReq), duration)
+    if raw is None:
+        return None
+    saveFile("/tmp/invite.log", raw)
+
+
 if __name__ == '__main__':
     log.basicConfig(level=log.INFO, format='%(filename)s:%(lineno)d: %(message)s')
     if len(sys.argv) < 3:
         log.info('args <gbid> <chid> [duration]')
         exit()
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    #main(sys.argv[1], sys.argv[2], sys.argv[3])
+    gbid = sys.argv[1]
+    chid = sys.argv[2]
+    duration = sys.argv[3]
+    param = Param(gbid, chid)
+    getInviteLog()
 
