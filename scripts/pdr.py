@@ -231,6 +231,7 @@ class Parser:
         log.info("%s invite %s resp: %s", dateTime, self.gbid ,code)
 
     def analysis(self):
+        self.sipProc()
         line, num = self.searchLine(0, self.query.IllegalSsrc)
         if not line is None:
             log.info('设备发送过来的rtp包的ssrc非法')
@@ -248,7 +249,6 @@ class Parser:
             self.udpProc(line, num)
             return
         log.info('[error] UDP和TCP都没有收到RTP包')
-        self.sipProc()
         ssrc = self.getSsrc()
         log.info('ssrc: %s', ssrc)
         nodeIp = self.getNodeIp()
