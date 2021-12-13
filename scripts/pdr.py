@@ -56,6 +56,11 @@ def saveFile(name, buf):
             f.write(buf)
             f.close
 
+def str2ts(str):
+    timeArray = time.strptime(str, "%Y-%m-%d %H:%M:%S")
+    timeStamp = int(time.mktime(timeArray))
+    return timeStamp
+
 class Pdr:
     def __init__(self, query=""):
         token = self.getToken()
@@ -155,13 +160,13 @@ class Pdr:
         return rawlog.split('\n'), rtpnode
 
 class Parser:
-    def __init__(self, query, gbid, chid=""):
-        self.query = query
-        self.gbid = gbid
-        self.chid = chid
-        with open(logfile, 'r') as f:
-            buf = f.read()
-            self.lines = buf.split('\n')
+    def __init__(self, log):
+        self.query = "" 
+        self.log = log
+        self.lines = log.split('\n')
+        #with open(logfile, 'r') as f:
+            #buf = f.read()
+            #self.lines = buf.split('\n')
 
     def getLogMeta(self, log):
         res = re.findall(r'[[](.*?)[]]', log)
@@ -169,6 +174,15 @@ class Parser:
         taskId = res[3]
         return dateTime,taskId
 
+    def getLatestLog(self):
+        for line in self.lines:
+            if line == '':
+                continue
+            date, taskId = self.getLogMeta(line)
+            ts = str2ts(date[:len(date)-4])
+            log.info(ts)
+            log.info(date+taskId)
+            
     def searchLine(self, start, keyword, direction='forward'):
         end = len(self.lines)
         step = 1
@@ -283,6 +297,8 @@ def getInviteLog():
     raw, rtpNode = pdr.getLog(fmtQuery(param.InviteReq), duration)
     if raw is None:
         return None
+    parser = Parser(raw)
+    parser.getLatestLog()
     saveFile("/tmp/invite.log", raw)
 
 
