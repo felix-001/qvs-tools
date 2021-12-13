@@ -61,6 +61,10 @@ def str2ts(str):
     timeStamp = int(time.mktime(timeArray))
     return timeStamp
 
+def dumpStr(str):
+    for i in str:
+        print('%#x '%ord(i))
+
 class Pdr:
     def __init__(self, query=""):
         token = self.getToken()
@@ -168,20 +172,33 @@ class Parser:
             #buf = f.read()
             #self.lines = buf.split('\n')
 
-    def getLogMeta(self, log):
-        res = re.findall(r'[[](.*?)[]]', log)
+    def getLogMeta(self, log_):
+        log.info(log_)
+        #dumpStr(log_)
+        # ^[[0m[2021-09021]] 去除垃圾字符
+        pos = log_.find('0m')
+        new = log_
+        if pos != -1:
+            new = log_[pos+2:]
+        res = re.findall(r'\[(.*?)\]', new)
+        log.info(res)
         dateTime = res[0]
         taskId = res[3]
+        log.info(res)
         return dateTime,taskId
 
     def getLatestLog(self):
+        latestLog = ''
+        latestTs = 0
         for line in self.lines:
             if line == '':
                 continue
             date, taskId = self.getLogMeta(line)
-            ts = str2ts(date[:len(date)-4])
-            log.info(ts)
-            log.info(date+taskId)
+            ts = str2ts(date[:len(date)-4]) # 时间的单位是精确到毫秒的
+            if ts > latestTs:
+                latestTs = ts
+                latestLog = line
+        return latestLog
             
     def searchLine(self, start, keyword, direction='forward'):
         end = len(self.lines)
