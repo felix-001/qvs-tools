@@ -162,10 +162,10 @@ class Parser:
         #log.info(res)
         return dateTime, taskId
 
-    def getLatestLog(self):
+    def getLatestLog(self, logs):
         latestLog = ''
         latestTs = 0
-        for line in self.lines:
+        for line in logs:
             if line == '':
                 continue
             date, taskId = self.getLogMeta(line)
@@ -273,7 +273,9 @@ def run():
         return
     parser = Parser(raw)
     logs = parser.filterLog(param.InviteReq)
-    log.info(logs)
+    #log.info(logs)
+    raw = parser.getLatestLog(logs)
+    log.info(raw)
 
 # invite没有返回resp
 # invite返回code非200
