@@ -162,6 +162,9 @@ class Parser:
         new = log_
         if pos != -1:
             new = log_[pos+2:]
+        pos = log_.find('31m')
+        if pos != -1:
+            new = log_[pos+3:]
         res = re.findall(r'\[(.*?)\]', new)
         if len(res) == 0:
             log.info("[Error] get meta err:"+log_)
@@ -289,6 +292,7 @@ class Parser:
         else:
             log.info("没有rtp over tcp连接过来")
     
+    # rtp over udp
     def getUdpRtp(self):
         ret = self.getLatestLog(param.UdpRtp[0])
         if ret is not None:
@@ -296,6 +300,23 @@ class Parser:
         else:
             log.info("没有收到rtp over udp的数据包")
 
+    # h265
+    def getH265(self):
+        ret = self.getLatestLog(param.H265[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " 视频编码格式为h265")
+
+    # illegal ssrc
+    def getIllegalSSRC(self):
+        ret = self.getLatestLog(param.IllegalSsrc[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " illegal ssrc")
+
+    # connection reset by peer
+    def getConnectionByPeer(self):
+        ret = self.getLatestLog(param.ResetByPeer[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " 设备tcp连接过来之后又被设备关闭了,可能是由于平台发送了bye")
 
     def run(self):
         self.getInviteReq()
@@ -305,6 +326,9 @@ class Parser:
         self.getInviteResp()
         self.getTcpAttach()
         self.getUdpRtp()
+        self.getH265()
+        self.getIllegalSSRC()
+        self.getConnectionByPeer()
 
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
