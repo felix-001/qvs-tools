@@ -162,7 +162,8 @@ class Parser:
         #log.info(res)
         return dateTime, taskId
 
-    def getLatestLog(self, logs):
+    def getLatestLog(self, substr):
+        logs = self.filterLog(substr)
         latestLog = ''
         latestTs = 0
         for line in logs:
@@ -177,7 +178,8 @@ class Parser:
                 latestTs = ts
                 latestLog = line
         #log.info("latestlog:"+latestLog)
-        return latestLog
+        date, taskId = self.getLogMeta(latestLog)
+        return {"date":date, "taskId":taskId, "raw":latestLog}
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -201,48 +203,9 @@ class Parser:
         ssrc = self.getValFromLog(log_, "ssrc=", "&token")
         return ssrc
 
-    def getNodeIp(self):
-        line, i = self.searchLine(len(self.lines)-1, self.query.InviteReq, 'backword')
-        if line is None:
-            log.info('get invite req error')
-            return
-        pos = line.find('ip=')
-        if pos == -1:
-            log.info('get node ip error')
-            return
-        end = line.find('&rtp_port=')
-        if end == -1:
-            log.info('find rtp_port error')
-            return
-        nodeIp = line[pos+len('ip=') : end]
-        return nodeIp
-
-def getLog(query):
-    pdr = Pdr()
-    raw, rtpNode = pdr.fetchLog(query, duration)
-    if raw is None:
-        return 
-    parser = Parser(raw)
-    log_ = parser.getLatestLog()
-    if len(log_) == 0:
-        return
-    date, taskId = parser.getLogMeta(log_)
-    return {"date":date, "taskId":taskId, "log":log_, "rtpNode":rtpNode}
-
-def check():
-    ret = getInviteLog()
-    if ret is None:
-        return
-    log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+ret["rtpNode"]+" ssrc:" + ret["ssrc"])
-    ret = getTcpAttachLog(ret["ssrc"])
-    if ret is None:
-        return
-    #log.info(ret)
-    log.info(ret["date"]+ ' ' + ret["taskId"] + " 有rtp over tcp连接过来,rtp节点:"+ret["rtpNode"])
-    ret = getInviteRespLog()
-    if ret is None:
-        return
-    log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200 OK:"+ret["rtpNode"])
+    def getNodeIp(self, log_):
+        ip = self.getValFromLog(log_, "ip=", "&rtp_port=")
+        return ip
 
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
@@ -271,11 +234,14 @@ def run():
     raw, rtpNode = fetchLog()
     if raw is None:
         return
+    log.info("rtpNode:"+rtpNode)
     parser = Parser(raw)
-    logs = parser.filterLog(param.InviteReq)
     #log.info(logs)
-    raw = parser.getLatestLog(logs)
-    log.info(raw)
+    ret = parser.getLatestLog(param.InviteReq)
+    ssrc = parser.getSSRC(ret["raw"])
+    ip = parser.getNodeIp(ret["raw"])
+    log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + ssrc + ", rtpIp: "+ip)
+    #log.info(ret)
 
 # invite没有返回resp
 # invite返回code非200
