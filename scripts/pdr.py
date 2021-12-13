@@ -276,8 +276,16 @@ class Parser:
         ret = self.getLatestLog("status:200")
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200")
+        self.lines = tmp
         #log.info(rawlog)
-        
+
+    # tcp attach
+    def getTcpAttach(self):
+        ret = self.getLatestLog(param.TcpAttach[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over tcp 连接过来了")
+        else:
+            log.info("没有rtp over tcp连接过来")
 
     def run(self):
         self.getInviteReq()
@@ -285,6 +293,7 @@ class Parser:
         self.getCallId()
         self.getCreateChannel()
         self.getInviteResp()
+        self.getTcpAttach()
 
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
