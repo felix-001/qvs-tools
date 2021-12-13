@@ -65,6 +65,8 @@ def dumpStr(str):
     for i in str:
         print('%#x '%ord(i))
 
+    
+
 class Pdr:
     def __init__(self, query=""):
         token = self.getToken()
@@ -194,12 +196,12 @@ class Parser:
             if line == '':
                 continue
             date, taskId = self.getLogMeta(line)
-            log.info(line)
+            #log.info(line)
             ts = str2ts(date[:len(date)-4]) # 时间的单位是精确到毫秒的
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
-        log.info("latestlog:"+latestLog)
+        #log.info("latestlog:"+latestLog)
         return latestLog
             
     def searchLine(self, start, keyword, direction='forward'):
@@ -214,20 +216,18 @@ class Parser:
                 return self.lines[i], i
         return None, None
 
-    def getSsrc(self):
-        line, i = self.searchLine(len(self.lines)-1, self.query.InviteReq, 'backword')
-        if line is None:
-            log.info('get invite req error')
-            return
-        pos = line.find('ssrc=')
-        if pos == -1:
-            log.info('get ssrc error')
-            return
-        end = line.find('&token=')
+
+    def getValFromLog(self, log_, startKey, endKey):
+        start = log_.find(startKey)
+        if start == -1:
+            return start
+        end = log_.find(endKey)
         if end == -1:
-            log.info('find token error')
-            return
-        ssrc = line[pos+len('ssrc=') : end]
+            return end
+        return log_[start+len(startKey):end]
+
+    def getSSRC(self, log_):
+        ssrc = self.getValFromLog(log_, "ssrc=", "&token")
         return ssrc
 
     def getNodeIp(self):
@@ -311,13 +311,18 @@ def main(gbid, chid, duration):
     parser = Parser(query, gbid)
     parser.analysis()
 
+
+
 def getInviteLog():
     pdr = Pdr()
     raw, rtpNode = pdr.getLog(fmtQuery(param.InviteReq), duration)
     if raw is None:
         return None
     parser = Parser(raw)
-    parser.getLatestLog()
+    log_ = parser.getLatestLog()
+    ssrc = parser.getSSRC(log_)
+    log.info(log_)
+    log.info(ssrc)
     saveFile("/tmp/invite.log", raw)
 
 
