@@ -25,28 +25,37 @@ class Param:
         if gbid != chid:
             streamId += '_' + chid
         self.streamId = streamId
-        self.InviteReq = 'action=sip_invite&chid=' + chid + '&id=' + gbid
-        self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
-        self.H265 = 'gb28181 gbId ' + chid + ', ps map video es_type=h265'
-        self.DeviceOffline = 'device ' + chid + ' offline'
-        self.UdpRtp = 'gb28181 rtp enqueue : client_id ' + chid
-        self.ResetByPeer = 'read() [src/protocol/srs_service_st.cpp:524][errno=104](Connection reset by peer)'
-        self.TcpAttach = 'gb28181: tcp attach new stream channel id:' + streamId
-        self.InviteResp = 'gb28181: INVITE response ' + chid + ' client status='
-        self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
-        self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + streamId 
-        self.CreateChannel = "id=" + streamId + "&port_mode=fixed"
-        self.MediaInfo = "gb28181 gbId " + streamId + ", ps map video es_type="
-        self.LostPkt = "gb28181: client_id " + streamId + " decode ps packet"
-        self.callIdQuery = "after invite "
+        self.InviteReq = ['action=sip_invite&chid=' + chid + '&id=' + gbid]
+        self.InviteCheck = ['error device->invite sipid =' + chid + ' state:']
+        self.H265 = ['gb28181 gbId ' + chid + ', ps map video es_type=h265']
+        self.DeviceOffline = ['device ' + chid + ' offline']
+        self.UdpRtp = ['gb28181 rtp enqueue : client_id ' + chid]
+        self.ResetByPeer = ['read() [src/protocol/srs_service_st.cpp:524][errno=104](Connection reset by peer)']
+        self.TcpAttach = ['gb28181: tcp attach new stream channel id:' + streamId]
+        self.InviteResp = ['gb28181: INVITE response ' + chid + ' client status=']
+        self.InviteCheck = ['error device->invite sipid =' + chid + ' state:']
+        self.IllegalSsrc = ["ssrc illegal on tcp payload chaanellid:" + streamId]
+        self.CreateChannel = ["id=" + streamId + "&is_audio_g711u"]
+        self.MediaInfo = ["gb28181 gbId " + streamId + ", ps map video es_type="]
+        self.LostPkt = ["gb28181: client_id " + streamId + " decode ps packet"]
+        self.callIdQuery = ["after invite", gbid]
+        self.rtmpConnect = ["rtmp connect ok url", streamId]
+        self.realChid = ["real chid of " + gbid + " is"]
 
 param = Param("", "")
 
-def wrapKeyword(keyword, isEnd = False):
-    if isEnd:
-        return '(\"' + keyword + '\")'
+def wrapKeyword(keywords, isEnd = False):
+    query = ''
+    for i in range(len(keywords)):
+        query += '\"%s\"' % (keywords[i])
+        if i < len(keywords) - 1:
+            query += ' and '
+    query = '(%s) ' % (query)
+    if not isEnd:
+        query += ' or ' 
     else:
-        return '(\"' + keyword + '\") or '
+        query += ' repo=logs | sort 1000000 by _time asc'
+    return query
 
 def saveFile(name, buf):
         with open(name, mode='w') as f:
@@ -96,12 +105,12 @@ class Pdr:
         return jres['process']
 
     def waitSearchDone(self, jobId):
-        print("searching...")
+        log.info("searching...")
         while True:
             process = self.getJobInfo(jobId)
             time.sleep(0.2)
             if process == 1:
-                print("search job done")
+                log.info("search job done")
                 return
 
     def getLogs(self, jobId):
@@ -120,7 +129,7 @@ class Pdr:
         logs = self.getLogs(jobId)
         rows = logs['rows']
         i = 0
-        log.info("total: " + str(len(rows)))
+        log.info("total logs: " + str(len(rows)))
         rawlog = ""
         rtpnode = ""
         while i < len(rows):
@@ -208,6 +217,75 @@ class Parser:
         ip = self.getValFromLog(log_, "ip=", "&rtp_port=")
         return ip
 
+    def parseRealChid(self, log_):
+        pos = log_.find('is ')
+        if pos == -1:
+            return
+        return log_[pos+3:]
+
+    def parseCallId(self, log_):
+        pos = log_.find('callid:')
+        if pos == -1:
+            return
+        return log_[pos+len('callid:'):]
+
+    # invite请求
+    def getInviteReq(self):
+        ret = self.getLatestLog(param.InviteReq[0])
+        self.ssrc = self.getSSRC(ret["raw"])
+        self.rtpIp = self.getNodeIp(ret["raw"])
+        log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
+
+    # 获取实际的chid
+    def getRealChid(self):
+        ret = self.getLatestLog(param.realChid[0])
+        #log.info(ret)
+        self.realChid = self.parseRealChid(ret["raw"])
+        log.info(ret["date"]+ ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
+
+    # 获取callid
+    def getCallId(self):
+        callidStr = "after invite %s:%s ssrc:%s return callid:" % (gbid, self.realChid, self.ssrc)
+        ret = self.getLatestLog(callidStr)
+        self.callId = self.parseCallId(ret['raw'])
+        #log.info(ret)
+        log.info(ret["date"]+ ' ' + ret["taskId"] + " callId: " + self.callId)
+
+    # 创建rtp通道
+    def getCreateChannel(self):
+        ret = self.getLatestLog(param.CreateChannel[0])
+        #log.info(ret)
+        log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
+
+    # 获取invite返回code
+    def getInviteResp(self):
+        keywords = ["request client id=" + self.realChid, "status:", "callid="+self.callId]
+        query = wrapKeyword(keywords, True)
+        #log.info("query: %s", query)
+        log.info("fetch invite resp log")
+        pdr = Pdr(query, duration)
+        rawlog, rtpnode = pdr.fetchLog()
+        if rawlog is None:
+            return None
+        # 先暂存对象原来的lines，后面需要恢复
+        tmp = self.lines
+        self.lines = rawlog.split('\n')
+        ret = self.getLatestLog("status:100")
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 100")
+        ret = self.getLatestLog("status:200")
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200")
+        #log.info(rawlog)
+        
+
+    def run(self):
+        self.getInviteReq()
+        self.getRealChid()
+        self.getCallId()
+        self.getCreateChannel()
+        self.getInviteResp()
+
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
         + wrapKeyword(param.IllegalSsrc) \
@@ -219,10 +297,11 @@ def fetchLog():
         + wrapKeyword(param.H265) \
         + wrapKeyword(param.LostPkt) \
         + wrapKeyword(param.CreateChannel) \
-        + "\"rtmp connect ok url=rtmp\"*" + param.streamId + "* or " \
+        + wrapKeyword(param.rtmpConnect) \
         + wrapKeyword(param.MediaInfo) \
-        + wrapKeyword(param.ResetByPeer, True) \
-        + ' repo=logs | sort 1000000 by _time asc'
+        + wrapKeyword(param.callIdQuery) \
+        + wrapKeyword(param.realChid) \
+        + wrapKeyword(param.ResetByPeer, True)
     log.info("query: %s", query)
     pdr = Pdr(query, duration)
     rawlog, rtpnode = pdr.fetchLog()
@@ -231,19 +310,6 @@ def fetchLog():
     saveFile(logfile, rawlog)
     return rawlog, rtpnode
 
-def run():
-    raw, rtpNode = fetchLog()
-    if raw is None:
-        return
-    log.info("rtpNode:"+rtpNode)
-    parser = Parser(raw)
-    #log.info(logs)
-    ret = parser.getLatestLog(param.InviteReq)
-    ssrc = parser.getSSRC(ret["raw"])
-    ip = parser.getNodeIp(ret["raw"])
-    log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + ssrc + ", rtpIp: "+ip)
-    param.callIdQuery = "after invite %s:%s ssrc:%s return callid:" % (gbid, chid, ssrc)
-    #log.info(ret)
 
 # invite没有返回resp
 # invite返回code非200
@@ -262,5 +328,10 @@ if __name__ == '__main__':
     chid = sys.argv[2]
     duration = sys.argv[3]
     param = Param(gbid, chid)
-    run()
+    raw, rtpNode = fetchLog()
+    if raw is None:
+        sys.exit()
+    log.info("rtpNode:"+rtpNode)
+    parser = Parser(raw)
+    parser.run()
 
