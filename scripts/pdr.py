@@ -38,6 +38,7 @@ class Param:
         self.CreateChannel = "id=" + streamId + "&port_mode=fixed"
         self.MediaInfo = "gb28181 gbId " + streamId + ", ps map video es_type="
         self.LostPkt = "gb28181: client_id " + streamId + " decode ps packet"
+        self.callIdQuery = "after invite "
 
 param = Param("", "")
 
@@ -241,6 +242,7 @@ def run():
     ssrc = parser.getSSRC(ret["raw"])
     ip = parser.getNodeIp(ret["raw"])
     log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + ssrc + ", rtpIp: "+ip)
+    param.callIdQuery = "after invite %s:%s ssrc:%s return callid:" % (gbid, chid, ssrc)
     #log.info(ret)
 
 # invite没有返回resp
