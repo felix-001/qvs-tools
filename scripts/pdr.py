@@ -32,7 +32,7 @@ class Param:
         self.UdpRtp = 'gb28181 rtp enqueue : client_id ' + chid
         self.ResetByPeer = 'read() [src/protocol/srs_service_st.cpp:524][errno=104](Connection reset by peer)'
         self.TcpAttach = 'gb28181: tcp attach new stream channel id:' + streamId
-        self.InviteResp = 'gb28181 request client id=' + chid + ' response invite'
+        self.InviteResp = 'gb28181: INVITE response ' + chid + ' client status='
         self.InviteCheck = 'error device->invite sipid =' + chid + ' state:'
         self.IllegalSsrc = "ssrc illegal on tcp payload chaanellid:" + streamId 
         self.CreateChannel = "id=" + streamId + "&port_mode=fixed"
@@ -46,10 +46,6 @@ def wrapKeyword(keyword, isEnd = False):
         return '(\"' + keyword + '\")'
     else:
         return '(\"' + keyword + '\") or '
-
-def fmtQuery(query):
-    query = wrapKeyword(query, True) + ' repo=logs | sort 1000000 by _time asc'
-    return query
 
 def saveFile(name, buf):
         with open(name, mode='w') as f:
@@ -65,14 +61,13 @@ def dumpStr(str):
     for i in str:
         print('%#x '%ord(i))
 
-    
-
 class Pdr:
-    def __init__(self, query=""):
+    def __init__(self, query="", duration=5):
         token = self.getToken()
         self.baseUrl = 'http://qvs-pdr.qnlinking.com/api/v1/jobs'
         self.headers = {'content-type': 'application/json', 'Authorization': token[:len(token) - 1]}
         self.query = query
+        self.duration = duration
 
     def getToken(self):
         with open(conf, mode='r') as f:
@@ -115,12 +110,11 @@ class Pdr:
         #print(resp.content)
         return jres
 
-    def getLog(self, query, minus=60):
-        log.info(query)
-        jobId = self.createJob(query, minus)
+    def fetchLog(self):
+        jobId = self.createJob(self.query, self.duration)
         if jobId is None:
             return None
-        log.info('create job to get sip log, jobid: %s', jobId)
+        #log.info('create job to get sip log, jobid: %s', jobId)
         self.waitSearchDone(jobId)
         logs = self.getLogs(jobId)
         rows = logs['rows']
@@ -141,32 +135,8 @@ class Pdr:
             f.write(buf)
             f.close
 
-    
-
-    def getPullStreamLog(self, minus=60):
-        query = wrapKeyword(InviteReq) \
-            + wrapKeyword(IllegalSsrc) \
-            + wrapKeyword(DeviceOffline) \
-            + wrapKeyword(InviteCheck) \
-            + wrapKeyword(InviteResp) \
-            + wrapKeyword(TcpAttach) \
-            + wrapKeyword(UdpRtp) \
-            + wrapKeyword(H265) \
-            + wrapKeyword(LostPkt) \
-            + wrapKeyword(CreateChannel) \
-            + "\"rtmp connect ok url=rtmp\"*" + streamId + "* or " \
-            + wrapKeyword(MediaInfo) \
-            + wrapKeyword(ResetByPeer, True) \
-            + ' repo=logs' + "| sort 1000000 by _time asc"
-        log.info("query: %s", query)
-        rawlog,rtpnode = self.getLog(query, minus)
-        if rawlog is None:
-            return None
-        self.saveFile(logfile, rawlog)
-        return rawlog.split('\n'), rtpnode
-
 class Parser:
-    def __init__(self, log):
+    def __init__(self, log=""):
         self.query = "" 
         self.log = log
         self.lines = log.split('\n')
@@ -183,11 +153,14 @@ class Parser:
         if pos != -1:
             new = log_[pos+2:]
         res = re.findall(r'\[(.*?)\]', new)
+        if len(res) == 0:
+            log.info("[Error] get meta err:"+log_)
+            return
         #log.info(res)
         dateTime = res[0]
         taskId = res[3]
         #log.info(res)
-        return dateTime,taskId
+        return dateTime, taskId
 
     def getLatestLog(self):
         latestLog = ''
@@ -196,6 +169,8 @@ class Parser:
             if line == '':
                 continue
             date, taskId = self.getLogMeta(line)
+            if date is None:
+                continue
             #log.info(line)
             ts = str2ts(date[:len(date)-4]) # 时间的单位是精确到毫秒的
             if ts > latestTs:
@@ -204,17 +179,13 @@ class Parser:
         #log.info("latestlog:"+latestLog)
         return latestLog
             
-    def searchLine(self, start, keyword, direction='forward'):
-        end = len(self.lines)
-        step = 1
-        if direction == 'backword':
-            step = -1
-            #end = len(self.lines)
-            end = 0
-        for i in range(start, end, step):
-            if keyword in self.lines[i]:
-                return self.lines[i], i
-        return None, None
+    # 过滤包含substr的所有字符串
+    def filterLog(self, substr):
+        ret = []
+        for line in self.lines:
+            if substr in line:
+                ret.append(line)
+        return ret
 
 
     def getValFromLog(self, log_, startKey, endKey):
@@ -246,100 +217,80 @@ class Parser:
         nodeIp = line[pos+len('ip=') : end]
         return nodeIp
 
-    def tcpProc(self, line, num):
-        log.info('有RTP OVER TCP过来了')
-        dateTime, taskId = self.getLogMeta(line)
-        tcpClose = '[' + taskId + ']:' + self.query.ResetByPeer 
-        line, _num = self.searchLine(num, tcpClose, 'backword')
-        if not line is None:
-            log.info('摄像头断开TCP连接')
-            return
-        line, _num = self.searchLine(num, tcpClose, 'backword')
-        if not line is None:
-            log.info('视频流编码格式为H265')
-            return
-
-    def udpProc(self, line, num):
-        log.info('收到RTP OVER UDP的包')
-
-    def sipProc(self):
-        line, num = self.searchLine(0, self.query.InviteResp)
-        if line is None:
-            log.info('[error] INVITE 信令没有收到response')
-            return
-        pos = line.find('status:')
-        if pos == -1:
-            log.info('[error] get invite status error')
-            return -1
-        dateTime, taskId = self.getLogMeta(line)
-        code = line[pos+len('status:') : pos+len('status:')+3]
-        log.info("%s invite %s resp: %s", dateTime, self.gbid ,code)
-
-    def analysis(self):
-        self.sipProc()
-        line, num = self.searchLine(0, self.query.IllegalSsrc)
-        if not line is None:
-            log.info('设备发送过来的rtp包的ssrc非法')
-            return
-        line, num = self.searchLine(0, self.query.DeviceOffline)
-        if not line is None:
-            log.info('设备离线')
-            return
-        line, num = self.searchLine(0, self.query.TcpAttach)
-        if not line is None:
-            self.tcpProc(line, num)
-            return
-        line, num = self.searchLine(0, self.query.UdpRtp)
-        if not line is None:
-            self.udpProc(line, num)
-            return
-        log.info('[error] UDP和TCP都没有收到RTP包')
-        ssrc = self.getSsrc()
-        log.info('ssrc: %s', ssrc)
-        nodeIp = self.getNodeIp()
-        log.info('nodeIp: %s', nodeIp)
-
-
-def main(gbid, chid, duration):
-    query = Query(gbid, chid)
-    pdr = Pdr(query)
-    minus = 30
-    if duration != "":
-        minus = int(duration)
-    raw, rtpnode = pdr.getPullStreamLog(minus)
-    log.info('rtpnode: %s', rtpnode)
-    parser = Parser(query, gbid)
-    parser.analysis()
-
-def getTcpAttachLog(ssrc):
+def getLog(query):
     pdr = Pdr()
-    raw, rtpNode = pdr.getLog(fmtQuery(param.TcpAttach+' ssrs:'+ssrc), duration)
-    log.info(raw)
-
-
-def getInviteLog():
-    pdr = Pdr()
-    raw, rtpNode = pdr.getLog(fmtQuery(param.InviteReq), duration)
+    raw, rtpNode = pdr.fetchLog(query, duration)
     if raw is None:
-        return None
+        return 
     parser = Parser(raw)
     log_ = parser.getLatestLog()
-    ssrc = parser.getSSRC(log_)
-    log.info(log_)
-    log.info(ssrc)
-    getTcpAttachLog(ssrc)
-    saveFile("/tmp/invite.log", raw)
+    if len(log_) == 0:
+        return
+    date, taskId = parser.getLogMeta(log_)
+    return {"date":date, "taskId":taskId, "log":log_, "rtpNode":rtpNode}
 
+def check():
+    ret = getInviteLog()
+    if ret is None:
+        return
+    log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+ret["rtpNode"]+" ssrc:" + ret["ssrc"])
+    ret = getTcpAttachLog(ret["ssrc"])
+    if ret is None:
+        return
+    #log.info(ret)
+    log.info(ret["date"]+ ' ' + ret["taskId"] + " 有rtp over tcp连接过来,rtp节点:"+ret["rtpNode"])
+    ret = getInviteRespLog()
+    if ret is None:
+        return
+    log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200 OK:"+ret["rtpNode"])
 
+def fetchLog():
+    query = wrapKeyword(param.InviteReq) \
+        + wrapKeyword(param.IllegalSsrc) \
+        + wrapKeyword(param.DeviceOffline) \
+        + wrapKeyword(param.InviteCheck) \
+        + wrapKeyword(param.InviteResp) \
+        + wrapKeyword(param.TcpAttach) \
+        + wrapKeyword(param.UdpRtp) \
+        + wrapKeyword(param.H265) \
+        + wrapKeyword(param.LostPkt) \
+        + wrapKeyword(param.CreateChannel) \
+        + "\"rtmp connect ok url=rtmp\"*" + param.streamId + "* or " \
+        + wrapKeyword(param.MediaInfo) \
+        + wrapKeyword(param.ResetByPeer, True) \
+        + ' repo=logs | sort 1000000 by _time asc'
+    log.info("query: %s", query)
+    pdr = Pdr(query, duration)
+    rawlog, rtpnode = pdr.fetchLog()
+    if rawlog is None:
+        return None
+    saveFile(logfile, rawlog)
+    return rawlog, rtpnode
+
+def run():
+    raw, rtpNode = fetchLog()
+    if raw is None:
+        return
+    parser = Parser(raw)
+    logs = parser.filterLog(param.InviteReq)
+    log.info(logs)
+
+# invite没有返回resp
+# invite返回code非200
+# 是否有tcp连接过来
+# 是否有rtp over udp过来
+# h265
+# 设备离线
+# illegal ssrc
+# connection reset by peer
 if __name__ == '__main__':
     log.basicConfig(level=log.INFO, format='%(filename)s:%(lineno)d: %(message)s')
     if len(sys.argv) < 3:
         log.info('args <gbid> <chid> [duration]')
         exit()
-    #main(sys.argv[1], sys.argv[2], sys.argv[3])
     gbid = sys.argv[1]
     chid = sys.argv[2]
     duration = sys.argv[3]
     param = Param(gbid, chid)
-    getInviteLog()
+    run()
 
