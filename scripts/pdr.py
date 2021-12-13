@@ -173,7 +173,7 @@ class Parser:
             #self.lines = buf.split('\n')
 
     def getLogMeta(self, log_):
-        log.info(log_)
+        #log.info(log_)
         #dumpStr(log_)
         # ^[[0m[2021-09021]] 去除垃圾字符
         pos = log_.find('0m')
@@ -181,10 +181,10 @@ class Parser:
         if pos != -1:
             new = log_[pos+2:]
         res = re.findall(r'\[(.*?)\]', new)
-        log.info(res)
+        #log.info(res)
         dateTime = res[0]
         taskId = res[3]
-        log.info(res)
+        #log.info(res)
         return dateTime,taskId
 
     def getLatestLog(self):
@@ -194,10 +194,12 @@ class Parser:
             if line == '':
                 continue
             date, taskId = self.getLogMeta(line)
+            log.info(line)
             ts = str2ts(date[:len(date)-4]) # 时间的单位是精确到毫秒的
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
+        log.info("latestlog:"+latestLog)
         return latestLog
             
     def searchLine(self, start, keyword, direction='forward'):
