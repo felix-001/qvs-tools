@@ -29,7 +29,7 @@ class Param:
         self.InviteCheck = ['error device->invite sipid =' + chid + ' state:']
         self.H265 = ['gb28181 gbId ' + chid + ', ps map video es_type=h265']
         self.DeviceOffline = ['device ' + chid + ' offline']
-        self.UdpRtp = ['gb28181 rtp enqueue : client_id ' + chid]
+        self.UdpRtp = ['got first rtp pkt', streamId]
         self.ResetByPeer = ['read() [src/protocol/srs_service_st.cpp:524][errno=104](Connection reset by peer)']
         self.TcpAttach = ['gb28181: tcp attach new stream channel id:' + streamId]
         self.InviteResp = ['gb28181: INVITE response ' + chid + ' client status=']
@@ -174,6 +174,8 @@ class Parser:
 
     def getLatestLog(self, substr):
         logs = self.filterLog(substr)
+        if len(logs) == 0:
+            return
         latestLog = ''
         latestTs = 0
         for line in logs:
@@ -286,6 +288,14 @@ class Parser:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over tcp 连接过来了")
         else:
             log.info("没有rtp over tcp连接过来")
+    
+    def getUdpRtp(self):
+        ret = self.getLatestLog(param.UdpRtp[0])
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over udp 数据包过来了")
+        else:
+            log.info("没有收到rtp over udp的数据包")
+
 
     def run(self):
         self.getInviteReq()
@@ -294,6 +304,7 @@ class Parser:
         self.getCreateChannel()
         self.getInviteResp()
         self.getTcpAttach()
+        self.getUdpRtp()
 
 def fetchLog():
     query = wrapKeyword(param.InviteReq) \
