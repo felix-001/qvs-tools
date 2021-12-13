@@ -22,7 +22,7 @@ duration = 0
 class Param:
     def __init__(self, gbid, chid):
         streamId = gbid
-        if gbid == chid:
+        if gbid != chid:
             streamId += '_' + chid
         self.streamId = streamId
         self.InviteReq = 'action=sip_invite&chid=' + chid + '&id=' + gbid
@@ -311,6 +311,10 @@ def main(gbid, chid, duration):
     parser = Parser(query, gbid)
     parser.analysis()
 
+def getTcpAttachLog(ssrc):
+    pdr = Pdr()
+    raw, rtpNode = pdr.getLog(fmtQuery(param.TcpAttach+' ssrs:'+ssrc), duration)
+    log.info(raw)
 
 
 def getInviteLog():
@@ -323,6 +327,7 @@ def getInviteLog():
     ssrc = parser.getSSRC(log_)
     log.info(log_)
     log.info(ssrc)
+    getTcpAttachLog(ssrc)
     saveFile("/tmp/invite.log", raw)
 
 
