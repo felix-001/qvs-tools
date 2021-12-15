@@ -237,6 +237,9 @@ class Parser:
     # invite请求
     def getInviteReq(self):
         ret = self.getLatestLog(param.InviteReq[0])
+        if ret is None:
+            log.info("[Error] 没有invite请求的日志")
+            return
         self.ssrc = self.getSSRC(ret["raw"])
         self.rtpIp = self.getNodeIp(ret["raw"])
         log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
@@ -244,14 +247,22 @@ class Parser:
     # 获取实际的chid
     def getRealChid(self):
         ret = self.getLatestLog(param.realChid[0])
+        if ret is None:
+            log.info("[Error] 没有获取实际chid的日志")
+            return
         #log.info(ret)
         self.realChid = self.parseRealChid(ret["raw"])
         log.info(ret["date"]+ ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
 
     # 获取callid
     def getCallId(self):
+        if not hasattr(self, 'realChid'):
+            return
         callidStr = "after invite %s:%s ssrc:%s return callid:" % (gbid, self.realChid, self.ssrc)
         ret = self.getLatestLog(callidStr)
+        if ret is None:
+            log.info("[Error] 没有获取callid的日志")
+            return
         self.callId = self.parseCallId(ret['raw'])
         #log.info(ret)
         log.info(ret["date"]+ ' ' + ret["taskId"] + " callId: " + self.callId)
@@ -263,10 +274,12 @@ class Parser:
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
         else:
-            log.info("没有创建rtp通道的日志")
+            log.info("[Error] 没有创建rtp通道的日志")
 
     # 获取invite返回code
     def getInviteResp(self):
+        if not hasattr(self, 'realChid'):
+            return
         keywords = ["request client id=" + self.realChid, "status:", "callid="+self.callId]
         query = wrapKeyword(keywords, True)
         #log.info("query: %s", query)
@@ -293,7 +306,7 @@ class Parser:
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over tcp 连接过来了")
         else:
-            log.info("没有rtp over tcp连接过来")
+            log.info("[Error] 没有rtp over tcp连接过来")
     
     # rtp over udp
     def getUdpRtp(self):
@@ -386,7 +399,7 @@ if __name__ == '__main__':
     raw, rtpNode = fetchLog()
     if raw is None:
         sys.exit()
-    log.info("rtpNode:"+rtpNode)
+    log.info("rtpNode: "+rtpNode)
     parser = Parser(raw)
     parser.run()
 
