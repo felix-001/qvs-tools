@@ -260,7 +260,10 @@ class Parser:
     def getCreateChannel(self):
         ret = self.getLatestLog(param.CreateChannel[0])
         #log.info(ret)
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
+        else:
+            log.info("没有创建rtp通道的日志")
 
     # 获取invite返回code
     def getInviteResp(self):
