@@ -149,6 +149,7 @@ class Parser:
     def __init__(self, log=""):
         self.query = "" 
         self.log = log
+        self.inviteReqTimeStamp = -1
         self.lines = log.split('\n')
         #with open(logfile, 'r') as f:
             #buf = f.read()
@@ -192,6 +193,9 @@ class Parser:
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
+        # 日志如果和invite请求的日志时间差太多则认为是无效日志
+        if self.inviteReqTimeStamp != -1 and latestTs - self.inviteReqTimeStamp > 20:
+            return
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
         return {"date":date, "taskId":taskId, "raw":latestLog}
@@ -240,6 +244,8 @@ class Parser:
         if ret is None:
             log.info("[Error] 没有invite请求的日志")
             return
+        self.inviteReqTimeStamp = str2ts(ret["date"][:-4])
+        #log.info(self.inviteReqTimeStamp)
         self.ssrc = self.getSSRC(ret["raw"])
         self.rtpIp = self.getNodeIp(ret["raw"])
         log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
@@ -287,6 +293,7 @@ class Parser:
         pdr = Pdr(query, duration)
         rawlog, rtpnode = pdr.fetchLog()
         if rawlog is None:
+            log.info("没有获取到invite resp的日志")
             return None
         # 先暂存对象原来的lines，后面需要恢复
         tmp = self.lines
