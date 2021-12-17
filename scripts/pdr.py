@@ -193,12 +193,13 @@ class Parser:
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
+        duration = latestTs - self.inviteReqTimeStamp
         # 日志如果和invite请求的日志时间差太多则认为是无效日志
-        if self.inviteReqTimeStamp != -1 and latestTs - self.inviteReqTimeStamp > 20:
+        if self.inviteReqTimeStamp != -1 and duration > 20:
             return
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
-        return {"date":date, "taskId":taskId, "raw":latestLog}
+        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":duration}
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -258,7 +259,7 @@ class Parser:
             return
         #log.info(ret)
         self.realChid = self.parseRealChid(ret["raw"])
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
+        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
 
     # 获取callid
     def getCallId(self):
@@ -271,14 +272,14 @@ class Parser:
             return
         self.callId = self.parseCallId(ret['raw'])
         #log.info(ret)
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " callId: " + self.callId)
+        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " callId: " + self.callId)
 
     # 创建rtp通道
     def getCreateChannel(self):
         ret = self.getLatestLog(param.CreateChannel[0])
         #log.info(ret)
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
+            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 创建rtp通道")
         else:
             log.info("[Error] 没有创建rtp通道的日志")
 
@@ -300,7 +301,7 @@ class Parser:
         self.lines = rawlog.split('\n')
         ret = self.getLatestLog("status:100")
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 100")
+            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " invite resp 100")
         ret = self.getLatestLog("status:200")
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200")
