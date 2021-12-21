@@ -199,7 +199,7 @@ class Parser:
             return
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
-        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":duration}
+        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":str(duration)}
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -322,7 +322,7 @@ class Parser:
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over udp 数据包过来了")
         else:
-            log.info("没有收到rtp over udp的数据包")
+            log.info("[Error] 没有收到rtp over udp的数据包")
 
     # h265
     def getH265(self):
