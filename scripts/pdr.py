@@ -305,6 +305,8 @@ class Parser:
         ret = self.getLatestLog("status:200")
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200")
+        else:
+            log.info("[Error] 没有收到设备回复的200 ok") 
         self.lines = tmp
         #log.info(rawlog)
 
