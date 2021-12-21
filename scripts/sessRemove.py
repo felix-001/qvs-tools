@@ -61,13 +61,13 @@ if __name__ == '__main__':
             nonExistGbids.append(gbids[i])
         else:
             existGbids.append(gbids[i])
-	    i += 1
+	i += 1
     print(nonExistGbids)
     print('non exist: ' + str(len(nonExistGbids)))
     i = 0
     s = ''
     while i < len(nonExistGbids):
-        s += "AND (NOT %s)" % (gbids[i])
+        s += "AND (NOT \"%s\")" % (gbids[i])
         i += 1
     print(existGbids)
     print('exist: ' + str(len(existGbids)))
