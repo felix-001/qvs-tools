@@ -196,16 +196,17 @@ substr() {
 # $5 - 对讲协议版本2014/2016
 # $6 - isV2, 是否使用v2版接口true/false
 # $7 - protocol http/https
+# $8 - schedIp，调度节点ip
 talk() {
-	if [ $# != 7 ];then
-		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016> <isV2:true/false> <protocol:http/https>"
+	if [ $# != 8 ];then
+		echo "usage: talk <uid> <nsid> <gbid> <tcp/udp> <2014/2016> <isV2:true/false> <protocol:http/https> <schedIp>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
 
 	pcmaB64=`cat ~/liyq/etc/pcma.b64`
 	data="{
-		\"rtpAccessIp\":\"115.238.200.14\",
+		\"rtpAccessIp\":\"$8\",
 		\"transProtocol\":\"$4\",
 		\"tcpModel\":\"sendrecv\",
 		\"version\":\"$5\",
@@ -234,13 +235,14 @@ talk() {
 # $3 - 对讲协议版本，2014/2016
 # $4 - isV2, 是否使用v2版接口true/false
 # $5 - protocol, http/https
+# $6 - schedIp，调度节点ip
 talk-internal() {
-	if [ $# != 5 ];then
-		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016> <isV2:true/false> <protocol:http/https>"
+	if [ $# != 6 ];then
+		echo "usage: talk-internal <gbid> <tcp/udp> <2014/2016> <isV2:true/false> <protocol:http/https> <schedIp>"
 		echo "       默认调度到vdn-gdgzh-dls-1-11"
 		return 0
 	fi
-	talk 1381539624 2xenzw72izhqy $1 $2 $3 $4 $5
+	talk 1381539624 2xenzw72izhqy $1 $2 $3 $4 $5 $6
 }
 
 # 发起拉流

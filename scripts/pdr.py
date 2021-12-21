@@ -149,6 +149,7 @@ class Parser:
     def __init__(self, log=""):
         self.query = "" 
         self.log = log
+        self.inviteReqTimeStamp = -1
         self.lines = log.split('\n')
         #with open(logfile, 'r') as f:
             #buf = f.read()
@@ -192,9 +193,13 @@ class Parser:
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
+        duration = latestTs - self.inviteReqTimeStamp
+        # 日志如果和invite请求的日志时间差太多则认为是无效日志
+        if self.inviteReqTimeStamp != -1 and duration > 20:
+            return
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
-        return {"date":date, "taskId":taskId, "raw":latestLog}
+        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":str(duration)}
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -237,6 +242,11 @@ class Parser:
     # invite请求
     def getInviteReq(self):
         ret = self.getLatestLog(param.InviteReq[0])
+        if ret is None:
+            log.info("[Error] 没有invite请求的日志")
+            return
+        self.inviteReqTimeStamp = str2ts(ret["date"][:-4])
+        #log.info(self.inviteReqTimeStamp)
         self.ssrc = self.getSSRC(ret["raw"])
         self.rtpIp = self.getNodeIp(ret["raw"])
         log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
@@ -244,26 +254,39 @@ class Parser:
     # 获取实际的chid
     def getRealChid(self):
         ret = self.getLatestLog(param.realChid[0])
+        if ret is None:
+            log.info("[Error] 没有获取实际chid的日志")
+            return
         #log.info(ret)
         self.realChid = self.parseRealChid(ret["raw"])
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
+        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
 
     # 获取callid
     def getCallId(self):
+        if not hasattr(self, 'realChid'):
+            return
         callidStr = "after invite %s:%s ssrc:%s return callid:" % (gbid, self.realChid, self.ssrc)
         ret = self.getLatestLog(callidStr)
+        if ret is None:
+            log.info("[Error] 没有获取callid的日志")
+            return
         self.callId = self.parseCallId(ret['raw'])
         #log.info(ret)
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " callId: " + self.callId)
+        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " callId: " + self.callId)
 
     # 创建rtp通道
     def getCreateChannel(self):
         ret = self.getLatestLog(param.CreateChannel[0])
         #log.info(ret)
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " 创建rtp通道")
+        if ret is not None:
+            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 创建rtp通道")
+        else:
+            log.info("[Error] 没有创建rtp通道的日志")
 
     # 获取invite返回code
     def getInviteResp(self):
+        if not hasattr(self, 'realChid'):
+            return
         keywords = ["request client id=" + self.realChid, "status:", "callid="+self.callId]
         query = wrapKeyword(keywords, True)
         #log.info("query: %s", query)
@@ -271,16 +294,21 @@ class Parser:
         pdr = Pdr(query, duration)
         rawlog, rtpnode = pdr.fetchLog()
         if rawlog is None:
+            log.info("没有获取到invite resp的日志")
             return None
         # 先暂存对象原来的lines，后面需要恢复
         tmp = self.lines
         self.lines = rawlog.split('\n')
         ret = self.getLatestLog("status:100")
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 100")
+            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " invite resp 100")
+        else:
+            log.info("[Error] 没有收到设备回复的100 Trying")
         ret = self.getLatestLog("status:200")
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " invite resp 200")
+        else:
+            log.info("[Error] 没有收到设备回复的200 ok") 
         self.lines = tmp
         #log.info(rawlog)
 
@@ -290,7 +318,7 @@ class Parser:
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over tcp 连接过来了")
         else:
-            log.info("没有rtp over tcp连接过来")
+            log.info("[Error] 没有rtp over tcp连接过来")
     
     # rtp over udp
     def getUdpRtp(self):
@@ -298,7 +326,7 @@ class Parser:
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over udp 数据包过来了")
         else:
-            log.info("没有收到rtp over udp的数据包")
+            log.info("[Error] 没有收到rtp over udp的数据包")
 
     # h265
     def getH265(self):
@@ -383,7 +411,7 @@ if __name__ == '__main__':
     raw, rtpNode = fetchLog()
     if raw is None:
         sys.exit()
-    log.info("rtpNode:"+rtpNode)
+    log.info("rtpNode: "+rtpNode)
     parser = Parser(raw)
     parser.run()
 
