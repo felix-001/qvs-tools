@@ -386,32 +386,35 @@ rtpReq() {
 
 # dump ps流 
 # $1 - 流id
+# $2 - 开：true 关：false
 dump-ps() {
-	if [ $# != 1 ];then
-		echo "usage: dump-ps <streamId>"
+	if [ $# != 2 ];then
+		echo "usage: dump-ps <streamId> <true/false>"
 		return 0
 	fi	
-	rtpReq "dump_stream" $1 "&dump_ps=true"
+	rtpReq "dump_stream" $1 "&dump_ps=$2"
 }
 
 # dump 音频流 
 # $1 - 流id
+# $2 - 开：true 关：false
 dump-audio() {
-	if [ $# != 1 ];then
-		echo "usage: dump-audio <streamId>"
+	if [ $# != 2 ];then
+		echo "usage: dump-audio <streamId> <true/false>"
 		return 0
 	fi	
-	rtpReq "dump_stream" $1 "&dump_audio=true"
+	rtpReq "dump_stream" $1 "&dump_audio=$2"
 }
 
 # dump 视频流 
 # $1 - 流id
+# $2 - 开：true 关：false
 dump-video() {
-	if [ $# != 1 ];then
-		echo "usage: dump-video <streamId>"
+	if [ $# != 2 ];then
+		echo "usage: dump-video <streamId> <true/false>"
 		return 0
 	fi	
-	rtpReq "dump_stream" $1 "&dump_video=true"
+	rtpReq "dump_stream" $1 "&dump_video=$2"
 }
 
 sipApiBasePath="http://localhost:7279/api/v1/gb28181?action="
