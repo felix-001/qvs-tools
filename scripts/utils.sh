@@ -374,20 +374,44 @@ stopgb() {
 	deviceReq $uid $nsid $gbid "stop" ""
 }
 
-rtpBaseUrl="http://localhost:2985/api/v1/gb28181?action="
+rtpBaseUrl="http://127.0.0.1:2985/api/v1/gb28181?action="
 
 # $1 - action
 # $2 - id
 # $3 - querys
 rtpReq() {
-	url="$sipBaseUrl$1&id=$2$3"
+	url="$rtpBaseUrl$1&id=$2$3"
 	curl $url
 }
 
 # dump ps流 
 # $1 - 流id
-dump() {
+dump-ps() {
+	if [ $# != 1 ];then
+		echo "usage: dump-ps <streamId>"
+		return 0
+	fi	
 	rtpReq "dump_stream" $1 "&dump_ps=true"
+}
+
+# dump 音频流 
+# $1 - 流id
+dump-audio() {
+	if [ $# != 1 ];then
+		echo "usage: dump-audio <streamId>"
+		return 0
+	fi	
+	rtpReq "dump_stream" $1 "&dump_audio=true"
+}
+
+# dump 视频流 
+# $1 - 流id
+dump-video() {
+	if [ $# != 1 ];then
+		echo "usage: dump-video <streamId>"
+		return 0
+	fi	
+	rtpReq "dump_stream" $1 "&dump_video=true"
 }
 
 sipApiBasePath="http://localhost:7279/api/v1/gb28181?action="
