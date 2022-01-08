@@ -17,7 +17,7 @@ class Parser():
         self.ptsList = []
 
     def dump(self):
-        cmd1 = 'ffprobe -show_frames -of xml ' + self.file + ' > /tmp/out.csv'
+        cmd1 = 'ffprobe -show_frames -of csv ' + self.file + ' > /tmp/out.csv'
         os.popen(cmd1)
         cmd = 'ffprobe -show_frames -of xml ' + self.file
         res = os.popen(cmd).read()
