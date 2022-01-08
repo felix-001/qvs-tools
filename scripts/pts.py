@@ -12,8 +12,9 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 class Parser():
-    def __init__(self, file):
+    def __init__(self, file, mediaType):
         self.file = file
+        self.mediaType = mediaType
         self.ptsList = []
 
     def dump(self):
@@ -33,9 +34,11 @@ class Parser():
     # 探测正常的duration, 所有的样本里面分布最多样本
     def probeNormalDur(self):
         durations = {}
+        print(len(self.ptsList))
         for i in range(len(self.ptsList)-1):
             duration = float(self.ptsList[i+1]) - float(self.ptsList[i])
             if durations.has_key(duration):
+                #print('duration:'+str(duration))
                 durations[duration] += 1
             else:
                 durations[duration] = 1
@@ -49,7 +52,8 @@ class Parser():
 
     def printDurations(self):
         xml = self.dump()
-        self.ParseXml(xml, 'video')
+        #print(xml)
+        self.ParseXml(xml, self.mediaType)
         self.probeNormalDur()
         total = 0
         max = 0
@@ -69,10 +73,10 @@ class Parser():
         print('总帧数: %d 总共异常: %d 异常率: %d%% 最大: %fs 最小: %fs' % (len(self.ptsList), total, float(total)/len(self.ptsList)*100, max, min))
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("args <videoFile>")
+    if len(sys.argv) < 3:
+        print("args <videoFile> <mediaType>")
         sys.exit(0)
 
-    parser = Parser(sys.argv[1])
+    parser = Parser(sys.argv[1], sys.argv[2])
     parser.printDurations()
 
