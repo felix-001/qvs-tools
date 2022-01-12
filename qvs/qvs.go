@@ -64,15 +64,15 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 		log.Println(err)
 		return "", err
 	}
-	if resp.StatusCode != 200 {
-		log.Println("status code", resp.StatusCode)
-		return "", errHttpStatusCode
-	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println(err)
 		return "", err
+	}
+	if resp.StatusCode != 200 {
+		log.Println("status code", resp.StatusCode, string(resp_body))
+		return "", errHttpStatusCode
 	}
 	return string(resp_body), err
 }
