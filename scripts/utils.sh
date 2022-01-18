@@ -110,7 +110,7 @@ srvlog() {
 	fi
 }
 
-srvApiBasePath="http://localhost:7275/v1"
+srvApiBasePath="http://10.20.21.40:7275/v1"
 
 deviceReq() {
 	uid=$1
@@ -417,7 +417,7 @@ dump-video() {
 	rtpReq "dump_stream" $1 "&dump_video=$2"
 }
 
-sipApiBasePath="http://localhost:7279/api/v1/gb28181?action="
+sipApiBasePath="http://10.20.21.40:7279/api/v1/gb28181?action="
 # $1 - action
 # $2 - id
 # $3 - querys
