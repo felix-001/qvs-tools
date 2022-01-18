@@ -105,12 +105,12 @@ class Pdr:
         return jres['process']
 
     def waitSearchDone(self, jobId):
-        log.info("searching...")
+        #log.info("searching...")
         while True:
             process = self.getJobInfo(jobId)
             time.sleep(0.2)
             if process == 1:
-                log.info("search job done")
+                #log.info("search job done")
                 return
 
     def getLogs(self, jobId):
@@ -129,7 +129,7 @@ class Pdr:
         logs = self.getLogs(jobId)
         rows = logs['rows']
         i = 0
-        log.info("total logs: " + str(len(rows)))
+        #log.info("total logs: " + str(len(rows)))
         rawlog = ""
         rtpnode = ""
         while i < len(rows):
@@ -199,7 +199,7 @@ class Parser:
             return
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
-        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":str(duration)}
+        return {"date":date, "taskId":taskId, "raw":latestLog, "duration":duration}
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -249,7 +249,7 @@ class Parser:
         #log.info(self.inviteReqTimeStamp)
         self.ssrc = self.getSSRC(ret["raw"])
         self.rtpIp = self.getNodeIp(ret["raw"])
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
+        log.info(ret["date"]+ ' ' + ret["taskId"] + " duration: 0 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
 
     # 获取实际的chid
     def getRealChid(self):
@@ -259,7 +259,7 @@ class Parser:
             return
         #log.info(ret)
         self.realChid = self.parseRealChid(ret["raw"])
-        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 实际的chid: " + self.realChid)
+        log.info(ret["date"]+ ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " 实际的chid: " + self.realChid)
 
     # 获取callid
     def getCallId(self):
@@ -272,14 +272,14 @@ class Parser:
             return
         self.callId = self.parseCallId(ret['raw'])
         #log.info(ret)
-        log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " callId: " + self.callId)
+        log.info(ret["date"] + ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " callId: " + self.callId)
 
     # 创建rtp通道
     def getCreateChannel(self):
         ret = self.getLatestLog(param.CreateChannel[0])
         #log.info(ret)
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " 创建rtp通道")
+            log.info(ret["date"] + ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " 创建rtp通道")
         else:
             log.info("[Error] 没有创建rtp通道的日志")
 
@@ -290,7 +290,7 @@ class Parser:
         keywords = ["request client id=" + self.realChid, "status:", "callid="+self.callId]
         query = wrapKeyword(keywords, True)
         #log.info("query: %s", query)
-        log.info("fetch invite resp log")
+        #log.info("fetch invite resp log")
         pdr = Pdr(query, duration)
         rawlog, rtpnode = pdr.fetchLog()
         if rawlog is None:
@@ -301,7 +301,7 @@ class Parser:
         self.lines = rawlog.split('\n')
         ret = self.getLatestLog("status:100")
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret['duration'] + ' ' + ret["taskId"] + " invite resp 100")
+            log.info(ret["date"]+ ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " invite resp 100")
         else:
             log.info("[Error] 没有收到设备回复的100 Trying")
         ret = self.getLatestLog("status:200")
@@ -316,7 +316,10 @@ class Parser:
     def getTcpAttach(self):
         ret = self.getLatestLog(param.TcpAttach[0])
         if ret is not None:
-            log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over tcp 连接过来了")
+            if ret['duration'] < 0:
+                log.info("[Error] 没有rtp over tcp连接过来")
+                return
+            log.info(ret["date"]+ ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " rtp over tcp 连接过来了")
         else:
             log.info("[Error] 没有rtp over tcp连接过来")
     
@@ -337,8 +340,8 @@ class Parser:
     # illegal ssrc
     def getIllegalSSRC(self):
         ret = self.getLatestLog(param.IllegalSsrc[0])
-        if ret is not None:
-            log.info(ret["date"]+ ' ' + ret["taskId"] + " illegal ssrc")
+        if ret is not None and ret['duration'] >= 0:
+            log.info(ret["date"]+ ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " illegal ssrc")
 
     # connection reset by peer
     def getConnectionByPeer(self):
