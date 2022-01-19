@@ -177,6 +177,20 @@ type TalksResp struct {
 	Gbid                  string `json:"gbid"`
 }
 
+func sendPcm(pcm []byte, addr string) error {
+	pos := 0
+	for pos < len(pcm) {
+		blkLen := calcBlkLen(len(pcm), pos)
+		blk := pcm[pos : pos+blkLen]
+		err := sendBlk(blk, addr)
+		if err != nil {
+			return err
+		}
+		pos += BlkLen
+	}
+	return nil
+}
+
 func broadcast() {
 	if *gbids == "" || *audioFile == "" || *nsid == "" || *ak == "" || *sk == "" {
 		flag.PrintDefaults()
@@ -209,16 +223,7 @@ func broadcast() {
 		return
 	}
 	for _, talkresp := range talkresps {
-		pos := 0
-		for pos < len(pcm) {
-			blkLen := calcBlkLen(len(pcm), pos)
-			blk := pcm[pos : pos+blkLen]
-			err := sendBlk(blk, talkresp.AudioSendAddrForHttp)
-			if err != nil {
-				return
-			}
-			pos += BlkLen
-		}
+		go sendPcm(pcm, talkresp.AudioSendAddrForHttp)
 	}
 }
 
