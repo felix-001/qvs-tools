@@ -265,6 +265,8 @@ class Parser:
     def getCallId(self):
         if not hasattr(self, 'realChid'):
             return
+        if not hasattr(self, 'ssrc'):
+            return
         callidStr = "after invite %s:%s ssrc:%s return callid:" % (gbid, self.realChid, self.ssrc)
         ret = self.getLatestLog(callidStr)
         if ret is None:
@@ -385,7 +387,7 @@ def fetchLog():
         + wrapKeyword(param.callIdQuery) \
         + wrapKeyword(param.realChid) \
         + wrapKeyword(param.ResetByPeer, True)
-    log.info("query: %s", query)
+    #log.info("query: %s", query)
     pdr = Pdr(query, duration)
     rawlog, rtpnode = pdr.fetchLog()
     if rawlog is None:
