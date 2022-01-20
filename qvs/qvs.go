@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 var ak, sk *string
@@ -231,4 +232,5 @@ func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
 	broadcast()
+	time.Sleep(60 * time.Second)
 }
