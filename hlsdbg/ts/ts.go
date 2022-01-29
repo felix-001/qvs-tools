@@ -73,7 +73,6 @@ func (self *TsMgr) Check(frames []Frame) {
 		if wallClockDur > int64(ptsDur) {
 			log.Println("playback stall, wallCloockDur:", wallClockDur, "ptsDur:", ptsDur)
 		}
-
 	}
 
 }
