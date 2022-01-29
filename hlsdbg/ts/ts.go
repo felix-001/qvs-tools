@@ -78,10 +78,11 @@ func (self *TsMgr) Check(frames []Frame) {
 }
 
 func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
-	body, err := utils.HttpGet(addr)
+	body, cost, err := utils.HttpGet(addr)
 	if err != nil {
 		return nil, err
 	}
+	log.Println("cost:", cost)
 	fileName := fmt.Sprintf("/tmp/%d.ts", self.index)
 	err = ioutil.WriteFile(fileName, []byte(body), 0644)
 	if err != nil {

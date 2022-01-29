@@ -38,11 +38,11 @@ func (self *M3u8) Init(addr string) error {
 }
 
 func (self *M3u8) Fetch() (*hls.MediaPlaylist, error) {
-	body, err := utils.HttpGet(self.addr)
+	body, cost, err := utils.HttpGet(self.addr)
 	if err != nil {
 		return nil, err
 	}
-
+	log.Println("cost:", cost)
 	p, listType, err := hls.DecodeFrom(bytes.NewReader([]byte(body)), true)
 	if err != nil {
 		return nil, err

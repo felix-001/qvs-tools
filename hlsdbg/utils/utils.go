@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 var (
@@ -36,6 +37,9 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 	return string(resp_body), err
 }
 
-func HttpGet(addr string) (string, error) {
-	return HttpReq("GET", addr, "", nil)
+func HttpGet(addr string) (string, int64, error) {
+	start := time.Now().UnixMilli()
+	resp, err := HttpReq("GET", addr, "", nil)
+	cost := time.Now().UnixMilli() - start
+	return resp, cost, err
 }

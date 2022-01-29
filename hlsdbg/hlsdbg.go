@@ -34,6 +34,7 @@ func main() {
 			log.Println(err)
 			return
 		}
+		log.Println("seqNo:", playlist.SeqNo)
 		for _, seg := range playlist.Segments {
 			frames, err := tsMgr.Fetch(seg.URI)
 			if err != nil {
