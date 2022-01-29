@@ -29,16 +29,18 @@ func main() {
 		return
 	}
 	for {
-		tslist, err := m3u8.Fetch()
+		playlist, err := m3u8.Fetch()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		for _, ts := range tslist {
-			if err := tsMgr.Fetch(ts); err != nil {
+		for _, seg := range playlist.Segments {
+			frames, err := tsMgr.Fetch(seg.URI)
+			if err != nil {
 				log.Println(err)
 				return
 			}
+			tsMgr.Check(frames)
 		}
 	}
 }

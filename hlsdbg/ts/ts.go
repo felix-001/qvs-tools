@@ -7,10 +7,13 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"time"
 )
 
 type TsMgr struct {
-	index int
+	index              int
+	wallClockStartTime int64
+	ptsStart           int
 }
 
 func New() *TsMgr {
@@ -42,38 +45,54 @@ type FrameInfo struct {
 	Frames []Frame `json:"frames"`
 }
 
-func (self *TsMgr) parse(filename string) error {
+func (self *TsMgr) parse(filename string) ([]Frame, error) {
 	cmdstr := "ffprobe -loglevel quiet -show_frames -of json " + filename
 	cmd := exec.Command("bash", "-c", cmdstr)
 	jsonstr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Println("cmd:", cmdstr, "err:", err)
-		return err
+		return nil, err
 	}
 	frameInfo := FrameInfo{}
 	err = json.Unmarshal(jsonstr, &frameInfo)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
-
-	return nil
+	return frameInfo.Frames, nil
 }
 
-func (self *TsMgr) Fetch(addr string) error {
+func (self *TsMgr) Check(frames []Frame) {
+	if self.wallClockStartTime == 0 {
+		self.wallClockStartTime = time.Now().UnixMilli()
+		self.ptsStart = frames[0].PktPts
+	} else {
+		len := len(frames)
+		ptsDur := (frames[len-1].PktPts - self.ptsStart) / 90
+		wallClockDur := time.Now().UnixMilli() - self.wallClockStartTime
+		if wallClockDur > int64(ptsDur) {
+			log.Println("playback stall, wallCloockDur:", wallClockDur, "ptsDur:", ptsDur)
+		}
+
+	}
+
+}
+
+func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 	body, err := utils.HttpGet(addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fileName := fmt.Sprintf("/tmp/%d.ts", self.index)
 	err = ioutil.WriteFile(fileName, []byte(body), 0644)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
-	if err := self.parse(fileName); err != nil {
-		return err
+	frames, err := self.parse(fileName)
+	if err != nil {
+		return nil, err
 	}
 	self.index++
-	return nil
+	return frames, nil
 }
