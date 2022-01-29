@@ -24,7 +24,7 @@ func New() *M3u8 {
 }
 
 func (self *M3u8) Init(addr string) error {
-	body, err := utils.HttpGet(addr)
+	body, _, err := utils.HttpGet(addr)
 	if err != nil {
 		return err
 	}
