@@ -71,7 +71,7 @@ func (self *TsMgr) Check(frames []Frame) {
 		ptsDur := (frames[len-1].PktPts - self.ptsStart) / 90
 		wallClockDur := time.Now().UnixMilli() - self.wallClockStartTime
 		if wallClockDur > int64(ptsDur) {
-			log.Println("playback stall, wallCloockDur:", wallClockDur, "ptsDur:", ptsDur)
+			log.Println("playback stall, wallClockDur:", wallClockDur, "ptsDur:", ptsDur)
 		}
 	}
 
