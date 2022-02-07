@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -28,15 +29,21 @@ func main() {
 	if err := m3u8.Init(*addr); err != nil {
 		return
 	}
+	var lastSeq uint64 = 0
 	for {
-		playlist, err := m3u8.Fetch()
+		playlist, host, err := m3u8.Fetch()
 		if err != nil {
 			log.Println(err)
 			return
 		}
+		if lastSeq == playlist.SeqNo {
+			continue
+		}
 		log.Println("seqNo:", playlist.SeqNo)
-		for _, seg := range playlist.Segments {
-			frames, err := tsMgr.Fetch(seg.URI)
+		lastSeq = playlist.SeqNo
+		for i := 0; i < int(playlist.Count()); i++ {
+			addr := fmt.Sprintf("%s/%s", host, playlist.Segments[i].URI)
+			frames, err := tsMgr.Fetch(addr)
 			if err != nil {
 				log.Println(err)
 				return

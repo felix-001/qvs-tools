@@ -82,7 +82,7 @@ func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("cost:", cost)
+	log.Println("cost:", cost, "ms")
 	fileName := fmt.Sprintf("/tmp/%d.ts", self.index)
 	err = ioutil.WriteFile(fileName, []byte(body), 0644)
 	if err != nil {
