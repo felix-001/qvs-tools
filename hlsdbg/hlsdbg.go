@@ -44,11 +44,13 @@ func main() {
 		for i := 0; i < int(playlist.Count()); i++ {
 			addr := fmt.Sprintf("%s/%s", host, playlist.Segments[i].URI)
 			frames, err := tsMgr.Fetch(addr)
-			if err != nil {
+			if err != nil && err != ts.ErrParseTS {
 				log.Println(err)
 				return
 			}
-			tsMgr.Check(frames)
+			if err != ts.ErrParseTS {
+				tsMgr.Check(frames)
+			}
 		}
 	}
 }

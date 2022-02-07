@@ -2,12 +2,17 @@ package ts
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hlsdbg/utils"
 	"io/ioutil"
 	"log"
 	"os/exec"
 	"time"
+)
+
+var (
+	ErrParseTS = errors.New("parse ts error")
 )
 
 type TsMgr struct {
@@ -71,7 +76,7 @@ func (self *TsMgr) Check(frames []Frame) {
 		ptsDur := (frames[len-1].PktPts - self.ptsStart) / 90
 		wallClockDur := time.Now().UnixMilli() - self.wallClockStartTime
 		if wallClockDur > int64(ptsDur) {
-			log.Println("playback stall, wallClockDur:", wallClockDur, "ptsDur:", ptsDur)
+			log.Println("playback stall, wallClockDur:", wallClockDur, "ms", "ptsDur:", ptsDur, "ms")
 		}
 	}
 
@@ -82,7 +87,6 @@ func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("cost:", cost, "ms")
 	fileName := fmt.Sprintf("/tmp/%d.ts", self.index)
 	err = ioutil.WriteFile(fileName, []byte(body), 0644)
 	if err != nil {
@@ -93,6 +97,11 @@ func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(frames) == 0 {
+		return nil, ErrParseTS
+	}
+	tsDur := (frames[len(frames)-1].PktPts - frames[0].PktPts) / 90
+	log.Println("cost:", cost, "ms", "ts size:", len(body)/1024, "k", "ts duration:", tsDur, "ms", "frame count:", len(frames))
 	self.index++
 	return frames, nil
 }
