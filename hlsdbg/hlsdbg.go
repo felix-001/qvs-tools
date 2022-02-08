@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"hlsdbg/m3u8"
 	"hlsdbg/ts"
@@ -30,6 +31,7 @@ func main() {
 		return
 	}
 	var lastSeq uint64 = 0
+	var lastSeqTime int64 = 0
 	for {
 		playlist, host, err := m3u8.Fetch()
 		if err != nil {
@@ -39,6 +41,11 @@ func main() {
 		if lastSeq == playlist.SeqNo {
 			continue
 		}
+		if lastSeqTime != 0 {
+			dur := time.Now().UnixMilli() - lastSeqTime
+			log.Println("seq gap:", dur, "ms")
+		}
+		lastSeqTime = time.Now().UnixMilli()
 		log.Println("seqNo:", playlist.SeqNo)
 		lastSeq = playlist.SeqNo
 		for i := 0; i < int(playlist.Count()); i++ {
