@@ -19,6 +19,8 @@ type TsMgr struct {
 	index              int
 	wallClockStartTime int64
 	ptsStart           int
+	totalBytes         int
+	totalFrames        int
 }
 
 func New() *TsMgr {
@@ -101,7 +103,13 @@ func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 		return nil, ErrParseTS
 	}
 	tsDur := (frames[len(frames)-1].PktPts - frames[0].PktPts) / 90
-	log.Println("cost:", cost, "ms", "ts size:", len(body)/1024, "k", "ts duration:", tsDur, "ms", "frame count:", len(frames))
+	self.totalBytes += len(body) * 8 / 1024
+	self.totalFrames += len(frames)
+	wallClockDur := float64(time.Now().UnixMilli()-self.wallClockStartTime) / 1000
+	bitrate := float64(self.totalBytes) / wallClockDur
+	fps := float64(self.totalFrames) / wallClockDur
+	log.Printf("cost: %dms ts size: %dk ts duration: %dms frame count: %d bitrate: %dKbps/s fps: %d total bytes: %dk\n",
+		cost, len(body)/1024, tsDur, len(frames), int(bitrate), int(fps), self.totalBytes)
 	self.index++
 	return frames, nil
 }

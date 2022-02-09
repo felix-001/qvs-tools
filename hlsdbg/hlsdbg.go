@@ -22,6 +22,10 @@ func parseConsole() {
 	}
 }
 
+// 检查每一个ts的所有帧时间戳是否正常
+// 计算帧率
+// 计算码率
+// 两个sequence之间的时间间隔
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
