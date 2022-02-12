@@ -24,12 +24,12 @@ let index = {
             index.listen();
 
             // Explore default path
-            index.explore();
+            index.show();
         })
     },
-    explore: function(path) {
+    show: function(path) {
         // Create message
-        let message = {"name": "explore"};
+        let message = {"name": "disp"};
         if (typeof path !== "undefined") {
             message.payload = path
         }
@@ -48,11 +48,11 @@ let index = {
 
             // Process files
             document.getElementById("files").innerHTML = "";
-            if (typeof message.payload.files !== "undefined") {
+            if (typeof message.payload.chart !== "undefined") {
                 document.getElementById("files_panel").style.display = "block";
                 let canvas = document.createElement("canvas");
                 document.getElementById("files").append(canvas);
-                new Chart(canvas, message.payload.files);
+                new Chart(canvas, message.payload.chart);
             } else {
                 document.getElementById("files_panel").style.display = "none";
             }
