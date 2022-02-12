@@ -26,7 +26,7 @@ func parseConsole() {
 // 计算帧率
 // 计算码率
 // 两个sequence之间的时间间隔
-func main() {
+func Run() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
 	m3u8 := m3u8.New()

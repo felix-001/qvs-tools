@@ -1,2 +1,4 @@
 
 .DS_Store
+output
+bind_darwin_amd64.go
