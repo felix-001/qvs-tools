@@ -5,13 +5,6 @@ let index = {
         asticode.modaler.setContent(c);
         asticode.modaler.show();
     },
-    addFolder(name, path) {
-        let div = document.createElement("div");
-        div.className = "dir";
-        div.onclick = function() { index.explore(path) };
-        div.innerHTML = `<i class="fa fa-folder"></i><span>` + name + `</span>`;
-        document.getElementById("dirs").appendChild(div)
-    },
     init: function() {
         // Init
         asticode.loader.init();

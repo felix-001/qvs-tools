@@ -13,7 +13,7 @@ import (
 )
 
 // Constants
-const htmlAbout = `hls流媒体调试工具`
+const htmlAbout = `hls调试工具`
 
 // Vars injected via ldflags by bundler
 var (
@@ -58,7 +58,7 @@ func main() {
 				{
 					Label: astikit.StrPtr("About"),
 					OnClick: func(e astilectron.Event) (deleteListener bool) {
-						if err := bootstrap.SendMessage(w, "about", htmlAbout, nil); err != nil {
+						if err := bootstrap.SendMessage(w, "about", htmlAbout, func(m *bootstrap.MessageIn) {}); err != nil {
 							l.Println(fmt.Errorf("sending about event failed: %w", err))
 						}
 						return
