@@ -13,10 +13,7 @@ let index = {
 
         // Wait for astilectron to be ready
         document.addEventListener('astilectron-ready', function() {
-            // Listen
             index.listen();
-
-            // Explore default path
             index.show();
         })
     },
@@ -57,10 +54,6 @@ let index = {
                 case "about":
                     index.about(message.payload);
                     return {payload: "payload"};
-                    break;
-                case "check.out.menu":
-                    asticode.notifier.info(message.payload);
-                    break;
                 case "update":
                     chart.data.datasets[0].data = message.payload
                     chart.update()
