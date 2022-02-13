@@ -75,6 +75,7 @@ func main() {
 					l.Println(fmt.Errorf("sending check.out.menu event failed: %w", err))
 				}
 			}()
+			go update()
 			return nil
 		},
 		RestoreAssets: RestoreAssets,

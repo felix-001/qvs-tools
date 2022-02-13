@@ -52,7 +52,7 @@ let index = {
                 document.getElementById("files_panel").style.display = "block";
                 let canvas = document.createElement("canvas");
                 document.getElementById("files").append(canvas);
-                new Chart(canvas, message.payload.chart);
+                chart = new Chart(canvas, message.payload.chart);
             } else {
                 document.getElementById("files_panel").style.display = "none";
             }
@@ -67,6 +67,10 @@ let index = {
                     break;
                 case "check.out.menu":
                     asticode.notifier.info(message.payload);
+                    break;
+                case "update":
+                    chart.data.datasets[0].data = message.payload
+                    chart.update()
                     break;
             }
         });

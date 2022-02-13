@@ -1,10 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"time"
+
 	"github.com/asticode/go-astichartjs"
 	"github.com/asticode/go-astilectron"
 	bootstrap "github.com/asticode/go-astilectron-bootstrap"
 )
+
+var index int
+
+func update() {
+	time.Sleep(5 * time.Second)
+	data := []int{60, 50, 5, 2, 30, 10, 25}
+	if err := bootstrap.SendMessage(w, "update", data); err != nil {
+		log.Println(fmt.Errorf("sending update event failed: %w", err))
+	}
+}
 
 // handleMessages handles messages
 func handleMessages(_ *astilectron.Window, m bootstrap.MessageIn) (payload interface{}, err error) {
