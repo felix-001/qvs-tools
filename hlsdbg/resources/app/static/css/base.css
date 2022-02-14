@@ -30,7 +30,7 @@ html, body {
 }
 
 .right {
-    float: left;
+    float: none;
     height: 100%;
     overflow: auto;
     padding: 15px;
