@@ -23,6 +23,16 @@ type TsMgr struct {
 	totalFrames        int
 }
 
+type TsInfo struct {
+	Frames  []Frame
+	TsDur   int
+	TsSize  int
+	Cost    int64
+	Bitrate float64
+	Fps     float64
+	SeqGap  int64
+}
+
 func New() *TsMgr {
 	return &TsMgr{}
 }
@@ -69,22 +79,31 @@ func (self *TsMgr) parse(filename string) ([]Frame, error) {
 	return frameInfo.Frames, nil
 }
 
-func (self *TsMgr) Check(frames []Frame) {
+func (self *TsMgr) Check(tsInfo *TsInfo) *TsInfo {
+	ret := *tsInfo
+	frames := tsInfo.Frames
+	tsDur := (frames[len(frames)-1].PktPts - frames[0].PktPts) / 90
+	wallClockDur := float64(time.Now().UnixMilli()-self.wallClockStartTime) / 1000
+	bitrate := float64(self.totalBytes) / wallClockDur
+	fps := float64(self.totalFrames) / wallClockDur
+	ret.TsDur = tsDur
+	ret.Fps = fps
+	ret.Bitrate = bitrate
+	log.Printf("cost: %dms ts size: %dk ts duration: %dms frame count: %d bitrate: %dKbps/s fps: %d total bytes: %dk\n",
+		tsInfo.Cost, tsInfo.TsSize, tsDur, len(frames), int(bitrate), int(fps), self.totalBytes)
 	if self.wallClockStartTime == 0 {
 		self.wallClockStartTime = time.Now().UnixMilli()
 		self.ptsStart = frames[0].PktPts
 	} else {
-		len := len(frames)
-		ptsDur := (frames[len-1].PktPts - self.ptsStart) / 90
 		wallClockDur := time.Now().UnixMilli() - self.wallClockStartTime
-		if wallClockDur > int64(ptsDur) {
-			log.Println("playback stall, wallClockDur:", wallClockDur, "ms", "ptsDur:", ptsDur, "ms")
+		if wallClockDur > int64(tsDur) {
+			log.Println("playback stall, wallClockDur:", wallClockDur, "ms", "ptsDur:", tsDur, "ms")
 		}
 	}
-
+	return &ret
 }
 
-func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
+func (self *TsMgr) Fetch(addr string) (*TsInfo, error) {
 	body, cost, err := utils.HttpGet(addr)
 	if err != nil {
 		return nil, err
@@ -102,14 +121,11 @@ func (self *TsMgr) Fetch(addr string) ([]Frame, error) {
 	if len(frames) == 0 {
 		return nil, ErrParseTS
 	}
-	tsDur := (frames[len(frames)-1].PktPts - frames[0].PktPts) / 90
 	self.totalBytes += len(body) * 8 / 1024
 	self.totalFrames += len(frames)
-	wallClockDur := float64(time.Now().UnixMilli()-self.wallClockStartTime) / 1000
-	bitrate := float64(self.totalBytes) / wallClockDur
-	fps := float64(self.totalFrames) / wallClockDur
-	log.Printf("cost: %dms ts size: %dk ts duration: %dms frame count: %d bitrate: %dKbps/s fps: %d total bytes: %dk\n",
-		cost, len(body)/1024, tsDur, len(frames), int(bitrate), int(fps), self.totalBytes)
 	self.index++
-	return frames, nil
+	return &TsInfo{
+		Cost:   cost,
+		TsSize: len(body) / 1024,
+	}, nil
 }

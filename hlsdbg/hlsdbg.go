@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"hlsdbg/m3u8"
+	"hlsdbg/message"
 	"hlsdbg/ts"
 )
 
@@ -45,22 +46,25 @@ func Run() {
 		if lastSeq == playlist.SeqNo {
 			continue
 		}
+		var seqGap int64
 		if lastSeqTime != 0 {
-			dur := time.Now().UnixMilli() - lastSeqTime
-			log.Println("seq gap:", dur, "ms")
+			seqGap = time.Now().UnixMilli() - lastSeqTime
+			log.Println("seq gap:", seqGap, "ms")
 		}
 		lastSeqTime = time.Now().UnixMilli()
 		log.Println("seqNo:", playlist.SeqNo)
 		lastSeq = playlist.SeqNo
 		for i := 0; i < int(playlist.Count()); i++ {
 			addr := fmt.Sprintf("%s/%s", host, playlist.Segments[i].URI)
-			frames, err := tsMgr.Fetch(addr)
+			tsInfo, err := tsMgr.Fetch(addr)
 			if err != nil && err != ts.ErrParseTS {
 				log.Println(err)
 				return
 			}
 			if err != ts.ErrParseTS {
-				tsMgr.Check(frames)
+				tsInfo = tsMgr.Check(tsInfo)
+				tsInfo.SeqGap = seqGap
+				message.SendData(tsInfo)
 			}
 		}
 	}

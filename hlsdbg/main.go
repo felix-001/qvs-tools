@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	"hlsdbg/message"
+
 	"github.com/asticode/go-astikit"
 	"github.com/asticode/go-astilectron"
 	bootstrap "github.com/asticode/go-astilectron-bootstrap"
@@ -68,13 +70,13 @@ func main() {
 		}},
 		OnWait: func(_ *astilectron.Astilectron, ws []*astilectron.Window, _ *astilectron.Menu, _ *astilectron.Tray, _ *astilectron.Menu) error {
 			w = ws[0]
-			go update()
+			message.SetWindow(w)
 			return nil
 		},
 		RestoreAssets: RestoreAssets,
 		Windows: []*bootstrap.Window{{
 			Homepage:       "index.html",
-			MessageHandler: handleMessages,
+			MessageHandler: message.HandleMessages,
 			Options: &astilectron.WindowOptions{
 				BackgroundColor: astikit.StrPtr("#333"),
 				Center:          astikit.BoolPtr(true),
