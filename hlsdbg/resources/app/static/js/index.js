@@ -5,13 +5,12 @@ let index = {
         asticode.modaler.setContent(c);
         asticode.modaler.show();
     },
-    createLineChart: function() {
+    createLineChart: function(id) {
         let ctx = document.createElement("canvas");
-        document.getElementById("files_panel").append(ctx);
+        document.getElementById(id).append(ctx);
         var c = new Chart(ctx, {
             // 要创建的图表类型
             type: 'line',
-        
             // 数据集
             data: {
                 labels: ["January", "February", "March", "April", "May", "June", "July"],
@@ -22,7 +21,6 @@ let index = {
                     data: [0, 10, 5, 2, 20, 30, 45],
                 }]
             },
-        
             // 配置选项
             options: {}
         });
@@ -34,94 +32,15 @@ let index = {
         asticode.modaler.init();
         asticode.notifier.init();
 
-        let ctx = document.createElement("canvas");
-        document.getElementById("files_panel").append(ctx);
-        var c = new Chart(ctx, {
-            // 要创建的图表类型
-            type: 'line',
-        
-            // 数据集
-            data: {
-                labels: ["January", "February", "March", "April", "May", "June", "July"],
-                datasets: [{
-                    label: "My First dataset",
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    borderColor: 'rgb(255, 99, 132)',
-                    data: [0, 10, 5, 2, 20, 30, 45],
-                }]
-            },
-        
-            // 配置选项
-            options: {}
-        });
-        c0 = this.createLineChart("c0")
-        ids = ["c0", "c1", "c2", "c3"]
-        for (id in ids) {
-            c = 
-        }
-
-        let ctx1 = document.createElement("canvas");
-        document.getElementById("c2").append(ctx1);
-        var c = new Chart(ctx1, {
-            // 要创建的图表类型
-            type: 'line',
-        
-            // 数据集
-            data: {
-                labels: ["January", "February", "March", "April", "May", "June", "July"],
-                datasets: [{
-                    label: "My First dataset",
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    borderColor: 'rgb(255, 99, 132)',
-                    data: [0, 10, 5, 2, 20, 30, 45],
-                }]
-            },
-        
-            // 配置选项
-            options: {}
-        });
-
-        let ctx2 = document.createElement("canvas");
-        document.getElementById("c3").append(ctx2);
-        var c = new Chart(ctx2, {
-            // 要创建的图表类型
-            type: 'line',
-        
-            // 数据集
-            data: {
-                labels: ["January", "February", "March", "April", "May", "June", "July"],
-                datasets: [{
-                    label: "My First dataset",
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    borderColor: 'rgb(255, 99, 132)',
-                    data: [0, 10, 5, 2, 20, 30, 45],
-                }]
-            },
-        
-            // 配置选项
-            options: {}
-        });
-
-        let ctx4 = document.createElement("canvas");
-        document.getElementById("c4").append(ctx4);
-        var c = new Chart(ctx4, {
-            // 要创建的图表类型
-            type: 'line',
-        
-            // 数据集
-            data: {
-                labels: ["January", "February", "March", "April", "May", "June", "July"],
-                datasets: [{
-                    label: "My First dataset",
-                    backgroundColor: 'rgb(255, 99, 132)',
-                    borderColor: 'rgb(255, 99, 132)',
-                    data: [0, 10, 5, 2, 20, 30, 45],
-                }]
-            },
-        
-            // 配置选项
-            options: {}
-        });
+        c01 = this.createLineChart("c00")
+        c01 = this.createLineChart("c01")
+        c02 = this.createLineChart("c02")
+        c11 = this.createLineChart("c10")
+        c11 = this.createLineChart("c11")
+        c12 = this.createLineChart("c12")
+        c21 = this.createLineChart("c20")
+        c21 = this.createLineChart("c21")
+        c22 = this.createLineChart("c22")
 
         // Wait for astilectron to be ready
         document.addEventListener('astilectron-ready', function() {
