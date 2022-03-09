@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 var ak, sk *string
@@ -22,6 +21,10 @@ var nsid, gbid *string
 var audioFile *string
 var addr *string
 var gbids *string
+var path *string
+var body *string
+var get *bool
+var post *bool
 
 var (
 	errHttpStatusCode = errors.New("http status code err")
@@ -121,18 +124,32 @@ func pm3u8() {
 }
 
 func parseConsole() {
-	ak = flag.String("ak", "", "ak")
-	sk = flag.String("sk", "", "sk")
 	nsid = flag.String("nsid", "", "namespace id")
 	gbid = flag.String("gbid", "", "gbid")
 	gbids = flag.String("gbids", "", "gbids")
-	addr = flag.String("url", "", "pm3u8 url")
+	addr = flag.String("url", "", "url")
+	body = flag.String("body", "", "body")
+	get = flag.Bool("get", true, "http get?")
+	post = flag.Bool("get", false, "http post?")
 	audioFile = flag.String("audiofile", "", "audio file")
+	path = flag.String("path", "", "path")
+	_ak := flag.String("ak", "", "ak")
+	_sk := flag.String("sk", "", "sk")
+	_addr := flag.String("addr", "", "addr")
 	flag.Parse()
+	if *_ak != "" {
+		ak = _ak
+	}
+	if *_sk != "" {
+		sk = _sk
+	}
+	if *_addr != "" {
+		addr = _addr
+	}
 }
 
-func qvsTestGet(path string) {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
+func qvsTestGet() {
+	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
 	resp, err := qvsHttpGet(addr)
 	if err != nil {
 		return
@@ -140,8 +157,9 @@ func qvsTestGet(path string) {
 	log.Println(resp)
 }
 
-func qvsTestPost(path, body string) (string, error) {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
+func qvsTestPost(body string) (string, error) {
+	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
+	//addr := fmt.Sprintf("http://qvs.qiniuapi.com/v1/%s", path)
 	return qvsHttpPost(addr, body)
 }
 
@@ -208,7 +226,7 @@ func broadcast() {
 		return
 	}
 
-	resp, err := qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid), string(jsonbody))
+	resp, err := qvsTestPost(string(jsonbody))
 	if err != nil {
 		return
 	}
@@ -228,9 +246,62 @@ func broadcast() {
 	}
 }
 
+func createTemplate() {
+	jsonbody :=
+		`{
+			"name":"helloworld111",
+			"bucket":"linking",
+			"deleteAfterDays":30,
+			"fileType":0,
+			"recordFileFormat":1,
+			"templateType":0,
+			"m3u8FileNameTemplate":"${startMs}-${endMs}-${duration}.m3u8"
+		}
+`
+	resp, err := qvsTestPost(jsonbody)
+	if err != nil {
+		return
+	}
+	log.Println(resp)
+}
+
+type Config struct {
+	ak  string
+	sk  string
+	url string
+}
+
+func loadConf() error {
+	file := "/etc/qvs.conf"
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Println("read fail", file, err)
+		return err
+	}
+	conf := Config{}
+	err = json.Unmarshal(b, &conf)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	ak = &conf.ak
+	sk = &conf.sk
+	addr = &conf.url
+	return nil
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
+	// 首先尝试从文件加载配置
+	loadConf()
+	// 控制台指定的参数会覆盖配置文件
 	parseConsole()
-	broadcast()
-	time.Sleep(60 * time.Second)
+	//broadcast()
+	//time.Sleep(60 * time.Second)
+	//createTemplate()
+	if *post {
+		qvsTestPost(*body)
+	} else {
+		qvsTestGet()
+	}
 }
