@@ -15,14 +15,19 @@ let index = {
             data: {
                 labels: ["January", "February", "March", "April", "May", "June", "July"],
                 datasets: [{
-                    label: "My First dataset",
+                    label: "",
                     backgroundColor: 'rgb(255, 99, 132)',
                     borderColor: 'rgb(255, 99, 132)',
                     data: [0, 10, 5, 2, 20, 30, 45],
                 }]
             },
             // 配置选项
-            options: {}
+            options: {
+                legend: {
+                    // 设置不显示label
+                    display: false
+                 }
+            }
         });
         return c
     },
@@ -58,24 +63,10 @@ let index = {
         // Send message
         asticode.loader.show();
         astilectron.sendMessage(message, function(message) {
-            // Init
             asticode.loader.hide();
-
-            // Check error
             if (message.name === "error") {
                 asticode.notifier.error(message.payload);
                 return
-            }
-
-            // Process files
-            document.getElementById("files").innerHTML = "";
-            if (typeof message.payload.chart !== "undefined") {
-                document.getElementById("files_panel").style.display = "block";
-                let canvas = document.createElement("canvas");
-                document.getElementById("files").append(canvas);
-                chart = new Chart(canvas, message.payload.chart);
-            } else {
-                document.getElementById("files_panel").style.display = "none";
             }
         })
     },
