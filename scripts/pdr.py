@@ -63,7 +63,7 @@ def saveFile(name, buf):
             f.close
 
 def str2ts(str):
-    timeArray = time.strptime(str, "%Y-%m-%d %H:%M:%S")
+    timeArray = time.strptime(str, "%Y-%m-%d %H:%M:%S.%f")
     timeStamp = int(time.mktime(timeArray))
     return timeStamp
 
@@ -189,7 +189,7 @@ class Parser:
             if date is None:
                 continue
             #log.info(line)
-            ts = str2ts(date[:len(date)-4]) # 时间的单位是精确到毫秒的
+            ts = str2ts(date) # 时间的单位是精确到毫秒的
             if ts > latestTs:
                 latestTs = ts
                 latestLog = line
@@ -200,6 +200,9 @@ class Parser:
         #log.info("latestlog:"+latestLog)
         date, taskId = self.getLogMeta(latestLog)
         return {"date":date, "taskId":taskId, "raw":latestLog, "duration":duration}
+
+    def info(self, common, s):
+        log.info("%s %s duration: %sms %s" % (common['date'], common['taskId'], common['duration'], s) )
             
     # 过滤包含substr的所有字符串
     def filterLog(self, substr):
@@ -245,11 +248,13 @@ class Parser:
         if ret is None:
             log.info("[Error] 没有invite请求的日志")
             return
-        self.inviteReqTimeStamp = str2ts(ret["date"][:-4])
-        #log.info(self.inviteReqTimeStamp)
+        self.inviteReqTimeStamp = str2ts(ret["date"])
+        log.info(self.inviteReqTimeStamp)
         self.ssrc = self.getSSRC(ret["raw"])
         self.rtpIp = self.getNodeIp(ret["raw"])
-        log.info(ret["date"]+ ' ' + ret["taskId"] + " duration: 0 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
+        #log.info(ret["date"]+ ' ' + ret["taskId"] + " duration: 0 请求invite,"+" ssrc: " + self.ssrc + ", rtpIp: "+self.rtpIp)
+        s = "ssrc: %s rtpIp: %s" % (self.ssrc, self.rtpIp)
+        self.info(ret, s)
 
     # 获取实际的chid
     def getRealChid(self):
@@ -322,6 +327,7 @@ class Parser:
                 log.info("[Error] 没有rtp over tcp连接过来")
                 return
             log.info(ret["date"]+ ' ' + ret["taskId"] + ' duration: ' + str(ret['duration']) + " rtp over tcp 连接过来了")
+            self.gotTcpConnection = True
         else:
             log.info("[Error] 没有rtp over tcp连接过来")
     
@@ -330,7 +336,7 @@ class Parser:
         ret = self.getLatestLog(param.UdpRtp[0])
         if ret is not None:
             log.info(ret["date"]+ ' ' + ret["taskId"] + " rtp over udp 数据包过来了")
-        else:
+        elif hasattr(self, 'gotTcpConnection') and not self.gotTcpConnection:
             log.info("[Error] 没有收到rtp over udp的数据包")
 
     # h265
