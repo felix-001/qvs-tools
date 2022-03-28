@@ -167,8 +167,8 @@ class Parser:
         if pos != -1:
             new = log_[pos+3:]
         res = re.findall(r'\[(.*?)\]', new)
-        if len(res) == 0:
-            log.info("[Error] get meta err:"+log_)
+        if len(res) == 0 or len(res) < 4:
+            log.info("[Error] get meta err:"+log_+' ' +str(res))
             return
         #log.info(res)
         dateTime = res[0]
