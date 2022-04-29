@@ -130,7 +130,7 @@ func parseConsole() {
 	addr = flag.String("url", "", "url")
 	body = flag.String("body", "", "body")
 	get = flag.Bool("get", true, "http get?")
-	post = flag.Bool("get", false, "http post?")
+	post = flag.Bool("post", false, "http post?")
 	audioFile = flag.String("audiofile", "", "audio file")
 	path = flag.String("path", "", "path")
 	_ak := flag.String("ak", "", "ak")
