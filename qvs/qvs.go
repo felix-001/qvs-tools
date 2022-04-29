@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -146,6 +147,11 @@ func parseConsole() {
 	if *_addr != "" {
 		addr = _addr
 	}
+	if path == nil || sk == nil || ak == nil {
+		fmt.Println("err: path/ak/sk need")
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 }
 
 func qvsTestGet() {
@@ -271,22 +277,35 @@ type Config struct {
 	url string
 }
 
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
 func loadConf() error {
 	file := "/etc/qvs.conf"
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Println("read fail", file, err)
-		return err
+	if exists(file) {
+		b, err := ioutil.ReadFile(file)
+		if err != nil {
+			log.Println("read fail", file, err)
+			return err
+		}
+		conf := Config{}
+		err = json.Unmarshal(b, &conf)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		ak = &conf.ak
+		sk = &conf.sk
+		addr = &conf.url
 	}
-	conf := Config{}
-	err = json.Unmarshal(b, &conf)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	ak = &conf.ak
-	sk = &conf.sk
-	addr = &conf.url
 	return nil
 }
 
@@ -300,7 +319,8 @@ func main() {
 	//time.Sleep(60 * time.Second)
 	//createTemplate()
 	if *post {
-		qvsTestPost(*body)
+		resp, err := qvsTestPost(*body)
+		log.Println(resp, err)
 	} else {
 		qvsTestGet()
 	}
