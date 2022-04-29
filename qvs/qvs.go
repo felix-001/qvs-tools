@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 )
 
 var ak, sk *string
@@ -112,18 +111,6 @@ func qvsHttpPost(addr, body string) (string, error) {
 	return resp, nil
 }
 
-func pm3u8() {
-	if *addr == "" {
-		flag.PrintDefaults()
-		return
-	}
-	resp, err := qvsHttpGet(*addr)
-	if err != nil {
-		return
-	}
-	log.Println(resp)
-}
-
 func parseConsole() {
 	nsid = flag.String("nsid", "", "namespace id")
 	gbid = flag.String("gbid", "", "gbid")
@@ -165,7 +152,6 @@ func qvsTestGet() {
 
 func qvsTestPost(body string) (string, error) {
 	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
-	//addr := fmt.Sprintf("http://qvs.qiniuapi.com/v1/%s", path)
 	return qvsHttpPost(addr, body)
 }
 
@@ -216,28 +202,14 @@ func sendPcm(pcm []byte, addr string) error {
 	return nil
 }
 
-func broadcast() {
-	if *gbids == "" || *audioFile == "" || *nsid == "" || *ak == "" || *sk == "" {
+func talk(resp string) {
+	if audioFile == nil {
+		log.Println("err: audioFile need")
 		flag.PrintDefaults()
 		return
 	}
-	res := strings.Split(*gbids, " ")
-	talkbody := TalkBody{TcpModel: "sendrecv", Gbids: []string{}}
-	for _, gbid := range res {
-		talkbody.Gbids = append(talkbody.Gbids, gbid)
-	}
-	jsonbody, err := json.Marshal(talkbody)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	resp, err := qvsTestPost(string(jsonbody))
-	if err != nil {
-		return
-	}
 	talkresps := []TalksResp{}
-	err = json.Unmarshal([]byte(resp), &talkresps)
+	err := json.Unmarshal([]byte(resp), &talkresps)
 	if err != nil {
 		log.Println(err)
 		return
@@ -250,25 +222,6 @@ func broadcast() {
 	for _, talkresp := range talkresps {
 		go sendPcm(pcm, talkresp.AudioSendAddrForHttp)
 	}
-}
-
-func createTemplate() {
-	jsonbody :=
-		`{
-			"name":"helloworld111",
-			"bucket":"linking",
-			"deleteAfterDays":30,
-			"fileType":0,
-			"recordFileFormat":1,
-			"templateType":0,
-			"m3u8FileNameTemplate":"${startMs}-${endMs}-${duration}.m3u8"
-		}
-`
-	resp, err := qvsTestPost(jsonbody)
-	if err != nil {
-		return
-	}
-	log.Println(resp)
 }
 
 type Config struct {
@@ -315,9 +268,6 @@ func main() {
 	loadConf()
 	// 控制台指定的参数会覆盖配置文件
 	parseConsole()
-	//broadcast()
-	//time.Sleep(60 * time.Second)
-	//createTemplate()
 	if *post {
 		resp, err := qvsTestPost(*body)
 		log.Println(resp, err)
