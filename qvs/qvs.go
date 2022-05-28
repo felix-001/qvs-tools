@@ -13,8 +13,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
-	"time"
+	"os"
 )
 
 var ak, sk *string
@@ -22,6 +21,10 @@ var nsid, gbid *string
 var audioFile *string
 var addr *string
 var gbids *string
+var path *string
+var body *string
+var get *bool
+var post *bool
 
 var (
 	errHttpStatusCode = errors.New("http status code err")
@@ -108,31 +111,38 @@ func qvsHttpPost(addr, body string) (string, error) {
 	return resp, nil
 }
 
-func pm3u8() {
-	if *addr == "" {
-		flag.PrintDefaults()
-		return
-	}
-	resp, err := qvsHttpGet(*addr)
-	if err != nil {
-		return
-	}
-	log.Println(resp)
-}
-
 func parseConsole() {
-	ak = flag.String("ak", "", "ak")
-	sk = flag.String("sk", "", "sk")
 	nsid = flag.String("nsid", "", "namespace id")
 	gbid = flag.String("gbid", "", "gbid")
 	gbids = flag.String("gbids", "", "gbids")
-	addr = flag.String("url", "", "pm3u8 url")
+	addr = flag.String("url", "", "url")
+	body = flag.String("body", "", "body")
+	get = flag.Bool("get", true, "http get?")
+	post = flag.Bool("post", false, "http post?")
 	audioFile = flag.String("audiofile", "", "audio file")
+	path = flag.String("path", "", "path")
+	_ak := flag.String("ak", "", "ak")
+	_sk := flag.String("sk", "", "sk")
+	_addr := flag.String("addr", "", "addr")
 	flag.Parse()
+	if *_ak != "" {
+		ak = _ak
+	}
+	if *_sk != "" {
+		sk = _sk
+	}
+	if *_addr != "" {
+		addr = _addr
+	}
+	if path == nil || sk == nil || ak == nil {
+		fmt.Println("err: path/ak/sk need")
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 }
 
-func qvsTestGet(path string) {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
+func qvsTestGet() {
+	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
 	resp, err := qvsHttpGet(addr)
 	if err != nil {
 		return
@@ -140,8 +150,8 @@ func qvsTestGet(path string) {
 	log.Println(resp)
 }
 
-func qvsTestPost(path, body string) (string, error) {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
+func qvsTestPost(body string) (string, error) {
+	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
 	return qvsHttpPost(addr, body)
 }
 
@@ -192,28 +202,14 @@ func sendPcm(pcm []byte, addr string) error {
 	return nil
 }
 
-func broadcast() {
-	if *gbids == "" || *audioFile == "" || *nsid == "" || *ak == "" || *sk == "" {
+func talk(resp string) {
+	if audioFile == nil {
+		log.Println("err: audioFile need")
 		flag.PrintDefaults()
 		return
 	}
-	res := strings.Split(*gbids, " ")
-	talkbody := TalkBody{TcpModel: "sendrecv", Gbids: []string{}}
-	for _, gbid := range res {
-		talkbody.Gbids = append(talkbody.Gbids, gbid)
-	}
-	jsonbody, err := json.Marshal(talkbody)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	resp, err := qvsTestPost(fmt.Sprintf("namespaces/%s/talks", *nsid), string(jsonbody))
-	if err != nil {
-		return
-	}
 	talkresps := []TalksResp{}
-	err = json.Unmarshal([]byte(resp), &talkresps)
+	err := json.Unmarshal([]byte(resp), &talkresps)
 	if err != nil {
 		log.Println(err)
 		return
@@ -228,9 +224,54 @@ func broadcast() {
 	}
 }
 
+type Config struct {
+	ak  string
+	sk  string
+	url string
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func loadConf() error {
+	file := "/etc/qvs.conf"
+	if exists(file) {
+		b, err := ioutil.ReadFile(file)
+		if err != nil {
+			log.Println("read fail", file, err)
+			return err
+		}
+		conf := Config{}
+		err = json.Unmarshal(b, &conf)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		ak = &conf.ak
+		sk = &conf.sk
+		addr = &conf.url
+	}
+	return nil
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
+	// 首先尝试从文件加载配置
+	loadConf()
+	// 控制台指定的参数会覆盖配置文件
 	parseConsole()
-	broadcast()
-	time.Sleep(60 * time.Second)
+	if *post {
+		resp, err := qvsTestPost(*body)
+		log.Println(resp, err)
+	} else {
+		qvsTestGet()
+	}
 }
