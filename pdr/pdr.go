@@ -204,16 +204,13 @@ func (self *Pdr) logFilter(logs string) []string {
 }
 
 func NewPdr(start, end, step int64, query, token string) *Pdr {
-	if step == 0 {
-		step = 10
-	}
 	return &Pdr{start: start, end: end, step: step, query: query, token: token}
 }
 
 func main() {
 	start := flag.Int64("start", 0, "start time")
 	end := flag.Int64("end", 0, "end time")
-	step := flag.Int64("step", 0, "step")
+	step := flag.Int64("step", 10, "step")
 	query := flag.String("query", "", "query")
 	output := flag.String("output", "/tmp/pdr.log", "output log")
 	flag.Parse()
