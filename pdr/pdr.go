@@ -204,7 +204,7 @@ func (self *Pdr) logFilter(logs string) []string {
 }
 
 func NewPdr(start, end, step int64, query, token string) *Pdr {
-	return &Pdr{start: start, end: end, step: step, query: query, token: token}
+	return &Pdr{start: start * 1000, end: end * 1000, step: step * 1000, query: query, token: token}
 }
 
 func main() {
