@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -34,6 +35,7 @@ func hmacSha1(key, data string) string {
 	mac := hmac.New(sha1.New, []byte(key))
 	mac.Write([]byte(data))
 	hm := mac.Sum(nil)
+	log.Println(hex.EncodeToString(hm))
 	s := base64.URLEncoding.EncodeToString(hm)
 	return s
 }
@@ -141,8 +143,8 @@ func parseConsole() {
 	}
 }
 
-func qvsTestGet() {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
+func qvsGet() {
+	addr := fmt.Sprintf("http://%s%s", *addr, *path)
 	resp, err := qvsHttpGet(addr)
 	if err != nil {
 		return
@@ -150,8 +152,8 @@ func qvsTestGet() {
 	log.Println(resp)
 }
 
-func qvsTestPost(body string) (string, error) {
-	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", *path)
+func qvsPost(body string) (string, error) {
+	addr := fmt.Sprintf("http://%s%s", *addr, *path)
 	return qvsHttpPost(addr, body)
 }
 
@@ -269,9 +271,9 @@ func main() {
 	// 控制台指定的参数会覆盖配置文件
 	parseConsole()
 	if *post {
-		resp, err := qvsTestPost(*body)
+		resp, err := qvsPost(*body)
 		log.Println(resp, err)
 	} else {
-		qvsTestGet()
+		qvsGet()
 	}
 }
