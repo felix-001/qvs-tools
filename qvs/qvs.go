@@ -15,17 +15,21 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 )
 
-var ak, sk *string
-var nsid, gbid *string
-var audioFile *string
-var addr *string
-var gbids *string
-var path *string
-var body *string
-var get *bool
-var post *bool
+var (
+	addr            string
+	start, end      int
+	ak, sk          string
+	path, body      string
+	gbids, nsid     string
+	gbid, audioFile string
+	get, post       bool
+	isDownload      bool
+	chid            string
+	isStop          bool
+)
 
 var (
 	errHttpStatusCode = errors.New("http status code err")
@@ -89,8 +93,10 @@ func qvsHttpReq(method, addr, body string, headers map[string]string) (string, e
 		log.Println(err)
 		return "", err
 	}
-	token := signToken(*ak, *sk, method, u.Path, u.Host, body, headers)
-	headers["Authorization"] = token
+	token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
+	if headers != nil {
+		headers["Authorization"] = token
+	}
 	return httpReq(method, addr, body, headers)
 }
 
@@ -114,47 +120,38 @@ func qvsHttpPost(addr, body string) (string, error) {
 }
 
 func parseConsole() {
-	nsid = flag.String("nsid", "", "namespace id")
-	gbid = flag.String("gbid", "", "gbid")
-	gbids = flag.String("gbids", "", "gbids")
-	addr = flag.String("url", "", "url")
-	body = flag.String("body", "", "body")
-	get = flag.Bool("get", true, "http get?")
-	post = flag.Bool("post", false, "http post?")
-	audioFile = flag.String("audiofile", "", "audio file")
-	path = flag.String("path", "", "path")
-	_ak := flag.String("ak", "", "ak")
-	_sk := flag.String("sk", "", "sk")
-	_addr := flag.String("addr", "", "addr")
+	flag.StringVar(&nsid, "nsid", "", "namespace id")
+	flag.StringVar(&gbid, "gbid", "", "gbid")
+	flag.StringVar(&chid, "chid", "", "chid")
+	flag.StringVar(&gbids, "gbids", "", "gbids")
+	flag.StringVar(&addr, "url", "qvs.qiniuapi.com", "url")
+	flag.StringVar(&body, "body", "", "body")
+	flag.BoolVar(&get, "get", true, "is http get")
+	flag.BoolVar(&post, "post", false, "is http post")
+	flag.BoolVar(&isDownload, "download", false, "is download")
+	flag.BoolVar(&isStop, "stop", false, "is stop")
+	flag.StringVar(&audioFile, "audiofile", "", "audio file")
+	flag.StringVar(&path, "path", "", "path")
+	flag.StringVar(&ak, "ak", "", "ak")
+	flag.StringVar(&sk, "sk", "", "sk")
+	flag.IntVar(&start, "start", 0, "start time")
+	flag.IntVar(&end, "end", 0, "end time")
 	flag.Parse()
-	if *_ak != "" {
-		ak = _ak
-	}
-	if *_sk != "" {
-		sk = _sk
-	}
-	if *_addr != "" {
-		addr = _addr
-	}
-	if path == nil || sk == nil || ak == nil {
+	if sk == "" || ak == "" {
 		fmt.Println("err: path/ak/sk need")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
 }
 
-func qvsGet() {
-	addr := fmt.Sprintf("http://%s%s", *addr, *path)
-	resp, err := qvsHttpGet(addr)
-	if err != nil {
-		return
-	}
-	log.Println(resp)
+func qvsGet() (string, error) {
+	addr := fmt.Sprintf("http://%s%s", addr, path)
+	return qvsHttpGet(addr)
 }
 
 func qvsPost(body string) (string, error) {
-	addr := fmt.Sprintf("http://%s%s", *addr, *path)
-	return qvsHttpPost(addr, body)
+	u := fmt.Sprintf("http://%s%s", addr, path)
+	return qvsHttpPost(u, body)
 }
 
 const BlkLen = 20 * 1024
@@ -205,7 +202,7 @@ func sendPcm(pcm []byte, addr string) error {
 }
 
 func talk(resp string) {
-	if audioFile == nil {
+	if audioFile == "" {
 		log.Println("err: audioFile need")
 		flag.PrintDefaults()
 		return
@@ -216,7 +213,7 @@ func talk(resp string) {
 		log.Println(err)
 		return
 	}
-	pcm, err := ioutil.ReadFile(*audioFile)
+	pcm, err := ioutil.ReadFile(audioFile)
 	if err != nil {
 		log.Println(err)
 		return
@@ -257,21 +254,137 @@ func loadConf() error {
 			log.Println(err)
 			return err
 		}
-		ak = &conf.ak
-		sk = &conf.sk
-		addr = &conf.url
+		ak = conf.ak
+		sk = conf.sk
+		addr = conf.url
 	}
+	return nil
+}
+
+type QueryUrl struct {
+	HttpQueryUrl  string `json:"httpQueryUrl"`
+	HttpsQueryUrl string `json:"httpsQueryUrl"`
+}
+
+func getQueryUrl() (*QueryUrl, error) {
+	path = fmt.Sprintf("/v1/namespaces/%s/devices/%s/download", nsid, gbid)
+	body := &struct {
+		ChannelId string `json:"channelId"`
+		Start     int    `json:"start"`
+		End       int    `json:"end"`
+	}{
+		Start:     start,
+		End:       end,
+		ChannelId: chid,
+	}
+	jsonbody, err := json.Marshal(body)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	resp, err := qvsPost(string(jsonbody))
+	if err != nil {
+		return nil, err
+	}
+	log.Println(resp)
+	queryUrl := &QueryUrl{}
+	err = json.Unmarshal([]byte(resp), queryUrl)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return queryUrl, nil
+}
+
+type DownloadStatus struct {
+	Code int `json:"code"`
+	Data struct {
+		ID                string `json:"id"`
+		Percent           int    `json:"percent"`
+		HttpDownloadAddr  string `json:"httpDownloadAddr"`
+		HttpsDownloadAddr string `json:"httpsDownloadAddr"`
+	}
+}
+
+func queryDownloadStatus(queryUrl *QueryUrl) (*DownloadStatus, error) {
+	log.Println(queryUrl.HttpQueryUrl)
+	resp, err := qvsHttpGet(queryUrl.HttpQueryUrl)
+	if err != nil {
+		return nil, err
+	}
+	downloadStatus := &DownloadStatus{}
+	err = json.Unmarshal([]byte(resp), downloadStatus)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	log.Println(downloadStatus.Code)
+	return downloadStatus, nil
+}
+
+func download() error {
+	queryUrl, err := getQueryUrl()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	downloadStatus := &DownloadStatus{}
+	for downloadStatus.Data.Percent != 100 {
+		downloadStatus, err = queryDownloadStatus(queryUrl)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		log.Println("percent:", downloadStatus.Data.Percent)
+		time.Sleep(3 * time.Second)
+	}
+	return nil
+}
+
+func streamStop() error {
+	body := &struct {
+		Start     int    `json:"start"`
+		End       int    `json:"end"`
+		ChannelId string `json:"channelId"`
+	}{
+		Start:     start,
+		End:       end,
+		ChannelId: chid,
+	}
+	jsonbody, err := json.Marshal(body)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	path = fmt.Sprintf("/v1/namespaces/%s/devices/%s/stop", nsid, gbid)
+	resp, err := qvsPost(string(jsonbody))
+	if err != nil {
+		return err
+	}
+	log.Println(resp)
 	return nil
 }
 
 func main() {
 	log.SetFlags(log.Lshortfile)
 	// 首先尝试从文件加载配置
-	loadConf()
+	//loadConf()
 	// 控制台指定的参数会覆盖配置文件
 	parseConsole()
-	if *post {
-		resp, err := qvsPost(*body)
+	if isDownload {
+		if err := download(); err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	if isStop {
+		if err := streamStop(); err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	if post {
+		resp, err := qvsPost(body)
 		log.Println(resp, err)
 	} else {
 		qvsGet()
