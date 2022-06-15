@@ -29,6 +29,7 @@ var (
 	isDownload      bool
 	chid            string
 	isStop          bool
+	isPlayer        bool
 )
 
 var (
@@ -127,6 +128,7 @@ func parseConsole() {
 	flag.StringVar(&addr, "url", "qvs.qiniuapi.com", "url")
 	flag.StringVar(&body, "body", "", "body")
 	flag.BoolVar(&get, "get", true, "is http get")
+	flag.BoolVar(&isPlayer, "player", false, "gen player url")
 	flag.BoolVar(&post, "post", false, "is http post")
 	flag.BoolVar(&isDownload, "download", false, "is download")
 	flag.BoolVar(&isStop, "stop", false, "is stop")
@@ -137,11 +139,6 @@ func parseConsole() {
 	flag.IntVar(&start, "start", 0, "start time")
 	flag.IntVar(&end, "end", 0, "end time")
 	flag.Parse()
-	if sk == "" || ak == "" {
-		fmt.Println("err: path/ak/sk need")
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
 }
 
 func qvsGet() (string, error) {
@@ -365,6 +362,16 @@ func streamStop() error {
 	return nil
 }
 
+func hlsPlayer() {
+	if addr == "" {
+		fmt.Println("please input addr")
+		return
+	}
+	b64 := base64.StdEncoding.EncodeToString([]byte(addr))
+	url := "http://236809372.cloudvdn.com:1370/player?video=" + b64
+	fmt.Println("url: ", url)
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	// 首先尝试从文件加载配置
@@ -381,6 +388,10 @@ func main() {
 		if err := streamStop(); err != nil {
 			log.Println(err)
 		}
+		return
+	}
+	if isPlayer {
+		hlsPlayer()
 		return
 	}
 	if post {
