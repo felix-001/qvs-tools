@@ -264,6 +264,18 @@ type QueryUrl struct {
 }
 
 func getQueryUrl() (*QueryUrl, error) {
+	if nsid == "" {
+		log.Fatal("please input nsid")
+	}
+	if gbid == "" {
+		log.Fatal("please input gbid")
+	}
+	if start == 0 {
+		log.Fatal("please input start")
+	}
+	if end == 0 {
+		log.Fatal("please input end")
+	}
 	path = fmt.Sprintf("/v1/namespaces/%s/devices/%s/download", nsid, gbid)
 	body := &struct {
 		ChannelId string `json:"channelId"`
@@ -316,6 +328,9 @@ func queryDownloadStatus(queryUrl *QueryUrl) (*DownloadStatus, error) {
 		return nil, err
 	}
 	log.Println(downloadStatus.Code)
+	if downloadStatus.Code != 0 {
+		return nil, errors.New("code err")
+	}
 	return downloadStatus, nil
 }
 
@@ -335,6 +350,12 @@ func download() error {
 		log.Println("percent:", downloadStatus.Data.Percent)
 		time.Sleep(3 * time.Second)
 	}
+	downloadStatus, err = queryDownloadStatus(queryUrl)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println("download url: ", downloadStatus.Data.HttpDownloadAddr)
 	return nil
 }
 
