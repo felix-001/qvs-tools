@@ -30,6 +30,8 @@ var (
 	chid            string
 	isStop          bool
 	isPlayer        bool
+	isTalk          bool
+	host            string
 )
 
 var (
@@ -82,7 +84,7 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 		return "", err
 	}
 	if resp.StatusCode != 200 {
-		log.Println("status code", resp.StatusCode, string(resp_body))
+		log.Println("status code", resp.StatusCode, string(resp_body), addr)
 		return "", errHttpStatusCode
 	}
 	return string(resp_body), err
@@ -112,6 +114,7 @@ func httpPost(addr, body string) (string, error) {
 
 func qvsHttpPost(addr, body string) (string, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
+	//headers["authorization"] = "QiniuStub uid=1"
 	resp, err := qvsHttpReq("POST", addr, body, headers)
 	if err != nil {
 		log.Println(err)
@@ -122,17 +125,19 @@ func qvsHttpPost(addr, body string) (string, error) {
 
 func parseConsole() {
 	flag.StringVar(&nsid, "nsid", "", "namespace id")
+	flag.StringVar(&host, "host", "qvs.qiniuapi.com", "host")
 	flag.StringVar(&gbid, "gbid", "", "gbid")
 	flag.StringVar(&chid, "chid", "", "chid")
 	flag.StringVar(&gbids, "gbids", "", "gbids")
 	flag.StringVar(&addr, "url", "qvs.qiniuapi.com", "url")
 	flag.StringVar(&body, "body", "", "body")
 	flag.BoolVar(&get, "get", true, "is http get")
+	flag.BoolVar(&isTalk, "talk", false, "is talk")
 	flag.BoolVar(&isPlayer, "player", false, "gen player url")
 	flag.BoolVar(&post, "post", false, "is http post")
 	flag.BoolVar(&isDownload, "download", false, "is download")
 	flag.BoolVar(&isStop, "stop", false, "is stop")
-	flag.StringVar(&audioFile, "audiofile", "", "audio file")
+	flag.StringVar(&audioFile, "audio", "", "audio file")
 	flag.StringVar(&path, "path", "", "path")
 	flag.StringVar(&ak, "ak", "", "ak")
 	flag.StringVar(&sk, "sk", "", "sk")
@@ -151,7 +156,7 @@ func qvsPost(body string) (string, error) {
 	return qvsHttpPost(u, body)
 }
 
-const BlkLen = 20 * 1024
+const BlkLen = 3200
 
 func calcBlkLen(len, pos int) int {
 	blkLen := BlkLen
@@ -198,14 +203,14 @@ func sendPcm(pcm []byte, addr string) error {
 	return nil
 }
 
-func talk(resp string) {
+func sendAudioData(resp string) {
 	if audioFile == "" {
 		log.Println("err: audioFile need")
 		flag.PrintDefaults()
 		return
 	}
-	talkresps := []TalksResp{}
-	err := json.Unmarshal([]byte(resp), &talkresps)
+	talkresp := TalksResp{}
+	err := json.Unmarshal([]byte(resp), &talkresp)
 	if err != nil {
 		log.Println(err)
 		return
@@ -215,9 +220,7 @@ func talk(resp string) {
 		log.Println(err)
 		return
 	}
-	for _, talkresp := range talkresps {
-		go sendPcm(pcm, talkresp.AudioSendAddrForHttp)
-	}
+	sendPcm(pcm, talkresp.AudioSendAddrForHttp)
 }
 
 type Config struct {
@@ -393,6 +396,35 @@ func hlsPlayer() {
 	fmt.Println("url: ", url)
 }
 
+func startTalk() {
+	if ak == "" {
+		log.Fatalln("ak is needed")
+	}
+	if sk == "" {
+		log.Fatalln("sk is needed")
+	}
+	if host == "" {
+		log.Fatalln("host is needed")
+	}
+	body := &struct {
+		IsV2 bool `json:"isV2"`
+	}{
+		IsV2: true,
+	}
+	jsonbody, err := json.Marshal(body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	u := fmt.Sprintf("http://%s/v1/namespaces/%s/devices/%s/talk", host, nsid, gbid)
+	resp, err := qvsHttpPost(u, string(jsonbody))
+	if err != nil {
+		log.Fatalln("start talk err", err)
+	}
+	sendAudioData(resp)
+
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	// 首先尝试从文件加载配置
@@ -413,6 +445,10 @@ func main() {
 	}
 	if isPlayer {
 		hlsPlayer()
+		return
+	}
+	if isTalk {
+		startTalk()
 		return
 	}
 	if post {
