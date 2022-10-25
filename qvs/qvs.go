@@ -97,9 +97,10 @@ func qvsHttpReq(method, addr, body string, headers map[string]string) (string, e
 		return "", err
 	}
 	token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
-	if headers != nil {
-		headers["Authorization"] = token
-	}
+	//if headers != nil {
+	headers = make(map[string]string)
+	headers["Authorization"] = token
+	//}
 	return httpReq(method, addr, body, headers)
 }
 
