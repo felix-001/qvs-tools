@@ -209,7 +209,7 @@ func (self *Pdr) getCallID(ssrc string) (string, error) {
 		return "", err
 	}
 	//log.Println("log:", data)
-	return self.getVal(data, "callid:", "")
+	return self.getVal(data, "callid:", "\n")
 }
 
 func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
