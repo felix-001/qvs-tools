@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -112,9 +113,18 @@ func httpPost(addr, body string) (string, error) {
 	return httpReq("POST", addr, body, headers)
 }
 
+func isLocalTest() bool {
+	if strings.Contains(host, "100") || strings.Contains(host, "192") || strings.Contains(host, "127") {
+		return true
+	}
+	return false
+}
+
 func qvsHttpPost(addr, body string) (string, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
-	//headers["authorization"] = "QiniuStub uid=1"
+	if isLocalTest() {
+		headers["authorization"] = "QiniuStub uid=1"
+	}
 	resp, err := qvsHttpReq("POST", addr, body, headers)
 	if err != nil {
 		log.Println(err)
@@ -156,7 +166,7 @@ func qvsPost(body string) (string, error) {
 	return qvsHttpPost(u, body)
 }
 
-const BlkLen = 3200
+const BlkLen = 320000
 
 func calcBlkLen(len, pos int) int {
 	blkLen := BlkLen
@@ -220,7 +230,18 @@ func sendAudioData(resp string) {
 		log.Println(err)
 		return
 	}
-	sendPcm(pcm, talkresp.AudioSendAddrForHttp)
+	addr := talkresp.AudioSendAddrForHttp
+	if isLocalTest() {
+		u, err := url.Parse(addr)
+		if err != nil {
+			log.Fatal("parse url err", addr)
+			return
+		}
+		u.Host += ":2985"
+		addr = u.String()
+	}
+	log.Println("addr:", addr)
+	sendPcm(pcm, addr)
 }
 
 type Config struct {
