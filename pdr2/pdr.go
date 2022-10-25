@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -142,7 +143,7 @@ func (self *Pdr) downloadLog(jobId string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Println(string(respBody))
+	//log.Println(string(respBody))
 	res := &struct {
 		Rows []struct {
 			Raw struct {
@@ -165,11 +166,11 @@ func (self *Pdr) getLog(query string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Println("jobId:", jobId)
+	//log.Println("jobId:", jobId)
 	if err := self.waitJobDone(jobId); err != nil {
 		return "", err
 	}
-	log.Println("wait done")
+	//log.Println("wait done")
 	return self.downloadLog(jobId)
 }
 
@@ -184,7 +185,11 @@ func (self *Pdr) getSSRC() (string, error) {
 		return "", err
 	}
 	log.Println("log:", data)
-	return data, nil
+	val, err := self.getVal(data, "ssrc=", "&talk")
+	if err != nil {
+		return "", err
+	}
+	return val, nil
 }
 
 func (self *Pdr) liveStreamDbg() error {
@@ -192,8 +197,21 @@ func (self *Pdr) liveStreamDbg() error {
 	if err != nil {
 		return err
 	}
-	log.Println(ssrc)
+	log.Println("ssrc:", ssrc)
 	return nil
+}
+
+func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
+	start := strings.Index(origin, startPrefix)
+	if start == -1 {
+		return "", fmt.Errorf("can't find %s from %s err", startPrefix, origin)
+	}
+	start += len(startPrefix)
+	end := strings.Index(origin, endPrefix)
+	if end == -1 {
+		return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
+	}
+	return origin[start:end], nil
 }
 
 func main() {
@@ -203,8 +221,8 @@ func main() {
 	reqId := flag.String("reqid", "", "reqId")
 	gbId := flag.String("gbid", "", "gbId")
 	chId := flag.String("chid", "", "chId")
-	start := flag.Int64("start", time.Now().UnixMilli(), "start")
-	end := flag.Int64("end", time.Now().UnixMilli()+3600*24*1000, "end")
+	start := flag.Int64("start", time.Now().UnixMilli()-3600*24*1000, "start")
+	end := flag.Int64("end", time.Now().UnixMilli(), "end")
 	flag.Parse()
 	if *reqId == "" {
 		log.Println("err: need reqId")
