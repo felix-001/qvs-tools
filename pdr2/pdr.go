@@ -184,12 +184,8 @@ func (self *Pdr) getSSRC() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Println("log:", data)
-	val, err := self.getVal(data, "ssrc=", "&talk")
-	if err != nil {
-		return "", err
-	}
-	return val, nil
+	//log.Println("log:", data)
+	return self.getVal(data, "ssrc=", "&talk")
 }
 
 func (self *Pdr) liveStreamDbg() error {
@@ -198,7 +194,22 @@ func (self *Pdr) liveStreamDbg() error {
 		return err
 	}
 	log.Println("ssrc:", ssrc)
+	callid, err := self.getCallID(ssrc)
+	if err != nil {
+		return err
+	}
+	log.Println("callid:", callid)
 	return nil
+}
+
+func (self *Pdr) getCallID(ssrc string) (string, error) {
+	query := fmt.Sprintf("repo=\"logs\" \"return callid\" \"%s\"", ssrc)
+	data, err := self.getLog(query)
+	if err != nil {
+		return "", err
+	}
+	log.Println("log:", data)
+	return self.getVal(data, "ssrc=", "&talk")
 }
 
 func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
