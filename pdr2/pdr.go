@@ -208,7 +208,7 @@ func (self *Pdr) getCallID(ssrc string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Println("log:", data)
+	//log.Println("log:", data)
 	return self.getVal(data, "callid:", "")
 }
 
