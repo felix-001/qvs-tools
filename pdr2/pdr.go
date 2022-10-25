@@ -209,7 +209,7 @@ func (self *Pdr) getCallID(ssrc string) (string, error) {
 		return "", err
 	}
 	log.Println("log:", data)
-	return self.getVal(data, "ssrc=", "&talk")
+	return self.getVal(data, "callid:", "")
 }
 
 func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
@@ -218,9 +218,12 @@ func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
 		return "", fmt.Errorf("can't find %s from %s err", startPrefix, origin)
 	}
 	start += len(startPrefix)
-	end := strings.Index(origin, endPrefix)
-	if end == -1 {
-		return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
+	end := len(origin)
+	if endPrefix != "" {
+		end = strings.Index(origin, endPrefix)
+		if end == -1 {
+			return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
+		}
 	}
 	return origin[start:end], nil
 }
