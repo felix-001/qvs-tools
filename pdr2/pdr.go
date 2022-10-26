@@ -137,11 +137,11 @@ func (self *Pdr) pdrGet(addr string) ([]byte, error) {
 	return httpReq("GET", addr, "", headers)
 }
 
-func (self *Pdr) downloadLog(jobId string) (string, error) {
+func (self *Pdr) downloadLog(jobId string) (string, string, string, error) {
 	addr := baseUrl + "/" + jobId + "/events?rawLenLimit=false&pageSize=5000000&prefix=&order=desc&sort=updateTime"
 	respBody, err := self.pdrGet(addr)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	//log.Println(string(respBody))
 	res := &struct {
@@ -149,26 +149,36 @@ func (self *Pdr) downloadLog(jobId string) (string, error) {
 			Raw struct {
 				Value string `json:"value"`
 			} `json:"_raw"`
+			Host struct {
+				Value string `json:"value"`
+			} `json:"host"`
+			Origin struct {
+				Value string `json:"value"`
+			} `json:"origin"`
 		} `json:"rows"`
 	}{}
 	if err := json.Unmarshal(respBody, res); err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	raw := ""
 	for _, row := range res.Rows {
 		raw += row.Raw.Value + "\n"
 	}
-	return raw, nil
+	if len(raw) == 0 {
+		return "", "", "", fmt.Errorf("no log found")
+	}
+	//log.Println(string(respBody))
+	return res.Rows[0].Host.Value, res.Rows[0].Origin.Value, raw, nil
 }
 
-func (self *Pdr) getLog(query string) (string, error) {
+func (self *Pdr) getLog(query string) (string, string, string, error) {
 	jobId, err := self.createJob(query)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	//log.Println("jobId:", jobId)
 	if err := self.waitJobDone(jobId); err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	//log.Println("wait done")
 	return self.downloadLog(jobId)
@@ -180,12 +190,70 @@ func NewPdr(reqId, gbId, chId, token string, start, end int64) *Pdr {
 
 func (self *Pdr) getSSRC() (string, error) {
 	query := fmt.Sprintf("repo=\"logs\" \"sip_invite\" \"%s\"", self.reqId)
-	data, err := self.getLog(query)
+	host, origin, data, err := self.getLog(query)
 	if err != nil {
 		return "", err
 	}
+	log.Println("host", host, "origin", origin)
 	//log.Println("log:", data)
 	return self.getVal(data, "ssrc=", "&talk")
+}
+
+func (self *Pdr) getCallID(ssrc string) (string, error) {
+	query := fmt.Sprintf("repo=\"logs\" \"return callid\" \"%s\"", ssrc)
+	host, origin, data, err := self.getLog(query)
+	if err != nil {
+		return "", err
+	}
+	log.Println("host", host, "origin", origin)
+	//log.Println("log:", data)
+	return self.getVal(data, "callid:", "\n")
+}
+
+func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
+	start := strings.Index(origin, startPrefix)
+	if start == -1 {
+		return "", fmt.Errorf("can't find %s from %s", startPrefix, origin)
+	}
+	start += len(startPrefix)
+	end := len(origin)
+	if endPrefix != "" {
+		end = strings.Index(origin, endPrefix)
+		if end == -1 {
+			return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
+		}
+	}
+	return origin[start:end], nil
+}
+
+func (self *Pdr) isInviteRespOK(callid string) (bool, error) {
+	query := fmt.Sprintf("repo=\"logs\" \"200\" \"callid=%s\"", callid)
+	log.Println(query)
+	host, origin, data, err := self.getLog(query)
+	if err != nil {
+		return false, err
+	}
+	log.Println("host", host, "origin", origin)
+	//log.Println("log:", data)
+	if len(data) == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (self *Pdr) IsDevTcpConnect() (bool, error) {
+	query := fmt.Sprintf("repo=\"logs\" \"tcp attach\" \"%s\"", self.reqId)
+	log.Println(query)
+	host, origin, data, err := self.getLog(query)
+	if err != nil {
+		return false, err
+	}
+	log.Println("host", host, "origin", origin)
+	log.Println(data)
+	if len(data) == 0 {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (self *Pdr) liveStreamDbg() error {
@@ -199,33 +267,17 @@ func (self *Pdr) liveStreamDbg() error {
 		return err
 	}
 	log.Println("callid:", callid)
-	return nil
-}
-
-func (self *Pdr) getCallID(ssrc string) (string, error) {
-	query := fmt.Sprintf("repo=\"logs\" \"return callid\" \"%s\"", ssrc)
-	data, err := self.getLog(query)
+	ok, err := self.isInviteRespOK(callid)
 	if err != nil {
-		return "", err
+		return err
 	}
-	//log.Println("log:", data)
-	return self.getVal(data, "callid:", "\n")
-}
-
-func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
-	start := strings.Index(origin, startPrefix)
-	if start == -1 {
-		return "", fmt.Errorf("can't find %s from %s err", startPrefix, origin)
+	log.Println("invite resp 200 ok:", ok)
+	conn, err := self.IsDevTcpConnect()
+	if err != nil {
+		return err
 	}
-	start += len(startPrefix)
-	end := len(origin)
-	if endPrefix != "" {
-		end = strings.Index(origin, endPrefix)
-		if end == -1 {
-			return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
-		}
-	}
-	return origin[start:end], nil
+	log.Println("device tcp connect:", conn)
+	return nil
 }
 
 func main() {
@@ -235,8 +287,8 @@ func main() {
 	reqId := flag.String("reqid", "", "reqId")
 	gbId := flag.String("gbid", "", "gbId")
 	chId := flag.String("chid", "", "chId")
-	start := flag.Int64("start", time.Now().UnixMilli()-3600*24*1000, "start")
 	end := flag.Int64("end", time.Now().UnixMilli(), "end")
+	start := flag.Int64("start", *end-3600*24*1000, "start")
 	flag.Parse()
 	if *reqId == "" {
 		log.Println("err: need reqId")
@@ -257,7 +309,7 @@ func main() {
 	switch *dbgType {
 	case "live":
 		if err := pdr.liveStreamDbg(); err != nil {
-			log.Fatalln("live stream dbg err", err)
+			log.Fatalln("live stream dbg err:", err)
 		}
 	}
 }
