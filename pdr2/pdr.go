@@ -190,22 +190,26 @@ func NewPdr(reqId, gbId, chId, token string, start, end int64) *Pdr {
 
 func (self *Pdr) getSSRC() (string, error) {
 	query := fmt.Sprintf("repo=\"logs\" \"sip_invite\" \"%s\"", self.reqId)
-	host, origin, data, err := self.getLog(query)
+	host, _, data, err := self.getLog(query)
 	if err != nil {
 		return "", err
 	}
-	log.Println("host", host, "origin", origin)
+	log.Println("qvs-sip node:", host)
 	//log.Println("log:", data)
+	rtpSrvIP, err := self.getVal(data, "ip=", "&reqId")
+	if err != nil {
+		return "", err
+	}
+	log.Println("rtp service ip:", rtpSrvIP)
 	return self.getVal(data, "ssrc=", "&talk")
 }
 
 func (self *Pdr) getCallID(ssrc string) (string, error) {
 	query := fmt.Sprintf("repo=\"logs\" \"return callid\" \"%s\"", ssrc)
-	host, origin, data, err := self.getLog(query)
+	_, _, data, err := self.getLog(query)
 	if err != nil {
 		return "", err
 	}
-	log.Println("host", host, "origin", origin)
 	//log.Println("log:", data)
 	return self.getVal(data, "callid:", "\n")
 }
@@ -228,12 +232,11 @@ func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
 
 func (self *Pdr) isInviteRespOK(callid string) (bool, error) {
 	query := fmt.Sprintf("repo=\"logs\" \"200\" \"callid=%s\"", callid)
-	log.Println(query)
-	host, origin, data, err := self.getLog(query)
+	//log.Println(query)
+	_, _, data, err := self.getLog(query)
 	if err != nil {
 		return false, err
 	}
-	log.Println("host", host, "origin", origin)
 	//log.Println("log:", data)
 	if len(data) == 0 {
 		return false, nil
