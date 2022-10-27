@@ -201,7 +201,7 @@ func (self *Pdr) getSSRC() (string, error) {
 		return "", err
 	}
 	log.Println("rtp service ip:", rtpSrvIP)
-	return self.getVal(data, "ssrc=", "&talk")
+	return self.getVal(data, "ssrc=", "&")
 }
 
 func (self *Pdr) getCallID(ssrc string) (string, error) {
@@ -222,12 +222,12 @@ func (self *Pdr) getVal(origin, startPrefix, endPrefix string) (string, error) {
 	start += len(startPrefix)
 	end := len(origin)
 	if endPrefix != "" {
-		end = strings.Index(origin, endPrefix)
+		end = strings.Index(origin[start:], endPrefix)
 		if end == -1 {
 			return "", fmt.Errorf("can't find %s from %s err", endPrefix, origin)
 		}
 	}
-	return origin[start:end], nil
+	return origin[start : start+end], nil
 }
 
 func (self *Pdr) isInviteRespOK(callid string) (bool, error) {
