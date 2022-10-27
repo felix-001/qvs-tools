@@ -200,7 +200,12 @@ func (self *Pdr) getSSRC() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	rtpPort, err := self.getVal(data, "rtp_port=", "&")
+	if err != nil {
+		return "", err
+	}
 	log.Println("rtp service ip:", rtpSrvIP)
+	log.Println("rtp service port:", rtpPort)
 	return self.getVal(data, "ssrc=", "&")
 }
 
