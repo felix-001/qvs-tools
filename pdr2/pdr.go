@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -188,6 +189,17 @@ func NewPdr(reqId, gbId, chId, token string, start, end int64) *Pdr {
 	return &Pdr{gbId: gbId, chId: chId, reqId: reqId, token: token, start: start, end: end}
 }
 
+func (self *Pdr) getLogTime(s string) string {
+	s = strings.ReplaceAll(s, "0m", "")
+	s = strings.ReplaceAll(s, "31m", "")
+	re := regexp.MustCompile(`\[(.*?)\]`)
+	submatchall := re.FindAllString(s, -1)
+	element := submatchall[0]
+	element = strings.Trim(element, "[")
+	element = strings.Trim(element, "]")
+	return element
+}
+
 func (self *Pdr) getSSRC() (string, error) {
 	query := fmt.Sprintf("repo=\"logs\" \"sip_invite\" \"%s\"", self.reqId)
 	host, _, data, err := self.getLog(query)
@@ -196,6 +208,7 @@ func (self *Pdr) getSSRC() (string, error) {
 	}
 	log.Println("qvs-sip node:", host)
 	//log.Println("log:", data)
+	log.Println("log time:", self.getLogTime(data))
 	rtpSrvIP, err := self.getVal(data, "ip=", "&reqId")
 	if err != nil {
 		return "", err
