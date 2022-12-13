@@ -31,7 +31,7 @@ type Frame struct {
 	MediaType      string `json:"media_type"`
 	StreamIndex    int    `json:"stream_index"`
 	KeyFrame       int    `json:"key_frame"`
-	PktPts         int    `json:"pkt_pts"`
+	PktPts         int    `json:"pts"` //`json:"pkt_pts"`
 	PktPtsTime     string `json:"pkt_pts_time"`
 	PktDts         int    `json:"pkt_dts"`
 	PktDtsTime     string `json:"pkt_dts_time"`
@@ -78,7 +78,8 @@ func (self *TsMgr) Check(frames []Frame) {
 		ptsDur := (frames[len-1].PktPts - self.ptsStart) / 90
 		wallClockDur := time.Now().UnixMilli() - self.wallClockStartTime
 		if wallClockDur > int64(ptsDur) {
-			log.Println("playback stall, wallClockDur:", wallClockDur, "ms", "ptsDur:", ptsDur, "ms")
+			s := fmt.Sprintf("playback stall, wallClockDur:%dms ptsDur: %dms", wallClockDur, ptsDur)
+			log.Printf("\033[1;31;40m%s\033[0m\n", s)
 		}
 	}
 

@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
+	//"time"
 )
 
 var ak, sk *string
@@ -67,6 +67,7 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
+	log.Println("resp body", string(resp_body))
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -83,6 +84,9 @@ func qvsHttpReq(method, addr, body string, headers map[string]string) (string, e
 	if err != nil {
 		log.Println(err)
 		return "", err
+	}
+	if headers == nil {
+		headers = map[string]string{}
 	}
 	token := signToken(*ak, *sk, method, u.Path, u.Host, body, headers)
 	headers["Authorization"] = token
@@ -135,6 +139,7 @@ func qvsTestGet(path string) {
 	addr := fmt.Sprintf("http://qvs-test.qiniuapi.com/v1/%s", path)
 	resp, err := qvsHttpGet(addr)
 	if err != nil {
+		log.Println(err)
 		return
 	}
 	log.Println(resp)
@@ -231,6 +236,7 @@ func broadcast() {
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConsole()
-	broadcast()
-	time.Sleep(60 * time.Second)
+	//broadcast()
+	qvsHttpGet(*addr)
+	//time.Sleep(60 * time.Second)
 }
