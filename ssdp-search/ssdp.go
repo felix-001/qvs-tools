@@ -8,13 +8,6 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-type SSDP struct {
-	Probe struct {
-		Uuid string `xml:"Uuid"`
-		//Types
-	} `xml:"Probe"`
-}
-
 var s = `
 <?xml version="1.0" encoding="utf-8"?><Probe><Uuid>5FC99970-D38E-4024-8FC0-85DEED82D653</Uuid><Types>inquiry</Types></Probe>
 `
