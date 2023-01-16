@@ -23,7 +23,7 @@ func response(conn net.PacketConn, addr net.Addr, buf []byte) {
 }
 
 func udpServer() {
-	conn, err := net.ListenPacket("udp", ":port")
+	conn, err := net.ListenPacket("udp", ":5065")
 	if err != nil {
 		log.Fatal(err)
 	}
