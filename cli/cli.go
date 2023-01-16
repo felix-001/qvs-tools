@@ -42,5 +42,5 @@ func main() {
 		println("Read data failed:", err.Error())
 		os.Exit(1)
 	}
-	log.Println("received:", received)
+	log.Println("received:", string(received))
 }

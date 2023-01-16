@@ -17,7 +17,8 @@ func response(conn net.PacketConn, addr net.Addr, buf []byte, n int) {
 	log.Println("sleep", t, "second")
 	time.Sleep(time.Second * time.Duration(t))
 	log.Println("send resp")
-	if _, err := conn.WriteTo(buf, addr); err != nil {
+	resp := "got " + string(buf[:n])
+	if _, err := conn.WriteTo([]byte(resp), addr); err != nil {
 		log.Println("send resp err", err)
 	}
 }
