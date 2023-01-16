@@ -41,5 +41,5 @@ func udpServer() {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
+	udpServer()
 }
