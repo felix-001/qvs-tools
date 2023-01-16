@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-func response(conn net.PacketConn, addr net.Addr, buf []byte) {
+func response(conn net.PacketConn, addr net.Addr, buf []byte, n int) {
 	log.Printf("time received: %v. Your message: %v!\n", time.Now().Format(time.ANSIC), string(buf))
-	t, err := strconv.Atoi(string(buf))
+	t, err := strconv.Atoi(string(buf[:n]))
 	if err != nil {
 		log.Println("parse buf err", err)
 		return
@@ -31,11 +31,11 @@ func udpServer() {
 
 	for {
 		buf := make([]byte, 1024)
-		_, addr, err := conn.ReadFrom(buf)
+		n, addr, err := conn.ReadFrom(buf)
 		if err != nil {
 			continue
 		}
-		go response(conn, addr, buf)
+		go response(conn, addr, buf, n)
 	}
 }
 
