@@ -11,7 +11,7 @@ func response(conn net.PacketConn, addr net.Addr, buf []byte) {
 	log.Printf("time received: %v. Your message: %v!\n", time.Now().Format(time.ANSIC), string(buf))
 	t, err := strconv.Atoi(string(buf))
 	if err != nil {
-		log.Println("parse buf err")
+		log.Println("parse buf err", err)
 		return
 	}
 	log.Println("sleep", t, "second")
