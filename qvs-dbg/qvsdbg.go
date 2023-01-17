@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -21,6 +23,7 @@ var (
 type Context struct {
 	NsId      string
 	SipNodeID string
+	SipSrvIP  string
 }
 
 func NewContext() *Context {
@@ -116,6 +119,36 @@ func (c *Context) getSipNodeID() (string, error) {
 	return device.NodeID, nil
 }
 
+func runCmd(cmdstr string) (string, error) {
+	cmd := exec.Command("bash", "-c", cmdstr)
+	b, _ := cmd.CombinedOutput()
+	return string(b), nil
+}
+
+func findDestStr(src string) (string, error) {
+	compileRegex := regexp.MustCompile("[(](.*?)[)]")
+	matchArr := compileRegex.FindStringSubmatch(src)
+	if len(matchArr) > 0 {
+		return matchArr[len(matchArr)-1], nil
+	}
+	return "", fmt.Errorf("parse err")
+}
+
+func (c *Context) getSipSrvIP() (string, error) {
+	cmd := fmt.Sprintf("ping -c 1 %s", c.SipNodeID)
+	res, err := runCmd(cmd)
+	if err != nil {
+		return "", err
+	}
+	ip, err := findDestStr(res)
+	if err != nil {
+		return "", err
+	}
+	c.SipSrvIP = ip
+	log.Println("sip srv ip:", c.SipSrvIP)
+	return ip, nil
+}
+
 func (c *Context) getSSRC(reqId string) (string, error) {
 	return "", nil
 }
@@ -165,6 +198,10 @@ func main() {
 		return
 	}
 	if _, err := ctx.getSipNodeID(); err != nil {
+		log.Println(err)
+		return
+	}
+	if _, err := ctx.getSipSrvIP(); err != nil {
 		log.Println(err)
 		return
 	}
