@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -245,6 +247,30 @@ func (c *Context) getLatestSipLogFile() (string, error) {
 	return latest, nil
 }
 
+// 从文本里面，找到符合关键字列表的行
+func (c *Context) findLineWithKeywords(file string, keywords []string) (string, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		found := true
+		for _, keyword := range keywords {
+			if !strings.Contains(line, keyword) {
+				found = false
+				break
+			}
+		}
+		if found {
+			return line, nil
+		}
+	}
+	return "", fmt.Errorf("line not found")
+}
+
 /*
 1. 拉流失败
 	1.1 实时流
@@ -301,4 +327,11 @@ func main() {
 		return
 	}
 	log.Println("lastest sip log file:", latestSipLogFile)
+	sipLogFile := fmt.Sprintf("/home/liyuanquan/logs/%s", latestSipLogFile)
+	line, err := ctx.findLineWithKeywords(sipLogFile, []string{"xwMAAMw4YS5mXjsX", "31011500991320021468"})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(line)
 }
