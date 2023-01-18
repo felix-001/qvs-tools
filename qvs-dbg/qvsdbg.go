@@ -191,7 +191,29 @@ func parseConsole() error {
 	return nil
 }
 
+func (c *Context) fetchLogs(srvName, nodeId string) error {
+	if !refetchLog {
+		return nil
+	}
+	log.Printf("start to fetch %s logs from %s\n", srvName, nodeId)
+	start := time.Now().Unix()
+	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s.log* %s", nodeId, srvName, srvName, localLogPath)
+	if _, err := runCmd(cmdstr); err != nil {
+		return err
+	}
+	log.Println("fetch", srvName, "logs from", nodeId, "done, cost time:", time.Now().Unix()-start, "service name:", srvName)
+	return nil
+}
+
 func (c *Context) fetchSipLogs() error {
+	srvName := "qvs-sip"
+	if c.ProcessIdx != "" {
+		srvName += c.ProcessIdx
+	}
+	return c.fetchLogs(srvName, c.SipNodeID)
+}
+
+func (c *Context) fetchSipLogs1() error {
 	if !refetchLog {
 		return nil
 	}
@@ -294,6 +316,9 @@ func (c *Context) getValByStartEndKeyword(s, startKeyword, endKeyword string) (s
 	}
 	return snew[:end], nil
 }
+
+// curl http://127.0.0.1:4981/listnodes/basicinfo --data '{"ip":"111.31.48.71"}'
+// ip查node
 
 /*
 1. 拉流失败
