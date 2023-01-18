@@ -281,6 +281,9 @@ func (c *Context) getValByStartEndKeyword(s, startKeyword, endKeyword string) (s
 		return "", fmt.Errorf("keyword %s not found in %s", startKeyword, s)
 	}
 	snew := s[start+len(startKeyword):]
+	if endKeyword == "" {
+		return snew, nil
+	}
 	end := strings.Index(snew, endKeyword)
 	if end == -1 {
 		return "", fmt.Errorf("keyword %s not found in %s", endKeyword, s)
@@ -302,6 +305,8 @@ buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporari
 7. nvr chid
 8. /home/liyuanquan自动获取
 9. 获取一些指标，比如有多少条sip 503， sip session remove， 带宽， illegal ssrc
+10. 通过请求admin，请求启动拉流，sleep几秒钟，然后获取reqId
+11. 响应经过时间
 */
 
 /*
@@ -354,10 +359,34 @@ func main() {
 		return
 	}
 	log.Println(line)
-	val, err := ctx.getValByStartEndKeyword(line, "ssrc=", "&talk_model")
+	ssrc, err := ctx.getValByStartEndKeyword(line, "ssrc=", "&talk_model")
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	log.Println("ssrc:", val)
+	log.Println("ssrc:", ssrc)
+	callidLine, err := ctx.findLineWithKeywords(sipLogFile, []string{ssrc, "return callid"})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("callid line:", callidLine)
+	callid, err := ctx.getValByStartEndKeyword(callidLine, "return callid:", "")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("callid:", callid)
+	rtpIp, err := ctx.getValByStartEndKeyword(line, "ip=", "&reqId")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("rtpIp:", rtpIp)
+	rtpPort, err := ctx.getValByStartEndKeyword(line, "rtp_port=", "&rtp_proto")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("rtpPort:", rtpPort)
 }
