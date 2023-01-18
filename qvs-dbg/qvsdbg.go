@@ -248,12 +248,13 @@ func (c *Context) getLatestSipLogFile() (string, error) {
 }
 
 // 从文本里面，找到符合关键字列表的行
-func (c *Context) findLineWithKeywords(file string, keywords []string) (string, error) {
+func (c *Context) findLineWithKeywords(file string, keywords []string) ([]string, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer f.Close()
+	lines := []string{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -265,10 +266,13 @@ func (c *Context) findLineWithKeywords(file string, keywords []string) (string, 
 			}
 		}
 		if found {
-			return line, nil
+			lines = append(lines, line)
 		}
 	}
-	return "", fmt.Errorf("line not found")
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("line not found")
+	}
+	return lines, nil
 }
 
 // s="hello&test=value&workd"
@@ -359,7 +363,7 @@ func main() {
 		return
 	}
 	log.Println(line)
-	ssrc, err := ctx.getValByStartEndKeyword(line, "ssrc=", "&talk_model")
+	ssrc, err := ctx.getValByStartEndKeyword(line[0], "ssrc=", "&talk_model")
 	if err != nil {
 		log.Println(err)
 		return
@@ -371,19 +375,37 @@ func main() {
 		return
 	}
 	log.Println("callid line:", callidLine)
-	callid, err := ctx.getValByStartEndKeyword(callidLine, "return callid:", "")
+	callid, err := ctx.getValByStartEndKeyword(callidLine[0], "return callid:", "")
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("callid:", callid)
-	rtpIp, err := ctx.getValByStartEndKeyword(line, "ip=", "&reqId")
+	inviteRespLine, err := ctx.findLineWithKeywords(sipLogFile, []string{callid, "respone method=INVITE"})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("invite resp line:", inviteRespLine)
+	inviteRespCode, err := ctx.getValByStartEndKeyword(inviteRespLine[0], "status:", " callid")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("invite resp code 0:", inviteRespCode)
+	inviteRespCode1, err := ctx.getValByStartEndKeyword(inviteRespLine[1], "status:", " callid")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("invite resp code 1:", inviteRespCode1)
+	rtpIp, err := ctx.getValByStartEndKeyword(line[0], "ip=", "&reqId")
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("rtpIp:", rtpIp)
-	rtpPort, err := ctx.getValByStartEndKeyword(line, "rtp_port=", "&rtp_proto")
+	rtpPort, err := ctx.getValByStartEndKeyword(line[0], "rtp_port=", "&rtp_proto")
 	if err != nil {
 		log.Println(err)
 		return
