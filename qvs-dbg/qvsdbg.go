@@ -271,6 +271,23 @@ func (c *Context) findLineWithKeywords(file string, keywords []string) (string, 
 	return "", fmt.Errorf("line not found")
 }
 
+// s="hello&test=value&workd"
+// start="hello&""
+// end="&world"
+// result = "value"
+func (c *Context) getValByStartEndKeyword(s, startKeyword, endKeyword string) (string, error) {
+	start := strings.Index(s, startKeyword)
+	if start == -1 {
+		return "", fmt.Errorf("keyword %s not found in %s", startKeyword, s)
+	}
+	snew := s[start+len(startKeyword):]
+	end := strings.Index(snew, endKeyword)
+	if end == -1 {
+		return "", fmt.Errorf("keyword %s not found in %s", endKeyword, s)
+	}
+	return snew[:end], nil
+}
+
 /*
 1. 拉流失败
 	1.1 实时流
@@ -282,6 +299,9 @@ func (c *Context) findLineWithKeywords(file string, keywords []string) (string, 
 ^[[31m[2023-01-17 11:33:57.440][Error][56736][d4262t5f][11] ssrc illegal on tcp payload chaanellid: ssrc :123116795 rtp_pack_len:8012
 buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporarily unavailable)
 6. ssrc不正确的问题
+7. nvr chid
+8. /home/liyuanquan自动获取
+9. 获取一些指标，比如有多少条sip 503， sip session remove， 带宽， illegal ssrc
 */
 
 /*
@@ -334,4 +354,10 @@ func main() {
 		return
 	}
 	log.Println(line)
+	val, err := ctx.getValByStartEndKeyword(line, "ssrc=", "&talk_model")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("ssrc:", val)
 }
