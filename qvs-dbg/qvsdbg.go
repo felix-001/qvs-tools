@@ -12,12 +12,15 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var (
-	adminIP string
-	gbID    string
-	reqID   string
+	adminIP      string
+	gbID         string
+	reqID        string
+	localLogPath string
+	refetchLog   bool
 )
 
 type Context struct {
@@ -121,8 +124,20 @@ func (c *Context) getSipNodeID() (string, error) {
 
 func runCmd(cmdstr string) (string, error) {
 	cmd := exec.Command("bash", "-c", cmdstr)
-	b, _ := cmd.CombinedOutput()
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		//TODO 待优化
+		return string(b), err
+	}
 	return string(b), nil
+}
+
+func (c *Context) deleteOldLogs() error {
+	log.Println("clear old logs")
+	if _, err := runCmd("rm -rf ~/logs/*"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func findDestStr(src string) (string, error) {
@@ -136,10 +151,7 @@ func findDestStr(src string) (string, error) {
 
 func (c *Context) getSipSrvIP() (string, error) {
 	cmd := fmt.Sprintf("ping -c 1 %s", c.SipNodeID)
-	res, err := runCmd(cmd)
-	if err != nil {
-		return "", err
-	}
+	res, _ := runCmd(cmd)
 	ip, err := findDestStr(res)
 	if err != nil {
 		return "", err
@@ -158,6 +170,8 @@ func parseConsole() error {
 	flag.StringVar(&reqID, "r", "", "input reqid")
 	flag.StringVar(&adminIP, "i", "", "input admin ip")
 	flag.StringVar(&gbID, "g", "", "input gbid")
+	flag.BoolVar(&refetchLog, "f", false, "refetch logs")
+	flag.StringVar(&localLogPath, "l", "~/logs", "refetch logs")
 	flag.Parse()
 	if reqID == "" {
 		return fmt.Errorf("please input reqId")
@@ -168,6 +182,17 @@ func parseConsole() error {
 	if gbID == "" {
 		return fmt.Errorf("please input gbid")
 	}
+	return nil
+}
+
+func (c *Context) fetchSipLogs() error {
+	log.Println("start to fetch sip logs from", c.SipNodeID)
+	start := time.Now().Unix()
+	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/qvs-sip/_package/run/qvs-sip.log* %s", c.SipNodeID, localLogPath)
+	if _, err := runCmd(cmdstr); err != nil {
+		return err
+	}
+	log.Println("fetch sip logs from", c.SipNodeID, "done, cost time:", time.Now().Unix()-start)
 	return nil
 }
 
@@ -202,6 +227,16 @@ func main() {
 		return
 	}
 	if _, err := ctx.getSipSrvIP(); err != nil {
+		log.Println(err)
+		return
+	}
+	if refetchLog {
+		if err := ctx.deleteOldLogs(); err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	if err := ctx.fetchSipLogs(); err != nil {
 		log.Println(err)
 		return
 	}
