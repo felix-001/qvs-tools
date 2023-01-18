@@ -24,9 +24,10 @@ var (
 )
 
 type Context struct {
-	NsId      string
-	SipNodeID string
-	SipSrvIP  string
+	NsId       string
+	SipNodeID  string
+	SipSrvIP   string
+	ProcessIdx string
 }
 
 func NewContext() *Context {
@@ -113,11 +114,14 @@ func (c *Context) getSipNodeID() (string, error) {
 		return "", err
 	}
 	sipNodeId := device.NodeID
+	processIdx := ""
 	ss := strings.Split(device.NodeID, "_")
 	if len(ss) == 2 {
 		sipNodeId = ss[0]
+		processIdx = ss[1]
 	}
 	c.SipNodeID = sipNodeId
+	c.ProcessIdx = processIdx
 	log.Println("sip nodeid:", c.SipNodeID)
 	return device.NodeID, nil
 }
@@ -170,8 +174,8 @@ func parseConsole() error {
 	flag.StringVar(&reqID, "r", "", "input reqid")
 	flag.StringVar(&adminIP, "i", "", "input admin ip")
 	flag.StringVar(&gbID, "g", "", "input gbid")
-	flag.BoolVar(&refetchLog, "f", false, "refetch logs")
-	flag.StringVar(&localLogPath, "l", "~/logs", "refetch logs")
+	flag.BoolVar(&refetchLog, "f", false, "删除本地缓存的日志文件，重新从节点获取,否则直接读取本地缓存的日志")
+	flag.StringVar(&localLogPath, "l", "/home/liyuanquan/logs", "本地缓存日志文件的路径")
 	flag.Parse()
 	if reqID == "" {
 		return fmt.Errorf("please input reqId")
@@ -186,14 +190,59 @@ func parseConsole() error {
 }
 
 func (c *Context) fetchSipLogs() error {
+	if !refetchLog {
+		return nil
+	}
 	log.Println("start to fetch sip logs from", c.SipNodeID)
 	start := time.Now().Unix()
-	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/qvs-sip/_package/run/qvs-sip.log* %s", c.SipNodeID, localLogPath)
+	srvName := "qvs-sip"
+	if c.ProcessIdx != "" {
+		srvName += c.ProcessIdx
+	}
+	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s.log* %s", c.SipNodeID, srvName, srvName, localLogPath)
 	if _, err := runCmd(cmdstr); err != nil {
 		return err
 	}
-	log.Println("fetch sip logs from", c.SipNodeID, "done, cost time:", time.Now().Unix()-start)
+	log.Println("fetch sip logs from", c.SipNodeID, "done, cost time:", time.Now().Unix()-start, "service name:", srvName)
 	return nil
+}
+
+func (c *Context) getDatetimeFromFileName(file string) (string, error) {
+	ss := strings.Split(file, "-")
+	if len(ss) != 3 {
+		return "", fmt.Errorf("split log file name err")
+	}
+	return ss[2], nil
+}
+
+// 从sip节点下载下来的日志文件可能有多个，这里需要获取到最新的
+func (c *Context) getLatestSipLogFile() (string, error) {
+	files, err := ioutil.ReadDir(localLogPath)
+	if err != nil {
+		return "", err
+	}
+	latest := ""
+	for _, file := range files {
+		if !strings.Contains(file.Name(), "qvs-sip") {
+			continue
+		}
+		if latest == "" {
+			latest = file.Name()
+			continue
+		}
+		latestLogfileTime, err := c.getDatetimeFromFileName(latest)
+		if err != nil {
+			return "", err
+		}
+		curLogfileTime, err := c.getDatetimeFromFileName(file.Name())
+		if err != nil {
+			return "", err
+		}
+		if strings.Compare(curLogfileTime, latestLogfileTime) > 0 {
+			latest = file.Name()
+		}
+	}
+	return latest, nil
 }
 
 /*
@@ -209,9 +258,15 @@ buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporari
 6. ssrc不正确的问题
 */
 
+/*
+使用姿势:
+./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]
+*/
+
 func main() {
 	if err := parseConsole(); err != nil {
-		log.Println(err)
+		fmt.Println(err)
+		fmt.Println("usage: ./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]")
 		flag.PrintDefaults()
 		return
 	}
@@ -240,4 +295,10 @@ func main() {
 		log.Println(err)
 		return
 	}
+	latestSipLogFile, err := ctx.getLatestSipLogFile()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("lastest sip log file:", latestSipLogFile)
 }
