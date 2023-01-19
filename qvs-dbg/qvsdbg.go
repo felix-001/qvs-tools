@@ -69,6 +69,14 @@ func qvsGet(addr string) (string, error) {
 	return qvsReq("GET", addr, "")
 }
 
+func qvsPost(addr, body string) (string, error) {
+	headers := map[string]string{
+		"authorization": "QiniuStub uid=0",
+		"Content-Type":  "application/json",
+	}
+	return httpReq("POST", addr, body, headers)
+}
+
 type Device struct {
 	Vendor   string `json:"vendor"`
 	RemoteIP string `json:"remoteIp"`
@@ -317,6 +325,35 @@ func (c *Context) getValByStartEndKeyword(s, startKeyword, endKeyword string) (s
 	return snew[:end], nil
 }
 
+type QueryNodesOpt struct {
+	IP string `json:"ip"`
+}
+
+type NodeInfo struct {
+	ID string `json:"id"`
+}
+
+func (c *Context) getNodeIDByIP(ip string) (string, error) {
+	query := QueryNodesOpt{IP: ip}
+	jsonbody, err := json.Marshal(&query)
+	if err != nil {
+		return "", err
+	}
+	// TOOD: 4981从控制台传入
+	uri := fmt.Sprintf("http://%s:4981/listnodes/basicinfo", adminIP)
+	resp, err := qvsPost(uri, string(jsonbody))
+	if err != nil {
+		return "", err
+	}
+	data := &struct {
+		Items []NodeInfo `json:"items"`
+	}{}
+	if err := json.Unmarshal([]byte(resp), data); err != nil {
+		return "", err
+	}
+	return data.Items[0].ID, nil
+}
+
 // curl http://127.0.0.1:4981/listnodes/basicinfo --data '{"ip":"111.31.48.71"}'
 // ip查node
 
@@ -436,4 +473,10 @@ func main() {
 		return
 	}
 	log.Println("rtpPort:", rtpPort)
+	rtpNodeId, err := ctx.getNodeIDByIP(rtpIp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("rtp node id:", rtpNodeId)
 }
