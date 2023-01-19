@@ -215,6 +215,21 @@ func (c *Context) fetchLogs(srvName, nodeId, filenamePrefix string) error {
 	return nil
 }
 
+func (c *Context) fetchRtpLog(srvName, nodeId, filename string) error {
+	if !refetchLog {
+		return nil
+	}
+	log.Printf("start to fetch %s logs from %s\n", srvName, nodeId)
+	start := time.Now().Unix()
+	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s %s", nodeId, srvName, filename, localLogPath)
+	log.Println(cmdstr)
+	if _, err := runCmd(cmdstr); err != nil {
+		return err
+	}
+	log.Println("fetch", srvName, "logs from", nodeId, "done, cost time:", time.Now().Unix()-start, "service name:", srvName)
+	return nil
+}
+
 func (c *Context) fetchSipLogs() error {
 	srvName := "qvs-sip"
 	if c.ProcessIdx != "" {
@@ -505,15 +520,21 @@ func main() {
 		return
 	}
 	log.Println("rtp node id:", rtpNodeId)
-	if err := ctx.fetchRtpLogs(rtpPort, rtpNodeId); err != nil {
-		log.Println(err)
-		return
-	}
+	/*
+		if err := ctx.fetchRtpLogs(rtpPort, rtpNodeId); err != nil {
+			log.Println(err)
+			return
+		}
+	*/
 	latestRtpLogFile, err := ctx.getLatestRtpLogFile(rtpNodeId, rtpPort)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("latest rtp log file:", latestRtpLogFile)
+	if err := ctx.fetchRtpLog("qvs-rtp", rtpNodeId, latestRtpLogFile); err != nil {
+		log.Println(err)
+		return
+	}
 
 }
