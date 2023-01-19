@@ -415,6 +415,15 @@ buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporari
 */
 
 /*
+拉流失败：
+1. 信令层返回非200 OK
+2. catalog信令有问题，导致nvr是在线的，通道是离线的
+3. ssrc不正确
+4. 没有tcp连接过来
+5. tcp连接过来，推流没多大一会，就断开了连接，connection reset by peer
+*/
+
+/*
 使用姿势:
 ./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]
 */
@@ -535,6 +544,13 @@ func main() {
 	if err := ctx.fetchRtpLog("qvs-rtp", rtpNodeId, latestRtpLogFile); err != nil {
 		log.Println(err)
 		return
+	}
+	file := "/home/liyuanquan/logs/" + latestRtpLogFile
+	tcpAttachLog, err := ctx.findLineWithKeywords(file, []string{reqID, "tcp attach"})
+	if err != nil {
+		log.Println("tcp attach log not found")
+	} else {
+		log.Println("tcp attach:", tcpAttachLog)
 	}
 
 }
