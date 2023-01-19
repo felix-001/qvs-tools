@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -199,13 +200,14 @@ func parseConsole() error {
 	return nil
 }
 
-func (c *Context) fetchLogs(srvName, nodeId string) error {
+func (c *Context) fetchLogs(srvName, nodeId, filenamePrefix string) error {
 	if !refetchLog {
 		return nil
 	}
 	log.Printf("start to fetch %s logs from %s\n", srvName, nodeId)
 	start := time.Now().Unix()
-	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s.log* %s", nodeId, srvName, srvName, localLogPath)
+	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s.log* %s", nodeId, srvName, filenamePrefix, localLogPath)
+	log.Println(cmdstr)
 	if _, err := runCmd(cmdstr); err != nil {
 		return err
 	}
@@ -218,44 +220,32 @@ func (c *Context) fetchSipLogs() error {
 	if c.ProcessIdx != "" {
 		srvName += c.ProcessIdx
 	}
-	return c.fetchLogs(srvName, c.SipNodeID)
+	return c.fetchLogs(srvName, c.SipNodeID, srvName)
 }
 
-func (c *Context) fetchSipLogs1() error {
-	if !refetchLog {
-		return nil
-	}
-	log.Println("start to fetch sip logs from", c.SipNodeID)
-	start := time.Now().Unix()
-	srvName := "qvs-sip"
-	if c.ProcessIdx != "" {
-		srvName += c.ProcessIdx
-	}
-	cmdstr := fmt.Sprintf("qscp qboxserver@%s:/home/qboxserver/%s/_package/run/%s.log* %s", c.SipNodeID, srvName, srvName, localLogPath)
-	if _, err := runCmd(cmdstr); err != nil {
-		return err
-	}
-	log.Println("fetch sip logs from", c.SipNodeID, "done, cost time:", time.Now().Unix()-start, "service name:", srvName)
-	return nil
+func (c *Context) fetchRtpLogs(rtpPort, rtpNodeId string) error {
+	srvName := "qvs-rtp"
+	filenamePrefix := srvName + "_" + rtpPort[2:]
+	return c.fetchLogs(srvName, rtpNodeId, filenamePrefix)
 }
 
 func (c *Context) getDatetimeFromFileName(file string) (string, error) {
 	ss := strings.Split(file, "-")
 	if len(ss) != 3 {
-		return "", fmt.Errorf("split log file name err")
+		return "", fmt.Errorf("split log file name err %v", []byte(file))
 	}
 	return ss[2], nil
 }
 
-// 从sip节点下载下来的日志文件可能有多个，这里需要获取到最新的
-func (c *Context) getLatestSipLogFile() (string, error) {
+// 从节点下载下来的日志文件可能有多个，这里需要获取到最新的
+func (c *Context) getLatestLogFile(srvName string) (string, error) {
 	files, err := ioutil.ReadDir(localLogPath)
 	if err != nil {
 		return "", err
 	}
 	latest := ""
 	for _, file := range files {
-		if !strings.Contains(file.Name(), "qvs-sip") {
+		if !strings.Contains(file.Name(), srvName) {
 			continue
 		}
 		if latest == "" {
@@ -272,6 +262,43 @@ func (c *Context) getLatestSipLogFile() (string, error) {
 		}
 		if strings.Compare(curLogfileTime, latestLogfileTime) > 0 {
 			latest = file.Name()
+		}
+	}
+	return latest, nil
+}
+
+func (c *Context) getLatestRtpLogFile(rtpNodeId, rtpPort string) (string, error) {
+	srvName := "qvs-rtp"
+	filenamePrefix := srvName + "_" + rtpPort[2:]
+	cmdstr := fmt.Sprintf("qssh %s \"ls /home/qboxserver/%s/_package/run/%s.log*\"", rtpNodeId, srvName, filenamePrefix)
+	// "qssh zz788 \"ls /home/qboxserver/qvs-rtp/_package/run/qvs-rtp_02*\""
+	res, err := runCmd(cmdstr)
+	if err != nil {
+		return "", err
+	}
+	log.Printf("rtp log file list:\n%s", res)
+	latest := ""
+	scanner := bufio.NewScanner(strings.NewReader(res))
+	for scanner.Scan() {
+		line := scanner.Text()
+		_, file := filepath.Split(line)
+		if latest == "" {
+			latest = file
+			continue
+		}
+		if latest == "\n" {
+			continue
+		}
+		latestLogfileTime, err := c.getDatetimeFromFileName(latest)
+		if err != nil {
+			return "", err
+		}
+		curLogfileTime, err := c.getDatetimeFromFileName(file)
+		if err != nil {
+			return "", err
+		}
+		if strings.Compare(curLogfileTime, latestLogfileTime) > 0 {
+			latest = file
 		}
 	}
 	return latest, nil
@@ -354,9 +381,6 @@ func (c *Context) getNodeIDByIP(ip string) (string, error) {
 	return data.Items[0].ID, nil
 }
 
-// curl http://127.0.0.1:4981/listnodes/basicinfo --data '{"ip":"111.31.48.71"}'
-// ip查node
-
 /*
 1. 拉流失败
 	1.1 实时流
@@ -387,8 +411,6 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	//ssrc := getSSRC()
-	//log.Println(ssrc)
 	ctx := NewContext()
 	if _, err := ctx.getNsID(); err != nil {
 		log.Println(err)
@@ -412,7 +434,7 @@ func main() {
 		log.Println(err)
 		return
 	}
-	latestSipLogFile, err := ctx.getLatestSipLogFile()
+	latestSipLogFile, err := ctx.getLatestLogFile("qvs-sip")
 	if err != nil {
 		log.Println(err)
 		return
@@ -424,7 +446,7 @@ func main() {
 		log.Println(err)
 		return
 	}
-	log.Println(line)
+	//log.Println(line)
 	ssrc, err := ctx.getValByStartEndKeyword(line[0], "ssrc=", "&talk_model")
 	if err != nil {
 		log.Println(err)
@@ -436,7 +458,7 @@ func main() {
 		log.Println(err)
 		return
 	}
-	log.Println("callid line:", callidLine)
+	//log.Println("callid line:", callidLine)
 	callid, err := ctx.getValByStartEndKeyword(callidLine[0], "return callid:", "")
 	if err != nil {
 		log.Println(err)
@@ -448,7 +470,7 @@ func main() {
 		log.Println(err)
 		return
 	}
-	log.Println("invite resp line:", inviteRespLine)
+	//log.Println("invite resp line:", inviteRespLine)
 	inviteRespCode, err := ctx.getValByStartEndKeyword(inviteRespLine[0], "status:", " callid")
 	if err != nil {
 		log.Println(err)
@@ -473,10 +495,25 @@ func main() {
 		return
 	}
 	log.Println("rtpPort:", rtpPort)
+	if len(rtpPort) != 4 {
+		log.Println("invalid rtp port", rtpPort)
+		return
+	}
 	rtpNodeId, err := ctx.getNodeIDByIP(rtpIp)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("rtp node id:", rtpNodeId)
+	if err := ctx.fetchRtpLogs(rtpPort, rtpNodeId); err != nil {
+		log.Println(err)
+		return
+	}
+	latestRtpLogFile, err := ctx.getLatestRtpLogFile(rtpNodeId, rtpPort)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("latest rtp log file:", latestRtpLogFile)
+
 }
