@@ -29,7 +29,6 @@ var (
 type Context struct {
 	NsId       string
 	SipNodeID  string
-	SipSrvIP   string
 	ProcessIdx string
 }
 
@@ -85,12 +84,12 @@ type Device struct {
 	NodeID   string `json:"nodeId"`
 }
 
-func (c *Context) getNsID() (string, error) {
+func (c *Context) getNsID() error {
 	path := fmt.Sprintf("devices?prefix=%s", gbID)
 	uri := c.adminUri(path)
 	resp, err := qvsGet(uri)
 	if err != nil {
-		return "", err
+		return err
 	}
 	//log.Println(resp)
 	data := struct {
@@ -98,31 +97,31 @@ func (c *Context) getNsID() (string, error) {
 	}{}
 	if err := json.Unmarshal([]byte(resp), &data); err != nil {
 		log.Println(err)
-		return "", err
+		return err
 	}
 	if len(data.Devices) == 0 {
-		return "", fmt.Errorf("device not found")
+		return fmt.Errorf("device not found")
 	}
 	c.NsId = data.Devices[0].NsID
 	log.Println("nsId:", c.NsId)
-	return data.Devices[0].NsID, nil
+	return nil
 }
 
 func (c *Context) adminUri(path string) string {
 	return fmt.Sprintf("http://%s:7277/v1/%s", adminIP, path)
 }
 
-func (c *Context) getSipNodeID() (string, error) {
+func (c *Context) getSipNodeID() error {
 	path := fmt.Sprintf("namespaces/%s/devices/%s", c.NsId, gbID)
 	uri := c.adminUri(path)
 	resp, err := qvsGet(uri)
 	if err != nil {
-		return "", err
+		return err
 	}
 	var device Device
 	if err := json.Unmarshal([]byte(resp), &device); err != nil {
 		log.Println(err)
-		return "", err
+		return err
 	}
 	sipNodeId := device.NodeID
 	processIdx := ""
@@ -134,7 +133,7 @@ func (c *Context) getSipNodeID() (string, error) {
 	c.SipNodeID = sipNodeId
 	c.ProcessIdx = processIdx
 	log.Println("sip nodeid:", c.SipNodeID)
-	return device.NodeID, nil
+	return nil
 }
 
 func runCmd(cmdstr string) (string, error) {
@@ -162,22 +161,6 @@ func findDestStr(src string) (string, error) {
 		return matchArr[len(matchArr)-1], nil
 	}
 	return "", fmt.Errorf("parse err")
-}
-
-func (c *Context) getSipSrvIP() (string, error) {
-	cmd := fmt.Sprintf("ping -c 1 %s", c.SipNodeID)
-	res, _ := runCmd(cmd)
-	ip, err := findDestStr(res)
-	if err != nil {
-		return "", err
-	}
-	c.SipSrvIP = ip
-	log.Println("sip srv ip:", c.SipSrvIP)
-	return ip, nil
-}
-
-func (c *Context) getSSRC(reqId string) (string, error) {
-	return "", nil
 }
 
 func parseConsole() error {
@@ -236,12 +219,6 @@ func (c *Context) fetchSipLogs() error {
 		srvName += c.ProcessIdx
 	}
 	return c.fetchLogs(srvName, c.SipNodeID, srvName)
-}
-
-func (c *Context) fetchRtpLogs(rtpPort, rtpNodeId string) error {
-	srvName := "qvs-rtp"
-	filenamePrefix := srvName + "_" + rtpPort[2:]
-	return c.fetchLogs(srvName, rtpNodeId, filenamePrefix)
 }
 
 func (c *Context) getDatetimeFromFileName(file string) (string, error) {
@@ -412,6 +389,8 @@ buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporari
 9. 获取一些指标，比如有多少条sip 503， sip session remove， 带宽， illegal ssrc
 10. 通过请求admin，请求启动拉流，sleep几秒钟，然后获取reqId
 11. 响应经过时间
+12. 脱敏
+13. 读配置文件
 */
 
 /*
@@ -423,28 +402,24 @@ buf:13142 payload_type:96 peer_ip:120.193.152.166:26564 fd:39(Resource temporari
 5. tcp连接过来，推流没多大一会，就断开了连接，connection reset by peer
 */
 
-/*
-使用姿势:
-./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]
-*/
+var usage = `usage:
+qvs调试工具，主要用于定位一些线上客户问题，其中包括：拉流失败、设备离线、对讲失败
+使用方法: ./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]
+`
 
 func main() {
 	if err := parseConsole(); err != nil {
 		fmt.Println(err)
-		fmt.Println("usage: ./qvsdbg -i <adminIP> -r <reqId> -g <gbId> [-f]")
+		fmt.Println(usage)
 		flag.PrintDefaults()
 		return
 	}
 	ctx := NewContext()
-	if _, err := ctx.getNsID(); err != nil {
+	if err := ctx.getNsID(); err != nil {
 		log.Println(err)
 		return
 	}
-	if _, err := ctx.getSipNodeID(); err != nil {
-		log.Println(err)
-		return
-	}
-	if _, err := ctx.getSipSrvIP(); err != nil {
+	if err := ctx.getSipNodeID(); err != nil {
 		log.Println(err)
 		return
 	}
@@ -529,12 +504,6 @@ func main() {
 		return
 	}
 	log.Println("rtp node id:", rtpNodeId)
-	/*
-		if err := ctx.fetchRtpLogs(rtpPort, rtpNodeId); err != nil {
-			log.Println(err)
-			return
-		}
-	*/
 	latestRtpLogFile, err := ctx.getLatestRtpLogFile(rtpNodeId, rtpPort)
 	if err != nil {
 		log.Println(err)
