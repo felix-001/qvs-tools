@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 )
 
 var (
@@ -31,8 +32,8 @@ var (
 )
 
 const (
-	apiHost     = "http://qvs.qiniuapi.com/v1"
-	apiHostTest = "http://qvs-test.qiniuapi.com/v1/"
+	apiHost     = "http://qvs.qiniuapi.com"
+	apiHostTest = "http://qvs-test.qiniuapi.com"
 	conf        = "/usr/local/etc/qvsHttpCli.conf"
 )
 
@@ -82,7 +83,7 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 		return "", err
 	}
 	if resp.StatusCode != 200 {
-		log.Print("status code", resp.StatusCode, string(resp_body))
+		log.Println("status code", resp.StatusCode, string(resp_body))
 		return "", errHttpStatusCode
 	}
 	return string(resp_body), err
@@ -94,11 +95,15 @@ func qvsHttpReq(method, addr, body string) (string, error) {
 		log.Println(err)
 		return "", err
 	}
+	host := u.Host
+	u.Host = ""
+	u.Scheme = ""
 	headers := map[string]string{}
 	if body != "" {
 		headers["Content-Type"] = "application/json"
 	}
-	token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
+	//token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
+	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token
 	return httpReq(method, addr, body, headers)
 }
@@ -145,6 +150,38 @@ func parseConsole() {
 	}
 }
 
+func isJSON(s string) bool {
+	var js map[string]interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
+}
+
+func PrintJSON(m map[string]interface{}) {
+	for k, v := range m {
+		switch vv := v.(type) {
+		case string:
+			fmt.Println(k, "is string", vv)
+		case float64:
+			fmt.Println(k, "is float", int64(vv))
+		case int:
+			fmt.Println(k, "is int", vv)
+		case []interface{}:
+			fmt.Println(k, "is an array:")
+			for i, u := range vv {
+				fmt.Println(i, u)
+			}
+		case nil:
+			fmt.Println(k, "is nil", "null")
+		case bool:
+			fmt.Println(k, "is bool", vv)
+		case map[string]interface{}:
+			fmt.Println(k, "is an map:")
+			PrintJSON(vv)
+		default:
+			fmt.Println(k, "is of a type I don't know how to handle ", fmt.Sprintf("%T", v))
+		}
+	}
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConf()
@@ -159,5 +196,22 @@ func main() {
 		log.Println("err:", err)
 		return
 	}
-	log.Println(resp)
+	resp = strings.ReplaceAll(resp, "\u0026", "")
+	if isJSON(resp) {
+		m := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(resp), &m); err != nil {
+			log.Fatal("err:", err)
+			return
+		}
+		PrintJSON(m)
+		/*
+			for key, value := range m {
+
+				log.Println(key, ":", value, reflect.TypeOf(value))
+			}
+		*/
+
+		return
+	}
+	log.Println("resp", resp)
 }
