@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/xml"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -78,8 +77,8 @@ func (s *GBPaser) onMessage(msg *sip.Msg, t int64) error {
 		return nil
 	}
 	//log.Println("in")
-	if msg.Payload.ContentType() != "application/MANSCDP+xml" {
-		//log.Println("收到消息格式为非xml,暂不处理", msg.String())
+	if !strings.EqualFold(msg.Payload.ContentType(), "application/MANSCDP+xml") {
+		log.Println("收到消息格式为非xml,暂不处理", msg.String(), msg.Payload.ContentType())
 		return nil
 	}
 	xmlMsg, err := parseXml(string(msg.Payload.Data()))
@@ -145,21 +144,7 @@ func (s *GBPaser) getTime(line string) int64 {
 		log.Println("str2unix err:", err, "raw:", line)
 		return -1
 	}
-	return t
-}
-
-func getSipRawMsg(s string) (string, error) {
-	start := strings.Index(s, startPrefix)
-	if start == -1 {
-		return "", fmt.Errorf("get sip raw msg, find start prefix err: %s", s)
-	}
-	s = s[start+len(startPrefix)+1:]
-	end := strings.Index(s, sep)
-	if start == -1 {
-		return "", fmt.Errorf("get sip raw msg, find sep err: %s", s)
-	}
-	s = s[:end]
-	return s, nil
+	return t / 1000
 }
 
 func MyScanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -167,15 +152,11 @@ func MyScanLines(data []byte, atEOF bool) (advance int, token []byte, err error)
 		return 0, nil, nil
 	}
 	if i := bytes.IndexByte(data, '\n'); i >= 0 {
-		// We have a full newline-terminated line.
-		//return i + 1, data[0:i], nil
 		return i + 1, data[0 : i+1], nil
 	}
-	// If we're at EOF, we have a final, non-terminated line. Return it.
 	if atEOF {
 		return len(data), data, nil
 	}
-	// Request more data.
 	return 0, nil, nil
 }
 
@@ -198,9 +179,11 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	errcnt := 0
 	total := 0
+	lineNo := 0
 	var t int64 = 0
 	scanner.Split(MyScanLines)
 	for scanner.Scan() {
+		lineNo++
 		line := scanner.Text()
 		if strings.Contains(line, "nbbuf") || strings.Contains(line, "send_message") {
 			t = parser.getTime(line)
@@ -214,12 +197,8 @@ func main() {
 			continue
 		}
 		if strings.Contains(line, sep) {
-			/*
-				if total > 2 {
-					return
-				}
-			*/
-			if len(line) > len(sep) {
+			raw = strings.ReplaceAll(raw, "tag=tag=", "tag=")
+			if len(line) > len(sep)+1 {
 				start := strings.Index(line, "<--")
 				if start == -1 {
 					log.Println("get sep err: ", line)
@@ -228,25 +207,19 @@ func main() {
 				if start > 0 {
 					raw += line[:start]
 				} else {
-					log.Println("err line:", line)
+					log.Println("err line:", line, len(line), len(sep))
 				}
 			}
 			total++
-			//log.Println("raw:", raw)
 			if len(raw) == 4 {
 				raw = ""
 				continue
 			}
-			//if !strings.Contains(line, "Content-Length : 0") {
-			//raw += "\r\n"
-			//}
 			msg, err := sip.ParseMsg([]byte(raw))
 			if err != nil {
-				log.Println(err, len(raw), raw)
-				log.Printf("%#x\n", raw)
+				//log.Printf("lineNo: %d err: %v str: %s hex: %#x\n", lineNo, err, raw, raw)
 				errcnt++
 				raw = ""
-				//panic(err)
 				continue
 			}
 			if err := parser.onSIP(msg, t); err != nil {
@@ -255,16 +228,6 @@ func main() {
 			raw = ""
 			continue
 		}
-		//if line == "" {
-		//	continue
-		//}
-		//if strings.Contains(line, "Content-Length") {
-		//log.Println("1")
-		//line += "\r\n"
-		//}
-		//log.Println("line:", line)
-		//log.Printf("line hex: %#x\n", line)
-		//raw += line + "\r\n"
 		raw += line
 	}
 	if err := scanner.Err(); err != nil {
@@ -272,93 +235,4 @@ func main() {
 	}
 	log.Println("errcnt:", errcnt)
 	log.Println("total:", total)
-}
-
-func main1() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	f := os.Args[1]
-	gbid = os.Args[2]
-	if gbid == "" {
-		log.Printf("usage: ./gb-parse <log-file> <gbid>")
-		return
-	}
-	file, err := os.Open(f)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	errcnt := 0
-	total := 0
-	parser := GBPaser{}
-	var b []byte = make([]byte, 1)
-	raw := []byte{}
-	for {
-		if _, err := file.Read(b); err != nil {
-			log.Println(err)
-			break
-		}
-		raw = append(raw, b[0])
-		s := string(raw)
-		if strings.Contains(s, sep) {
-			//log.Println("total:", total)
-			t := parser.getTime(s)
-			if t < 0 {
-				log.Println("get time err:", s)
-				return
-			}
-			sipMsg, err := getSipRawMsg(s)
-			if err != nil {
-				break
-			}
-			if len(sipMsg) < 10 {
-				raw = raw[:0]
-				continue
-			}
-			msg, err := sip.ParseMsg([]byte(sipMsg))
-			if err != nil {
-				//log.Println(err, len(raw), string(sipMsg))
-				//log.Printf("%#x len:%d raw:%s\n", sipMsg, len(sipMsg), sipMsg)
-				errcnt++
-				log.Println("errcnt:", errcnt, "total:", total)
-				raw = raw[:0]
-				//panic(err)
-				continue
-			}
-			if err := parser.onSIP(msg, t); err != nil {
-				panic(err)
-			}
-			total++
-
-			raw = raw[:0]
-		}
-	}
-	log.Println("errcnt:", errcnt)
-	log.Println("total:", total)
-}
-
-func main3() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	f := os.Args[1]
-	gbid = os.Args[2]
-	if gbid == "" {
-		log.Printf("usage: ./gb-parse <log-file> <gbid>")
-		return
-	}
-	file, err := os.Open(f)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	cnt := 0
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Printf("line: %s hex: %#x\n", line, line)
-		cnt++
-		if cnt == 30 {
-			break
-		}
-	}
 }
