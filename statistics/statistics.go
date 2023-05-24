@@ -52,10 +52,10 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
-	log.Println("data:")
-	fmt.Println(data)
+	//log.Println("data:")
+	//fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
-	log.Println("token:", token)
+	//log.Println("token:", token)
 	return token
 }
 
@@ -168,27 +168,136 @@ type NsList struct {
 }
 
 func (s *StatisticsInstance) getNsList(offset int) (*NsList, error) {
-	path := fmt.Sprintf("/v1/namespaces?line=10&offset=%d", offset)
+	path := fmt.Sprintf("/v1/namespaces?line=500&offset=%d", offset)
 	resp, err := qvsGet(path)
 	if err != nil {
 		return nil, err
 	}
-	log.Println(resp)
+	//log.Println(resp)
 	nsList := NsList{}
 	if err := json.Unmarshal([]byte(resp), &nsList); err != nil {
 		return nil, err
 	}
-	log.Println("total:", nsList.Total, "count:", len(nsList.Items))
+	//log.Println("total:", nsList.Total, "count:", len(nsList.Items))
 	return &nsList, nil
 }
 
-func (s *StatisticsInstance) getUids() ([]string, error) {
+func (s *StatisticsInstance) isUidExist(uids []int, uid int) bool {
+	for _, v := range uids {
+		if v == uid {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *StatisticsInstance) mergeUids(uids *[]int, nslist *NsList) {
+	for _, v := range nslist.Items {
+		if v.AccessType == "gb28181" && !s.isUidExist(*uids, v.Uid) {
+			*uids = append(*uids, v.Uid)
+		}
+	}
+}
+
+func (s *StatisticsInstance) getUids() ([]int, error) {
+	uids := []int{}
 	nslist, err := s.getNsList(0)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("total:", nslist.Total)
-	return nil, nil
+	s.mergeUids(&uids, nslist)
+	log.Println("total namespaces:", nslist.Total)
+	for i := len(nslist.Items); i < nslist.Total; {
+		log.Println("total:", nslist.Total, "offset:", i)
+		nslist, err := s.getNsList(i)
+		if err != nil {
+			return nil, err
+		}
+		s.mergeUids(&uids, nslist)
+		i += len(nslist.Items)
+	}
+	log.Println("total uids:", len(uids))
+	return uids, nil
+}
+
+type Device struct {
+	Gbid string `json:"gbId"`
+}
+
+type DeviceList struct {
+	Items []Device `json:"items"`
+	Total int      `json:"total"`
+}
+
+func (s *StatisticsInstance) getDevices(uid int) (*DeviceList, error) {
+	path := fmt.Sprintf("/v1/devices?uid=%d", uid)
+	resp, err := qvsGet(path)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	devlist := DeviceList{}
+	if err := json.Unmarshal([]byte(resp), &devlist); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return &devlist, nil
+}
+
+func (s *StatisticsInstance) filterUid(uids []int) (int, error) {
+	noDevCnt := 0
+	for _, uid := range uids {
+		devlist, err := s.getDevices(uid)
+		if err != nil {
+			log.Println(err)
+			return 0, err
+		}
+		if devlist.Total == 0 {
+			//log.Println("uid:", uid, "no devices")
+			noDevCnt++
+		}
+
+	}
+	return noDevCnt, nil
+}
+
+func (s *StatisticsInstance) get(path string, v interface{}) error {
+	resp, err := qvsGet(path)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	if err := json.Unmarshal([]byte(resp), v); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+type Stream struct {
+	Status       bool   `json:"status"`
+	StreamId     string `json:"streamId"`
+	LastPushedAt int    `json:"lastPushedAt"`
+}
+
+type StreamList struct {
+	Items []Stream `json:"items"`
+	Total int      `json:"total"`
+}
+
+func (s *StatisticsInstance) getStreams() error {
+	path := fmt.Sprintf("/v1/streams")
+	resp, err := qvsGet(path)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	devlist := DeviceList{}
+	if err := json.Unmarshal([]byte(resp), &devlist); err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 func main() {
@@ -196,5 +305,26 @@ func main() {
 	parseConf()
 	parseConsole()
 	s := StatisticsInstance{}
-	s.getUids()
+	/*
+		uids, err := s.getUids()
+		if err != nil {
+			panic(err)
+		}
+		noDevCnt, err := s.filterUid(uids)
+		if err != nil {
+			panic(err)
+		}
+		log.Println("no dev uid cnt:", noDevCnt)
+	*/
+	streamlist := &StreamList{}
+	if err := s.get("/v1/streams?qtype=1", streamlist); err != nil {
+		panic(err)
+	}
+	log.Println("同时在线推流路数:", streamlist.Total)
+	streamlist = &StreamList{}
+	if err := s.get("/v1/streams", streamlist); err != nil {
+		panic(err)
+	}
+	log.Println("总共流个数:", streamlist.Total)
+	// 每天推流个数
 }
