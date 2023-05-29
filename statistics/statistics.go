@@ -384,7 +384,7 @@ func main() {
 				panic(err)
 			}
 		log.Println("总共流个数:", streamlist.Total)
-		s.getDevCountByUID(1380463884)
+		s.getDevCountByUID()
 	*/
 	s.getTotalDevCnt()
 }
