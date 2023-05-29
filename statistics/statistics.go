@@ -221,7 +221,9 @@ func (s *StatisticsInstance) getUids() ([]int, error) {
 }
 
 type Device struct {
-	Gbid string `json:"gbId"`
+	Gbid     string `json:"gbId"`
+	Channels int    `json:"channels"`
+	State    string `json:"state"`
 }
 
 type DeviceList struct {
@@ -229,8 +231,23 @@ type DeviceList struct {
 	Total int      `json:"total"`
 }
 
-func (s *StatisticsInstance) getDevices(uid int) (*DeviceList, error) {
+func (s *StatisticsInstance) getDevicesByUid(uid int) (*DeviceList, error) {
 	path := fmt.Sprintf("/v1/devices?uid=%d", uid)
+	resp, err := qvsGet(path)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	devlist := DeviceList{}
+	if err := json.Unmarshal([]byte(resp), &devlist); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return &devlist, nil
+}
+
+func (s *StatisticsInstance) getDevices(offset int) (*DeviceList, error) {
+	path := fmt.Sprintf("/v1/devices?offset=%d&line=1000", offset)
 	resp, err := qvsGet(path)
 	if err != nil {
 		log.Println(err)
@@ -247,7 +264,7 @@ func (s *StatisticsInstance) getDevices(uid int) (*DeviceList, error) {
 func (s *StatisticsInstance) filterUid(uids []int) (int, error) {
 	noDevCnt := 0
 	for _, uid := range uids {
-		devlist, err := s.getDevices(uid)
+		devlist, err := s.getDevicesByUid(uid)
 		if err != nil {
 			log.Println(err)
 			return 0, err
@@ -300,6 +317,46 @@ func (s *StatisticsInstance) getStreams() error {
 	return nil
 }
 
+func (s *StatisticsInstance) getDevCountByUID(uid int) {
+	devlist := &DeviceList{}
+	path := fmt.Sprintf("/v1/devices?uid=%d&line=1000", uid)
+	if err := s.get(path, devlist); err != nil {
+		panic(err)
+	}
+	total := 0
+	for _, dev := range devlist.Items {
+		total += dev.Channels
+	}
+	log.Println("total:", total, "raw total:", devlist.Total, "item count:", len(devlist.Items))
+}
+
+func (s *StatisticsInstance) getTotalDevCnt() error {
+	devlist, err := s.getDevices(0)
+	if err != nil {
+		return err
+	}
+	total := 0
+	for _, dev := range devlist.Items {
+		total += dev.Channels
+	}
+	for i := len(devlist.Items); i < devlist.Total; {
+		devlist, err := s.getDevices(i)
+		if err != nil {
+			return err
+		}
+		for _, dev := range devlist.Items {
+			if dev.State != "online" {
+				continue
+			}
+			total += dev.Channels
+		}
+		i += len(devlist.Items)
+
+	}
+	log.Println("total:", total)
+	return nil
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConf()
@@ -316,15 +373,18 @@ func main() {
 		}
 		log.Println("no dev uid cnt:", noDevCnt)
 	*/
-	streamlist := &StreamList{}
-	if err := s.get("/v1/streams?qtype=1", streamlist); err != nil {
-		panic(err)
-	}
-	log.Println("同时在线推流路数:", streamlist.Total)
-	streamlist = &StreamList{}
-	if err := s.get("/v1/streams", streamlist); err != nil {
-		panic(err)
-	}
-	log.Println("总共流个数:", streamlist.Total)
-	// 每天推流个数
+	/*
+			streamlist := &StreamList{}
+			if err := s.get("/v1/streams?qtype=1", streamlist); err != nil {
+				panic(err)
+			}
+			log.Println("同时在线推流路数:", streamlist.Total)
+			streamlist = &StreamList{}
+			if err := s.get("/v1/streams", streamlist); err != nil {
+				panic(err)
+			}
+		log.Println("总共流个数:", streamlist.Total)
+		s.getDevCountByUID(1380463884)
+	*/
+	s.getTotalDevCnt()
 }
