@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"crypto/tls"
 )
 
 var (
@@ -65,7 +66,8 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 }
 
 func httpReq(method, addr, body string, headers map[string]string) (string, error) {
-	client := &http.Client{}
+	tr := &http.Transport{ TLSClientConfig: &tls.Config{ InsecureSkipVerify: true, }}
+	client := &http.Client{Transport: tr}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
 		req.Header.Add(key, value)
