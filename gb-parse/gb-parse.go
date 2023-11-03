@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -14,7 +15,8 @@ import (
 )
 
 var (
-	gbid = ""
+	gbid  = ""
+	total = 0
 )
 
 const (
@@ -160,6 +162,42 @@ func MyScanLines(data []byte, atEOF bool) (advance int, token []byte, err error)
 	return 0, nil, nil
 }
 
+func processOneSipMsg(raw, line string) error {
+	raw = strings.ReplaceAll(raw, "tag=tag=", "tag=")
+	if len(line) > len(sep)+1 {
+		start := strings.Index(line, "<--")
+		if start == -1 {
+			log.Println("get sep err: ", line)
+			return fmt.Errorf("get sep err: %v", line)
+		}
+		if start > 0 {
+			raw += line[:start]
+		} else {
+			log.Println("err line:", line, len(line), len(sep))
+		}
+	}
+	total++
+	if len(raw) == 4 {
+		raw = ""
+		continue
+	}
+	msg, err := sip.ParseMsg([]byte(raw))
+	if err != nil {
+		//log.Printf("lineNo: %d err: %v str: %s hex: %#x\n", lineNo, err, raw, raw)
+		errcnt++
+		raw = ""
+		continue
+	}
+	if err := s.onSIP(msg, t); err != nil {
+		panic(err)
+	}
+}
+
+/*
+* 解析qvs sip_msg_dmmp文件
+* 信令转换成结构化数据, json/csv
+ */
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	f := os.Args[1]
@@ -178,7 +216,6 @@ func main() {
 	raw := ""
 	scanner := bufio.NewScanner(file)
 	errcnt := 0
-	total := 0
 	lineNo := 0
 	var t int64 = 0
 	scanner.Split(MyScanLines)
@@ -197,34 +234,7 @@ func main() {
 			continue
 		}
 		if strings.Contains(line, sep) {
-			raw = strings.ReplaceAll(raw, "tag=tag=", "tag=")
-			if len(line) > len(sep)+1 {
-				start := strings.Index(line, "<--")
-				if start == -1 {
-					log.Println("get sep err: ", line)
-					break
-				}
-				if start > 0 {
-					raw += line[:start]
-				} else {
-					log.Println("err line:", line, len(line), len(sep))
-				}
-			}
-			total++
-			if len(raw) == 4 {
-				raw = ""
-				continue
-			}
-			msg, err := sip.ParseMsg([]byte(raw))
-			if err != nil {
-				//log.Printf("lineNo: %d err: %v str: %s hex: %#x\n", lineNo, err, raw, raw)
-				errcnt++
-				raw = ""
-				continue
-			}
-			if err := parser.onSIP(msg, t); err != nil {
-				panic(err)
-			}
+			processOneSipMsg(raw, line)
 			raw = ""
 			continue
 		}
