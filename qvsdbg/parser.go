@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type M map[string]string
@@ -31,12 +33,21 @@ func (s *Parser) adminPost(path, body string) (string, error) {
 }
 
 func (s *Parser) searchLogs(node, service, re string) (string, error) {
-	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E '%s' * -nR\\\"\"", node, service, re)
+	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h '%s' * -R\\\"\"", node, service, re)
 	log.Println(cmd)
 	return RunCmd(cmd)
 }
 
+func (s *Parser) parseInviteBye(logs string) {
+	scanner := bufio.NewScanner(strings.NewReader(logs))
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Println(line)
+	}
+}
+
 func (s *Parser) inviteBye() error {
+	logs := ""
 	nodes := []string{"jjh1445", "jjh1449", "jjh250", "bili-jjh9"}
 	for _, node := range nodes {
 		invite := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
@@ -48,7 +59,9 @@ func (s *Parser) inviteBye() error {
 			return err
 		}
 		log.Println(res)
+		logs += res
 	}
+	//s.parseInviteBye(logs)
 	return nil
 }
 
