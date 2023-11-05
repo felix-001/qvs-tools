@@ -37,7 +37,7 @@ func (s *Parser) searchLogs(node, service, re string) (string, error) {
 }
 
 func (s *Parser) Run() error {
-	res, err := s.searchLogs("vdn-gdgzh-dls-1-11", "qvs-rtp", "got tcp connection")
+	res, err := s.searchLogs("vdn-gdgzh-dls-1-11", "qvs-rtp", "got.*connection")
 	if err != nil {
 		log.Println(res, err)
 		return err
