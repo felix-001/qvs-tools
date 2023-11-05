@@ -36,13 +36,23 @@ func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	return RunCmd(cmd)
 }
 
-func (s *Parser) Run() error {
-	re := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
-	res, err := s.searchLogs("jjh1445", "qvs-server", re)
-	if err != nil {
-		log.Println(res, err)
-		return err
+func (s *Parser) inviteBye() error {
+	nodes := []string{"jjh1445", "jjh1449", "jjh250", "bili-jjh9"}
+	for _, node := range nodes {
+		invite := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
+		bye := fmt.Sprintf("bye ok.*%s", s.Conf.GbId)
+		re := fmt.Sprintf("%s|%s", invite, bye)
+		res, err := s.searchLogs(node, "qvs-server", re)
+		if err != nil {
+			log.Println(res, err)
+			return err
+		}
+		log.Println(res)
 	}
-	log.Println(res)
+	return nil
+}
+
+func (s *Parser) Run() error {
+	s.inviteBye()
 	return nil
 }
