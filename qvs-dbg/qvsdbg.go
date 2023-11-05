@@ -230,7 +230,7 @@ func (c *Context) getDatetimeFromFileName(file string) (string, error) {
 }
 
 // 从节点下载下来的日志文件可能有多个，这里需要获取到最新的
-func (c *Context) getLatestLogFile(srvName string) (string, error) {
+func (c *Context) getLatestLogFile1(srvName string) (string, error) {
 	files, err := ioutil.ReadDir(localLogPath)
 	if err != nil {
 		return "", err
@@ -259,16 +259,13 @@ func (c *Context) getLatestLogFile(srvName string) (string, error) {
 	return latest, nil
 }
 
-func (c *Context) getLatestRtpLogFile(rtpNodeId, rtpPort string) (string, error) {
-	srvName := "qvs-rtp"
-	filenamePrefix := srvName + "_" + rtpPort[2:]
-	cmdstr := fmt.Sprintf("qssh %s \"ls /home/qboxserver/%s/_package/run/%s.log*\"", rtpNodeId, srvName, filenamePrefix)
-	// "qssh zz788 \"ls /home/qboxserver/qvs-rtp/_package/run/qvs-rtp_02*\""
+func (c *Context) getLatestLogFile(srvName, nodeId, filenamePrefix string) (string, error) {
+	cmdstr := fmt.Sprintf("qssh %s \"ls /home/qboxserver/%s/_package/run/%s.log*\"", nodeId, srvName, filenamePrefix)
 	res, err := runCmd(cmdstr)
 	if err != nil {
 		return "", err
 	}
-	log.Printf("rtp log file list:\n%s", res)
+	log.Printf("log file list:\n%s", res)
 	latest := ""
 	scanner := bufio.NewScanner(strings.NewReader(res))
 	for scanner.Scan() {
@@ -294,6 +291,20 @@ func (c *Context) getLatestRtpLogFile(rtpNodeId, rtpPort string) (string, error)
 		}
 	}
 	return latest, nil
+}
+
+func (c *Context) getRtpLatestLogFile(rtpNodeId, rtpPort string) (string, error) {
+	srvName := "qvs-rtp"
+	filenamePrefix := srvName + "_" + rtpPort[2:]
+	return c.getLatestLogFile(srvName, rtpNodeId, filenamePrefix)
+}
+
+func (c *Context) getSipLatestLogFile() (string, error) {
+	srvName := "qvs-sip"
+	if c.ProcessIdx != "" {
+		srvName += c.ProcessIdx
+	}
+	return c.getLatestLogFile(srvName, c.SipNodeID, srvName)
 }
 
 // 从文本里面，找到符合关键字列表的行
@@ -433,7 +444,7 @@ func main() {
 		log.Println(err)
 		return
 	}
-	latestSipLogFile, err := ctx.getLatestLogFile("qvs-sip")
+	latestSipLogFile, err := ctx.getSipLatestLogFile()
 	if err != nil {
 		log.Println(err)
 		return
@@ -504,7 +515,7 @@ func main() {
 		return
 	}
 	log.Println("rtp node id:", rtpNodeId)
-	latestRtpLogFile, err := ctx.getLatestRtpLogFile(rtpNodeId, rtpPort)
+	latestRtpLogFile, err := ctx.getRtpLatestLogFile(rtpNodeId, rtpPort)
 	if err != nil {
 		log.Println(err)
 		return
