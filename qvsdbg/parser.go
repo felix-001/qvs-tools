@@ -31,13 +31,14 @@ func (s *Parser) adminPost(path, body string) (string, error) {
 }
 
 func (s *Parser) searchLogs(node, service, re string) (string, error) {
-	cmd := fmt.Sprintf("qssh %s \"cd /home/qboxserver/%s/_package/run;grep -E '%s' * -nR\"", node, service, re)
+	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E '%s' * -nR\\\"\"", node, service, re)
 	log.Println(cmd)
 	return RunCmd(cmd)
 }
 
 func (s *Parser) Run() error {
-	res, err := s.searchLogs("vdn-gdgzh-dls-1-11", "qvs-rtp", "got.*connection")
+	re := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
+	res, err := s.searchLogs("jjh1445", "qvs-server", re)
 	if err != nil {
 		log.Println(res, err)
 		return err
