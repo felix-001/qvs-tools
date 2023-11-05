@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 )
 
@@ -38,16 +38,84 @@ func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	return RunCmd(cmd)
 }
 
-func (s *Parser) parseInviteBye(logs string) {
-	scanner := bufio.NewScanner(strings.NewReader(logs))
-	for scanner.Scan() {
-		line := scanner.Text()
-		log.Println(line)
+type KeyWord struct {
+	Start string
+	End   string
+	Key   string
+}
+
+type Result struct {
+	Key   string
+	Value string
+}
+
+func re(start, end string) string {
+	return fmt.Sprintf("%s(.*)%s", start, end)
+}
+
+func (s *Parser) parseLine(line string, keywords []KeyWord) ([]Result, error) {
+	regex := re(keywords[0].Start, keywords[1].End)
+	for i := 1; i < len(keywords); i++ {
+		regex += ".*?" + re(keywords[i].Start, keywords[i].End)
 	}
+	re := regexp.MustCompile(regex)
+	matchs := re.FindStringSubmatch(line)
+	if len(matchs) < len(keywords) {
+		return nil, fmt.Errorf("parse %s err", line)
+	}
+	results := []Result{}
+	for i, match := range matchs {
+		results = append(results, Result{Key: keywords[i].Key, Value: match})
+	}
+	return results, nil
+}
+
+func (s *Parser) parseInviteBye(data string) error {
+	log.Println(data)
+	//scanner := bufio.NewScanner(strings.NewReader(data))
+	lines := strings.Split(data, "\n")
+	for _, line := range lines {
+		//line := scanner.Text()
+		log.Println(line)
+		keywords := []KeyWord{
+			{
+				Key:   "rtpIp",
+				Start: "rtpAccessIp",
+				End:   "callId",
+			},
+			{
+				Key:   "callId",
+				Start: "callId",
+				End:   "___",
+			},
+			{
+				Key:   "ssrc",
+				Start: "ssrc:",
+				End:   "host",
+			},
+			{
+				Key:   "rtpPort",
+				Start: "rtpPort:",
+				End:   "$",
+			},
+		}
+		results, err := s.parseLine(line, keywords)
+		if err != nil {
+			//log.Println(err)
+			return err
+		}
+		log.Println(results)
+	}
+	/*
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error:", err)
+		}
+	*/
+	return nil
 }
 
 func (s *Parser) inviteBye() error {
-	logs := ""
+	data := ""
 	nodes := []string{"jjh1445", "jjh1449", "jjh250", "bili-jjh9"}
 	for _, node := range nodes {
 		invite := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
@@ -58,10 +126,12 @@ func (s *Parser) inviteBye() error {
 			log.Println(res, err)
 			return err
 		}
-		log.Println(res)
-		logs += res
+		//log.Println(res)
+		data += res
 	}
-	//s.parseInviteBye(logs)
+	if err := s.parseInviteBye(data); err != nil {
+		log.Println(err)
+	}
 	return nil
 }
 
