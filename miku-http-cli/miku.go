@@ -16,18 +16,16 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"crypto/tls"
 )
 
 var (
-	ak     string
-	sk     string
-	path   string
-	body   string
-	host   string
-	defAK  string
-	defSK  string
-	method string
+	ak    string
+	sk    string
+	path  string
+	body  string
+	host  string
+	defAK string
+	defSK string
 )
 
 var (
@@ -40,29 +38,33 @@ const (
 	conf        = "/usr/local/etc/qvsHttpCli.conf"
 )
 
-func hmacSha1(key, data string) string {
-	mac := hmac.New(sha1.New, []byte(key))
-	mac.Write([]byte(data))
-	hm := mac.Sum(nil)
-	s := base64.URLEncoding.EncodeToString(hm)
-	return s
+func sign(key, data string) string {
+	hash := hmac.New(sha1.New, []byte(key))
+	hash.Write([]byte(data))
+	byteSignature := hash.Sum(nil)
+	signature := base64.URLEncoding.EncodeToString(byteSignature)
+	log.Println("sign res:", signature)
+	return signature
 }
 
 func signToken(ak, sk, method, path, host, body string, headers map[string]string) string {
-	data := method + " " + path + "\n"
-	data += "Host: " + host
+	data := method + "\n" + path + "\n\n"
+	data += "host:" + host
 	if headers != nil {
 		for key, value := range headers {
 			data += "\n" + key + ": " + value
 		}
 	}
-	data += "\n\n"
+	//data += "\n\n"
+	//data += "\n"
 	if body != "" {
 		data += body
 	}
 	log.Println("data:")
-	fmt.Println(data)
-	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
+	log.Printf("data 16: %#x\n", data)
+	fmt.Println(data, "secret:", sk)
+	//token := "Sufy " + ak + ":" + hmacSha1(sk, data)
+	token := "Sufy " + ak + ":" + sign(sk, data)
 	log.Println("token:", token)
 	return token
 }
@@ -136,7 +138,6 @@ func parseConsole() {
 	flag.StringVar(&path, "path", "", "path")
 	flag.StringVar(&body, "body", "", "body")
 	flag.StringVar(&host, "host", apiHost, "host")
-	flag.StringVar(&method, "method", "GET", "method")
 	flag.Parse()
 	if ak == "" {
 		log.Println("need ak")
@@ -187,31 +188,14 @@ func PrintJSON(m map[string]interface{}) {
 	}
 }
 
-func printJson1(data string) string {
-	var d interface{}
-	err := json.Unmarshal([]byte(data), &d)
-	if err != nil {
-		fmt.Println("JSON unmarshaling failed:", err)
-		return ""
-	}
-	jsonStr, err := json.MarshalIndent(d, "", "   ")
-	if err != nil {
-		fmt.Println("JSON marshaling failed:", err)
-		return ""
-	}
-	return string(jsonStr)
-}
-
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConf()
 	parseConsole()
 	uri := fmt.Sprintf("%s%s", host, path)
-	if method == "" {
-		method = "GET"
-		if body != "" {
-			method = "POST"
-		}
+	method := "GET"
+	if body != "" {
+		method = "POST"
 	}
 	resp, err := qvsHttpReq(method, uri, body)
 	if err != nil {
@@ -219,24 +203,6 @@ func main() {
 		return
 	}
 	resp = strings.ReplaceAll(resp, "\u0026", "")
-
-	/*
-		if isJSON(resp) {
-			m := map[string]interface{}{}
-			if err := json.Unmarshal([]byte(resp), &m); err != nil {
-				log.Fatal("err:", err)
-				return
-			}
-			PrintJSON(m)
-				for key, value := range m {
-
-					log.Println(key, ":", value, reflect.TypeOf(value))
-				}
-
-			return
-		}
-	*/
-	log.Println("resp", printJson1(resp))
 	if isJSON(resp) {
 		m := map[string]interface{}{}
 		if err := json.Unmarshal([]byte(resp), &m); err != nil {
