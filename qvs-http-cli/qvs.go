@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"crypto/tls"
 )
 
 var (
@@ -237,21 +236,4 @@ func main() {
 		}
 	*/
 	log.Println("resp", printJson1(resp))
-	if isJSON(resp) {
-		m := map[string]interface{}{}
-		if err := json.Unmarshal([]byte(resp), &m); err != nil {
-			log.Fatal("err:", err)
-			return
-		}
-		PrintJSON(m)
-		/*
-			for key, value := range m {
-
-				log.Println(key, ":", value, reflect.TypeOf(value))
-			}
-		*/
-
-		return
-	}
-	log.Println("resp", resp)
 }
