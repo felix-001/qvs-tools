@@ -108,57 +108,6 @@ func (s *Parser) parseInviteBye(data string) error {
 		for k, v := range result {
 			log.Println(k, v)
 		}
-		/*
-			rtpIp, match := s.getValue(line, "rtpAccessIp:", "callId")
-			if match {
-				log.Println("rtpIp:", rtpIp)
-			}
-			callid, match := s.getValue(line, "callId:", "____")
-			if match {
-				log.Println("callid:", callid)
-			}
-			ssrc, match := s.getValue(line, "ssrc:", "host")
-			if match {
-				log.Println("ssrc:", ssrc)
-			}
-			rtpPort, match := s.getValue(line, "rtpPort:", "$")
-			if match {
-				log.Println("rtpPort:", rtpPort)
-			}
-			/*
-			/*
-				keywords := []KeyWord{
-					{
-						Key:   "rtpIp",
-						Start: "rtpAccessIp",
-						End:   "callId",
-					},
-					{
-						Key:   "callId",
-						Start: ": ",
-						End:   "___",
-					},
-					{
-						Key:   "ssrc",
-						Start: "ssrc:",
-						End:   "host",
-					},
-					{
-						Key:   "rtpPort",
-						Start: "rtpPort:",
-						End:   "$",
-					},
-				}
-				results, err := s.parseLine(line, keywords)
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-				if len(results) > 0 {
-					log.Println(line)
-					log.Println(results)
-				}
-		*/
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error:", err)
@@ -193,7 +142,41 @@ func (s *Parser) inviteBye() error {
 	return nil
 }
 
+func (s *Parser) getZZList() (string, error) {
+	cmd := fmt.Sprint("ssh -t liyuanquan@10.20.34.27 \"floy version qvs-rtp 2>/dev/null | grep zz  | awk '{print $1}'\"")
+	log.Println(cmd)
+	return RunCmd(cmd)
+}
+
 func (s *Parser) Run() error {
-	s.inviteBye()
+	//s.inviteBye()
+	s1, err := s.getZZList()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	//log.Println(s1)
+	ss := strings.Split(s1, "\n")
+	nodes := []string{}
+	for _, s2 := range ss {
+		ss1 := strings.Split(s2, ",")
+		nodes = append(nodes, ss1[0])
+	}
+	log.Println(nodes)
+	data := ""
+	for _, node := range nodes[1:] {
+		re := fmt.Sprintf("RTC play.*%s", s.Conf.GbId)
+		res, err := s.searchLogs(node, "qvs-rtp", re)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		data += res
+	}
+	err = ioutil.WriteFile("out.txt", []byte(data), 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
 	return nil
 }
