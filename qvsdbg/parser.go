@@ -7,7 +7,6 @@ import (
 	"log"
 	"regexp"
 	"strings"
-	"time"
 )
 
 type M map[string]string
@@ -316,8 +315,7 @@ func (s *Parser) rtpNoMuxer() {
 	}
 	log.Println(nodes)
 	// nodes := []string{"zz780"}
-	data := ""
-	for _, node := range nodes {
+	for i, node := range nodes {
 		if node == "" {
 			continue
 		}
@@ -327,26 +325,132 @@ func (s *Parser) rtpNoMuxer() {
 			log.Println(err)
 			continue
 		}
-		data += logs
+		err = ioutil.WriteFile("./zz/"+node+".txt", []byte(logs), 0644)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Printf("%d -> %d\n", i, len(nodes))
 	}
-	err = ioutil.WriteFile("rtpNoMuxer.txt", []byte(data), 0644)
-	if err != nil {
-		log.Println(err)
-		return
+	/*
+		err = ioutil.WriteFile("rtpNoMuxer.txt", []byte(data), 0644)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	*/
+}
+
+func (s *Parser) parseRtpLog(str string) (string, string, bool) {
+	re := regexp.MustCompile(`\[(.*?)\]`)
+	matches := re.FindAllStringSubmatch(str, -1)
+
+	if len(matches) <= 0 {
+		log.Println("not match", str)
+		return "", "", false
+	}
+	if len(matches) != 4 {
+		log.Println("match count not 4")
+		return "", "", false
+	}
+	return matches[0][1], matches[3][1], true
+}
+
+func (s *Parser) filterLogByDate(in, start, end string) ([]string, error) {
+	ss := strings.Split(in, "\n")
+	res := []string{}
+	for _, str := range ss {
+		if strings.Contains(str, "Pseudo-terminal") {
+			continue
+		}
+		if str == "" {
+			continue
+		}
+		time, _, match := s.parseRtpLog(str)
+		if !match {
+			continue
+		}
+		if time > start {
+			if end == "" {
+				res = append(res, str)
+				continue
+			}
+			if time < end {
+				res = append(res, str)
+			}
+		}
+	}
+	return res, nil
+}
+
+func (s *Parser) filterLogByTask(ss []string) map[string][]string {
+	m := map[string][]string{}
+	for _, str := range ss {
+		if str == "" {
+			continue
+		}
+		_, task, match := s.parseRtpLog(str)
+		if !match {
+			continue
+		}
+		if _, ok := m[task]; !ok {
+			m[task] = []string{str}
+			continue
+		}
+		m[task] = append(m[task], str)
+	}
+	return m
+}
+
+/*
+func (s *Parser) logSortByTime(ss []string) []string {
+	for _, str := range ss {
+		time, _, match := s.parseRtpLog(str)
+		if !match {
+			continue
+		}
 	}
 }
+*/
 
 func (s *Parser) Run() error {
 	//s.inviteBye()
 	//s.parseRtcLog()
 	//s.decodeErr()
 	//s.calc()
-	//s.rtpNoMuxer()
-	resp, err := s.pdr.FetchLog("repo = \"logs\" and \"invite\"", time.Now().Unix()-600, time.Now().Unix())
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	log.Println(resp)
+	s.rtpNoMuxer()
+	/*
+		du := 10 * time.Minute
+		resp, err := s.pdr.FetchLog("repo = \"logs\" and \"invite\"", time.Now().UnixMilli()-du.Milliseconds(), time.Now().UnixMilli())
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		log.Println(resp)
+	*/
+	/*
+		b, err := ioutil.ReadFile("rtpNoMuxer.txt")
+		if err != nil {
+			log.Println("read fail", "rtpNoMuxer.txt", err)
+			return err
+		}
+		out, err := s.filterLogByDate(string(b), "2023-11-05 00:00:00", "")
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		sort.Strings(out)
+		txt := ""
+		for _, str := range out {
+			txt += str + "\n"
+		}
+		err = ioutil.WriteFile("out.txt", []byte(txt), 0644)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+	*/
 	return nil
 }
+
+// 捞取日志集合, 各种and集合
