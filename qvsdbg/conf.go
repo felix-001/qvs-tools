@@ -19,6 +19,7 @@ type Config struct {
 	ChId      string `json:"chid"`
 	Start     string `json:"start"`
 	End       string `json:"end"`
+	PdrToken  string `json:"pdrToken"`
 }
 
 func checkConf(config *Config) error {
@@ -38,6 +39,8 @@ func parseConsole(config *Config) {
 	flag.StringVar(&config.AdminAddr, "addr", "10.20.76.42:7277", "admin addr")
 	flag.StringVar(&config.GbId, "gbid", "", "gbid")
 	flag.StringVar(&config.ChId, "chid", "", "chid")
+	flag.StringVar(&config.PdrToken, "token", "", "pdr token")
+
 	flag.StringVar(&config.Start, "start", start, "开始时间,格式为2023-11-05 19:20:00")
 	flag.StringVar(&config.End, "end", end, "结束时间,格式为2023-11-05 19:20:00")
 	flag.Parse()

@@ -7,16 +7,19 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type M map[string]string
 
 type Parser struct {
 	Conf *Config
+	pdr  *Pdr
 }
 
 func NewParser(conf *Config) *Parser {
-	return &Parser{Conf: conf}
+	pdr := NewPdr(conf)
+	return &Parser{Conf: conf, pdr: pdr}
 }
 
 func (s *Parser) adminGet(path string) (string, error) {
@@ -148,8 +151,7 @@ func (s *Parser) getZZList() (string, error) {
 	return RunCmd(cmd)
 }
 
-func (s *Parser) Run() error {
-	//s.inviteBye()
+func (s *Parser) rtcLog() error {
 	s1, err := s.getZZList()
 	if err != nil {
 		log.Println(err)
@@ -165,18 +167,186 @@ func (s *Parser) Run() error {
 	log.Println(nodes)
 	data := ""
 	for _, node := range nodes[1:] {
+		if node == " " || node == "" {
+			continue
+		}
 		re := fmt.Sprintf("RTC play.*%s", s.Conf.GbId)
 		res, err := s.searchLogs(node, "qvs-rtp", re)
 		if err != nil {
 			log.Println(err)
-			return err
+			continue
+			//return err
 		}
 		data += res
+		log.Println("len:", len(data))
 	}
 	err = ioutil.WriteFile("out.txt", []byte(data), 0644)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	return nil
+}
+
+func (s *Parser) uniq(data string) M {
+	ss := strings.Split(data, "\n")
+	m := M{}
+	for _, s1 := range ss {
+		streamid, match := s.getValue(s1, "2xenzw32d1rf9/", ", api")
+		if !match {
+			log.Printf("not match, %s\n", s1)
+			continue
+		}
+		if m[streamid] != "" {
+			continue
+		}
+		m[streamid] = s1
+	}
+	return m
+}
+
+func (s *Parser) calc() {
+	b, err := ioutil.ReadFile("./11-03.txt")
+	if err != nil {
+		log.Println("read fail", "./11-03.txt", err)
+		return
+	}
+	ss := strings.Split(string(b), "\n")
+	m := map[string]int{}
+	for _, s1 := range ss {
+		streamid, match := s.getValue(s1, "2xenzw32d1rf9/", ", api")
+		if !match {
+			log.Printf("not match, %s\n", s1)
+			continue
+		}
+		_, ok := m[streamid]
+		if ok {
+			m[streamid] += 1
+		} else {
+			m[streamid] = 1
+		}
+	}
+	log.Println("len m:", len(m))
+	for k, v := range m {
+		log.Printf("%s : %d\n", k, v)
+	}
+}
+
+func (s *Parser) parseRtcLog() {
+	b, err := ioutil.ReadFile("./11-03.txt")
+	if err != nil {
+		log.Println("read fail", "./11-03.txt", err)
+		return
+	}
+	m := s.uniq(string(b))
+	log.Println("m len:", len(m))
+	/*
+		for i := 0; i < 24; i++ {
+			s1 := fmt.Sprintf("2023-11-03 %02d", i)
+			cmd := fmt.Sprintf("grep \"%s\" /Users/liyuanquan/workspace/qvs-tools/qvsdbg/11-03.txt", s1)
+			//log.Println(cmd)
+			res, err := RunCmd(cmd)
+			if err != nil {
+				log.Println(err, res)
+				continue
+			}
+			m := s.uniq(res)
+			log.Printf("%02d : %d\n", i, len(m))
+
+			if i == 17 {
+				//log.Printf("%#v\n", m)
+				ss := []string{}
+				for k, _ := range m {
+					//log.Println(k)
+					ss = append(ss, k)
+				}
+				sort.Strings(ss)
+				log.Println(ss)
+			}
+		}
+	*/
+
+	/*
+		for i := 0; i < 60; i++ {
+			s := fmt.Sprintf("2023-11-03 17:%02d", i)
+			cmd := fmt.Sprintf("grep \"%s\" /Users/liyuanquan/workspace/qvs-tools/qvsdbg/11-03.txt", s)
+			//log.Println(cmd)
+			res, err := RunCmd(cmd)
+			if err != nil {
+				log.Println(err, res)
+				continue
+			}
+			ss := strings.Split(res, "\n")
+			log.Printf("%02d : %d\n", i, len(ss))
+		}
+	*/
+
+}
+
+func (s *Parser) decodeErr() {
+	re := fmt.Sprintf("grep \"15010400402000000000_15010400401320000656.*decode ps packet error\" * -R")
+	logs, err := s.searchLogs("zz780", "qvs-rtp", re)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if len(logs) == 0 {
+		log.Println("log empty")
+		return
+	}
+	err = ioutil.WriteFile("decode.txt", []byte(logs), 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func (s *Parser) rtpNoMuxer() {
+	s1, err := s.getZZList()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	//log.Println(s1)
+	ss := strings.Split(s1, "\n")
+	nodes := []string{}
+	for _, s2 := range ss {
+		ss1 := strings.Split(s2, ",")
+		nodes = append(nodes, ss1[0])
+	}
+	log.Println(nodes)
+	// nodes := []string{"zz780"}
+	data := ""
+	for _, node := range nodes {
+		if node == "" {
+			continue
+		}
+		re := fmt.Sprint("udp gb28181 rtp enqueue.*111.56.244.163.*nil")
+		logs, err := s.searchLogs(node, "qvs-rtp", re)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		data += logs
+	}
+	err = ioutil.WriteFile("rtpNoMuxer.txt", []byte(data), 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func (s *Parser) Run() error {
+	//s.inviteBye()
+	//s.parseRtcLog()
+	//s.decodeErr()
+	//s.calc()
+	//s.rtpNoMuxer()
+	resp, err := s.pdr.FetchLog("repo = \"logs\" and \"invite\"", time.Now().Unix()-600, time.Now().Unix())
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	log.Println(resp)
 	return nil
 }
