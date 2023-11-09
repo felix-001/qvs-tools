@@ -36,7 +36,7 @@ func (s *Pdr) createJob(query string, start, end int64) (string, error) {
 		StartTime: start,
 		EndTime:   end,
 	}
-	log.Println("q", q)
+	//log.Println("q", q)
 	body, err := json.Marshal(&q)
 	if err != nil {
 		log.Println(err)
@@ -69,7 +69,7 @@ func (s *Pdr) getJobProcess(jobId string) (int, error) {
 	result := &struct {
 		Process int `json:"process"`
 	}{}
-	log.Printf("result: %s\n", resp)
+	//log.Printf("result: %s\n", resp)
 	if err := json.Unmarshal([]byte(resp), result); err != nil {
 		log.Println(err)
 		return 0, err
@@ -90,16 +90,38 @@ func (s *Pdr) getRaw(jobId string) (string, error) {
 	return resp, err
 }
 
-func (s *Pdr) FetchLog(query string, start, end int64) (string, error) {
+type Host struct {
+	Value string `json:"value"`
+}
+
+type Origin struct {
+	Value string `json:"value"`
+}
+
+type Raw struct {
+	Value string `json:"value"`
+}
+
+type Row struct {
+	Raw    Raw    `json:"_raw"`
+	Host   Host   `json:"host"`
+	Origin Origin `json:"origin"`
+}
+
+type PdrLog struct {
+	Total int   `json:"total"`
+	Rows  []Row `json:"rows"`
+}
+
+func (s *Pdr) FetchLog(query string, start, end int64) (*PdrLog, error) {
 	jobId, err := s.createJob(query, start, end)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	log.Println("jobId:", jobId)
 	for {
 		process, err := s.getJobProcess(jobId)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if process == 1 {
 			break
@@ -108,7 +130,13 @@ func (s *Pdr) FetchLog(query string, start, end int64) (string, error) {
 	}
 	resp, err := s.getRaw(jobId)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return resp, nil
+	//log.Println(resp)
+	pdrLog := PdrLog{}
+	if err := json.Unmarshal([]byte(resp), &pdrLog); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return &pdrLog, nil
 }

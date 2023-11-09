@@ -19,7 +19,7 @@ type Config struct {
 	ChId      string `json:"chid"`
 	Start     string `json:"start"`
 	End       string `json:"end"`
-	PdrToken  string `json:"pdrToken"`
+	PdrToken  string `json:"pdr_token"`
 }
 
 func checkConf(config *Config) error {

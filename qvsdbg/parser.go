@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type M map[string]string
@@ -38,7 +40,7 @@ func (s *Parser) adminPost(path, body string) (string, error) {
 
 func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h '%s' * -R\\\"\"", node, service, re)
-	log.Println(cmd)
+	//log.Println(cmd)
 	return RunCmd(cmd)
 }
 
@@ -300,11 +302,11 @@ func (s *Parser) decodeErr() {
 	}
 }
 
-func (s *Parser) rtpNoMuxer() {
+func (s *Parser) rtpNoMuxer() (string, error) {
 	s1, err := s.getZZList()
 	if err != nil {
 		log.Println(err)
-		return
+		return "", err
 	}
 	//log.Println(s1)
 	ss := strings.Split(s1, "\n")
@@ -315,6 +317,7 @@ func (s *Parser) rtpNoMuxer() {
 	}
 	log.Println(nodes)
 	// nodes := []string{"zz780"}
+	data := ""
 	for i, node := range nodes {
 		if node == "" {
 			continue
@@ -325,20 +328,22 @@ func (s *Parser) rtpNoMuxer() {
 			log.Println(err)
 			continue
 		}
-		err = ioutil.WriteFile("./zz/"+node+".txt", []byte(logs), 0644)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		/*
+			err = ioutil.WriteFile("./zz/"+node+".txt", []byte(logs), 0644)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		*/
 		log.Printf("%d -> %d\n", i, len(nodes))
+		data += logs
 	}
-	/*
-		err = ioutil.WriteFile("rtpNoMuxer.txt", []byte(data), 0644)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	*/
+	err = ioutil.WriteFile("rtpNoMuxer.txt", []byte(data), 0644)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return data, nil
 }
 
 func (s *Parser) parseRtpLog(str string) (string, string, bool) {
@@ -349,8 +354,8 @@ func (s *Parser) parseRtpLog(str string) (string, string, bool) {
 		log.Println("not match", str)
 		return "", "", false
 	}
-	if len(matches) != 4 {
-		log.Println("match count not 4")
+	if len(matches) < 4 {
+		log.Println("match count not 4 real:", len(matches), matches)
 		return "", "", false
 	}
 	return matches[0][1], matches[3][1], true
@@ -413,43 +418,283 @@ func (s *Parser) logSortByTime(ss []string) []string {
 }
 */
 
+func insertString(original, insert string, pos int) string {
+	if pos < 0 || pos > len(original) {
+		return original
+	}
+
+	return original[:pos] + insert + original[pos:]
+}
+
+func (s *Parser) getRtpNode(ip string) (string, error) {
+	du := 15 * time.Minute
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	query := fmt.Sprintf("repo = \"logs\" and \"%s\" and \"/stream/publish/check\"", ip)
+	pdrLog, err := s.pdr.FetchLog(query, start, end)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	//log.Println(pdrLog.Total, pdrLog.Rows[0].Raw.Value)
+	nodeId, match := s.getValue(pdrLog.Rows[0].Raw.Value, "\"nodeId\":\"", "\",")
+	if !match {
+		return "", fmt.Errorf("parse node Id err")
+	}
+	return nodeId, nil
+}
+
+func (s *Parser) getRtpIp() (string, error) {
+	du := 3 * 24 * time.Hour
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	resp, err := s.pdr.FetchLog("repo = \"logs\" and \"41468169\" and \"invite ok\"", start, end)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	//log.Println(resp.Rows[0].Raw.Value)
+	rtpIp, match := s.getValue(resp.Rows[0].Raw.Value, "rtpAccessIp:", "callId")
+	if !match {
+		return "", fmt.Errorf("parse rtp ip err")
+	}
+	return rtpIp, nil
+}
+
+func (s *Parser) getCreateChLog(inviteTime, streamid string) (string, error) {
+	// 2023-11-09 13:50:46.806 --> 2023-11-09 13:50:4
+	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], streamid)
+	data, err := s.searchLogs("zz450", "qvs-rtp", re)
+	if err != nil {
+		log.Println("search log err")
+		return "", err
+	}
+	log.Println(data)
+	return data, nil
+}
+
+func (s *Parser) getStreamId(callId, ssrc string) (string, error) {
+	du := 4 * 24 * time.Hour
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	re := fmt.Sprintf("repo = \"logs\" and \"%s\" and \"%s*\"", ssrc, callId)
+	resp, err := s.pdr.FetchLog(re, start, end)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	log.Println(resp)
+	gbid, match := s.getValue(resp.Rows[0].Raw.Value, "gbId:", "chId:")
+	if !match {
+		log.Println("get gbid err")
+		return "", fmt.Errorf("get gbid err")
+	}
+	log.Println("gbid:", gbid)
+	chid, match := s.getValue(resp.Rows[0].Raw.Value, "chId:", "resp")
+	if !match {
+		log.Println("get chid err")
+		return "", fmt.Errorf("get chid err")
+	}
+	log.Println("chid:", chid)
+	return fmt.Sprintf("%s_%s", gbid, chid), nil
+}
+
+func (s Parser) getInviteMsg(date, ssrc string) (string, string, error) {
+	du := 4 * 24 * time.Hour
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	re := fmt.Sprintf("repo = \"sip_msg_dump2\" and \"0%s\" and \"%s*\"", ssrc, date[:10])
+	log.Println(re)
+	resp, err := s.pdr.FetchLog(re, start, end)
+	if err != nil {
+		log.Println(err)
+		return "", "", err
+	}
+	//log.Printf("%#v\n", resp)
+	log.Println(resp.Rows[0].Raw.Value)
+	log.Println(resp.Rows[1].Raw.Value)
+	inviteTime, _, match := s.parseRtpLog(resp.Rows[0].Raw.Value)
+	if !match {
+		log.Println("get invite time err")
+		return "", "", fmt.Errorf("get invite time err")
+	}
+
+	pos := strings.Index(resp.Rows[0].Raw.Value, "send_message:")
+	if pos == -1 {
+		log.Println("find send_message: err")
+		return "", "", err
+	}
+	raw := resp.Rows[0].Raw.Value[pos+len("send_message:")+1:]
+	idx := strings.Index(raw, "Content-Length")
+	if idx == -1 {
+		log.Println("find Content-Length err")
+		return "", "", err
+	}
+	idx2 := strings.Index(raw[idx:], "\r\n")
+	if idx2 == -1 {
+		log.Println("find idx2 err")
+		return "", "", err
+	}
+	idx += idx2 + 2
+	raw = insertString(raw, "\r\n", idx)
+	return inviteTime, raw, nil
+
+}
+
+func (s *Parser) getByeMsg(callId string) (string, error) {
+	du := 4 * 24 * time.Hour
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	query := fmt.Sprintf("repo = \"sip_msg_dump2\" and \"bye\" and \"%s\"", callId)
+	pdrLog, err := s.pdr.FetchLog(query, start, end)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	//log.Println(pdrLog.Total, pdrLog.Rows[0].Raw.Value)
+	//log.Println(pdrLog.Total, pdrLog.Rows[1].Raw.Value)
+	return pdrLog.Rows[0].Raw.Value, nil
+}
+
+func (s *Parser) rtpNoMuxerAllLog(date, ssrc string) {
+	inviteTime, inviteMsg, err := s.getInviteMsg(date, ssrc)
+	if err != nil {
+		log.Println("err")
+		return
+	}
+	log.Println("invite time:", inviteTime)
+	callId, err := GetCallId(inviteMsg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("callid", callId)
+	byeMsg, err := s.getByeMsg(callId)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(byeMsg)
+	rtpIp, err := s.getRtpIp()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("rtpIp:", rtpIp)
+	rtpNode, err := s.getRtpNode(rtpIp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("rtpNode:", rtpNode)
+	streamid, err := s.getStreamId(callId, "41468169")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("streamid:", streamid)
+	createChLog, err := s.getCreateChLog(inviteTime, streamid)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(createChLog)
+}
+
+func (s *Parser) getSsrc(str string) (string, error) {
+	val, match := s.getValue(str, "sts=", ", muxer")
+	if !match {
+		return "", fmt.Errorf("get sts err")
+	}
+	ss := strings.Split(val, "/")
+	if len(ss) != 3 {
+		return "", fmt.Errorf("ss not 3")
+	}
+	num, err := strconv.ParseInt(ss[2][2:], 16, 64)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%d", num), nil
+}
+
+type SSRCInfo struct {
+	SSRC string
+	Date string
+}
+
+func (s *Parser) getSsrcList(ss []string) ([]SSRCInfo, error) {
+	m := map[string]int{}
+	for _, str := range ss {
+		dateTime, _, match := s.parseRtpLog(str)
+		if !match {
+			log.Println("parse rtp log err", str)
+			continue
+		}
+		date := dateTime[:10]
+		ssrc, err := s.getSsrc(str)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		key := fmt.Sprintf("%s_%s", date, ssrc)
+		if _, ok := m[key]; !ok {
+			m[key] = 0
+			continue
+		}
+		m[key]++
+	}
+	ssrcs := []SSRCInfo{}
+	for k, v := range m {
+		if v >= 10 {
+			//log.Println(k, v)
+			ss := strings.Split(k, "_")
+			ssrcs = append(ssrcs, SSRCInfo{SSRC: ss[1], Date: ss[0]})
+		}
+	}
+	return ssrcs, nil
+}
+
+// rtp日志找到muxer为nil的ssrc
+// invite和resp信令
+// 根据callid找到bye
+// ssrc和streamid找到create channel和delete channel日志
 func (s *Parser) Run() error {
+	//s.rtpNoMuxerAllLog()
 	//s.inviteBye()
 	//s.parseRtcLog()
 	//s.decodeErr()
 	//s.calc()
-	s.rtpNoMuxer()
 	/*
-		du := 10 * time.Minute
-		resp, err := s.pdr.FetchLog("repo = \"logs\" and \"invite\"", time.Now().UnixMilli()-du.Milliseconds(), time.Now().UnixMilli())
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		log.Println(resp)
-	*/
-	/*
-		b, err := ioutil.ReadFile("rtpNoMuxer.txt")
-		if err != nil {
-			log.Println("read fail", "rtpNoMuxer.txt", err)
-			return err
-		}
-		out, err := s.filterLogByDate(string(b), "2023-11-05 00:00:00", "")
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		sort.Strings(out)
-		txt := ""
-		for _, str := range out {
-			txt += str + "\n"
-		}
-		err = ioutil.WriteFile("out.txt", []byte(txt), 0644)
+		data, err := s.rtpNoMuxer()
 		if err != nil {
 			log.Println(err)
 			return err
 		}
 	*/
+	b, err := ioutil.ReadFile("rtpNoMuxer.txt")
+	if err != nil {
+		log.Println("read fail", "rtpNoMuxer.txt", err)
+		return err
+	}
+	data := string(b)
+	str := strings.ReplaceAll(data, "0m[", "")
+	ss, err := s.filterLogByDate(str, "2023-11-05 00:00:00", "2023-11-09 00:00:00")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	ssrcs, err := s.getSsrcList(ss)
+	if err != nil {
+		return err
+	}
+	log.Println(ssrcs)
+
+	for i, ssrc := range ssrcs {
+		if i < 2 {
+			s.rtpNoMuxerAllLog(ssrc.Date, ssrc.SSRC)
+		}
+	}
+
 	return nil
 }
 
