@@ -138,5 +138,28 @@ func (s *Pdr) FetchLog(query string, start, end int64) (*PdrLog, error) {
 		log.Println(err)
 		return nil, err
 	}
+	if pdrLog.Total == 0 {
+		return nil, fmt.Errorf("get log fail, query:%s", query)
+	}
 	return &pdrLog, nil
+}
+
+func (s *Pdr) FetchLogByHour(query string, oursBefore int) (*PdrLog, error) {
+	du := time.Duration(oursBefore) * time.Hour
+	end := time.Now().UnixMilli()
+	start := end - du.Milliseconds()
+	return s.FetchLog(query, start, end)
+}
+
+func (s *Pdr) RepoLogsQuery(ss []string) string {
+	query := "repo=\"logs\" and "
+	for i, str := range ss {
+		if i < len(ss)-1 {
+			query += fmt.Sprintf("\"%s\" and ", str)
+		} else {
+
+			query += fmt.Sprintf("\"%s\"", str)
+		}
+	}
+	return query
 }

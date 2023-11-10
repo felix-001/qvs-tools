@@ -14,21 +14,23 @@ const (
 )
 
 type Config struct {
-	AdminAddr string `json:"admin_addr"`
-	GbId      string `json:"gbid"`
-	ChId      string `json:"chid"`
-	Start     string `json:"start"`
-	End       string `json:"end"`
-	PdrToken  string `json:"pdr_token"`
+	AdminAddr      string `json:"admin_addr"`
+	Start          string `json:"start"`
+	End            string `json:"end"`
+	PdrToken       string `json:"pdr_token"`
+	StreamId       string `json:"streamId"`
+	StreamPullFail bool
 }
 
 func checkConf(config *Config) error {
 	if config.AdminAddr == "" {
 		return fmt.Errorf("admin ip empty")
 	}
-	if config.GbId == "" {
-		return fmt.Errorf("gbid empty")
-	}
+	/*
+		if config.GbId == "" {
+			return fmt.Errorf("gbid empty")
+		}
+	*/
 	return nil
 }
 
@@ -37,9 +39,9 @@ func parseConsole(config *Config) {
 	end := currentTime.Format("2006-01-02 15:04:05")
 	start := currentTime.Add(-time.Hour).Format("2006-01-02 15:04:05")
 	flag.StringVar(&config.AdminAddr, "addr", "10.20.76.42:7277", "admin addr")
-	flag.StringVar(&config.GbId, "gbid", "", "gbid")
-	flag.StringVar(&config.ChId, "chid", "", "chid")
+	flag.StringVar(&config.StreamId, "sid", "", "streapsm id")
 	flag.StringVar(&config.PdrToken, "token", "", "pdr token")
+	flag.BoolVar(&config.StreamPullFail, "s", false, "拉流失败获取日志")
 
 	flag.StringVar(&config.Start, "start", start, "开始时间,格式为2023-11-05 19:20:00")
 	flag.StringVar(&config.End, "end", end, "结束时间,格式为2023-11-05 19:20:00")

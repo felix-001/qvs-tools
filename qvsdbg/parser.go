@@ -44,6 +44,19 @@ func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	return RunCmd(cmd)
 }
 
+// 遇到一个匹配的就停止
+func (s *Parser) searchLogsOne(node, service, re string) (string, error) {
+	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h -m 1 '%s' * -R \\\"\"", node, service, re)
+	log.Println(cmd)
+	return RunCmd(cmd)
+}
+
+func (s *Parser) searchLogsMultiLine(node, service, re string) (string, error) {
+	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run/auditlog/sip_dump;grep -h -Pzo '%s' * -R\\\"\"", node, service, re)
+	log.Println(cmd)
+	return RunCmd(cmd)
+}
+
 func (s *Parser) getValue(line, start, end string) (string, bool) {
 	reg := fmt.Sprintf("%s(.*?)%s", start, end)
 	re := regexp.MustCompile(reg)
@@ -122,10 +135,11 @@ func (s *Parser) parseInviteBye(data string) error {
 func (s *Parser) inviteBye() error {
 	data := ""
 	//nodes := []string{"jjh1445", "jjh1449", "jjh250", "bili-jjh9"}
+	ss := strings.Split(s.Conf.StreamId, "_")
 	nodes := []string{"jjh1445"}
 	for _, node := range nodes {
-		invite := fmt.Sprintf("invite ok.*%s", s.Conf.GbId)
-		bye := fmt.Sprintf("bye ok.*%s", s.Conf.GbId)
+		invite := fmt.Sprintf("invite ok.*%s", ss[0])
+		bye := fmt.Sprintf("bye ok.*%s", ss[1])
 		re := fmt.Sprintf("%s|%s", invite, bye)
 		res, err := s.searchLogs(node, "qvs-server", re)
 		if err != nil {
@@ -166,12 +180,13 @@ func (s *Parser) rtcLog() error {
 		nodes = append(nodes, ss1[0])
 	}
 	log.Println(nodes)
+
 	data := ""
 	for _, node := range nodes[1:] {
 		if node == " " || node == "" {
 			continue
 		}
-		re := fmt.Sprintf("RTC play.*%s", s.Conf.GbId)
+		re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
 		res, err := s.searchLogs(node, "qvs-rtp", re)
 		if err != nil {
 			log.Println(err)
@@ -499,7 +514,7 @@ func (s *Parser) getStreamId(callId, ssrc string) (string, error) {
 	return fmt.Sprintf("%s_%s", gbid, chid), nil
 }
 
-func (s Parser) getInviteMsg(date, ssrc string) (string, string, error) {
+func (s Parser) getInviteMsg2(date, ssrc string) (string, string, error) {
 	du := 4 * 24 * time.Hour
 	end := time.Now().UnixMilli()
 	start := end - du.Milliseconds()
@@ -557,7 +572,7 @@ func (s *Parser) getByeMsg(callId string) (string, error) {
 }
 
 func (s *Parser) rtpNoMuxerAllLog(date, ssrc string) {
-	inviteTime, inviteMsg, err := s.getInviteMsg(date, ssrc)
+	inviteTime, inviteMsg, err := s.getInviteMsg2(date, ssrc)
 	if err != nil {
 		log.Println("err")
 		return
@@ -654,23 +669,7 @@ func (s *Parser) getSsrcList(ss []string) ([]SSRCInfo, error) {
 	return ssrcs, nil
 }
 
-// rtp日志找到muxer为nil的ssrc
-// invite和resp信令
-// 根据callid找到bye
-// ssrc和streamid找到create channel和delete channel日志
-func (s *Parser) Run() error {
-	//s.rtpNoMuxerAllLog()
-	//s.inviteBye()
-	//s.parseRtcLog()
-	//s.decodeErr()
-	//s.calc()
-	/*
-		data, err := s.rtpNoMuxer()
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-	*/
+func (s *Parser) rtpNoMuxerLog() error {
 	b, err := ioutil.ReadFile("rtpNoMuxer.txt")
 	if err != nil {
 		log.Println("read fail", "rtpNoMuxer.txt", err)
@@ -694,8 +693,210 @@ func (s *Parser) Run() error {
 			s.rtpNoMuxerAllLog(ssrc.Date, ssrc.SSRC)
 		}
 	}
-
 	return nil
 }
 
+type StreamIdInfo struct {
+	GbId  string
+	ChId  string
+	Start string
+	End   string
+}
+
+func (s *Parser) getIds() (streamInfo StreamIdInfo) {
+	if s.Conf.StreamId == "" {
+		log.Fatal("check streamid err")
+	}
+	ss := strings.Split(s.Conf.StreamId, "_")
+	streamInfo.GbId = ss[0]
+	if len(ss) > 1 {
+		streamInfo.ChId = ss[1]
+	}
+	if len(ss) > 2 {
+		streamInfo.Start = ss[2]
+		streamInfo.End = ss[3]
+	}
+	return
+}
+
+func (s *Parser) getValByRegex(str, re string) (string, error) {
+	regex := regexp.MustCompile(re)
+	matchs := regex.FindStringSubmatch(str)
+	if len(matchs) < 1 {
+		return "", fmt.Errorf("not match, str: %s re: %s", str, re)
+	}
+	return matchs[1], nil
+}
+
+func (s *Parser) getNewestLog(logs string) (string, error) {
+	ss := strings.Split(logs, "\n")
+	if len(ss) == 1 {
+		return logs, nil
+	}
+	newestLog := ""
+	newestDateTime := ""
+	for _, str := range ss {
+		if str == "" {
+			continue
+		}
+		if strings.Contains(str, "Pseudo-terminal") {
+			continue
+		}
+		dateTime, err := s.getValByRegex(str, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
+		if err != nil {
+			return "", err
+		}
+		if newestLog == "" {
+			newestLog = str
+			newestDateTime = dateTime
+			continue
+		}
+		if dateTime > newestDateTime {
+			newestLog = str
+			newestDateTime = dateTime
+		}
+	}
+	if newestLog == "" {
+		return "", fmt.Errorf("no valid log found")
+	}
+	return newestLog, nil
+}
+
+func (s *Parser) query(Keywords []string) (query string) {
+	for i, keyword := range Keywords {
+		if i < len(Keywords)-1 {
+			query += fmt.Sprintf("%s.*", keyword)
+		} else {
+			query += keyword
+		}
+	}
+	return
+}
+
+func (s *Parser) getInviteLog() (string, error) {
+	streamInfo := s.getIds()
+	keywords := []string{"invite ok", streamInfo.GbId}
+	if streamInfo.ChId != "" {
+		keywords = append(keywords, streamInfo.ChId)
+	}
+	query := s.query(keywords)
+	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+	for _, node := range nodes {
+		raw, err := s.searchLogs(node, "qvs-server", query)
+		if err == nil {
+			raw, err := s.getNewestLog(raw)
+			if err != nil {
+				continue
+			}
+			//log.Println(node, raw)
+			log.Println("got logs from", node)
+			return raw, nil
+		}
+		log.Println(node, err)
+	}
+	return "", fmt.Errorf("log not found")
+}
+
+type InvitInfo struct {
+	CallId  string
+	SSRC    string
+	RtpIp   string
+	SipNode string
+	RtpPort string
+}
+
+func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
+	raw, err := s.getInviteLog()
+	if err != nil {
+		return
+	}
+	inviteInfo.CallId, err = s.getValByRegex(raw, `callId: (\d+)`)
+	if err != nil {
+		return
+	}
+	inviteInfo.SSRC, err = s.getValByRegex(raw, `ssrc:  (\d+)`)
+	if err != nil {
+		return
+	}
+	inviteInfo.RtpIp, err = s.getValByRegex(raw, `rtpAccessIp: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`)
+	if err != nil {
+		return
+	}
+	inviteInfo.SipNode, err = s.getValByRegex(raw, `rtpNode: (\S+)`)
+	if err != nil {
+		return
+	}
+	inviteInfo.RtpPort, err = s.getValByRegex(raw, `rtpPort: (\d+)`)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (s *Parser) multiLineQuery(Keywords []string) (query string) {
+	query = "(?s)(?<=<--------------------------------------------------------------------------------------------------->).*?"
+	for _, keyword := range Keywords {
+		query += keyword + ".*?"
+	}
+	query += "(?=<--------------------------------------------------------------------------------------------------->)"
+	return
+}
+
+func (s *Parser) getInviteMsg(inviteInfo *InvitInfo, chid string) (string, error) {
+	//streamInfo := s.getIds()
+	//Keywords := []string{chid, inviteInfo.CallId, inviteInfo.RtpIp, "0" + inviteInfo.SSRC}
+	Keywords := []string{chid, inviteInfo.CallId, "0" + inviteInfo.SSRC}
+	query := s.multiLineQuery(Keywords)
+	return s.searchLogsMultiLine(inviteInfo.SipNode, "qvs-sip", query)
+}
+
+func (s *Parser) getChidOfIPC(node, gbid string) (string, error) {
+	Keywords := []string{"real chid of", gbid}
+	query := s.query(Keywords)
+	raw, err := s.searchLogsOne(node, "qvs-sip", query)
+	if err != nil {
+		return "", err
+	}
+	chid, err := s.getValByRegex(raw, `real chid of \d+ is (\d+)`)
+	if err != nil {
+		return "", err
+	}
+	//log.Println("chid:", chid)
+	return chid, nil
+}
+
+func (s *Parser) streamPullFail() {
+	streamInfo := s.getIds()
+	inviteInfo, err := s.getInviteInfo()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("callid:", inviteInfo.CallId, "ssrc:", inviteInfo.SSRC, "rtpIp:", inviteInfo.RtpIp, "sipNode:", inviteInfo.SipNode, "rtpPort:", inviteInfo.RtpPort)
+	if streamInfo.ChId == "" {
+		chid, err := s.getChidOfIPC(inviteInfo.SipNode, streamInfo.GbId)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		streamInfo.ChId = chid
+	}
+	log.Println("real chid:", streamInfo.ChId)
+	raw, err := s.getInviteMsg(&inviteInfo, streamInfo.ChId)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(raw)
+}
+
+// rtp日志找到muxer为nil的ssrc
+// invite和resp信令
+// 根据callid找到bye
+// ssrc和streamid找到create channel和delete channel日志
 // 捞取日志集合, 各种and集合
+func (s *Parser) Run() error {
+	if s.Conf.StreamPullFail {
+		s.streamPullFail()
+	}
+	return nil
+}
