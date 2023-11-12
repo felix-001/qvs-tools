@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -729,7 +730,7 @@ func (s *Parser) getValByRegex(str, re string) (string, error) {
 }
 
 func (s *Parser) getNewestLog(logs string) (string, error) {
-	ss := strings.Split(logs, "\n")
+	ss := strings.Split(logs, "\r\n")
 	if len(ss) == 1 {
 		return logs, nil
 	}
@@ -783,9 +784,10 @@ func (s *Parser) getInviteLog() (string, error) {
 	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
 	for _, node := range nodes {
 		raw, err := s.searchLogs(node, "qvs-server", query)
-		if err == nil {
+		if err == nil && raw != "" {
 			raw, err := s.getNewestLog(raw)
 			if err != nil {
+				log.Println("get newest loggg err:", err)
 				continue
 			}
 			//log.Println(node, raw)
@@ -834,11 +836,12 @@ func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
 }
 
 func (s *Parser) multiLineQuery(Keywords []string) (query string) {
-	query = "(?s)(?<=<--------------------------------------------------------------------------------------------------->).*?"
+	//query = "(?s)(?<=<--------------------------------------------------------------------------------------------------->).*?"
+	query = "(?s)(---).*?"
 	for _, keyword := range Keywords {
 		query += keyword + ".*?"
 	}
-	query += "(?=<--------------------------------------------------------------------------------------------------->)"
+	query += "(---)"
 	return
 }
 
@@ -865,6 +868,19 @@ func (s *Parser) getChidOfIPC(node, gbid string) (string, error) {
 	return chid, nil
 }
 
+/*
+ * invite √
+ * invite resp √
+ * bye √
+ * bye resp √
+ * create channel
+ * delete channel
+ * channel remove
+ * got first
+ * tcp attach
+ * inner stean
+ * catalog invite
+ */
 func (s *Parser) streamPullFail() {
 	streamInfo := s.getIds()
 	inviteInfo, err := s.getInviteInfo()
@@ -881,22 +897,72 @@ func (s *Parser) streamPullFail() {
 		streamInfo.ChId = chid
 	}
 	log.Println("real chid:", streamInfo.ChId)
-	raw, err := s.getInviteMsg(&inviteInfo, streamInfo.ChId)
+	start := time.Now()
+	params := streamInfo.ChId + "," + inviteInfo.CallId
+	sipMsgs, err := GetSipMsg(params)
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatalln(err)
 	}
-	log.Println(raw)
+	//log.Println(sipMsgs)
+	log.Println("cost:", time.Since(start))
+	msgs := s.splitSipMsg(sipMsgs)
+	log.Println("msgs: ", len(msgs))
+	log.Println(msgs)
 }
 
-// rtp日志找到muxer为nil的ssrc
-// invite和resp信令
-// 根据callid找到bye
-// ssrc和streamid找到create channel和delete channel日志
-// 捞取日志集合, 各种and集合
+func (s *Parser) splitSipMsg(raw string) []string {
+	ss := strings.Split(raw, "\r\n")
+	sipMsg := ""
+	msgs := []string{}
+	for _, str := range ss {
+		if strings.Contains(str, "---") {
+			if sipMsg == "" {
+				continue
+			}
+			msgs = append(msgs, sipMsg)
+			sipMsg = ""
+			continue
+		}
+		sipMsg += str + "\r\n"
+		if strings.Contains(str, "Content-Length") {
+			sipMsg += "\r\n"
+		}
+	}
+	return msgs
+}
+
+func (s *Parser) searchLog() {
+	if s.Conf.Node == "" || s.Conf.Service == "" {
+		flag.PrintDefaults()
+		log.Fatalln("check param err")
+	}
+	if s.Conf.Node == "center" {
+		nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+		out := ""
+		for _, node := range nodes {
+			result, err := s.searchLogs(node, s.Conf.Service, s.Conf.Re)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			out += result
+		}
+		log.Println(out)
+		return
+	}
+	result, err := s.searchLogs(s.Conf.Node, s.Conf.Service, s.Conf.Re)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println(result)
+
+}
+
 func (s *Parser) Run() error {
 	if s.Conf.StreamPullFail {
 		s.streamPullFail()
+	}
+	if s.Conf.Re != "" {
+		s.searchLog()
 	}
 	return nil
 }
