@@ -805,6 +805,7 @@ type InvitInfo struct {
 	RtpIp   string
 	SipNode string
 	RtpPort string
+	Time    string
 }
 
 func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
@@ -829,6 +830,10 @@ func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
 		return
 	}
 	inviteInfo.RtpPort, err = s.getValByRegex(raw, `rtpPort: (\d+)`)
+	if err != nil {
+		return
+	}
+	inviteInfo.Time, err = s.getValByRegex(raw, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
 	if err != nil {
 		return
 	}
