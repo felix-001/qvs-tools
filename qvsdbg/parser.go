@@ -41,14 +41,18 @@ func (s *Parser) adminPost(path, body string) (string, error) {
 
 func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h '%s' * -R\\\"\"", node, service, re)
-	//log.Println(cmd)
+	if s.Conf.Verbose {
+		log.Println(cmd)
+	}
 	return RunCmd(cmd)
 }
 
 // 遇到一个匹配的就停止
 func (s *Parser) searchLogsOne(node, service, re string) (string, error) {
 	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h -m 1 '%s' * -R \\\"\"", node, service, re)
-	log.Println(cmd)
+	if s.Conf.Verbose {
+		log.Println(cmd)
+	}
 	return RunCmd(cmd)
 }
 
@@ -442,7 +446,7 @@ func insertString(original, insert string, pos int) string {
 	return original[:pos] + insert + original[pos:]
 }
 
-func (s *Parser) getRtpNode(ip string) (string, error) {
+func (s *Parser) getRtpNodeByPdr(ip string) (string, error) {
 	du := 15 * time.Minute
 	end := time.Now().UnixMilli()
 	start := end - du.Milliseconds()
@@ -477,15 +481,16 @@ func (s *Parser) getRtpIp() (string, error) {
 	return rtpIp, nil
 }
 
-func (s *Parser) getCreateChLog(inviteTime, streamid string) (string, error) {
+func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	// 2023-11-09 13:50:46.806 --> 2023-11-09 13:50:4
-	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], streamid)
-	data, err := s.searchLogs("zz450", "qvs-rtp", re)
+	inviteTime = strings.ReplaceAll(inviteTime, "/", "-")
+	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], s.Conf.StreamId)
+	data, err := s.searchLogs(node, "qvs-rtp", re)
 	if err != nil {
 		log.Println("search log err")
 		return "", err
 	}
-	log.Println(data)
+	//log.Println(data)
 	return data, nil
 }
 
@@ -597,7 +602,7 @@ func (s *Parser) rtpNoMuxerAllLog(date, ssrc string) {
 		return
 	}
 	log.Println("rtpIp:", rtpIp)
-	rtpNode, err := s.getRtpNode(rtpIp)
+	rtpNode, err := s.getRtpNodeByPdr(rtpIp)
 	if err != nil {
 		log.Println(err)
 		return
@@ -609,7 +614,7 @@ func (s *Parser) rtpNoMuxerAllLog(date, ssrc string) {
 		return
 	}
 	log.Println("streamid:", streamid)
-	createChLog, err := s.getCreateChLog(inviteTime, streamid)
+	createChLog, err := s.getCreateChLog(inviteTime, "zz450")
 	if err != nil {
 		log.Println(err)
 		return
@@ -873,12 +878,26 @@ func (s *Parser) getChidOfIPC(node, gbid string) (string, error) {
 	return chid, nil
 }
 
+func (s *Parser) getCreateChLogs(inviteTime, streamId, nodeId string) (string, error) {
+	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], streamId)
+	return s.searchLogs(nodeId, "qvs-rtp", re)
+}
+
+func (s *Parser) getRtpNode(rtpIp string) (string, error) {
+	re := fmt.Sprintf("/stream/publish/check.*%s", rtpIp)
+	result, err := searchThemisd(re)
+	if err != nil {
+		return "", err
+	}
+	return s.getValByRegex(result, `"nodeId":"(.*?)"`)
+}
+
 /*
  * invite √
  * invite resp √
  * bye √
  * bye resp √
- * create channel
+ * create channel √
  * delete channel
  * channel remove
  * got first
@@ -890,10 +909,10 @@ func (s *Parser) streamPullFail() {
 	streamInfo := s.getIds()
 	inviteInfo, err := s.getInviteInfo()
 	if err != nil {
-		log.Println(err)
+		log.Println("get invite info err:", err)
 		return
 	}
-	log.Println("callid:", inviteInfo.CallId, "ssrc:", inviteInfo.SSRC, "rtpIp:", inviteInfo.RtpIp, "sipNode:", inviteInfo.SipNode, "rtpPort:", inviteInfo.RtpPort)
+	log.Println("callid:", inviteInfo.CallId, "ssrc:", inviteInfo.SSRC, "rtpIp:", inviteInfo.RtpIp, "sipNode:", inviteInfo.SipNode, "rtpPort:", inviteInfo.RtpPort, "time:", inviteInfo.Time)
 	if streamInfo.ChId == "" {
 		chid, err := s.getChidOfIPC(inviteInfo.SipNode, streamInfo.GbId)
 		if err != nil {
@@ -913,6 +932,16 @@ func (s *Parser) streamPullFail() {
 	msgs := s.splitSipMsg(sipMsgs)
 	log.Println("msgs: ", len(msgs))
 	log.Println(msgs)
+	rtpNodeId, err := s.getRtpNode(inviteInfo.RtpIp)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("rtpNodeId:", rtpNodeId)
+	createChLog, err := s.getCreateChLog(inviteInfo.Time, rtpNodeId)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("createChLog:", createChLog)
 }
 
 func (s *Parser) splitSipMsg(raw string) []string {

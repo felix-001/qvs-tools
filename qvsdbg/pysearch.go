@@ -97,6 +97,24 @@ func runMultiLineSearchScript(node string, args []string) (string, error) {
 	return RunCmd(cmd)
 }
 
+func searchThemisd(re string) (string, error) {
+	rawCmd := "cd /home/qboxserver/qvs-apigate/_package/run/auditlog/PILI-THEMISD/;"
+	rawCmd += fmt.Sprintf("grep -E -h -m 1 \"%s\" * -R", re)
+	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+	for _, node := range nodes {
+		cmd := sshCmd(rawCmd, node)
+		result, err := RunCmd(cmd)
+		if err != nil {
+			return "", err
+		}
+		if result != "" {
+			return result, nil
+		}
+
+	}
+	return "", fmt.Errorf("themisd log not found")
+}
+
 var sep = "<--------------------------------------------------------------------------------------------------->\r\n"
 
 // 参数列表，逗号分隔

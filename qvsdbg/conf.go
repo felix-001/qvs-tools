@@ -23,6 +23,7 @@ type Config struct {
 	Re             string
 	Node           string
 	Service        string
+	Verbose        bool
 }
 
 func checkConf(config *Config) error {
@@ -51,6 +52,7 @@ func parseConsole(config *Config) {
 	flag.StringVar(&config.Start, "start", start, "开始时间,格式为2023-11-05 19:20:00")
 	flag.StringVar(&config.End, "end", end, "结束时间,格式为2023-11-05 19:20:00")
 	flag.BoolVar(&config.StreamPullFail, "s", false, "拉流失败获取日志")
+	flag.BoolVar(&config.Verbose, "v", false, "是否打印更详细的日志")
 
 	flag.Parse()
 }
