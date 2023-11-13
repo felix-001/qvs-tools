@@ -942,6 +942,11 @@ func (s *Parser) streamPullFail() {
 		log.Fatalln(err)
 	}
 	log.Println("createChLog:", createChLog)
+	_, taskId, match := s.parseRtpLog(createChLog)
+	if !match {
+		log.Fatalln("get task id from create ch log err")
+	}
+	log.Println("taskId:", taskId)
 }
 
 func (s *Parser) splitSipMsg(raw string) []string {
