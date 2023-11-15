@@ -928,10 +928,10 @@ func (s *Parser) getRtpLog(taskId, nodeId, ssrc string) (string, error) {
  * bye √
  * bye resp √
  * create channel √
- * delete channel
+ * delete channel √
  * channel remove
  * got first
- * tcp attach
+ * tcp attach √
  * inner stean
  * catalog invite
  */
