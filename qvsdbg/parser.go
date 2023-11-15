@@ -892,6 +892,11 @@ func (s *Parser) getRtpNode(rtpIp string) (string, error) {
 	return s.getValByRegex(result, `"nodeId":"(.*?)"`)
 }
 
+func (s *Parser) getRtpLog(taskId, nodeId string) (string, error) {
+	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout", taskId, taskId, taskId)
+	return s.searchLogs(nodeId, "qvs-rtp", re)
+}
+
 /*
  * invite √
  * invite resp √
