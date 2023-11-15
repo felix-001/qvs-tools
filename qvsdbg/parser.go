@@ -490,6 +490,9 @@ func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 		log.Println("search log err")
 		return "", err
 	}
+	if data == "" {
+		return "", fmt.Errorf("create ch log empty")
+	}
 	//log.Println(data)
 	return data, nil
 }
@@ -787,21 +790,22 @@ func (s *Parser) getInviteLog() (string, error) {
 	}
 	query := s.query(keywords)
 	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+	logs := ""
 	for _, node := range nodes {
+		log.Println("fetching logs from", node)
 		raw, err := s.searchLogs(node, "qvs-server", query)
 		if err == nil && raw != "" {
-			raw, err := s.getNewestLog(raw)
-			if err != nil {
-				log.Println("get newest loggg err:", err)
-				continue
-			}
-			//log.Println(node, raw)
-			log.Println("got logs from", node)
-			return raw, nil
+			logs += raw
 		}
 		log.Println(node, err)
 	}
-	return "", fmt.Errorf("log not found")
+	logs, err := s.getNewestLog(logs)
+	if err != nil {
+		log.Println("get newest loggg err:", err)
+		return "", err
+	}
+	//log.Println(node, raw)
+	return logs, nil
 }
 
 type InvitInfo struct {
@@ -952,6 +956,11 @@ func (s *Parser) streamPullFail() {
 		log.Fatalln("get task id from create ch log err")
 	}
 	log.Println("taskId:", taskId)
+	rtpLog, err := s.getRtpLog(taskId, rtpNodeId)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("rtpLog:", rtpLog)
 }
 
 func (s *Parser) splitSipMsg(raw string) []string {
