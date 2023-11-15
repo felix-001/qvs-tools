@@ -917,8 +917,8 @@ func (s *Parser) getRtpNode(rtpIp string) (string, error) {
 	return s.getValByRegex(result, `"nodeId":"(.*?)"`)
 }
 
-func (s *Parser) getRtpLog(taskId, nodeId string) (string, error) {
-	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout", taskId, taskId, taskId)
+func (s *Parser) getRtpLog(taskId, nodeId, ssrc string) (string, error) {
+	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout|tcp attach.*%s", taskId, taskId, taskId, ssrc)
 	return s.searchLogs(nodeId, "qvs-rtp", re)
 }
 
@@ -977,7 +977,7 @@ func (s *Parser) streamPullFail() {
 		log.Fatalln("get task id from create ch log err")
 	}
 	log.Println("taskId:", taskId)
-	rtpLog, err := s.getRtpLog(taskId, rtpNodeId)
+	rtpLog, err := s.getRtpLog(taskId, rtpNodeId, inviteInfo.SSRC)
 	if err != nil {
 		log.Fatalln(err)
 	}
