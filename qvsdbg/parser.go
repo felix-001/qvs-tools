@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -483,6 +484,7 @@ func (s *Parser) getRtpIp() (string, error) {
 
 func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	// 2023-11-09 13:50:46.806 --> 2023-11-09 13:50:4
+	start := time.Now()
 	inviteTime = strings.ReplaceAll(inviteTime, "/", "-")
 	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], s.Conf.StreamId)
 	data, err := s.searchLogs(node, "qvs-rtp", re)
@@ -493,7 +495,7 @@ func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	if data == "" {
 		return "", fmt.Errorf("create ch log empty")
 	}
-	//log.Println(data)
+	log.Println("get create ch log cost:", time.Since(start))
 	return data, nil
 }
 
@@ -782,6 +784,18 @@ func (s *Parser) query(Keywords []string) (query string) {
 	return
 }
 
+func (s *Parser) doSearch(node, service, query string, resultChan chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	log.Println("fetching logs from", node)
+	raw, err := s.searchLogs(node, service, query)
+	if err != nil {
+		log.Println("search log err", node, query, service)
+		return
+	}
+	log.Println("fetch logs from", node, "done")
+	resultChan <- raw
+}
+
 func (s *Parser) getInviteLog() (string, error) {
 	streamInfo := s.getIds()
 	keywords := []string{"invite ok", streamInfo.GbId}
@@ -789,17 +803,22 @@ func (s *Parser) getInviteLog() (string, error) {
 		keywords = append(keywords, streamInfo.ChId)
 	}
 	query := s.query(keywords)
+	resultChan := make(chan string)
+	wg := sync.WaitGroup{}
+	wg.Add(4)
 	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
-	logs := ""
 	for _, node := range nodes {
-		log.Println("fetching logs from", node)
-		raw, err := s.searchLogs(node, "qvs-server", query)
-		if err == nil && raw != "" {
-			logs += raw
-		}
-		log.Println(node, err)
+		go s.doSearch(node, "qvs-server", query, resultChan, &wg)
 	}
-	logs, err := s.getNewestLog(logs)
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+	var finalResult string
+	for str := range resultChan {
+		finalResult += str
+	}
+	logs, err := s.getNewestLog(finalResult)
 	if err != nil {
 		log.Println("get newest loggg err:", err)
 		return "", err
@@ -888,11 +907,13 @@ func (s *Parser) getCreateChLogs(inviteTime, streamId, nodeId string) (string, e
 }
 
 func (s *Parser) getRtpNode(rtpIp string) (string, error) {
+	start := time.Now()
 	re := fmt.Sprintf("/stream/publish/check.*%s", rtpIp)
 	result, err := searchThemisd(re)
 	if err != nil {
 		return "", err
 	}
+	log.Println("get rtp node cost:", time.Since(start))
 	return s.getValByRegex(result, `"nodeId":"(.*?)"`)
 }
 
@@ -940,7 +961,7 @@ func (s *Parser) streamPullFail() {
 	log.Println("cost:", time.Since(start))
 	msgs := s.splitSipMsg(sipMsgs)
 	log.Println("msgs: ", len(msgs))
-	log.Println(msgs)
+	//log.Println(msgs)
 	rtpNodeId, err := s.getRtpNode(inviteInfo.RtpIp)
 	if err != nil {
 		log.Fatalln(err)
