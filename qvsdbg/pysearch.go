@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"sync"
 )
 
@@ -175,6 +176,9 @@ func runScript(node, params string, resultChan chan<- string, wg *sync.WaitGroup
 
 var sep = "<--------------------------------------------------------------------------------------------------->\r\n"
 
+var centerNodeList = []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+var centerNodeList2 = []interface{}{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+
 // 参数列表，逗号分隔
 // <chid>,<callid>,...
 func GetSipMsg(params string) (string, error) {
@@ -199,4 +203,92 @@ func GetSipMsg(params string) (string, error) {
 		return "", err
 	}
 	return finalResult, nil
+}
+
+func doGetFileList(node string, resultChan chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	files, err := runSipLsCmd(node)
+	if err != nil {
+		log.Println("get sip raw file list err", node)
+	}
+	resultChan <- files
+}
+
+func getAllSipRawFiles() string {
+	resultChan := make(chan string)
+	wg := sync.WaitGroup{}
+	wg.Add(len(centerNodeList))
+	for _, node := range centerNodeList {
+		go doGetFileList(node, resultChan, &wg)
+	}
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+	var finalResult string
+	for str := range resultChan {
+		finalResult += str
+	}
+	return finalResult
+}
+
+type Handler func(v interface{}) string
+
+type ParaleelTask struct {
+	Params  []interface{}
+	Handler Handler
+}
+
+func NewParaleelTask(params []interface{}, handler Handler) *ParaleelTask {
+	return &ParaleelTask{Params: params, Handler: handler}
+}
+
+func (p *ParaleelTask) doTask(param interface{}, resultChan chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	str := p.Handler(param)
+	resultChan <- str
+}
+
+func (p *ParaleelTask) Run() string {
+	resultChan := make(chan string)
+	wg := sync.WaitGroup{}
+	wg.Add(len(p.Params))
+	for _, param := range p.Params {
+		go p.doTask(param, resultChan, &wg)
+	}
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+	var finalResult string
+	for str := range resultChan {
+		finalResult += str
+	}
+	return finalResult
+}
+
+func getAllSipRawFiles2() string {
+	handler := func(v interface{}) string {
+		node := v.(string)
+		files, err := runSipLsCmd(node)
+		if err != nil {
+			log.Println("get sip raw file list err", node)
+		}
+		files = strings.TrimRight(files, "\r\n")
+		fileList := strings.Split(files, "\n")
+		result := ""
+		for _, file := range fileList {
+			result += node + "," + file + "\r\n"
+		}
+		return result
+	}
+	task := NewParaleelTask(centerNodeList2, handler)
+	result := task.Run()
+	return result
+}
+
+func GetSipMsgs(params string) (string, error) {
+	//logs, _ := runServiceLsCmd("qvs-rtp", "zz718")
+	//files := getAllSipRawFiles()
+	return "", nil
 }
