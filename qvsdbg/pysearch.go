@@ -65,15 +65,18 @@ def multiLineSearch(file):
 
 
 
-directory = sys.argv[1]
+file_path = sys.argv[1]
+with open(file_path, "r") as file:
+	#print('search', file_path)
+	multiLineSearch(file)
 
-start=datetime.datetime.now()
-for root, dirs, files in os.walk(directory):
-    for file_name in files:
-        file_path = os.path.join(root, file_name)
-        with open(file_path, "r") as file:
+#start=datetime.datetime.now()
+#for root, dirs, files in os.walk(directory):
+#    for file_name in files:
+#        file_path = os.path.join(root, file_name)
+#        with open(file_path, "r") as file:
 		#print('search', file_path)
-	        multiLineSearch(file)
+#	        multiLineSearch(file)
 #print('cost', str(datetime.datetime.now()-start))
 print('<--------------------------------------------------------------------------------------------------->')
 `
@@ -97,7 +100,7 @@ func runMultiLineSearchScript(node string, args []string) (string, error) {
 		rawCmd += arg + " "
 	}
 	cmd := sshCmd(rawCmd, node)
-	//log.Println(cmd)
+	log.Println(cmd)
 	return RunCmd(cmd)
 }
 
@@ -214,24 +217,6 @@ func doGetFileList(node string, resultChan chan<- string, wg *sync.WaitGroup) {
 	resultChan <- files
 }
 
-func getAllSipRawFiles() string {
-	resultChan := make(chan string)
-	wg := sync.WaitGroup{}
-	wg.Add(len(centerNodeList))
-	for _, node := range centerNodeList {
-		go doGetFileList(node, resultChan, &wg)
-	}
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-	var finalResult string
-	for str := range resultChan {
-		finalResult += str
-	}
-	return finalResult
-}
-
 type Handler func(v interface{}) string
 
 type ParaleelTask struct {
@@ -267,7 +252,7 @@ func (p *ParaleelTask) Run() string {
 	return finalResult
 }
 
-func getAllSipRawFiles2() string {
+func getAllSipRawFiles() string {
 	handler := func(v interface{}) string {
 		node := v.(string)
 		files, err := runSipLsCmd(node)
@@ -275,10 +260,10 @@ func getAllSipRawFiles2() string {
 			log.Println("get sip raw file list err", node)
 		}
 		files = strings.TrimRight(files, "\r\n")
-		fileList := strings.Split(files, "\n")
+		fileList := strings.Split(files, "\r\n")
 		result := ""
 		for _, file := range fileList {
-			result += node + "," + file + "\r\n"
+			result += node + "," + file + "\n"
 		}
 		return result
 	}
@@ -287,8 +272,61 @@ func getAllSipRawFiles2() string {
 	return result
 }
 
-func GetSipMsgs(params string) (string, error) {
+var sipLogPath = "/home/qboxserver/qvs-sip/_package/run/auditlog/sip_dump"
+
+type SearchSipParam struct {
+	Node  string
+	File  string
+	Query string
+}
+
+func GetSipMsgs(query string) (string, error) {
 	//logs, _ := runServiceLsCmd("qvs-rtp", "zz718")
-	//files := getAllSipRawFiles()
-	return "", nil
+	files := getAllSipRawFiles()
+	/*
+		log.Printf("files: %#v\n", files)
+		log.Printf("files hex: %#x\n", files)
+		log.Println("files:", files)
+	*/
+	files = strings.TrimRight(files, "\n")
+	params := []interface{}{}
+	fileList := strings.Split(files, "\n")
+	log.Println(len(fileList))
+	for i, file := range fileList[:11] {
+		ss := strings.Split(file, ",")
+		if len(ss) != 2 {
+			log.Fatalln("ss err", file, i)
+		}
+		param := SearchSipParam{
+			Node:  ss[0],
+			File:  ss[1],
+			Query: query,
+		}
+		params = append(params, param)
+	}
+	handler := func(v interface{}) string {
+		param := v.(SearchSipParam)
+		log.Println("fetching sip log", param.Node, param.File)
+		/*
+			if str, err := writeScriptToNode(param.Node); err != nil {
+				log.Println("write script err", param.Node, err, str)
+				return ""
+			}
+		*/
+		args := []string{param.File, param.Query}
+		msg, err := runMultiLineSearchScript(param.Node, args)
+		if err != nil {
+			log.Println("run script err", param.Node, args, err, msg)
+			return ""
+		}
+		//log.Println("msg:", msg, "len:", len(msg))
+		if msg == sep {
+			return ""
+		}
+		log.Println("fetch sip log", param.Node, "done")
+		return msg
+	}
+	task := NewParaleelTask(params, handler)
+	result := task.Run()
+	return result, nil
 }

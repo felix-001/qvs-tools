@@ -860,6 +860,8 @@ func (s *Parser) Run() error {
 	if s.Conf.Re != "" {
 		s.searchLog()
 	}
-	log.Println(getAllSipRawFiles2())
+	//log.Println(getAllSipRawFiles2())
+	msgs, _ := GetSipMsgs("202076923212,4491783")
+	log.Println(msgs)
 	return nil
 }
