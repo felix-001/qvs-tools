@@ -48,6 +48,14 @@ func (s *Parser) searchLogs(node, service, re string) (string, error) {
 	return RunCmd(cmd)
 }
 
+func (s *Parser) searchApiLog(node, service, re string) (string, error) {
+	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/qvs-apigate/_package/run/auditlog/%s;grep -E -h '%s' * -R\\\"\"", node, service, re)
+	if s.Conf.Verbose {
+		log.Println(cmd)
+	}
+	return RunCmd(cmd)
+}
+
 // 遇到一个匹配的就停止
 func (s *Parser) searchLogsOne(node, service, re string) (string, error) {
 	cmd := fmt.Sprintf("ssh -t liyuanquan@10.20.34.27 \"qssh %s \\\"cd /home/qboxserver/%s/_package/run;grep -E -h -m 1 '%s' * -R \\\"\"", node, service, re)
@@ -853,12 +861,40 @@ func (s *Parser) searchLog() {
 
 }
 
+func (s *Parser) searchApiLogs() {
+	if s.Conf.Service == "" {
+		flag.PrintDefaults()
+		log.Fatalln("need service")
+	}
+	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
+	out := ""
+	service := strings.ToUpper(s.Conf.Service)
+	for _, node := range nodes {
+		result, err := s.searchApiLog(node, service, s.Conf.Re)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		out += result
+	}
+	log.Println(out)
+}
+
 func (s *Parser) Run() error {
 	if s.Conf.StreamPullFail {
 		s.streamPullFail()
+		return nil
+	}
+	if s.Conf.Api {
+		s.searchApiLogs()
+		return nil
 	}
 	if s.Conf.Re != "" {
 		s.searchLog()
+		return nil
+	}
+	if len(s.Conf.Keywords) > 0 {
+		s.SearchSipLogs()
+		return nil
 	}
 	//log.Println(getAllSipRawFiles2())
 	msgs, _ := GetSipMsgs("202076923212,4491783")

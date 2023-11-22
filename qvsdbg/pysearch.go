@@ -13,6 +13,7 @@ var PyMultiLineSearchScript = `
 import sys
 import os
 import datetime
+import threading
 
 # -*- coding: UTF-8 -*-
 
@@ -20,65 +21,73 @@ keys = sys.argv[2].split(",")
 keywords = {key: False for key in keys}
 
 def checkKeywords(line):
-        for key in keywords:
-                if key in line:
-                        keywords[key] = True
-                        return
+    for key in keywords:
+        if key in line:
+            keywords[key] = True
+            return
 
 def allNeedFound():
-        for val in keywords.values():
-                if val == False:
-                        return False
-        return True
+    for val in keywords.values():
+        if val == False:
+            return False
+    return True
 
 def resetKeywords():
-	for key in keywords:
-		keywords[key] = False
+    for key in keywords:
+        keywords[key] = False
 
 def multiLineSearch(file):
     logs = ""
     foundStart = False
 
     for line in file:
-	if foundStart == False:
-		if "---" in line:
-			foundStart = True
-			logs += line
-		continue
+        if foundStart == False:
+            if "---" in line:
+                foundStart = True
+                logs += line
+            continue
 
-	if "---" in line:
-		if allNeedFound():
-		    #print('all need found')
-		    #logs += line
-		    print(logs)
-		    logs = line
-		    resetKeywords()
-		else:
-		    #print('reset key words')
-                    #logs = ""
-                    logs = line
-		    resetKeywords()
-		continue
+        if "---" in line:
+            if allNeedFound():
+                # print('all need found')
+                # logs += line
+                print(logs)
+                logs = line
+                resetKeywords()
+            else:
+                # print('reset key words')
+                # logs = ""
+                logs = line
+                resetKeywords()
+            continue
         checkKeywords(line)
         logs += line
-    #print("not found")
+    # print("not found")
 
 
+def process_file(file_path):
+    #print("start search file " + file_path)
+    with open(file_path, "r") as file:
+        # print('search', file_path)
+        multiLineSearch(file)
+    #print("search file " + file_path + " done")
 
-file_path = sys.argv[1]
-with open(file_path, "r") as file:
-	#print('search', file_path)
-	multiLineSearch(file)
+start = datetime.datetime.now()
 
-#start=datetime.datetime.now()
-#for root, dirs, files in os.walk(directory):
-#    for file_name in files:
-#        file_path = os.path.join(root, file_name)
-#        with open(file_path, "r") as file:
-		#print('search', file_path)
-#	        multiLineSearch(file)
-#print('cost', str(datetime.datetime.now()-start))
-print('<--------------------------------------------------------------------------------------------------->')
+directory=sys.argv[1]
+threads = []
+for root, dirs, files in os.walk(directory):
+    for file_name in files:
+        file_path = os.path.join(root, file_name)
+        thread = threading.Thread(target=process_file, args=(file_path,))
+        thread.start()
+        threads.append(thread)
+
+for thread in threads:
+    thread.join()
+
+end = datetime.datetime.now()
+#print("Time elapsed:" + str(end - start))
 `
 
 func sshCmd(rawCmd, node string) string {
@@ -100,7 +109,7 @@ func runMultiLineSearchScript(node string, args []string) (string, error) {
 		rawCmd += arg + " "
 	}
 	cmd := sshCmd(rawCmd, node)
-	log.Println(cmd)
+	//log.Println(cmd)
 	return RunCmd(cmd)
 }
 

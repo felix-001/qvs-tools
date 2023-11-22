@@ -24,6 +24,8 @@ type Config struct {
 	Node           string
 	Service        string
 	Verbose        bool
+	Keywords       string
+	Api            bool
 }
 
 func checkConf(config *Config) error {
@@ -53,6 +55,8 @@ func parseConsole(config *Config) {
 	flag.StringVar(&config.End, "end", end, "结束时间,格式为2023-11-05 19:20:00")
 	flag.BoolVar(&config.StreamPullFail, "s", false, "拉流失败获取日志")
 	flag.BoolVar(&config.Verbose, "v", false, "是否打印更详细的日志")
+	flag.StringVar(&config.Keywords, "keywords", "", "捞取sip日志的关键字列表,逗号分隔")
+	flag.BoolVar(&config.Api, "api", false, "捞取apigate的日志")
 
 	flag.Parse()
 }
