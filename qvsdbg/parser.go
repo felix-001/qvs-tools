@@ -879,6 +879,8 @@ func (s *Parser) searchApiLogs() {
 	log.Println(out)
 }
 
+// 流断了，查询是哪里bye的
+
 func (s *Parser) Run() error {
 	if s.Conf.StreamPullFail {
 		s.streamPullFail()
