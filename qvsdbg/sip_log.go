@@ -34,10 +34,10 @@ func FetchSipMsg(node, instance, params string) (string, error) {
 	return msg, nil
 }
 
-func (s *Parser) SearchSipLogs() {
+func (s *Parser) SearchSipLogs() string {
 	if s.Conf.Node == "" {
 		log.Println("need node, ex: jjh1445_2")
-		return
+		return ""
 	}
 	ss := strings.Split(s.Conf.Node, "_")
 	node := ss[0]
@@ -50,4 +50,5 @@ func (s *Parser) SearchSipLogs() {
 		log.Fatalln(err)
 	}
 	log.Println(result)
+	return result
 }

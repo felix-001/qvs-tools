@@ -482,7 +482,7 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.HttpSrv {
-		HttpSrvRun()
+		s.HttpSrvRun()
 		return nil
 	}
 	//log.Println(getAllSipRawFiles2())

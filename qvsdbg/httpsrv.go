@@ -10,9 +10,13 @@ import (
 func (s *Parser) httpProc(input string) string {
 	ss := strings.Split(input, " ")
 	cmd := ss[0]
+	keywords := ss[1]
+	node := ss[2]
 	switch cmd {
 	case "sip":
-
+		s.Conf.Keywords = keywords
+		s.Conf.Node = node
+		return s.SearchSipLogs()
 	}
 	return ""
 }
@@ -21,12 +25,8 @@ func (s *Parser) HttpSrvRun() {
 	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
 		// 从前端请求中读取数据
 		data := r.FormValue("data")
-
-		// 在后端进行处理，这里简单地将数据加上前缀
-		response := "Processed: " + data
-
-		// 将处理后的数据作为响应发送给前端
-		fmt.Fprintf(w, response)
+		result := s.httpProc(data)
+		fmt.Fprintf(w, result)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
