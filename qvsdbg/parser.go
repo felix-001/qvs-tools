@@ -375,6 +375,21 @@ func (s *Parser) searchLog() {
 
 }
 
+func (s *Parser) searchApiHandler(v interface{}) string {
+	param := v.(TaskParam)
+	service := strings.ToUpper(param.Service)
+	result, err := s.searchApiLog(param.Node, service, param.Re)
+	if err != nil {
+		log.Println("search log err", param.Node, param.Service, param.Re)
+		return ""
+	}
+	return result
+}
+
+func (s *Parser) searchQvsServerApiLog(re string) string {
+	return s.fetchCenterLog("qvs-server", re, s.searchApiHandler)
+}
+
 func (s *Parser) searchApiLogs() {
 	if s.Conf.Service == "" {
 		flag.PrintDefaults()
@@ -414,18 +429,18 @@ func (s *Parser) taskHandler(v interface{}) string {
 	return result
 }
 
-func (s *Parser) fetchCenterLog(service, re string) string {
+func (s *Parser) fetchCenterLog(service, re string, handler Handler) string {
 	params := []interface{}{
 		TaskParam{"jjh1445", re, service},
 		TaskParam{"jjh250", re, service},
 		TaskParam{"jjh1449", re, service},
 		TaskParam{"bili-jjh9", re, service},
 	}
-	return s.RunParallelTask(params, s.taskHandler)
+	return s.RunParallelTask(params, handler)
 }
 
 func (s *Parser) fetchQvsServerLog(re string) string {
-	return s.fetchCenterLog("qvs-server", re)
+	return s.fetchCenterLog("qvs-server", re, s.taskHandler)
 }
 
 func (s *Parser) PullStreamLog() {
@@ -444,6 +459,11 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.Api {
+		if s.Conf.Service == "qvs-server" {
+			result := s.searchQvsServerApiLog(s.Conf.Re)
+			log.Println(result)
+			return nil
+		}
 		s.searchApiLogs()
 		return nil
 	}
