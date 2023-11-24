@@ -880,6 +880,7 @@ func (s *Parser) searchApiLogs() {
 }
 
 // 流断了，查询是哪里bye的
+// 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 
 func (s *Parser) Run() error {
 	if s.Conf.StreamPullFail {
