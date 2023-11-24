@@ -4,9 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
-func HttpSrvRun() {
+func (s *Parser) httpProc(input string) string {
+	ss := strings.Split(input, " ")
+	cmd := ss[0]
+	switch cmd {
+	case "sip":
+
+	}
+	return ""
+}
+
+func (s *Parser) HttpSrvRun() {
 	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
 		// 从前端请求中读取数据
 		data := r.FormValue("data")
@@ -23,5 +34,5 @@ func HttpSrvRun() {
 		fmt.Fprintf(w, html)
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }

@@ -16,7 +16,7 @@ var html = `
     function sendData() {
       var data = document.getElementById("inputData").value;
       $.ajax({
-        url: "http://localhost:8080/data", // 后端服务器的地址
+        url: "http://101.133.131.188:8000/data", // 后端服务器的地址
         type: "POST",
         data: { data: data },
         success: function(response) {
