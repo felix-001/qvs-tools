@@ -27,3 +27,18 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 	}
 	return string(resp_body), nil
 }
+
+func (s *Parser) adminGet(path string) (string, error) {
+	uri := fmt.Sprintf("http://%s:7277/v1/%s", s.Conf.AdminAddr, path)
+	headers := M{"authorization": "QiniuStub uid=0"}
+	return httpReq("GET", uri, "", headers)
+}
+
+func (s *Parser) adminPost(path, body string) (string, error) {
+	uri := fmt.Sprintf("http://%s:7277/v1/%s", s.Conf.AdminAddr, path)
+	headers := map[string]string{
+		"authorization": "QiniuStub uid=0",
+		"Content-Type":  "application/json",
+	}
+	return httpReq("POST", uri, body, headers)
+}
