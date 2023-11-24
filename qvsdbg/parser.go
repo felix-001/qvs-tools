@@ -453,6 +453,8 @@ func (s *Parser) PullStreamLog() {
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
 // decode err
+// 播放者的ip
+// flv对端ip, "HttpFlvConnected" and "32050000491180000023_32050000491320000011"
 func (s *Parser) Run() error {
 	if s.Conf.StreamPullFail {
 		s.streamPullFail()
@@ -477,6 +479,10 @@ func (s *Parser) Run() error {
 	}
 	if s.Conf.PullStream {
 		s.PullStreamLog()
+		return nil
+	}
+	if s.Conf.HttpSrv {
+		HttpSrvRun()
 		return nil
 	}
 	//log.Println(getAllSipRawFiles2())
