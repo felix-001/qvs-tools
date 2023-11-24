@@ -393,6 +393,47 @@ func (s *Parser) searchApiLogs() {
 	log.Println(out)
 }
 
+func (s *Parser) RunParallelTask(params []interface{}, handler Handler) string {
+	task := NewParaleelTask(params, handler)
+	return task.Run()
+}
+
+type TaskParam struct {
+	Node    string
+	Re      string
+	Service string
+}
+
+func (s *Parser) taskHandler(v interface{}) string {
+	param := v.(TaskParam)
+	result, err := s.searchLogs(param.Node, param.Service, param.Re)
+	if err != nil {
+		log.Println("search log err", param.Node, param.Service, param.Re)
+		return ""
+	}
+	return result
+}
+
+func (s *Parser) fetchCenterLog(service, re string) string {
+	params := []interface{}{
+		TaskParam{"jjh1445", re, service},
+		TaskParam{"jjh250", re, service},
+		TaskParam{"jjh1449", re, service},
+		TaskParam{"bili-jjh9", re, service},
+	}
+	return s.RunParallelTask(params, s.taskHandler)
+}
+
+func (s *Parser) fetchQvsServerLog(re string) string {
+	return s.fetchCenterLog("qvs-server", re)
+}
+
+func (s *Parser) PullStreamLog() {
+	re := fmt.Sprintf("start a  channel stream.*%s", s.Conf.StreamId)
+	result := s.fetchQvsServerLog(re)
+	log.Println("fetch pull stream log:", result)
+}
+
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
@@ -412,6 +453,10 @@ func (s *Parser) Run() error {
 	}
 	if len(s.Conf.Keywords) > 0 {
 		s.SearchSipLogs()
+		return nil
+	}
+	if s.Conf.PullStream {
+		s.PullStreamLog()
 		return nil
 	}
 	//log.Println(getAllSipRawFiles2())

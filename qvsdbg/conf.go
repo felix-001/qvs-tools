@@ -26,6 +26,7 @@ type Config struct {
 	Verbose        bool
 	Keywords       string
 	Api            bool
+	PullStream     bool
 }
 
 func checkConf(config *Config) error {
@@ -57,6 +58,7 @@ func parseConsole(config *Config) {
 	flag.BoolVar(&config.Verbose, "v", false, "是否打印更详细的日志")
 	flag.StringVar(&config.Keywords, "keywords", "", "捞取sip日志的关键字列表,逗号分隔")
 	flag.BoolVar(&config.Api, "api", false, "捞取apigate的日志")
+	flag.BoolVar(&config.PullStream, "pull", false, "捞取拉流日志")
 
 	flag.Parse()
 }
