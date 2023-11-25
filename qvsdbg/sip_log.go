@@ -8,10 +8,12 @@ import (
 
 func FetchSipMsg(node, instance, params string) (string, error) {
 	log.Println("fetching sip log", node)
-	if _, err := writeScriptToNode(node); err != nil {
-		log.Println("write script err", node)
-		return "", err
-	}
+	/*
+		if _, err := writeScriptToNode(node); err != nil {
+			log.Println("write script err", node)
+			return "", err
+		}
+	*/
 	service := "qvs-sip"
 	if instance != "" {
 		service += instance

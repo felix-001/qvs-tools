@@ -3,17 +3,18 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
 )
 
 var PyMultiLineSearchScript = `
+#!/usr/bin/python
+
 import sys
 import os
 import datetime
-import threading
+import multiprocessing
 
 # -*- coding: UTF-8 -*-
 
@@ -36,7 +37,7 @@ def resetKeywords():
     for key in keywords:
         keywords[key] = False
 
-def multiLineSearch(file):
+def multiLineSearch(file, results):
     logs = ""
     foundStart = False
 
@@ -49,45 +50,55 @@ def multiLineSearch(file):
 
         if "---" in line:
             if allNeedFound():
-                # print('all need found')
-                # logs += line
-                print(logs)
+                results.append(logs)
+		print(logs)
                 logs = line
                 resetKeywords()
             else:
-                # print('reset key words')
-                # logs = ""
                 logs = line
                 resetKeywords()
             continue
         checkKeywords(line)
         logs += line
-    # print("not found")
 
-
-def process_file(file_path):
+def process_file(file_path, results):
     #print("start search file " + file_path)
+    #start = datetime.datetime.now()
     with open(file_path, "r") as file:
-        # print('search', file_path)
-        multiLineSearch(file)
-    #print("search file " + file_path + " done")
+        multiLineSearch(file, results)
+    #end = datetime.datetime.now()
+    #print("task Time elapsed:" + str(end - start) + " " + file_path)
 
-start = datetime.datetime.now()
+def write_to_file(file_path, content):
+    with open(file_path, 'w') as file:
+        file.write(content)
 
-directory=sys.argv[1]
-threads = []
-for root, dirs, files in os.walk(directory):
-    for file_name in files:
-        file_path = os.path.join(root, file_name)
-        thread = threading.Thread(target=process_file, args=(file_path,))
-        thread.start()
-        threads.append(thread)
+if __name__ == '__main__':
+    #start = datetime.datetime.now()
 
-for thread in threads:
-    thread.join()
+    directory = sys.argv[1]
+    processes = []
+    manager = multiprocessing.Manager()
+    results = manager.list()
 
-end = datetime.datetime.now()
-#print("Time elapsed:" + str(end - start))
+    for root, dirs, files in os.walk(directory):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            process = multiprocessing.Process(target=process_file, args=(file_path, results))
+            process.start()
+            processes.append(process)
+
+    for process in processes:
+        process.join()
+
+    final = ""
+    for result in results:
+        final += result
+    #write_to_file("out2.txt", final)
+
+    end = datetime.datetime.now()
+    #print("cost time:" + str(end - start) )
+
 `
 
 func sshCmd(rawCmd, node string) string {
@@ -115,7 +126,7 @@ func runMultiLineSearchScript(node string, args []string) (string, error) {
 
 func doRunCmd(cmd string, resultChan chan<- string, exitChan chan<- bool, wg *sync.WaitGroup) {
 	defer wg.Done()
-	log.Println("start run cmd", cmd)
+	//log.Println("start run cmd", cmd)
 	result, err := RunCmd(cmd)
 	if err != nil {
 		log.Println("rum cmd", cmd, "err:", err)
@@ -125,21 +136,26 @@ func doRunCmd(cmd string, resultChan chan<- string, exitChan chan<- bool, wg *sy
 		return
 	}
 
-	log.Println("run cmd", cmd, "done")
+	//log.Println("run cmd", cmd, "done")
 	resultChan <- result
 	exitChan <- true // 发送退出信号
 }
 
 func searchThemisd(re string) (string, error) {
-	rawCmd := "cd /home/qboxserver/qvs-apigate/_package/run/auditlog/PILI-THEMISD/;"
-	rawCmd += fmt.Sprintf("grep -E -h -m 1 \"%s\" * -R", re)
 	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
 	resultChan := make(chan string)
 	exitChan := make(chan bool) // 退出通道
 	wg := sync.WaitGroup{}
 	wg.Add(4)
 	for _, node := range nodes {
-		log.Println("search themisd node", node)
+		rawCmd := "cd /home/qboxserver/qvs-apigate/_package/run/auditlog/"
+		if node == "jjh1449" || node == "bili-jjh9" {
+			rawCmd += "PILI-THEMISD-TEST/;"
+		} else {
+			rawCmd += "PILI-THEMISD/;"
+		}
+		rawCmd += fmt.Sprintf("grep -E -h -m 1 \"%s\" * -R", re)
+		//		log.Println("search themisd node", node)
 		cmd := sshCmd(rawCmd, node)
 		go doRunCmd(cmd, resultChan, exitChan, &wg)
 	}
@@ -193,28 +209,10 @@ var centerNodeList2 = []interface{}{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
 
 // 参数列表，逗号分隔
 // <chid>,<callid>,...
-func GetSipMsg(params string) (string, error) {
-	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
-	resultChan := make(chan string)
-	wg := sync.WaitGroup{}
-	wg.Add(4)
-	for _, node := range nodes {
-		go runScript(node, params, resultChan, &wg)
-	}
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-	var finalResult string
-	for str := range resultChan {
-		finalResult += str
-	}
-	err := ioutil.WriteFile("out.sip", []byte(finalResult), 0644)
-	if err != nil {
-		log.Println(err)
-		return "", err
-	}
-	return finalResult, nil
+func (s *Parser) GetSipMsg(node, params string) {
+	s.Conf.Node = node
+	s.Conf.Keywords = params
+	go s.SearchSipLogs()
 }
 
 func doGetFileList(node string, resultChan chan<- string, wg *sync.WaitGroup) {

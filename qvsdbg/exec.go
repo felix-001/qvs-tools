@@ -82,6 +82,12 @@ func qsshCmd(rawCmd, node string) string {
 	return cmd
 }
 
+func jumpboxCmd(rawCmd string) (string, error) {
+	jumpbox := "ssh -t liyuanquan@10.20.34.27"
+	cmd := fmt.Sprintf("%s \" %s \"", jumpbox, rawCmd)
+	return RunCmd(cmd)
+}
+
 func grepCmd(srcFile, node, re string) string {
 	//srcFile := fmt.Sprintf("/home/qboxserver/%s/_package/run")
 	grepCmd := fmt.Sprintf("grep -E -h '%s' %s -R", re, srcFile)

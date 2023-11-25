@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,37 +23,10 @@ func NewParser(conf *Config) *Parser {
 	return &Parser{Conf: conf, pdr: pdr}
 }
 
-func (s *Parser) getValue(line, start, end string) (string, bool) {
-	reg := fmt.Sprintf("%s(.*?)%s", start, end)
-	re := regexp.MustCompile(reg)
-	matchs := re.FindStringSubmatch(line)
-	if len(matchs) < 1 {
-		return "", false
-	}
-	return strings.TrimSpace(matchs[1]), true
-}
-
 type Keyword struct {
 	Start string
 	End   string
 	Key   string
-}
-
-func (s *Parser) uniq(data string) M {
-	ss := strings.Split(data, "\n")
-	m := M{}
-	for _, s1 := range ss {
-		streamid, match := s.getValue(s1, "2xenzw32d1rf9/", ", api")
-		if !match {
-			log.Printf("not match, %s\n", s1)
-			continue
-		}
-		if m[streamid] != "" {
-			continue
-		}
-		m[streamid] = s1
-	}
-	return m
 }
 
 func (s *Parser) decodeErr() {
@@ -83,71 +55,17 @@ func (s *Parser) parseRtpLog(str string) (string, string, bool) {
 		log.Println("not match", str)
 		return "", "", false
 	}
-	if len(matches) < 4 {
+	if len(matches) < 3 {
 		log.Println("match count not 4 real:", len(matches), matches)
 		return "", "", false
 	}
-	return matches[0][1], matches[3][1], true
-}
-
-func (s *Parser) filterLogByDate(in, start, end string) ([]string, error) {
-	ss := strings.Split(in, "\n")
-	res := []string{}
-	for _, str := range ss {
-		if strings.Contains(str, "Pseudo-terminal") {
-			continue
-		}
-		if str == "" {
-			continue
-		}
-		time, _, match := s.parseRtpLog(str)
-		if !match {
-			continue
-		}
-		if time > start {
-			if end == "" {
-				res = append(res, str)
-				continue
-			}
-			if time < end {
-				res = append(res, str)
-			}
-		}
-	}
-	return res, nil
-}
-
-func (s *Parser) filterLogByTask(ss []string) map[string][]string {
-	m := map[string][]string{}
-	for _, str := range ss {
-		if str == "" {
-			continue
-		}
-		_, task, match := s.parseRtpLog(str)
-		if !match {
-			continue
-		}
-		if _, ok := m[task]; !ok {
-			m[task] = []string{str}
-			continue
-		}
-		m[task] = append(m[task], str)
-	}
-	return m
-}
-
-func insertString(original, insert string, pos int) string {
-	if pos < 0 || pos > len(original) {
-		return original
-	}
-
-	return original[:pos] + insert + original[pos:]
+	return matches[0][1], matches[2][1], true
 }
 
 func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	// 2023-11-09 13:50:46.806 --> 2023-11-09 13:50:4
 	start := time.Now()
-	inviteTime = strings.ReplaceAll(inviteTime, "/", "-")
+	//inviteTime = strings.ReplaceAll(inviteTime, "/", "-")
 	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], s.Conf.StreamId)
 	data, err := s.searchLogs(node, "qvs-rtp", re)
 	if err != nil {
@@ -161,93 +79,19 @@ func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	return data, nil
 }
 
-func (s *Parser) getStreamId(callId, ssrc string) (string, error) {
-	du := 4 * 24 * time.Hour
-	end := time.Now().UnixMilli()
-	start := end - du.Milliseconds()
-	re := fmt.Sprintf("repo = \"logs\" and \"%s\" and \"%s*\"", ssrc, callId)
-	resp, err := s.pdr.FetchLog(re, start, end)
+func (s *Parser) getDeleteChLog(createChTime, node string) (string, error) {
+	start := time.Now()
+	re := fmt.Sprintf("delete_channel.*%s", s.Conf.StreamId)
+	data, err := s.searchLogs(node, "qvs-rtp", re)
 	if err != nil {
-		log.Println(err)
+		log.Println("search log err")
 		return "", err
 	}
-	log.Println(resp)
-	gbid, match := s.getValue(resp.Rows[0].Raw.Value, "gbId:", "chId:")
-	if !match {
-		log.Println("get gbid err")
-		return "", fmt.Errorf("get gbid err")
+	if data == "" {
+		return "", fmt.Errorf("delete ch log empty")
 	}
-	log.Println("gbid:", gbid)
-	chid, match := s.getValue(resp.Rows[0].Raw.Value, "chId:", "resp")
-	if !match {
-		log.Println("get chid err")
-		return "", fmt.Errorf("get chid err")
-	}
-	log.Println("chid:", chid)
-	return fmt.Sprintf("%s_%s", gbid, chid), nil
-}
-
-func (s Parser) getInviteMsg2(date, ssrc string) (string, string, error) {
-	du := 4 * 24 * time.Hour
-	end := time.Now().UnixMilli()
-	start := end - du.Milliseconds()
-	re := fmt.Sprintf("repo = \"sip_msg_dump2\" and \"0%s\" and \"%s*\"", ssrc, date[:10])
-	log.Println(re)
-	resp, err := s.pdr.FetchLog(re, start, end)
-	if err != nil {
-		log.Println(err)
-		return "", "", err
-	}
-	//log.Printf("%#v\n", resp)
-	log.Println(resp.Rows[0].Raw.Value)
-	log.Println(resp.Rows[1].Raw.Value)
-	inviteTime, _, match := s.parseRtpLog(resp.Rows[0].Raw.Value)
-	if !match {
-		log.Println("get invite time err")
-		return "", "", fmt.Errorf("get invite time err")
-	}
-
-	pos := strings.Index(resp.Rows[0].Raw.Value, "send_message:")
-	if pos == -1 {
-		log.Println("find send_message: err")
-		return "", "", err
-	}
-	raw := resp.Rows[0].Raw.Value[pos+len("send_message:")+1:]
-	idx := strings.Index(raw, "Content-Length")
-	if idx == -1 {
-		log.Println("find Content-Length err")
-		return "", "", err
-	}
-	idx2 := strings.Index(raw[idx:], "\r\n")
-	if idx2 == -1 {
-		log.Println("find idx2 err")
-		return "", "", err
-	}
-	idx += idx2 + 2
-	raw = insertString(raw, "\r\n", idx)
-	return inviteTime, raw, nil
-
-}
-
-func (s *Parser) getSsrc(str string) (string, error) {
-	val, match := s.getValue(str, "sts=", ", muxer")
-	if !match {
-		return "", fmt.Errorf("get sts err")
-	}
-	ss := strings.Split(val, "/")
-	if len(ss) != 3 {
-		return "", fmt.Errorf("ss not 3")
-	}
-	num, err := strconv.ParseInt(ss[2][2:], 16, 64)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%d", num), nil
-}
-
-type SSRCInfo struct {
-	SSRC string
-	Date string
+	log.Println("get delete ch log cost:", time.Since(start))
+	return s.getFirstLogAfterTimePoint(data, createChTime)
 }
 
 type StreamIdInfo struct {
@@ -273,60 +117,6 @@ func (s *Parser) getIds() (streamInfo StreamIdInfo) {
 	return
 }
 
-func (s *Parser) getValByRegex(str, re string) (string, error) {
-	regex := regexp.MustCompile(re)
-	matchs := regex.FindStringSubmatch(str)
-	if len(matchs) < 1 {
-		return "", fmt.Errorf("not match, str: %s re: %s", str, re)
-	}
-	return matchs[1], nil
-}
-
-func (s *Parser) getNewestLog(logs string) (string, error) {
-	ss := strings.Split(logs, "\r\n")
-	if len(ss) == 1 {
-		return logs, nil
-	}
-	newestLog := ""
-	newestDateTime := ""
-	for _, str := range ss {
-		if str == "" {
-			continue
-		}
-		if strings.Contains(str, "Pseudo-terminal") {
-			continue
-		}
-		dateTime, err := s.getValByRegex(str, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
-		if err != nil {
-			return "", err
-		}
-		if newestLog == "" {
-			newestLog = str
-			newestDateTime = dateTime
-			continue
-		}
-		if dateTime > newestDateTime {
-			newestLog = str
-			newestDateTime = dateTime
-		}
-	}
-	if newestLog == "" {
-		return "", fmt.Errorf("no valid log found")
-	}
-	return newestLog, nil
-}
-
-func (s *Parser) query(Keywords []string) (query string) {
-	for i, keyword := range Keywords {
-		if i < len(Keywords)-1 {
-			query += fmt.Sprintf("%s.*", keyword)
-		} else {
-			query += keyword
-		}
-	}
-	return
-}
-
 func (s *Parser) doSearch(node, service, query string, resultChan chan<- string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	log.Println("fetching logs from", node)
@@ -337,16 +127,6 @@ func (s *Parser) doSearch(node, service, query string, resultChan chan<- string,
 	}
 	log.Println("fetch logs from", node, "done")
 	resultChan <- raw
-}
-
-func (s *Parser) multiLineQuery(Keywords []string) (query string) {
-	//query = "(?s)(?<=<--------------------------------------------------------------------------------------------------->).*?"
-	query = "(?s)(---).*?"
-	for _, keyword := range Keywords {
-		query += keyword + ".*?"
-	}
-	query += "(---)"
-	return
 }
 
 func (s *Parser) searchLog() {
@@ -474,7 +254,9 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if len(s.Conf.Keywords) > 0 {
+		start := time.Now()
 		s.SearchSipLogs()
+		log.Println("cost", time.Since(start))
 		return nil
 	}
 	if s.Conf.PullStream {
@@ -485,8 +267,8 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
-	//log.Println(getAllSipRawFiles2())
-	msgs, _ := GetSipMsgs("202076923212,4491783")
-	log.Println(msgs)
+	start := time.Now()
+	res, err := s.getSipLog("bili-jjh9", "202050606396")
+	log.Println("sip log", res, "err:", err, "cost:", time.Since(start))
 	return nil
 }

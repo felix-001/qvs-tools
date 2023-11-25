@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -17,42 +17,17 @@ type InvitInfo struct {
 	Time    string
 }
 
-func (s *Parser) getInviteLog() (string, error) {
+func (s *Parser) getInviteLog() string {
 	streamInfo := s.getIds()
 	keywords := []string{"invite ok", streamInfo.GbId}
 	if streamInfo.ChId != "" {
 		keywords = append(keywords, streamInfo.ChId)
 	}
-	query := s.query(keywords)
-	resultChan := make(chan string)
-	wg := sync.WaitGroup{}
-	wg.Add(4)
-	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
-	for _, node := range nodes {
-		go s.doSearch(node, "qvs-server", query, resultChan, &wg)
-	}
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-	var finalResult string
-	for str := range resultChan {
-		finalResult += str
-	}
-	logs, err := s.getNewestLog(finalResult)
-	if err != nil {
-		log.Println("get newest loggg err:", err)
-		return "", err
-	}
-	//log.Println(node, raw)
-	return logs, nil
+	re := s.query(keywords)
+	return s.fetchQvsServerLog(re)
 }
 
-func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
-	raw, err := s.getInviteLog()
-	if err != nil {
-		return
-	}
+func (s *Parser) parseInviteInfo(raw string) (inviteInfo InvitInfo, err error) {
 	inviteInfo.CallId, err = s.getValByRegex(raw, `callId: (\d+)`)
 	if err != nil {
 		return
@@ -83,6 +58,16 @@ func (s *Parser) getInviteInfo() (inviteInfo InvitInfo, err error) {
 func (s *Parser) getRtpLog(taskId, nodeId, ssrc string) (string, error) {
 	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout|tcp attach.*%s", taskId, taskId, taskId, ssrc)
 	return s.searchLogs(nodeId, "qvs-rtp", re)
+}
+
+func (s *Parser) getSipLog(node, callid string) (string, error) {
+	ss := strings.Split(node, "_")
+	service := "qvs-sip"
+	if len(ss) > 1 {
+		service += ss[1]
+	}
+	re := fmt.Sprintf("INVITE response.*%s|sip_bye.*%s", callid, callid)
+	return s.searchLogs(ss[0], service, re)
 }
 
 func (s *Parser) getCreateChLogs(inviteTime, streamId, nodeId string) (string, error) {
@@ -124,6 +109,18 @@ func (s *Parser) getChidOfIPC(node, gbid string) (string, error) {
 	return chid, nil
 }
 
+func (s *Parser) getSipInviteRespLog(nodeid, callid string, resultChan chan<- string) {
+	go func() {
+		res, err := s.getSipLog(nodeid, callid)
+		if err != nil {
+			log.Println("get sip invite resp log err:", err)
+			resultChan <- ""
+			return
+		}
+		resultChan <- res
+	}()
+}
+
 /*
  * invite √
  * invite resp √
@@ -136,10 +133,17 @@ func (s *Parser) getChidOfIPC(node, gbid string) (string, error) {
  * tcp attach √
  * inner stean
  * catalog invite
+ * reset by peer
+ * rtp 日志，过滤某个gbid
+ * create channel 时间点之后的delete channel √
+ * create channel时间点之后的idle timeout
  */
 func (s *Parser) streamPullFail() {
+	final := ""
 	streamInfo := s.getIds()
-	inviteInfo, err := s.getInviteInfo()
+	raw := s.getInviteLog()
+	final += raw
+	inviteInfo, err := s.parseInviteInfo(raw)
 	if err != nil {
 		log.Println("get invite info err:", err)
 		return
@@ -153,17 +157,15 @@ func (s *Parser) streamPullFail() {
 		streamInfo.ChId = chid
 	}
 	log.Println("real chid:", streamInfo.ChId)
-	start := time.Now()
 	params := streamInfo.ChId + "," + inviteInfo.CallId
-	sipMsgs, err := GetSipMsg(params)
+	dev, err := getDevice(streamInfo.GbId)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	//log.Println(sipMsgs)
-	log.Println("cost:", time.Since(start))
-	msgs := s.splitSipMsg(sipMsgs)
-	log.Println("msgs: ", len(msgs))
-	//log.Println(msgs)
+	s.GetSipMsg(dev.NodeId, params)
+	resultChan := make(chan string)
+	s.getSipInviteRespLog(dev.NodeId, inviteInfo.CallId, resultChan)
+
 	rtpNodeId, err := s.getRtpNode(inviteInfo.RtpIp)
 	if err != nil {
 		log.Fatalln(err)
@@ -173,17 +175,36 @@ func (s *Parser) streamPullFail() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	final += createChLog
+	createChTime, err := s.getValByRegex(createChLog, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	log.Println("createChLog:", createChLog)
 	_, taskId, match := s.parseRtpLog(createChLog)
 	if !match {
 		log.Fatalln("get task id from create ch log err")
 	}
 	log.Println("taskId:", taskId)
+	start2 := time.Now()
 	rtpLog, err := s.getRtpLog(taskId, rtpNodeId, inviteInfo.SSRC)
 	if err != nil {
 		log.Fatalln(err)
 	}
+	log.Println("get rtp log cost:", time.Since(start2))
 	log.Println("rtpLog:", rtpLog)
+	final += rtpLog
+	delChLog, err := s.getDeleteChLog(createChTime, rtpNodeId)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	final += delChLog + "\n"
+	log.Println("delete ch log:", delChLog)
+	inviteRespLog := <-resultChan
+	final += inviteRespLog
+	if err := ioutil.WriteFile("out.log", []byte(final), 0644); err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func (s *Parser) splitSipMsg(raw string) []string {
