@@ -78,8 +78,17 @@ func (s *Parser) searchLogsOne(node, service, re string) (string, error) {
 
 func qsshCmd(rawCmd, node string) string {
 	jumpbox := "ssh -t liyuanquan@10.20.34.27"
-	cmd := fmt.Sprintf("%s \"qssh %s \\\" %s \\\" \"", jumpbox, node, rawCmd)
+	cmd := fmt.Sprintf("%s \"qssh %s \\\" %s \\\"\"", jumpbox, node, rawCmd)
 	return cmd
+}
+
+func (s *Parser) searchLogsAllService(node, re string) (string, error) {
+	rawCmd := fmt.Sprintf("~/liyq/multi-process-search.py '%s'", re)
+	cmd := qsshCmd(rawCmd, node)
+	if s.Conf.Verbose {
+		log.Println(cmd)
+	}
+	return RunCmd(cmd)
 }
 
 func jumpboxCmd(rawCmd string) (string, error) {

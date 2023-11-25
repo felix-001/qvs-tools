@@ -199,11 +199,26 @@ type TaskParam struct {
 	Service string
 }
 
+type TaskParamAllService struct {
+	Node string
+	Re   string
+}
+
 func (s *Parser) taskHandler(v interface{}) string {
 	param := v.(TaskParam)
 	result, err := s.searchLogs(param.Node, param.Service, param.Re)
 	if err != nil {
 		log.Println("search log err", param.Node, param.Service, param.Re)
+		return ""
+	}
+	return result
+}
+
+func (s *Parser) taskHandlerAllService(v interface{}) string {
+	param := v.(TaskParamAllService)
+	result, err := s.searchLogsAllService(param.Node, param.Re)
+	if err != nil {
+		log.Println("search log err", param.Node, param.Re)
 		return ""
 	}
 	return result
@@ -217,6 +232,16 @@ func (s *Parser) fetchCenterLog(service, re string, handler Handler) string {
 		TaskParam{"bili-jjh9", re, service},
 	}
 	return s.RunParallelTask(params, handler)
+}
+
+func (s *Parser) fetchCenterAllServiceLogs(re string) string {
+	params := []interface{}{
+		TaskParamAllService{"jjh1445", re},
+		TaskParamAllService{"jjh250", re},
+		TaskParamAllService{"jjh1449", re},
+		TaskParamAllService{"bili-jjh9", re},
+	}
+	return s.RunParallelTask(params, s.taskHandlerAllService)
 }
 
 func (s *Parser) fetchQvsServerLog(re string) string {
@@ -250,7 +275,9 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.Re != "" {
-		s.searchLog()
+		//s.searchLog()
+		result := s.fetchCenterAllServiceLogs(s.Conf.Re)
+		log.Println(result)
 		return nil
 	}
 	if len(s.Conf.Keywords) > 0 {

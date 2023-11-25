@@ -101,6 +101,71 @@ if __name__ == '__main__':
 
 `
 
+var multiProcessSearch = `
+#!/usr/bin/python
+
+import sys
+import os
+import datetime
+import multiprocessing
+
+def grep_search(directory, search_string):
+    command = "grep '{0}' {1}*".format(search_string, directory)
+    #print(command)
+    #start = datetime.datetime.now()
+    output = os.popen(command).read()
+    #end = datetime.datetime.now()
+    #print("cost:"+str(end-start)+" " + command)
+    return output
+
+def process_directory(directory, search_string, results):
+    output = grep_search(directory, search_string)
+    results.append(output)
+
+if __name__ == '__main__':
+    start = datetime.datetime.now()
+
+    search_string = sys.argv[1]
+    services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "pili-themisd", "server-api", "themisd-api"]
+
+    processes = []
+    manager = multiprocessing.Manager()
+    results = manager.list()
+    node = os.popen("hostname").read()
+    node = node[:len(node)-1]
+    #print("node:"+node)
+
+    for service in services:
+	path = "/home/qboxserver/" + service + "/_package/run/"
+ 	if service == "server-api":
+		path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/QVS-SERVER"
+        if service == "themisd-api":
+		path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/PILI-THEMISD"
+		if node == "jjh1449":
+			path += "-TEST"
+		if node == "bili-jjh9":
+			#print("themisd api skip bili-jjh9")
+			continue
+	if service == "pili-themisd" and node == "bili-jjh9":
+		continue
+
+        process = multiprocessing.Process(target=process_directory, args=(path, search_string, results))
+        process.start()
+        processes.append(process)
+
+    for process in processes:
+        process.join()
+
+    final = ""
+    for result in results:
+        final += result
+
+    end = datetime.datetime.now()
+    #print("total cost"+str(end - start))
+    print(final)
+
+`
+
 func sshCmd(rawCmd, node string) string {
 	jumpbox := "ssh -t liyuanquan@10.20.34.27"
 	cmd := fmt.Sprintf("%s \"qssh %s \\\" %s \\\" \"", jumpbox, node, rawCmd)
