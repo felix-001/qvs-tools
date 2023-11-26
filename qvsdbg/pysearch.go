@@ -168,7 +168,7 @@ if __name__ == '__main__':
 
 func sshCmd(rawCmd, node string) string {
 	jumpbox := "ssh -t liyuanquan@10.20.34.27"
-	cmd := fmt.Sprintf("%s \"qssh %s \\\" %s \\\" \"", jumpbox, node, rawCmd)
+	cmd := fmt.Sprintf("%s \"qssh %s \\\"%s\\\"\"", jumpbox, node, rawCmd)
 	return cmd
 }
 
@@ -198,6 +198,7 @@ func doRunCmd(cmd string, resultChan chan<- string, exitChan chan<- bool, wg *sy
 		return
 	}
 	if result == "" {
+		resultChan <- ""
 		return
 	}
 
@@ -206,7 +207,7 @@ func doRunCmd(cmd string, resultChan chan<- string, exitChan chan<- bool, wg *sy
 	exitChan <- true // 发送退出信号
 }
 
-func searchThemisd(re string) (string, error) {
+func (s *Parser) searchThemisd(re string) (string, error) {
 	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
 	resultChan := make(chan string)
 	exitChan := make(chan bool) // 退出通道
@@ -219,9 +220,12 @@ func searchThemisd(re string) (string, error) {
 		} else {
 			rawCmd += "PILI-THEMISD/;"
 		}
-		rawCmd += fmt.Sprintf("grep -E -h -m 1 \"%s\" * -R", re)
+		rawCmd += fmt.Sprintf("grep -E -h -m 1 '%s' * -R", re)
 		//		log.Println("search themisd node", node)
 		cmd := sshCmd(rawCmd, node)
+		if s.Conf.Verbose {
+			log.Println(cmd)
+		}
 		go doRunCmd(cmd, resultChan, exitChan, &wg)
 	}
 	go func() {

@@ -51,6 +51,6 @@ func (s *Parser) SearchSipLogs() string {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println(result)
+	//log.Println(result)
 	return result
 }

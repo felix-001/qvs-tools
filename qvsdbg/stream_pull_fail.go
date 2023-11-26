@@ -78,11 +78,11 @@ func (s *Parser) getCreateChLogs(inviteTime, streamId, nodeId string) (string, e
 func (s *Parser) getRtpNode(rtpIp string) (string, error) {
 	start := time.Now()
 	re := fmt.Sprintf("/stream/publish/check.*%s", rtpIp)
-	result, err := searchThemisd(re)
+	result, err := s.searchThemisd(re)
 	if err != nil {
 		return "", err
 	}
-	log.Println("get rtp node cost:", time.Since(start))
+	log.Println("get rtp node cost:", time.Since(start), "result:", result)
 	return s.getValByRegex(result, `"nodeId":"(.*?)"`)
 }
 
