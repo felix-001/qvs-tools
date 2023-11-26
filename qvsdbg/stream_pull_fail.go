@@ -55,8 +55,8 @@ func (s *Parser) parseInviteInfo(raw string) (inviteInfo InvitInfo, err error) {
 	return
 }
 
-func (s *Parser) getRtpLog(taskId, nodeId, ssrc string) (string, error) {
-	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout|tcp attach.*%s", taskId, taskId, taskId, ssrc)
+func (s *Parser) getRtpLog(taskId, nodeId, ssrc, chid string) (string, error) {
+	re := fmt.Sprintf("%s.*got first|%s.*delete_channel|%s.*stream idle timeout|tcp attach.*%s|%s.*reset by peer", taskId, taskId, taskId, ssrc, chid)
 	return s.searchLogs(nodeId, "qvs-rtp", re)
 }
 
@@ -121,6 +121,12 @@ func (s *Parser) getSipInviteRespLog(nodeid, callid string, resultChan chan<- st
 	}()
 }
 
+func (s *Parser) getStartStreamLog(inviteTime string) string {
+	streamInfo := s.getIds()
+	re := fmt.Sprintf("%s.*start a.*stream.*%s|devices/%s/start|rebuild strean.*%s.*%s", inviteTime[:18], s.Conf.StreamId, streamInfo.GbId, streamInfo.GbId, streamInfo.ChId)
+	return s.fetchCenterAllServiceLogs(re)
+}
+
 /*
  * invite √
  * invite resp √
@@ -128,15 +134,14 @@ func (s *Parser) getSipInviteRespLog(nodeid, callid string, resultChan chan<- st
  * bye resp √
  * create channel √
  * delete channel √
- * channel remove
- * got first
+ * got first √
  * tcp attach √
  * inner stean
  * catalog invite
- * reset by peer
+ * reset by peer √
  * rtp 日志，过滤某个gbid
  * create channel 时间点之后的delete channel √
- * create channel时间点之后的idle timeout
+ * create channel时间点之后的idle timeout √
  */
 func (s *Parser) streamPullFail() {
 	final := ""
@@ -187,7 +192,7 @@ func (s *Parser) streamPullFail() {
 	}
 	log.Println("taskId:", taskId)
 	start2 := time.Now()
-	rtpLog, err := s.getRtpLog(taskId, rtpNodeId, inviteInfo.SSRC)
+	rtpLog, err := s.getRtpLog(taskId, rtpNodeId, inviteInfo.SSRC, streamInfo.ChId)
 	if err != nil {
 		log.Fatalln(err)
 	}

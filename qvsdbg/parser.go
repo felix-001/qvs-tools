@@ -294,8 +294,7 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
-	start := time.Now()
-	res, err := s.getSipLog("bili-jjh9", "202050606396")
-	log.Println("sip log", res, "err:", err, "cost:", time.Since(start))
+	res := s.getStartStreamLog("2023/11/25 09:56:47.678513")
+	log.Println("res:", res)
 	return nil
 }
