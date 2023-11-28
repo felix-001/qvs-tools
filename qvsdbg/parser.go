@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,12 +14,10 @@ type M map[string]string
 
 type Parser struct {
 	Conf *Config
-	pdr  *Pdr
 }
 
 func NewParser(conf *Config) *Parser {
-	pdr := NewPdr(conf)
-	return &Parser{Conf: conf, pdr: pdr}
+	return &Parser{Conf: conf}
 }
 
 type Keyword struct {
@@ -129,32 +126,6 @@ func (s *Parser) doSearch(node, service, query string, resultChan chan<- string,
 	resultChan <- raw
 }
 
-func (s *Parser) searchLog() {
-	if s.Conf.Node == "" || s.Conf.Service == "" {
-		flag.PrintDefaults()
-		log.Fatalln("check param err")
-	}
-	if s.Conf.Node == "center" {
-		nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
-		out := ""
-		for _, node := range nodes {
-			result, err := s.searchLogs(node, s.Conf.Service, s.Conf.Re)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			out += result
-		}
-		log.Println(out)
-		return
-	}
-	result, err := s.searchLogs(s.Conf.Node, s.Conf.Service, s.Conf.Re)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Println(result)
-
-}
-
 func (s *Parser) searchApiHandler(v interface{}) string {
 	param := v.(TaskParam)
 	service := strings.ToUpper(param.Service)
@@ -168,24 +139,6 @@ func (s *Parser) searchApiHandler(v interface{}) string {
 
 func (s *Parser) searchQvsServerApiLog(re string) string {
 	return s.fetchCenterLog("qvs-server", re, s.searchApiHandler)
-}
-
-func (s *Parser) searchApiLogs() {
-	if s.Conf.Service == "" {
-		flag.PrintDefaults()
-		log.Fatalln("need service")
-	}
-	nodes := []string{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
-	out := ""
-	service := strings.ToUpper(s.Conf.Service)
-	for _, node := range nodes {
-		result, err := s.searchApiLog(node, service, s.Conf.Re)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		out += result
-	}
-	log.Println(out)
 }
 
 func (s *Parser) RunParallelTask(params []interface{}, handler Handler) string {
@@ -287,22 +240,7 @@ func (s *Parser) Run() error {
 		s.streamPullFail()
 		return nil
 	}
-	if s.Conf.Api {
-		if s.Conf.Service == "qvs-server" {
-			result := s.searchQvsServerApiLog(s.Conf.Re)
-			log.Println(result)
-			return nil
-		}
-		s.searchApiLogs()
-		return nil
-	}
-	if s.Conf.Re != "" {
-		//s.searchLog()
-		result := s.fetchCenterAllServiceLogs(s.Conf.Re)
-		log.Println(result)
-		return nil
-	}
-	if len(s.Conf.Keywords) > 0 {
+	if s.Conf.Sip {
 		start := time.Now()
 		s.SearchSipLogs()
 		log.Println("cost", time.Since(start))
@@ -316,7 +254,7 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
-	node, err := s.getNodeByIP("124.160.115.132")
-	log.Println(node, err)
+	result := s.fetchCenterAllServiceLogs(s.Conf.Re)
+	log.Println(result)
 	return nil
 }

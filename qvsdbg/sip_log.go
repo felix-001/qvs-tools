@@ -47,7 +47,7 @@ func (s *Parser) SearchSipLogs() string {
 	if len(ss) == 2 {
 		instance = ss[1]
 	}
-	result, err := FetchSipMsg(node, instance, s.Conf.Keywords)
+	result, err := FetchSipMsg(node, instance, s.Conf.Re)
 	if err != nil {
 		log.Fatalln(err)
 	}

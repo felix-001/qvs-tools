@@ -10,12 +10,12 @@ import (
 func (s *Parser) httpProc(input string) string {
 	ss := strings.Split(input, " ")
 	cmd := ss[0]
-	keywords := ss[1]
-	node := ss[2]
+	//keywords := ss[1]
+	//node := ss[2]
 	switch cmd {
 	case "sip":
-		s.Conf.Keywords = keywords
-		s.Conf.Node = node
+		//s.Conf.Keywords = keywords
+		//s.Conf.Node = node
 		return s.SearchSipLogs()
 	}
 	return ""

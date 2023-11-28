@@ -279,8 +279,8 @@ var centerNodeList2 = []interface{}{"jjh1445", "jjh250", "jjh1449", "bili-jjh9"}
 // 参数列表，逗号分隔
 // <chid>,<callid>,...
 func (s *Parser) GetSipMsg(node, params string) {
-	s.Conf.Node = node
-	s.Conf.Keywords = params
+	//s.Conf.Node = node
+	//s.Conf.Keywords = params
 	go s.SearchSipLogs()
 }
 
