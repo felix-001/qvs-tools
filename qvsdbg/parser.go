@@ -254,6 +254,28 @@ func (s *Parser) PullStreamLog() {
 	log.Println("fetch pull stream log:", result)
 }
 
+func (s *Parser) isContain(v string, items []string) bool {
+	for _, item := range items {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Parser) getNodeByIP(ip string) (string, error) {
+	nodes, err := s.getNodes()
+	if err != nil {
+		return "", err
+	}
+	for _, node := range nodes {
+		if s.isContain(ip, node.Ips) {
+			return node.ID, nil
+		}
+	}
+	return "", fmt.Errorf("not found")
+}
+
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
@@ -294,7 +316,7 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
-	res := s.getStartStreamLog("2023/11/25 09:56:47.678513")
-	log.Println("res:", res)
+	node, err := s.getNodeByIP("124.160.115.132")
+	log.Println(node, err)
 	return nil
 }

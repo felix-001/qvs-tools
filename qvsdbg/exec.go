@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
@@ -49,6 +50,28 @@ func RunPyCmd(cmdstr string, args []string) (string, error) {
 	//return string(b), nil
 	raw := string(b)
 	return raw, nil
+}
+
+type Node struct {
+	ID  string   `json:"id"`
+	Ips []string `json:"ips"`
+}
+
+func (s *Parser) getNodes() ([]Node, error) {
+	rawCmd := "curl -s http://localhost:1201/nodes"
+	cmd := qsshCmd(rawCmd, "lf286")
+	res, err := RunCmd(cmd)
+	if err != nil {
+		return nil, err
+	}
+	items := &struct {
+		Items []Node `json:"items"`
+	}{}
+	if err := json.Unmarshal([]byte(res), &items); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return items.Items, nil
 }
 
 func (s *Parser) searchLogs(node, service, re string) (string, error) {
