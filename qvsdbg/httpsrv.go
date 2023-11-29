@@ -34,5 +34,5 @@ func (s *Parser) HttpSrvRun() {
 		fmt.Fprintf(w, html)
 	})
 
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(":8001", nil))
 }
