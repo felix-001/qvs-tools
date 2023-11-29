@@ -254,7 +254,9 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
+	start := time.Now()
 	result := s.fetchCenterAllServiceLogs(s.Conf.Re)
 	log.Println(result)
+	log.Println("cost:", time.Since(start))
 	return nil
 }

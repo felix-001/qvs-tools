@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
 )
 
 func FetchSipMsg(node, instance, params string) (string, error) {
@@ -37,16 +36,20 @@ func FetchSipMsg(node, instance, params string) (string, error) {
 }
 
 func (s *Parser) SearchSipLogs() string {
-	if s.Conf.Node == "" {
-		log.Println("need node, ex: jjh1445_2")
-		return ""
-	}
-	ss := strings.Split(s.Conf.Node, "_")
-	node := ss[0]
-	instance := ""
-	if len(ss) == 2 {
-		instance = ss[1]
-	}
+	/*
+			if s.Conf.Node == "" {
+				log.Println("need node, ex: jjh1445_2")
+				return ""
+			}
+			ss := strings.Split(s.Conf.Node, "_")
+		node := ss[0]
+		instance := ""
+		if len(ss) == 2 {
+			instance = ss[1]
+		}
+	*/
+	node := "jjh250"
+	instance := "1"
 	result, err := FetchSipMsg(node, instance, s.Conf.Re)
 	if err != nil {
 		log.Fatalln(err)
