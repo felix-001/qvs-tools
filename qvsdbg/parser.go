@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"regexp"
 	"strings"
@@ -24,24 +23,6 @@ type Keyword struct {
 	Start string
 	End   string
 	Key   string
-}
-
-func (s *Parser) decodeErr() {
-	re := fmt.Sprintf("grep \"15010400402000000000_15010400401320000656.*decode ps packet error\" * -R")
-	logs, err := s.searchLogs("zz780", "qvs-rtp", re)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if len(logs) == 0 {
-		log.Println("log empty")
-		return
-	}
-	err = ioutil.WriteFile("decode.txt", []byte(logs), 0644)
-	if err != nil {
-		log.Println(err)
-		return
-	}
 }
 
 func (s *Parser) parseRtpLog(str string) (string, string, bool) {
@@ -232,7 +213,7 @@ func (s *Parser) getNodeByIP(ip string) (string, error) {
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
-// decode err
+// decode err, 15010400402000000000_15010400401320000656.*decode ps packet error
 // 播放者的ip
 // flv对端ip, "HttpFlvConnected" and "32050000491180000023_32050000491320000011"
 func (s *Parser) Run() error {
@@ -247,7 +228,11 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.PullStream {
-		s.PullStreamLog()
+		start := time.Now()
+		re := fmt.Sprintf("start a  channel stream.*%s", s.Conf.StreamId)
+		result := s.fetchCenterAllServiceLogs(re)
+		log.Println(result)
+		log.Println("cost:", time.Since(start))
 		return nil
 	}
 	if s.Conf.HttpSrv {
