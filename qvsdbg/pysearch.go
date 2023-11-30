@@ -62,7 +62,7 @@ def multiLineSearch(file, results, filename):
             continue
         checkKeywords(line)
         logs += line
-    print("result len is:"+str(len(result)))
+    #print("result len is:"+str(len(result)))
     # skip <-------->
     if len(result) > 102:
     	write_to_file("/home/qboxserver/liyq/sip-search-result/"+filename, result)
@@ -93,7 +93,7 @@ def print_file_contents(directory):
     for path, dirs, files in os.walk(directory):
         for file in files:
             filepath = os.path.join(path, file)
-            
+
             with open(filepath, 'r') as f:
                 contents = f.read()
                 print(contents, filepath)
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     delete_files("/home/qboxserver/liyq/sip-search-result")
 
     for directory in paths:
-	print(directory)
+	#print(directory)
 	for root, dirs, files in os.walk(directory):
 		for file_name in files:
 			if ".sip_raw" in file_name:
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     #write_to_file("/tmp/out.txt", final)
 
     end = datetime.datetime.now()
-    print("cost time:" + str(end - start) )
+    #print("cost time:" + str(end - start) )
 
     size = get_directory_size("/home/qboxserver/liyq/sip-search-result")
 
@@ -408,7 +408,7 @@ func (s *Parser) GetSipMsgs(query string) (string, error) {
 	}
 	handler := func(v interface{}) string {
 		param := v.(SearchSipParam)
-		log.Println("fetching sip log", param.Node, param.File)
+		log.Println("fetching sip log", param.Node, param.Node)
 		if s.Conf.WritePyToNode {
 			if str, err := writeScriptToNode(param.Node); err != nil {
 				log.Println("write script err", param.Node, err, str)

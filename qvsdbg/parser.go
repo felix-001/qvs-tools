@@ -223,7 +223,11 @@ func (s *Parser) Run() error {
 	}
 	if s.Conf.Sip {
 		start := time.Now()
-		s.SearchSipLogs()
+		result, err := s.GetSipMsgs(s.Conf.Re)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.Println(result)
 		log.Println("cost", time.Since(start))
 		return nil
 	}
