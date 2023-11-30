@@ -68,12 +68,12 @@ def multiLineSearch(file, results, filename):
     	write_to_file("/home/qboxserver/liyq/sip-search-result/"+filename, result)
 
 def process_file(file_path, results, filename):
-    print("start search file " + file_path)
+    #print("start search file " + file_path)
     #start = datetime.datetime.now()
     with open(file_path, "r") as file:
         multiLineSearch(file, results, filename)
     end = datetime.datetime.now()
-    print("task Time elapsed:" + str(end - start) + " " + file_path)
+    #print("task Time elapsed:" + str(end - start) + " " + file_path)
 
 def write_to_file(file_path, content):
     with open(file_path, 'w') as file:
@@ -96,7 +96,8 @@ def print_file_contents(directory):
 
             with open(filepath, 'r') as f:
                 contents = f.read()
-                print(contents, filepath)
+		print(contents)
+                #print(contents, filepath)
 
 def delete_files(directory):
     for path, dirs, files in os.walk(directory):
