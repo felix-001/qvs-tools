@@ -170,8 +170,7 @@ func (s *Parser) streamPullFail() {
 	s.GetSipMsg(dev.NodeId, params)
 	resultChan := make(chan string)
 	s.getSipInviteRespLog(dev.NodeId, inviteInfo.CallId, resultChan)
-
-	rtpNodeId, err := s.getRtpNode(inviteInfo.RtpIp)
+	rtpNodeId, err := s.getNodeByIP(inviteInfo.RtpIp)
 	if err != nil {
 		log.Fatalln(err)
 	}
