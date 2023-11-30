@@ -24,6 +24,7 @@ type Config struct {
 	PullStream     bool
 	HttpSrv        bool
 	Sip            bool
+	WritePyToNode  bool
 }
 
 func checkConf(config *Config) error {
@@ -53,6 +54,7 @@ func parseConsole(config *Config) {
 	flag.BoolVar(&config.PullStream, "pull", false, "捞取拉流日志")
 	flag.BoolVar(&config.HttpSrv, "srv", false, "是否启动http server")
 	flag.BoolVar(&config.Sip, "sip", false, "是否捞取sip日志")
+	flag.BoolVar(&config.WritePyToNode, "w", false, "是否需要把py脚本写入到节点")
 
 	flag.Parse()
 }

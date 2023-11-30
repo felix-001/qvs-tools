@@ -18,7 +18,7 @@ import multiprocessing
 
 # -*- coding: UTF-8 -*-
 
-keys = sys.argv[2].split(",")
+keys = sys.argv[1].split(",")
 keywords = {key: False for key in keys}
 
 def checkKeywords(line):
@@ -37,9 +37,10 @@ def resetKeywords():
     for key in keywords:
         keywords[key] = False
 
-def multiLineSearch(file, results):
+def multiLineSearch(file, results, filename):
     logs = ""
     foundStart = False
+    result = ""
 
     for line in file:
         if foundStart == False:
@@ -51,7 +52,8 @@ def multiLineSearch(file, results):
         if "---" in line:
             if allNeedFound():
                 results.append(logs)
-		print(logs)
+		#print(logs)
+		result += logs
                 logs = line
                 resetKeywords()
             else:
@@ -60,45 +62,91 @@ def multiLineSearch(file, results):
             continue
         checkKeywords(line)
         logs += line
+    print("result len is:"+str(len(result)))
+    # skip <-------->
+    if len(result) > 102:
+    	write_to_file("/home/qboxserver/liyq/sip-search-result/"+filename, result)
 
-def process_file(file_path, results):
-    #print("start search file " + file_path)
+def process_file(file_path, results, filename):
+    print("start search file " + file_path)
     #start = datetime.datetime.now()
     with open(file_path, "r") as file:
-        multiLineSearch(file, results)
-    #end = datetime.datetime.now()
-    #print("task Time elapsed:" + str(end - start) + " " + file_path)
+        multiLineSearch(file, results, filename)
+    end = datetime.datetime.now()
+    print("task Time elapsed:" + str(end - start) + " " + file_path)
 
 def write_to_file(file_path, content):
     with open(file_path, 'w') as file:
         file.write(content)
 
-if __name__ == '__main__':
-    #start = datetime.datetime.now()
+def get_directory_size(directory):
+    total_size = 0
 
-    directory = sys.argv[1]
+    for path, dirs, files in os.walk(directory):
+        for file in files:
+            filepath = os.path.join(path, file)
+            total_size += os.path.getsize(filepath)
+
+    return total_size
+
+def print_file_contents(directory):
+    for path, dirs, files in os.walk(directory):
+        for file in files:
+            filepath = os.path.join(path, file)
+            
+            with open(filepath, 'r') as f:
+                contents = f.read()
+                print(contents, filepath)
+
+def delete_files(directory):
+    for path, dirs, files in os.walk(directory):
+        for file in files:
+            filepath = os.path.join(path, file)
+            os.remove(filepath)
+
+if __name__ == '__main__':
+    start = datetime.datetime.now()
+
     processes = []
     manager = multiprocessing.Manager()
     results = manager.list()
 
-    for root, dirs, files in os.walk(directory):
-        for file_name in files:
-            file_path = os.path.join(root, file_name)
-            process = multiprocessing.Process(target=process_file, args=(file_path, results))
-            process.start()
-            processes.append(process)
+    paths = []
+    for service in ["qvs-sip", "qvs-sip2", "qvs-sip3"]:
+	paths.append("/home/qboxserver/"+service+"/_package/run/auditlog/sip_dump")
+
+    delete_files("/home/qboxserver/liyq/sip-search-result")
+
+    for directory in paths:
+	print(directory)
+	for root, dirs, files in os.walk(directory):
+		for file_name in files:
+			if ".sip_raw" in file_name:
+				# skip .sip_rawxxx.log.xxx
+				continue
+			file_path = os.path.join(root, file_name)
+			process = multiprocessing.Process(target=process_file, args=(file_path, results, file_name))
+			process.start()
+			processes.append(process)
 
     for process in processes:
         process.join()
 
-    final = ""
-    for result in results:
-        final += result
-    #write_to_file("out2.txt", final)
+    #final = ""
+    #for result in results:
+    #    final += result
+    #write_to_file("/tmp/out.txt", final)
 
     end = datetime.datetime.now()
-    #print("cost time:" + str(end - start) )
+    print("cost time:" + str(end - start) )
 
+    size = get_directory_size("/home/qboxserver/liyq/sip-search-result")
+
+    if size > 5*1024*1024:
+	print("err, search resutl too large, more than 5M, "+str(size))
+	exit()
+
+    print_file_contents("/home/qboxserver/liyq/sip-search-result")
 `
 
 var multiProcessSearch = `
@@ -179,11 +227,8 @@ func writeScriptToNode(node string) (string, error) {
 	return RunCmd(cmd)
 }
 
-func runMultiLineSearchScript(node string, args []string) (string, error) {
-	rawCmd := "python /home/qboxserver/liyq/multiLineSearch.py "
-	for _, arg := range args {
-		rawCmd += arg + " "
-	}
+func runMultiLineSearchScript(node, query string) (string, error) {
+	rawCmd := "python /home/qboxserver/liyq/multiLineSearch.py " + query
 	cmd := sshCmd(rawCmd, node)
 	//log.Println(cmd)
 	return RunCmd(cmd)
@@ -254,13 +299,9 @@ func runScript(node, params string, resultChan chan<- string, wg *sync.WaitGroup
 		log.Println("write script err", node)
 		return
 	}
-	args := []string{
-		"/home/qboxserver/qvs-sip/_package/run/auditlog/sip_dump",
-		params,
-	}
-	msg, err := runMultiLineSearchScript(node, args)
+	msg, err := runMultiLineSearchScript(node, params)
 	if err != nil {
-		log.Println("run script err", node, args)
+		log.Println("run script err", node, params)
 		return
 	}
 	//log.Println("msg:", msg, "len:", len(msg))
@@ -356,26 +397,11 @@ type SearchSipParam struct {
 	Query string
 }
 
-func GetSipMsgs(query string) (string, error) {
-	//logs, _ := runServiceLsCmd("qvs-rtp", "zz718")
-	files := getAllSipRawFiles()
-	/*
-		log.Printf("files: %#v\n", files)
-		log.Printf("files hex: %#x\n", files)
-		log.Println("files:", files)
-	*/
-	files = strings.TrimRight(files, "\n")
+func (s *Parser) GetSipMsgs(query string) (string, error) {
 	params := []interface{}{}
-	fileList := strings.Split(files, "\n")
-	log.Println(len(fileList))
-	for i, file := range fileList[:11] {
-		ss := strings.Split(file, ",")
-		if len(ss) != 2 {
-			log.Fatalln("ss err", file, i)
-		}
+	for _, node := range centerNodeList {
 		param := SearchSipParam{
-			Node:  ss[0],
-			File:  ss[1],
+			Node:  node,
 			Query: query,
 		}
 		params = append(params, param)
@@ -383,16 +409,15 @@ func GetSipMsgs(query string) (string, error) {
 	handler := func(v interface{}) string {
 		param := v.(SearchSipParam)
 		log.Println("fetching sip log", param.Node, param.File)
-		/*
+		if s.Conf.WritePyToNode {
 			if str, err := writeScriptToNode(param.Node); err != nil {
 				log.Println("write script err", param.Node, err, str)
 				return ""
 			}
-		*/
-		args := []string{param.File, param.Query}
-		msg, err := runMultiLineSearchScript(param.Node, args)
+		}
+		msg, err := runMultiLineSearchScript(param.Node, query)
 		if err != nil {
-			log.Println("run script err", param.Node, args, err, msg)
+			log.Println("run script err", param.Node, query, err, msg)
 			return ""
 		}
 		//log.Println("msg:", msg, "len:", len(msg))

@@ -22,7 +22,7 @@ func FetchSipMsg(node, instance, params string) (string, error) {
 		path,
 		params,
 	}
-	msg, err := runMultiLineSearchScript(node, args)
+	msg, err := runMultiLineSearchScript(node, path)
 	if err != nil {
 		log.Println("run script err", node, args)
 		return "", err
