@@ -27,6 +27,7 @@ var (
 	defAK  string
 	defSK  string
 	method string
+	conf   string
 )
 
 var (
@@ -34,8 +35,8 @@ var (
 )
 
 const (
-	apiHost = "http://mls.cn-east-1.qiniumiku.com"
-	conf    = "/usr/local/etc/miku.conf"
+	apiHost     = "http://mls.cn-east-1.qiniumiku.com"
+	defaultConf = "/usr/local/etc/miku.conf"
 )
 
 func hmacSha1(key, data string) string {
@@ -111,6 +112,9 @@ func mikuHttpReq(method, addr, body string) (string, error) {
 }
 
 func parseConf() {
+	if conf == "" {
+		conf = defaultConf
+	}
 	b, err := ioutil.ReadFile(conf)
 	if err != nil {
 		log.Printf("%s not found\n", conf)
@@ -124,18 +128,12 @@ func parseConf() {
 		log.Println("parse conf err", err)
 		return
 	}
-	defAK = keys.AK
-	defSK = keys.SK
-}
-
-func parseConsole() {
-	flag.StringVar(&ak, "ak", defAK, "ak")
-	flag.StringVar(&sk, "sk", defSK, "sk")
-	flag.StringVar(&path, "path", "", "path")
-	flag.StringVar(&body, "body", "", "body")
-	flag.StringVar(&host, "host", apiHost, "host")
-	flag.StringVar(&method, "method", "GET", "method")
-	flag.Parse()
+	if ak == "" {
+		ak = keys.AK
+	}
+	if sk == "" {
+		sk = keys.SK
+	}
 	if ak == "" {
 		log.Println("need ak")
 		flag.PrintDefaults()
@@ -146,6 +144,17 @@ func parseConsole() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+}
+
+func parseConsole() {
+	flag.StringVar(&ak, "ak", defAK, "ak")
+	flag.StringVar(&sk, "sk", defSK, "sk")
+	flag.StringVar(&path, "path", "", "path")
+	flag.StringVar(&body, "body", "", "body")
+	flag.StringVar(&host, "host", apiHost, "host")
+	flag.StringVar(&method, "method", "GET", "method")
+	flag.StringVar(&conf, "conf", "", "配置文件路径")
+	flag.Parse()
 	if path == "" {
 		log.Println("need path")
 		flag.PrintDefaults()
@@ -170,8 +179,8 @@ func printJson(data string) string {
 
 func main() {
 	log.SetFlags(log.Lshortfile)
-	parseConf()
 	parseConsole()
+	parseConf()
 	uri := fmt.Sprintf("%s%s", host, path)
 	if method == "" {
 		method = "GET"
