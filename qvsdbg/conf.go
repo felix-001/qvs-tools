@@ -26,6 +26,7 @@ type Config struct {
 	Sip            bool
 	WritePyToNode  bool
 	SearchThemisd  bool
+	Node           string
 }
 
 func checkConf(config *Config) error {
@@ -49,6 +50,7 @@ func parseConsole(config *Config) {
 	flag.StringVar(&config.StreamId, "sid", "", "stream id")
 	flag.StringVar(&config.Re, "re", "", "捞日志的正则表达式")
 	flag.StringVar(&config.Start, "start", start, "开始时间,格式为2023-11-05 19:20:00")
+	flag.StringVar(&config.Node, "node", "", "搜索rtp日志指定node")
 	flag.StringVar(&config.End, "end", end, "结束时间,格式为2023-11-05 19:20:00")
 	flag.BoolVar(&config.StreamPullFail, "s", false, "拉流失败获取日志")
 	flag.BoolVar(&config.Verbose, "v", false, "是否打印更详细的日志")

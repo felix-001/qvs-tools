@@ -243,6 +243,16 @@ func (s *Parser) Run() error {
 		s.HttpSrvRun()
 		return nil
 	}
+	if s.Conf.Node != "" {
+		start := time.Now()
+		result, err := s.searchLogs(s.Conf.Node, "qvs-rtp", s.Conf.Re)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.Println(result)
+		log.Println("cost:", time.Since(start))
+		return nil
+	}
 	start := time.Now()
 	result := s.fetchCenterAllServiceLogs(s.Conf.Re)
 	log.Println(result)
