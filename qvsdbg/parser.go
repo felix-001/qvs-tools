@@ -267,7 +267,9 @@ func (s *Parser) Run() error {
 		// 停止拉流
 		re += fmt.Sprintf("devices/%s/stop.*%s|", streamInfo.GbId, streamInfo.ChId)
 		// 按需截图
-		re += fmt.Sprintf("streams/%s/snap", s.Conf.StreamId)
+		re += fmt.Sprintf("streams/%s/snap|", s.Conf.StreamId)
+		// 一分钟无人观看关闭
+		re += fmt.Sprintf("CloseStream.*%s", s.Conf.StreamId)
 		result := s.fetchCenterAllServiceLogs(re)
 		log.Println(result)
 		log.Println("cost:", time.Since(start))
