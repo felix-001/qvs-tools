@@ -254,6 +254,10 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.Bye {
+		// TODO
+		// NVR 从通道获取rtp node
+		// IPC 从设备获取rtp node
+		// 然后获取reset by peer 日志
 		if s.Conf.StreamId == "" {
 			log.Println("need streamid")
 			return nil
