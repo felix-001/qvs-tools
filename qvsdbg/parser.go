@@ -253,6 +253,26 @@ func (s *Parser) Run() error {
 		log.Println("cost:", time.Since(start))
 		return nil
 	}
+	if s.Conf.Bye {
+		if s.Conf.StreamId == "" {
+			log.Println("need streamid")
+			return nil
+		}
+		streamInfo := s.getIds()
+		start := time.Now()
+		// autostrat
+		re := fmt.Sprintf("rebuild strean.*%s.*%s|", streamInfo.GbId, streamInfo.ChId)
+		// 按需拉流
+		re += fmt.Sprintf("start a.*stream.*%s|", s.Conf.StreamId)
+		// 停止拉流
+		re += fmt.Sprintf("devices/%s/stop.*%s|", streamInfo.GbId, streamInfo.ChId)
+		// 按需截图
+		re += fmt.Sprintf("streams/%s/snap", s.Conf.StreamId)
+		result := s.fetchCenterAllServiceLogs(re)
+		log.Println(result)
+		log.Println("cost:", time.Since(start))
+		return nil
+	}
 	start := time.Now()
 	result := s.fetchCenterAllServiceLogs(s.Conf.Re)
 	log.Println(result)

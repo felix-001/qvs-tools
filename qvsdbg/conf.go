@@ -26,6 +26,7 @@ type Config struct {
 	Sip            bool
 	WritePyToNode  bool
 	SearchThemisd  bool
+	Bye            bool
 	Node           string
 }
 
@@ -59,6 +60,7 @@ func parseConsole(config *Config) {
 	flag.BoolVar(&config.Sip, "sip", false, "是否捞取sip日志")
 	flag.BoolVar(&config.WritePyToNode, "w", false, "是否需要把py脚本写入到节点")
 	flag.BoolVar(&config.SearchThemisd, "themisd", false, "是否搜索themisd日志")
+	flag.BoolVar(&config.Bye, "bye", false, "搜索流为什么被断开了")
 
 	flag.Parse()
 }
