@@ -106,7 +106,17 @@ func qsshCmd(rawCmd, node string) string {
 }
 
 func (s *Parser) searchLogsAllService(node, re string) (string, error) {
-	rawCmd := fmt.Sprintf("~/liyq/multi-process-search.py '%s'", re)
+	if s.Conf.WritePyToNode {
+		if str, err := writeServiceScriptToNode(node); err != nil {
+			log.Println("write script err", node, err, str)
+			return "", err
+		}
+	}
+	mode := "release"
+	if s.Conf.Verbose {
+		mode = "debug"
+	}
+	rawCmd := fmt.Sprintf("~/liyq/multi-process-search.py '%s' '%s'", re, mode)
 	cmd := qsshCmd(rawCmd, node)
 	if s.Conf.Verbose {
 		log.Println(cmd)

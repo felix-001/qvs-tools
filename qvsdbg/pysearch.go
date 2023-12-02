@@ -150,21 +150,24 @@ if __name__ == '__main__':
     print_file_contents("/home/qboxserver/liyq/sip-search-result")
 `
 
-var multiProcessSearch = `
-#!/usr/bin/python
+var multiProcessSearch = `#!/usr/bin/python
 
 import sys
 import os
 import datetime
 import multiprocessing
+import socket
 
 def grep_search(directory, search_string):
-    command = "grep '{0}' {1}*".format(search_string, directory)
-    #print(command)
-    #start = datetime.datetime.now()
+    command = "LC_ALL=C grep -E -h '{0}' {1}* 2>/tmp/search-err.log".format(search_string, directory)
+    if sys.argv[2] == "debug":
+        print(command)
+    start = datetime.datetime.now()
     output = os.popen(command).read()
-    #end = datetime.datetime.now()
-    #print("cost:"+str(end-start)+" " + command)
+    end = datetime.datetime.now()
+    if sys.argv[2] == "debug":
+        hostname = socket.gethostname()
+        print("cost:"+str(end-start)+" " + command + " hostname: " + hostname)
     return output
 
 def process_directory(directory, search_string, results):
@@ -175,7 +178,8 @@ if __name__ == '__main__':
     start = datetime.datetime.now()
 
     search_string = sys.argv[1]
-    services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "pili-themisd", "server-api", "themisd-api"]
+    #services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "pili-themisd", "server-api", "themisd-api"]
+    services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "server-api", "themisd-api"]
 
     processes = []
     manager = multiprocessing.Manager()
@@ -185,18 +189,20 @@ if __name__ == '__main__':
     #print("node:"+node)
 
     for service in services:
-	path = "/home/qboxserver/" + service + "/_package/run/"
- 	if service == "server-api":
-		path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/QVS-SERVER"
+        path = "/home/qboxserver/" + service + "/_package/run/"
+        if service == "server-api":
+            path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/QVS-SERVER/"
         if service == "themisd-api":
-		path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/PILI-THEMISD"
-		if node == "jjh1449":
-			path += "-TEST"
-		if node == "bili-jjh9":
+            path = "/home/qboxserver/qvs-apigate/_package/run/auditlog/PILI-THEMISD"
+            if node == "jjh1449":
+                path += "-TEST"
+            else:
+                path += "/"
+            if node == "bili-jjh9":
 			#print("themisd api skip bili-jjh9")
-			continue
-	if service == "pili-themisd" and node == "bili-jjh9":
-		continue
+                continue
+        if service == "pili-themisd" and node == "bili-jjh9":
+            continue
 
         process = multiprocessing.Process(target=process_directory, args=(path, search_string, results))
         process.start()
@@ -210,9 +216,9 @@ if __name__ == '__main__':
         final += result
 
     end = datetime.datetime.now()
-    #print("total cost"+str(end - start))
+    if sys.argv[2] == "debug":
+        print("total cost"+str(end - start))
     print(final)
-
 `
 
 func sshCmd(rawCmd, node string) string {
@@ -224,6 +230,13 @@ func sshCmd(rawCmd, node string) string {
 func writeScriptToNode(node string) (string, error) {
 	b64 := base64.StdEncoding.EncodeToString([]byte(PyMultiLineSearchScript))
 	rawCmd := fmt.Sprintf("cd ~/liyq && echo %s | base64 -d > multiLineSearch.py", b64)
+	cmd := sshCmd(rawCmd, node)
+	return RunCmd(cmd)
+}
+
+func writeServiceScriptToNode(node string) (string, error) {
+	b64 := base64.StdEncoding.EncodeToString([]byte(multiProcessSearch))
+	rawCmd := fmt.Sprintf("cd ~/liyq && echo %s | base64 -d > multi-process-search.py", b64)
 	cmd := sshCmd(rawCmd, node)
 	return RunCmd(cmd)
 }
