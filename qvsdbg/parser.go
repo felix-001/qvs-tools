@@ -260,7 +260,7 @@ func (s *Parser) Run() error {
 		}
 		streamInfo := s.getIds()
 		start := time.Now()
-		// autostrat
+		// 收到catalog拉流，autostrat
 		re := fmt.Sprintf("rebuild strean.*%s.*%s|", streamInfo.GbId, streamInfo.ChId)
 		// 按需拉流
 		re += fmt.Sprintf("start a.*stream.*%s|", s.Conf.StreamId)
