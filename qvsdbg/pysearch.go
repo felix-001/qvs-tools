@@ -180,6 +180,8 @@ if __name__ == '__main__':
     search_string = sys.argv[1]
     #services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "pili-themisd", "server-api", "themisd-api"]
     services = ["qvs-server", "qvs-sip", "qvs-sip2", "qvs-sip3", "server-api", "themisd-api"]
+    if sys.argv[3] == "searchThemisd":
+        services.append("pili-themisd")
 
     processes = []
     manager = multiprocessing.Manager()

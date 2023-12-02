@@ -116,7 +116,11 @@ func (s *Parser) searchLogsAllService(node, re string) (string, error) {
 	if s.Conf.Verbose {
 		mode = "debug"
 	}
-	rawCmd := fmt.Sprintf("~/liyq/multi-process-search.py '%s' '%s'", re, mode)
+	isSearchThemisd := "notSearchThemisd"
+	if s.Conf.SearchThemisd {
+		isSearchThemisd = "searchThemisd"
+	}
+	rawCmd := fmt.Sprintf("~/liyq/multi-process-search.py '%s' '%s' '%s'", re, mode, isSearchThemisd)
 	cmd := qsshCmd(rawCmd, node)
 	if s.Conf.Verbose {
 		log.Println(cmd)

@@ -25,6 +25,7 @@ type Config struct {
 	HttpSrv        bool
 	Sip            bool
 	WritePyToNode  bool
+	SearchThemisd  bool
 }
 
 func checkConf(config *Config) error {
@@ -55,6 +56,7 @@ func parseConsole(config *Config) {
 	flag.BoolVar(&config.HttpSrv, "srv", false, "是否启动http server")
 	flag.BoolVar(&config.Sip, "sip", false, "是否捞取sip日志")
 	flag.BoolVar(&config.WritePyToNode, "w", false, "是否需要把py脚本写入到节点")
+	flag.BoolVar(&config.SearchThemisd, "themisd", false, "是否搜索themisd日志")
 
 	flag.Parse()
 }
