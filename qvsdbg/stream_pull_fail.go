@@ -177,7 +177,13 @@ func (s *Parser) streamPullFail() {
 	log.Println("rtpNodeId:", rtpNodeId)
 	createChLog, err := s.getCreateChLog(inviteInfo.Time, rtpNodeId)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
+		inviteRespLog := <-resultChan
+		final += inviteRespLog
+		if err := ioutil.WriteFile("out.log", []byte(final), 0644); err != nil {
+			log.Fatalln(err)
+		}
+		return
 	}
 	final += createChLog
 	createChTime, err := s.getValByRegex(createChLog, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
