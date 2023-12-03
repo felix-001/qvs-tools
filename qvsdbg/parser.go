@@ -254,10 +254,6 @@ func (s *Parser) Run() error {
 		return nil
 	}
 	if s.Conf.Bye {
-		// TODO
-		// NVR 从通道获取rtp node
-		// IPC 从设备获取rtp node
-		// 然后获取reset by peer 日志
 		if s.Conf.StreamId == "" {
 			log.Println("need streamid")
 			return nil
@@ -276,6 +272,17 @@ func (s *Parser) Run() error {
 		re += fmt.Sprintf("CloseStream.*%s", s.Conf.StreamId)
 		result := s.fetchCenterAllServiceLogs(re)
 		log.Println(result)
+		rtpNodeId, err := s.getInviteRtpNode(streamInfo.GbId, streamInfo.ChId)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// 连接被对端断开
+		re = fmt.Sprintf("%s.*reset by perr", s.Conf.StreamId)
+		rtpRes, err := s.searchLogs(rtpNodeId, "qvs-rtp", re)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		log.Println(rtpRes)
 		log.Println("cost:", time.Since(start))
 		return nil
 	}
