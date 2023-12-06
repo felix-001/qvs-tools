@@ -58,7 +58,7 @@ func getStreamStatus(streamId string) (bool, error) {
 	return stream.Status, err
 }
 
-var wecomNotifyUrl = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=92f4334a-906a-4394-b975-d9bba071f19d"
+var wecomNotifyUrl = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=59b3d537-8160-4870-ba92-31245c4b4729"
 
 type WeComNotfiy struct {
 	Msgtype string `json:"msgtype"`
