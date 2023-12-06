@@ -66,7 +66,7 @@ func (s *Parser) getSipLog(node, callid string) (string, error) {
 	if len(ss) > 1 {
 		service += ss[1]
 	}
-	re := fmt.Sprintf("INVITE response.*%s|sip_bye.*%s", callid, callid)
+	re := fmt.Sprintf("response invite.*%s|INVITE response.*%s|sip_bye.*%s", callid, callid, callid)
 	return s.searchLogs(ss[0], service, re)
 }
 
