@@ -128,6 +128,7 @@ func (s *Parser) getStartStreamLog(inviteTime string) string {
 }
 
 func (s *Parser) pullFailLogAnalyse(final string) {
+	// TODO: 时间接近的日志
 	if strings.Contains(final, "status:200") {
 		log.Println("信令响应了200 ok")
 	}
