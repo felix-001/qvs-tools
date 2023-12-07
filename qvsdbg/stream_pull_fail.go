@@ -127,6 +127,25 @@ func (s *Parser) getStartStreamLog(inviteTime string) string {
 	return s.fetchCenterAllServiceLogs(re)
 }
 
+func (s *Parser) pullFailLogAnalyse(final string) {
+	if strings.Contains(final, "status:200") {
+		log.Println("信令响应了200 ok")
+	}
+	if strings.Contains(final, "got first") {
+		log.Println("设备有udp推流")
+	} else if strings.Contains(final, "tcp attach") {
+		log.Println("设备有tcp推流")
+	} else {
+		log.Println("设备没有推流")
+	}
+	if strings.Contains(final, "reset by") {
+		log.Println("对端断开了tcp连接")
+	}
+	if strings.Contains(final, "sip_bye") {
+		log.Println("有收到bye请求")
+	}
+}
+
 /*
  * invite √
  * invite resp √
@@ -215,23 +234,8 @@ func (s *Parser) streamPullFail() {
 	//log.Println("delete ch log:", delChLog)
 	inviteRespLog := <-resultChan
 	final += inviteRespLog
-	if strings.Contains(final, "status:200") {
-		log.Println("信令响应了200 ok")
-	}
-	if strings.Contains(final, "got first") {
-		log.Println("设备有udp推流")
-	} else if strings.Contains(final, "tcp attach") {
-		log.Println("设备有tcp推流")
-	} else {
-		log.Println("设备没有推流")
-	}
-	if strings.Contains(final, "reset by") {
-		log.Println("对端断开了tcp连接")
-	}
-	if strings.Contains(final, "sip_bye") {
-		log.Println("有收到bye请求")
-	}
-	if err := ioutil.WriteFile("out.log", []byte(final), 0644); err != nil {
+	s.pullFailLogAnalyse(final)
+	if err := ioutil.WriteFile("/tmp/streamPullFail.log", []byte(final), 0644); err != nil {
 		log.Fatalln(err)
 	}
 }
