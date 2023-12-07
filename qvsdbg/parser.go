@@ -44,7 +44,7 @@ func (s *Parser) getCreateChLog(inviteTime, node string) (string, error) {
 	// 2023-11-09 13:50:46.806 --> 2023-11-09 13:50:4
 	start := time.Now()
 	//inviteTime = strings.ReplaceAll(inviteTime, "/", "-")
-	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[:18], s.Conf.StreamId)
+	re := fmt.Sprintf("%s.*create_channel.*%s", inviteTime[11:18], s.Conf.StreamId)
 	data, err := s.searchLogs(node, "qvs-rtp", re)
 	if err != nil {
 		log.Println("search log err")

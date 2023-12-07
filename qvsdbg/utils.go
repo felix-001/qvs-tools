@@ -166,7 +166,11 @@ func (s *Parser) getFirstLogAfterTimePoint(logs, t string) (string, error) {
 		}
 		dateTime, err := s.getValByRegex(str, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
 		if err != nil {
-			return "", err
+			//return "", err
+			dateTime, err = s.getValByRegex(str, `\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\]`)
+			if err != nil {
+				return "", err
+			}
 		}
 		if dateTime > t {
 			return str, nil

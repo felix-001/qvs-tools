@@ -188,9 +188,12 @@ func (s *Parser) streamPullFail() {
 	final += createChLog
 	createChTime, err := s.getValByRegex(createChLog, `(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}.\d+)`)
 	if err != nil {
-		log.Fatalln(err)
+		createChTime, err = s.getValByRegex(createChLog, `\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\]`)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
-	log.Println("createChLog:", createChLog)
+	//log.Println("createChLog:", createChLog)
 	_, taskId, match := s.parseRtpLog(createChLog)
 	if !match {
 		log.Fatalln("get task id from create ch log err")
@@ -202,16 +205,32 @@ func (s *Parser) streamPullFail() {
 		log.Fatalln(err)
 	}
 	log.Println("get rtp log cost:", time.Since(start2))
-	log.Println("rtpLog:", rtpLog)
+	//log.Println("rtpLog:", rtpLog)
 	final += rtpLog
 	delChLog, err := s.getDeleteChLog(createChTime, rtpNodeId)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	final += delChLog + "\n"
-	log.Println("delete ch log:", delChLog)
+	//log.Println("delete ch log:", delChLog)
 	inviteRespLog := <-resultChan
 	final += inviteRespLog
+	if strings.Contains(final, "status:200") {
+		log.Println("信令响应了200 ok")
+	}
+	if strings.Contains(final, "got first") {
+		log.Println("设备有udp推流")
+	} else if strings.Contains(final, "tcp attach") {
+		log.Println("设备有tcp推流")
+	} else {
+		log.Println("设备没有推流")
+	}
+	if strings.Contains(final, "reset by") {
+		log.Println("对端断开了tcp连接")
+	}
+	if strings.Contains(final, "sip_bye") {
+		log.Println("有收到bye请求")
+	}
 	if err := ioutil.WriteFile("out.log", []byte(final), 0644); err != nil {
 		log.Fatalln(err)
 	}
