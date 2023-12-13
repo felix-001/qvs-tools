@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -143,7 +144,7 @@ func main() {
 				} else {
 					message(content)
 				}
-
+				os.Exit(0)
 			}
 		}
 		time.Sleep(time.Duration(globalConf.SleepInterval) * time.Second)
