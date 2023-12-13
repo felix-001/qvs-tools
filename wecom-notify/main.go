@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -22,8 +23,41 @@ func RunCmd(cmdstr string) (string, error) {
 		return string(b), err
 	}
 	raw := string(b)
+	if strings.Contains(raw, "Pseudo-terminal") {
+		new := ""
+		ss := strings.Split(raw, "\n")
+		if len(ss) == 1 {
+			return "", nil
+		}
+		for _, str := range ss {
+			if strings.Contains(str, "Pseudo-terminal") {
+				continue
+			}
+			if len(str) == 0 {
+				continue
+			}
+			//log.Println("str len:", len(str))
+			new += str + "\r\n"
+		}
+		//log.Println("new:", new)
+		return new, nil
+	}
 	//log.Println(raw)
 	return raw, nil
+}
+
+func message(content string) {
+	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`tell app "System Events" to display dialog "%s" buttons {"OK"} default button "OK"`, content))
+	err := cmd.Run()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func RunJumpboxCmd(rawCmd string) (string, error) {
+	jumpbox := "ssh -t liyuanquan@10.20.34.27"
+	cmd := fmt.Sprintf("%s \" %s \"", jumpbox, rawCmd)
+	return RunCmd(cmd)
 }
 
 var conf = "./alert.conf"
@@ -31,7 +65,10 @@ var conf = "./alert.conf"
 type AlertConf struct {
 	Streams       []string `json:"streams"`
 	SleepInterval int      `json:"interval"`
+	NotifyMethod  string   `json:"notify_method"`
 }
+
+var globalConf AlertConf
 
 func loadConf() (alertConf AlertConf) {
 	b, err := ioutil.ReadFile(conf)
@@ -45,8 +82,9 @@ func loadConf() (alertConf AlertConf) {
 }
 
 func getStreamStatus(streamId string) (bool, error) {
+	//cmd := fmt.Sprintf("curl -s --location --request GET http://10.20.76.42:7277/v1/streams/%s --header 'authorization: QiniuStub uid=1'", streamId)
 	cmd := fmt.Sprintf("curl -s --location --request GET http://10.20.76.42:7277/v1/streams/%s --header 'authorization: QiniuStub uid=1'", streamId)
-	result, err := RunCmd(cmd)
+	result, err := RunJumpboxCmd(cmd)
 	if err != nil {
 		log.Println(result, err, cmd)
 		return false, err
@@ -67,39 +105,48 @@ type WeComNotfiy struct {
 	} `json:"text"`
 }
 
+func wecomNotify(content string) {
+	notify := WeComNotfiy{
+		Msgtype: "text",
+		Text: struct {
+			Content string `json:"content"`
+		}{Content: content},
+	}
+	body, err := json.Marshal(&notify)
+	if err != nil {
+		log.Println(err)
+	}
+	resp, err := http.Post(wecomNotifyUrl, "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Println(err)
+	}
+	if resp.StatusCode != 200 {
+		log.Println("http code err:", resp.StatusCode, resp.Status)
+	}
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	conf := loadConf()
+	globalConf = loadConf()
 	cnt := 0
 	for {
-		for _, streamId := range conf.Streams {
+		for _, streamId := range globalConf.Streams {
 			status, err := getStreamStatus(streamId)
 			if err != nil {
 				log.Println("get stream status err", streamId, err)
 				continue
 			}
 			if !status {
-				content := fmt.Sprintf("流id: %s已离线", streamId)
-				notify := WeComNotfiy{
-					Msgtype: "text",
-					Text: struct {
-						Content string `json:"content"`
-					}{Content: content},
+				content := fmt.Sprintf("%v 流id: %s已离线", time.Now(), streamId)
+				if globalConf.NotifyMethod == "wecom" {
+					wecomNotify(content)
+				} else {
+					message(content)
 				}
-				body, err := json.Marshal(&notify)
-				if err != nil {
-					log.Println(err)
-				}
-				resp, err := http.Post(wecomNotifyUrl, "application/json", bytes.NewReader(body))
-				if err != nil {
-					log.Println(err)
-				}
-				if resp.StatusCode != 200 {
-					log.Println("http code err:", resp.StatusCode, resp.Status)
-				}
+
 			}
 		}
-		time.Sleep(time.Duration(conf.SleepInterval) * time.Second)
+		time.Sleep(time.Duration(globalConf.SleepInterval) * time.Second)
 		cnt++
 		log.Println("running", cnt, "times")
 	}
