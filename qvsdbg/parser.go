@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +17,8 @@ import (
 type M map[string]string
 
 type Parser struct {
-	Conf *Config
+	Conf  *Config
+	nodes []Node
 }
 
 func NewParser(conf *Config) *Parser {
@@ -210,6 +216,91 @@ func (s *Parser) getNodeByIP(ip string) (string, error) {
 	return "", fmt.Errorf("not found")
 }
 
+func (s *Parser) getNodeByIPWithCache(ip string) (string, error) {
+	if s.nodes == nil {
+		log.Println("get nodes")
+		nodes, err := s.getNodes()
+		if err != nil {
+			return "", err
+		}
+		s.nodes = make([]Node, len(nodes))
+		copy(s.nodes, nodes)
+	}
+	for _, node := range s.nodes {
+		if s.isContain(ip, node.Ips) {
+			return node.ID, nil
+		}
+	}
+	return "", fmt.Errorf("not found")
+}
+
+type Pair struct {
+	Key   string
+	Value int
+}
+
+func (s *Parser) ParseNetstat() {
+	b, err := ioutil.ReadFile(s.Conf.NetstatLogFile)
+	if err != nil {
+		log.Println("read fail", s.Conf.NetstatLogFile, err)
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	unknow := 0
+	private := 0
+	statis := map[string]int{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			log.Fatal("fields not 4")
+		}
+		//localAddress := fields[3]
+		remoteAddress := fields[4]
+		//fmt.Printf("Local Address: %s, Remote Address: %s\n", localAddress, remoteAddress)
+		ss := strings.Split(remoteAddress, ":")
+		if len(ss) != 2 {
+			//log.Fatal("split ip:port err")
+			log.Println("split ip:port err", remoteAddress)
+		}
+		ip := net.ParseIP(ss[0])
+		if ip.IsPrivate() {
+			private++
+		}
+		node, err := s.getNodeByIPWithCache(ss[0])
+		if err != nil {
+			log.Println("unkonw ip:", ss[0])
+			unknow++
+		} else {
+			log.Println("node:", node, "ip:", ss[0])
+			statis[node]++
+		}
+	}
+	log.Println("unkonw:", unknow)
+	total := 0
+	/*
+		for k, v := range statis {
+			log.Println(k, v)
+			total += v
+		}
+	*/
+	var pairs []Pair
+	for key, value := range statis {
+		pairs = append(pairs, Pair{key, value})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Value > pairs[j].Value
+	})
+
+	for _, pair := range pairs {
+		fmt.Printf("%s: %d\n", pair.Key, pair.Value)
+		total += pair.Value
+	}
+	log.Println("total:", total)
+	log.Println("private:", private)
+}
+
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
@@ -217,6 +308,10 @@ func (s *Parser) getNodeByIP(ip string) (string, error) {
 // 播放者的ip
 // flv对端ip, "HttpFlvConnected" and "32050000491180000023_32050000491320000011"
 func (s *Parser) Run() error {
+	if s.Conf.NetstatLogFile != "" {
+		s.ParseNetstat()
+		return nil
+	}
 	if s.Conf.StreamPullFail {
 		s.streamPullFail()
 		return nil

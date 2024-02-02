@@ -134,7 +134,7 @@ func parseConsole() {
 	flag.StringVar(&sk, "sk", defSK, "sk")
 	flag.StringVar(&path, "path", "", "path")
 	flag.StringVar(&body, "body", "", "body")
-	flag.StringVar(&host, "host", apiHost, "host")
+	flag.StringVar(&host, "host", apiHostTest, "host")
 	flag.StringVar(&method, "method", "GET", "method")
 	flag.Parse()
 	if ak == "" {
