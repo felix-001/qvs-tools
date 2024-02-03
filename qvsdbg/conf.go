@@ -29,6 +29,7 @@ type Config struct {
 	Bye            bool
 	Node           string
 	NetstatLogFile string
+	PointFile      string
 }
 
 func checkConf(config *Config) error {
@@ -63,6 +64,7 @@ func parseConsole(config *Config) {
 	flag.BoolVar(&config.SearchThemisd, "themisd", false, "是否搜索themisd日志")
 	flag.BoolVar(&config.Bye, "bye", false, "搜索流为什么被断开了")
 	flag.StringVar(&config.NetstatLogFile, "netstatlog", "", "在节点上执行netstat -an之后，分析建立连接的对端，都是什么角色，是推流客户端，播放器，还是转推中继")
+	flag.StringVar(&config.PointFile, "pointfile", "", "pili-flowd的打点日志解析")
 
 	flag.Parse()
 }

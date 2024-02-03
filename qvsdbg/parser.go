@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -301,6 +302,135 @@ func (s *Parser) ParseNetstat() {
 	log.Println("private:", private)
 }
 
+type Fields struct {
+	StreamId       string  `json:"streamId"`
+	Status         string  `json:"status"`
+	ReqId          string  `json:"reqId"`
+	StartAt        int64   `json:"startAt"`
+	Domain         string  `json:"domain"`
+	BytesPerSecond string  `json:"bytesPerSecond"`
+	Bytes          int     `json:"bytes"`
+	Duration       string  `json:"duration"`
+	Elapsed        int     `json:"elapsed"`
+	VideoPerSecond string  `json:"videoPerSecond"`
+	Video_fps      float64 `json:"video_fps"`
+}
+
+type Tags struct {
+	Hub    string `json:"hub"`
+	Uid    string `json:"uid"`
+	Method string `json:"method"`
+	Type   string `json:"type"`
+	Domain string `json:"domain"`
+}
+
+type Point struct {
+	Tags   Tags   `json:"tags"`
+	Fields Fields `json:"fields"`
+	Ts     int64  `json:"ts"`
+}
+
+func (s *Parser) ParsePoint() {
+	b, err := ioutil.ReadFile(s.Conf.PointFile)
+	if err != nil {
+		log.Println("read fail", s.Conf.PointFile, err)
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	streams := map[string]int{}
+	internalSource := 0
+	internalDestination := 0
+	publish := 0
+	play := 0
+	disconnect := 0
+	publishStream := map[string]int{}
+	playStream := map[string]int{}
+	interSrcStrms := map[string]int{}
+	interDestStrms := map[string]int{}
+	types := map[string]int{}
+	bpsMap := map[string]int{}
+	forwardMap := map[string]int{}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		point := &Point{}
+		if err := json.Unmarshal([]byte(line), point); err != nil {
+			log.Println(err)
+			return
+		}
+		//log.Printf("%+v\n", point)
+		streams[point.Fields.StreamId] = 1
+		if point.Tags.Method == "internal source" {
+			internalSource++
+			interSrcStrms[point.Fields.StreamId]++
+		}
+		if point.Tags.Method == "internal destination" {
+			internalDestination++
+			interDestStrms[point.Fields.StreamId]++
+		}
+		if point.Tags.Method == "publish" {
+			publish++
+			publishStream[point.Fields.StreamId]++
+
+		}
+		if point.Tags.Method == "play" {
+			play++
+			playStream[point.Fields.StreamId]++
+		}
+		if point.Fields.Status == "disconnected" {
+			disconnect++
+		}
+		types[point.Tags.Type]++
+
+		if point.Fields.BytesPerSecond != "" {
+			bytesPerSecond := []int{}
+			raw := strings.ReplaceAll(point.Fields.BytesPerSecond, " ", ",")
+			err := json.Unmarshal([]byte(raw), &bytesPerSecond)
+			if err != nil {
+				fmt.Println("Error:", err)
+			}
+			total := 0
+			for _, sample := range bytesPerSecond {
+				total += sample
+			}
+			bps := total / len(bytesPerSecond)
+			if bps > bpsMap[point.Fields.StreamId] {
+				bpsMap[point.Fields.StreamId] = bps
+			}
+		}
+
+		if point.Tags.Method == "qvs forward" {
+			forwardMap[point.Fields.StreamId]++
+		}
+
+	}
+	//log.Println("total streams:", len(streams), "internal source:", internalSource, "internal destination:", internalDestination, "publish:", publish, "play:", play, "disconnect:", disconnect)
+	for k, v := range types {
+		log.Println(k, v)
+	}
+	/*
+		for k, v := range bpsMap {
+			log.Println(k, v/1000)
+		}
+	*/
+	var pairs []Pair
+	for key, value := range bpsMap {
+		pairs = append(pairs, Pair{key, value})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Value > pairs[j].Value
+	})
+
+	for _, pair := range pairs {
+		fmt.Printf("%s: %d\n", pair.Key, pair.Value/1000)
+	}
+	log.Println("total streams:", len(streams))
+	log.Println("inter soure streams:", len(interSrcStrms), "inter dest streams:", len(interDestStrms))
+	log.Println("publish streams:", len(publishStream), "play streams:", len(playStream))
+	log.Println("forward", len(forwardMap))
+}
+
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
@@ -310,6 +440,10 @@ func (s *Parser) ParseNetstat() {
 func (s *Parser) Run() error {
 	if s.Conf.NetstatLogFile != "" {
 		s.ParseNetstat()
+		return nil
+	}
+	if s.Conf.PointFile != "" {
+		s.ParsePoint()
 		return nil
 	}
 	if s.Conf.StreamPullFail {
