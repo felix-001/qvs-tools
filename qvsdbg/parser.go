@@ -250,6 +250,7 @@ func (s *Parser) ParseNetstat() {
 	unknow := 0
 	private := 0
 	statis := map[string]int{}
+	localost := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
@@ -268,16 +269,21 @@ func (s *Parser) ParseNetstat() {
 		if ip.IsPrivate() {
 			private++
 		}
-		node, err := s.getNodeByIPWithCache(ss[0])
-		if err != nil {
-			log.Println("unkonw ip:", ss[0])
-			unknow++
+		if ss[0] == "127.0.0.1" {
+			localost++
 		} else {
-			log.Println("node:", node, "ip:", ss[0])
-			statis[node]++
+			node, err := s.getNodeByIPWithCache(ss[0])
+			if err != nil {
+				log.Println("unkonw ip:", ss[0])
+				unknow++
+			} else {
+				log.Println("node:", node, "ip:", ss[0])
+				statis[node]++
+			}
 		}
 	}
 	log.Println("unkonw:", unknow)
+	log.Println("localhost:", localost)
 	total := 0
 	/*
 		for k, v := range statis {
@@ -350,13 +356,15 @@ func (s *Parser) ParsePoint() {
 	types := map[string]int{}
 	bpsMap := map[string]int{}
 	forwardMap := map[string]int{}
+	uidMap := map[string]int{}
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		point := &Point{}
 		if err := json.Unmarshal([]byte(line), point); err != nil {
-			log.Println(err)
-			return
+			log.Println(err, line)
+			continue
+			//return
 		}
 		//log.Printf("%+v\n", point)
 		streams[point.Fields.StreamId] = 1
@@ -402,6 +410,7 @@ func (s *Parser) ParsePoint() {
 		if point.Tags.Method == "qvs forward" {
 			forwardMap[point.Fields.StreamId]++
 		}
+		uidMap[point.Tags.Uid]++
 
 	}
 	//log.Println("total streams:", len(streams), "internal source:", internalSource, "internal destination:", internalDestination, "publish:", publish, "play:", play, "disconnect:", disconnect)
@@ -429,6 +438,33 @@ func (s *Parser) ParsePoint() {
 	log.Println("inter soure streams:", len(interSrcStrms), "inter dest streams:", len(interDestStrms))
 	log.Println("publish streams:", len(publishStream), "play streams:", len(playStream))
 	log.Println("forward", len(forwardMap))
+
+	i := 0
+	for k, v := range interSrcStrms {
+		log.Println(k, v)
+		if i > 10 {
+			break
+		}
+		i++
+	}
+	log.Println("uids :", len(uidMap))
+	/*
+		for k, v := range uidMap {
+			log.Println(k, v)
+		}
+	*/
+	var pairs1 []Pair
+	for key, value := range uidMap {
+		pairs1 = append(pairs1, Pair{key, value})
+	}
+
+	sort.Slice(pairs1, func(i, j int) bool {
+		return pairs1[i].Value > pairs1[j].Value
+	})
+
+	for _, pair := range pairs1 {
+		fmt.Printf("%s: %d\n", pair.Key, pair.Value)
+	}
 }
 
 // 流断了，查询是哪里bye的
