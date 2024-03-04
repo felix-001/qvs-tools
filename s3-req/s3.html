@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkbox Selection and Sending Data</title>
+<script>
+// 假设后端API接口URL
+const backendApi = 'http://127.0.0.1:8080';
+
+// 获取数据并填充复选框
+function fetchData() {
+  console.log("fetchData")
+  fetch(backendApi)
+    .then(response => response.json())
+    .then(data => {
+      const checkboxesContainer = document.getElementById('checkboxes');
+      data.forEach(item => {
+        console.log("item:", item)
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'selectedItems[]';
+        console.log("id is:", item.id)
+        checkbox.value = item.id;
+        checkbox.id = `checkbox-${item.id}`;
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.textContent = item.name;
+        checkboxesContainer.appendChild(checkbox);
+        checkboxesContainer.appendChild(label);
+        checkboxesContainer.appendChild(document.createElement('br'));
+      });
+    })
+    .catch(error => console.error('Error fetching data:', error));
+}
+
+// 发送选中的数据到后端
+function sendData() {
+  const checkboxes = document.getElementsByName('selectedItems[]');
+  const selectedItems = [];
+  checkboxes.forEach(checkbox => {
+    if (checkbox.checked) {
+      selectedItems.push(checkbox.value);
+    }
+  });
+  const dataToSend = { selectedItems };
+  fetch(backendApi, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(dataToSend)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Data sent:', data);
+    // 这里可以添加发送数据后的逻辑，比如显示反馈信息
+  })
+  .catch(error => console.error('Error sending data:', error));
+}
+
+// 页面加载时获取数据
+document.addEventListener('DOMContentLoaded', fetchData);
+</script>
+</head>
+<body>
+<h1>Checkbox Selection</h1>
+<div id="checkboxes">
+  <!-- 复选框将在这里生成 -->
+</div>
+<button onclick="sendData()">Send</button>
+</body>
+</html>
