@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
@@ -14,6 +15,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 )
 
 var (
@@ -22,6 +25,7 @@ var (
 	host  string
 	defAK string
 	defSK string
+	csv   string
 )
 
 var (
@@ -132,6 +136,7 @@ func parseConsole() {
 	flag.StringVar(&ak, "ak", defAK, "ak")
 	flag.StringVar(&sk, "sk", defSK, "sk")
 	flag.StringVar(&host, "host", host, "host")
+	flag.StringVar(&csv, "csv", "", "csv file")
 	flag.Parse()
 	if ak == "" {
 		log.Println("need ak")
@@ -160,12 +165,15 @@ func (s *StatisticsInstance) getDevCount() (error, int) {
 type Namespace struct {
 	Uid        int    `json:"uid"`
 	AccessType string `json:"accessType"`
+	ID         string `json:"id"`
 }
 
 type NsList struct {
 	Items []Namespace `json:"items"`
 	Total int         `json:"total"`
 }
+
+var allNamespaces []Namespace
 
 func (s *StatisticsInstance) getNsList(offset int) (*NsList, error) {
 	path := fmt.Sprintf("/v1/namespaces?line=500&offset=%d", offset)
@@ -302,19 +310,55 @@ type StreamList struct {
 	Total int      `json:"total"`
 }
 
-func (s *StatisticsInstance) getStreams() error {
-	path := fmt.Sprintf("/v1/streams")
+// /v1/streams?prefix=31011500991320000384&namespaceId=bj&qtype=0&line=10&offset=0
+func (s *StatisticsInstance) getStreams(nsId string, line, offset int) (*StreamList, error) {
+	path := fmt.Sprintf("/v1/streams?namespaceId=%s&line=%d&offset=%d&qtype=0", nsId, line, offset)
 	resp, err := qvsGet(path)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
-	devlist := DeviceList{}
-	if err := json.Unmarshal([]byte(resp), &devlist); err != nil {
+	streamlist := StreamList{}
+	if err := json.Unmarshal([]byte(resp), &streamlist); err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
-	return nil
+	//log.Println("total streams:", streamlist.Total, "nsId:", nsId)
+	return &streamlist, nil
+}
+
+func (s *StatisticsInstance) getAllStreamsByNamespace(nsId string) (streams []Stream, err error) {
+	streamlist, err := s.getStreams(nsId, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+	log.Println("nsid:", nsId, "total:", streamlist.Total, "len:", len(streamlist.Items))
+	streams = append(streams, streamlist.Items...)
+	if streamlist.Total < 1000 {
+		return
+	}
+	for i := len(streamlist.Items); i < streamlist.Total; i += len(streamlist.Items) {
+		streamlist, err = s.getStreams(nsId, 1000, i)
+		if err != nil {
+			return nil, err
+		}
+		streams = append(streams, streamlist.Items...)
+	}
+	return
+}
+
+func (s *StatisticsInstance) getAllRtmpStreams(namespaces []Namespace) (streams []Stream, err error) {
+	for i, ns := range namespaces {
+		log.Println("nsid:", ns.ID)
+		stremlist, err := s.getAllStreamsByNamespace(ns.ID)
+		if err != nil {
+			return nil, err
+		}
+		log.Println("i:", i, "ns:", ns.ID, "streams:", len(stremlist))
+		streams = append(streams, stremlist...)
+		//time.Sleep(time.Second)
+	}
+	return
 }
 
 func (s *StatisticsInstance) getDevCountByUID(uid int) {
@@ -357,11 +401,111 @@ func (s *StatisticsInstance) getTotalDevCnt() error {
 	return nil
 }
 
+func (s *StatisticsInstance) getAllNamespaces() {
+	namespaces, err := s.getNsList(0)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("total:", namespaces.Total)
+	allNamespaces = append(allNamespaces, namespaces.Items...)
+	for i := len(namespaces.Items); i < namespaces.Total; {
+		log.Println("i:", i)
+		namespaces, err := s.getNsList(i)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		allNamespaces = append(allNamespaces, namespaces.Items...)
+		i += len(namespaces.Items)
+	}
+}
+
+var allRtmpNamespaces []Namespace
+
+func (s *StatisticsInstance) getAllRtmpNamespaces() {
+	s.getAllNamespaces()
+	for _, ns := range allNamespaces {
+		if ns.AccessType == "rtmp" {
+			allRtmpNamespaces = append(allRtmpNamespaces, ns)
+		}
+	}
+	log.Println("rtmp namespaces:", len(allRtmpNamespaces))
+}
+
+type Template struct {
+	ID           string `json:"id"`
+	RecordType   int    `json:"recordType"`   // 录制模式，取值：0（不录制），1（实时录制），2（按需录制）
+	TemplateType int    `json:"templateType"` // 模板类型，取值：0（录制模版），1（截图模版）
+}
+
+// /v1/templates?templateType=0&uid=1380505636&line=10&offset=0
+func (s *StatisticsInstance) getTemplate(uid string) ([]Template, error) {
+	temps := struct {
+		Items []Template `json:"items"`
+		Total int        `json:"total"`
+	}{}
+	path := fmt.Sprintf("/v1/templates?uid=%s&line=1000&offset=0&templateType=0", uid)
+	if err := s.get(path, &temps); err != nil {
+		panic(err)
+	}
+	return temps.Items, nil
+}
+
+func (s *StatisticsInstance) getAllStorageFee() {
+	b, err := ioutil.ReadFile(csv)
+	if err != nil {
+		log.Fatalln("read fail", csv, err)
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	totalFee := 0
+	i := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if i == 0 {
+			i++
+			continue
+		}
+		i++
+		ss := strings.Split(line, ",")
+		uid := ss[1]
+		kodoFeeStr := ss[len(ss)-1]
+		kodoFee, err := strconv.ParseInt(kodoFeeStr, 10, 32) // 10 表示十进制，32 表示 int 的位宽（32位）
+		if err != nil {
+			fmt.Println("Error converting string to int:", err)
+			return
+		}
+		qvsFeeStr := ss[len(ss)-2]
+		qvsFee, err := strconv.ParseInt(qvsFeeStr, 10, 32) // 10 表示十进制，32 表示 int 的位宽（32位）
+		if err != nil {
+			fmt.Println("Error converting string to int:", err)
+			return
+		}
+
+		if qvsFee > 30 {
+			totalFee += int(qvsFee)
+		}
+		log.Println(uid, kodoFee, qvsFee)
+		/*
+			tmps, _ := s.getTemplate(uid)
+			if len(tmps) > 0 {
+				totalFee += int(kodoFee)
+			}
+		*/
+	}
+	log.Println("total:", totalFee)
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConf()
 	parseConsole()
 	s := StatisticsInstance{}
+	s.getAllStorageFee()
+	//s.getAllRtmpNamespaces()
+	//s.getStreams(allRtmpNamespaces[0].ID, 2000, 0)
+	//allStreams, err := s.getAllRtmpStreams(allRtmpNamespaces)
+	//log.Println("total stream count:", len(allStreams), "err:", err)
+	//s.getAllNamespaces()
+	//log.Println(len(allNamespaces))
 	/*
 		uids, err := s.getUids()
 		if err != nil {
@@ -386,5 +530,5 @@ func main() {
 		log.Println("总共流个数:", streamlist.Total)
 		s.getDevCountByUID()
 	*/
-	s.getTotalDevCnt()
+	//s.getTotalDevCnt()
 }
