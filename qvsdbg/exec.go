@@ -181,3 +181,8 @@ func (s *Parser) searchLogsMultiLine(node, service, re string) (string, error) {
 	log.Println(cmd)
 	return RunCmd(cmd)
 }
+
+func runServerCmdGrayNode(rawCmd string) (string, error) {
+	cmd := qsshCmd(rawCmd, "bili-jjh9")
+	return RunCmd(cmd)
+}
