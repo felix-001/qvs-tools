@@ -17,6 +17,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -302,7 +303,9 @@ func (s *StatisticsInstance) get(path string, v interface{}) error {
 type Stream struct {
 	Status       bool   `json:"status"`
 	StreamId     string `json:"streamId"`
-	LastPushedAt int    `json:"lastPushedAt"`
+	LastPushedAt int64  `json:"lastPushedAt"`
+	NamespaceId  string `json:"nsId"`
+	UID          int    `json:"uid"`
 }
 
 type StreamList struct {
@@ -313,6 +316,7 @@ type StreamList struct {
 // /v1/streams?prefix=31011500991320000384&namespaceId=bj&qtype=0&line=10&offset=0
 func (s *StatisticsInstance) getStreams(nsId string, line, offset int) (*StreamList, error) {
 	path := fmt.Sprintf("/v1/streams?namespaceId=%s&line=%d&offset=%d&qtype=0", nsId, line, offset)
+	log.Println(path)
 	resp, err := qvsGet(path)
 	if err != nil {
 		log.Println(err)
@@ -343,6 +347,10 @@ func (s *StatisticsInstance) getAllStreamsByNamespace(nsId string) (streams []St
 			return nil, err
 		}
 		streams = append(streams, streamlist.Items...)
+		if len(streamlist.Items) < 1000 {
+			break
+		}
+
 	}
 	return
 }
@@ -494,16 +502,36 @@ func (s *StatisticsInstance) getAllStorageFee() {
 	log.Println("total:", totalFee)
 }
 
+func (s *StatisticsInstance) getAllActiveStreams(streams []Stream) (outStreams []Stream) {
+	for _, stream := range streams {
+		if stream.LastPushedAt != 0 && time.Now().Unix()-stream.LastPushedAt < 3*24*3600 {
+			outStreams = append(outStreams, stream)
+		}
+	}
+	return
+}
+
 func main() {
 	log.SetFlags(log.Lshortfile)
 	parseConf()
 	parseConsole()
 	s := StatisticsInstance{}
-	s.getAllStorageFee()
-	//s.getAllRtmpNamespaces()
+	s.getAllRtmpNamespaces()
+	allStreams, err := s.getAllRtmpStreams(allRtmpNamespaces)
+	log.Println("total stream count:", len(allStreams), "err:", err)
+	activeStreams := s.getAllActiveStreams(allStreams)
+	log.Println("total active streams:", len(activeStreams))
+	jsonbody, err := json.Marshal(activeStreams)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = ioutil.WriteFile("out.json", jsonbody, 0644)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//s.getAllStorageFee()
 	//s.getStreams(allRtmpNamespaces[0].ID, 2000, 0)
-	//allStreams, err := s.getAllRtmpStreams(allRtmpNamespaces)
-	//log.Println("total stream count:", len(allStreams), "err:", err)
 	//s.getAllNamespaces()
 	//log.Println(len(allNamespaces))
 	/*
