@@ -8,8 +8,20 @@ import (
 	"strings"
 )
 
+func RunCmd2(cmdstr string) (string, error) {
+	cmd := exec.Command("ssh", "-t", cmdstr)
+	fmt.Println(cmd)
+	//cmd.Stderr = os.Stderr
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(b), err
+	}
+	return string(b), nil
+}
+
 func RunCmd(cmdstr string) (string, error) {
 	cmd := exec.Command("bash", "-c", cmdstr)
+	fmt.Println(cmd)
 	//cmd.Stderr = os.Stderr
 	b, err := cmd.CombinedOutput()
 	if err != nil {
@@ -100,7 +112,8 @@ func (s *Parser) searchLogsOne(node, service, re string) (string, error) {
 }
 
 func qsshCmd(rawCmd, node string) string {
-	jumpbox := "ssh -t liyuanquan@10.20.34.27"
+	//jumpbox := "ssh -t liyuanquan@10.20.34.27"
+	jumpbox := "liyuanquan@10.20.34.27"
 	cmd := fmt.Sprintf("%s \"qssh %s \\\" %s \\\"\"", jumpbox, node, rawCmd)
 	return cmd
 }
@@ -184,5 +197,19 @@ func (s *Parser) searchLogsMultiLine(node, service, re string) (string, error) {
 
 func runServerCmdGrayNode(rawCmd string) (string, error) {
 	cmd := qsshCmd(rawCmd, "bili-jjh9")
-	return RunCmd(cmd)
+	return RunCmd2(cmd)
+}
+
+func curlCmd(uid, path, body string) string {
+	cmd := "curl -s http://localhost:7275/v1" + path + " "
+	cmd += fmt.Sprintf("--header 'authorization: QiniuStub uid=%s' ", uid)
+	if body != "" {
+		cmd += body
+	}
+	return cmd
+}
+
+func runServerCmd(uid, path, body string) (string, error) {
+	cmd := curlCmd(uid, path, body)
+	return runServerCmdGrayNode(cmd)
 }

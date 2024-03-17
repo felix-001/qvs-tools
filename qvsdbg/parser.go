@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -467,6 +468,38 @@ func (s *Parser) ParsePoint() {
 	}
 }
 
+func isNumeric(s string) bool {
+	re := regexp.MustCompile(`^\d+$`)
+	return re.MatchString(s)
+}
+
+func (s *Parser) runqsshCmd() {
+	b, err := ioutil.ReadFile("/usr/local/etc/uid.conf")
+	if err != nil {
+		log.Println("read fail", "/usr/local/etc/uid.conf", err)
+		return
+	}
+	uid := string(b)
+	uid = uid[:len(uid)-1]
+	body := ""
+	if len(os.Args) == 4 {
+		uid = os.Args[3]
+		body = os.Args[2]
+	} else if len(os.Args) == 3 {
+		if isNumeric(os.Args[2]) {
+			uid = os.Args[2]
+		} else {
+			body = os.Args[2]
+		}
+	} else if len(os.Args) != 2 {
+		log.Println("<path> <body/uid> <uid>")
+		return
+	}
+	path := os.Args[1]
+	runServerCmd(uid, path, body)
+	//s.getNodes()
+}
+
 // 流断了，查询是哪里bye的
 // 流量带宽异常，查询拉流的源是哪里: 按需拉流？按需截图？catalog重试？
 // re := fmt.Sprintf("RTC play.*%s", s.Conf.StreamId)
@@ -474,6 +507,10 @@ func (s *Parser) ParsePoint() {
 // 播放者的ip
 // flv对端ip, "HttpFlvConnected" and "32050000491180000023_32050000491320000011"
 func (s *Parser) Run() error {
+	if os.Args[1] != "" {
+		s.runqsshCmd()
+		return nil
+	}
 	if s.Conf.NetstatLogFile != "" {
 		s.ParseNetstat()
 		return nil
