@@ -588,3 +588,15 @@ help() {
 	path=`which utils.sh`
 	grep .*\(\) $path
 }
+
+snap() {
+	if [ $# != 3 ];then
+		echo "<uid> <nsid> <streamid>"
+		return 0
+	fi
+	uid=$1
+	nsid=$2
+	sid=$3
+	cmd="snap"
+	streamPostReq  $uid $nsid $sid
+}
