@@ -589,7 +589,7 @@ help() {
 	grep .*\(\) $path
 }
 
-snap() {
+qvssnap() {
 	if [ $# != 3 ];then
 		echo "<uid> <nsid> <streamid>"
 		return 0
