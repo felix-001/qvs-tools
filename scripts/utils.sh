@@ -598,5 +598,5 @@ qvssnap() {
 	nsid=$2
 	sid=$3
 	cmd="snap"
-	streamPostReq  $uid $nsid $sid
+	streamPostReq  $uid $nsid $sid $cmd
 }
