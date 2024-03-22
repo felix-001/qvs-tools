@@ -402,58 +402,63 @@ func loadfile(isp string) string {
 func dumpISP(isp string, areas map[string]map[string]Province) {
 	for area, provinceInfo := range areas {
 		for province, info := range provinceInfo {
-			log.Println(isp, area, province, info.UserCount)
+			log.Println(isp, area, province, info.UserCount, info.UserPercent)
 		}
 	}
+}
+
+func calcUserPercentInArea(areas map[string]map[string]Province) {
+	for _, provinceInfo := range areas {
+		for province, info := range provinceInfo {
+			totalInfo := provinceInfo["合计"]
+			info.UserPercent = float64(info.UserCount*100) / float64(totalInfo.UserCount)
+			provinceInfo[province] = info
+		}
+	}
+}
+
+func parseIspUserDistribution(isp string) map[string]map[string]Province {
+	areas := map[string]map[string]Province{}
+	raw := loadfile(isp)
+	if raw == "" {
+		log.Fatalln("load file err")
+	}
+	lines := strings.Split(raw, "\r\n")
+	for _, line := range lines[1:] {
+		ss := strings.Split(line, ";")
+		if len(ss) != 3 {
+			log.Fatalln("item not 3")
+		}
+		province := strings.ReplaceAll(ss[0], `"`, "")
+		area := ProvinceAreaRelation(province)
+		if province == "空" {
+			continue
+		}
+		userCount, err := strconv.ParseInt(ss[2], 10, 32)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		if provinces, ok := areas[area]; !ok {
+			provinces := map[string]Province{
+				province: Province{UserCount: int(userCount)},
+				"合计":     Province{UserCount: int(userCount)},
+			}
+			areas[area] = provinces
+		} else if _, ok := provinces[province]; !ok {
+			provinces[province] = Province{UserCount: int(userCount)}
+			info := provinces["合计"]
+			info.UserCount += int(userCount)
+			provinces["合计"] = info
+		}
+	}
+	return areas
 }
 
 // 运营商 --> 大区 --> 省份
 func douyuData() {
 	for _, isp := range isps {
-		areas := map[string]map[string]Province{}
-		raw := loadfile(isp)
-		if raw == "" {
-			log.Fatalln("load file err")
-		}
-		lines := strings.Split(raw, "\r\n")
-		for _, line := range lines[1:] {
-			ss := strings.Split(line, ";")
-			if len(ss) != 3 {
-				log.Fatalln("item not 3")
-			}
-			province := strings.ReplaceAll(ss[0], `"`, "")
-			area := ProvinceAreaRelation(province)
-			if province == "空" {
-				continue
-			}
-			userCount, err := strconv.ParseInt(ss[2], 10, 32)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			if provinces, ok := areas[area]; !ok {
-				provinces := map[string]Province{
-					province: Province{UserCount: int(userCount)},
-					"合计":     Province{UserCount: int(userCount)},
-				}
-				areas[area] = provinces
-			} else {
-				if _, ok := provinces[province]; !ok {
-					provinces[province] = Province{UserCount: int(userCount)}
-					info := provinces["合计"]
-					//log.Println("total", info, province, area)
-					info.UserCount += int(userCount)
-					provinces["合计"] = info
-				}
-				/*
-					provinces[province] = Province{UserCount: int(userCount)}
-					info := provinces["合计"]
-					log.Println("total", info, province, area)
-					info.UserCount += int(userCount)
-					provinces["合计"] = info
-				*/
-			}
-
-		}
+		areas := parseIspUserDistribution(isp)
+		calcUserPercentInArea(areas)
 		//log.Println(areas)
 		dumpISP(isp, areas)
 	}
