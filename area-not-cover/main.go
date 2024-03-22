@@ -446,7 +446,11 @@ func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
 func dumpISP(isp string, areas map[string]map[string]Province) {
 	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比\n"
 	lastArea := ""
-	for area, provinceInfo := range areas {
+	areaDatas := sortAreaMapData(areas)
+	for _, areaData := range areaDatas {
+		area := areaData.Key
+		provinceInfo := areaData.Value
+		//for area, provinceInfo := range areas {
 		areaCopy := area
 		//for province, info := range provinceInfo {
 		//log.Println(isp, area, province, info.UserCount, info.UserPercent, info.NodeCount, info.NodePercent)
