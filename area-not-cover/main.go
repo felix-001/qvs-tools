@@ -427,15 +427,43 @@ func sortMapData(raw map[string]Province) []Data {
 	return datas
 }
 
+type AreaData struct {
+	Key   string
+	Value map[string]Province
+}
+
+func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
+	var datas []AreaData
+	for key, value := range raw {
+		datas = append(datas, AreaData{key, value})
+	}
+	sort.Slice(datas, func(i, j int) bool {
+		return datas[i].Value["合计"].UserCount > datas[j].Value["合计"].UserCount
+	})
+	return datas
+}
+
 func dumpISP(isp string, areas map[string]map[string]Province) {
 	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比\n"
+	lastArea := ""
 	for area, provinceInfo := range areas {
-		for province, info := range provinceInfo {
-			//log.Println(isp, area, province, info.UserCount, info.UserPercent, info.NodeCount, info.NodePercent)
+		areaCopy := area
+		//for province, info := range provinceInfo {
+		//log.Println(isp, area, province, info.UserCount, info.UserPercent, info.NodeCount, info.NodePercent)
+		provinces := sortMapData(provinceInfo)
+		for _, data := range provinces {
+			province := data.Key
+			info := data.Value
+			log.Println("area", area, "province", province)
 			if province != "合计" {
+				if lastArea != "" && lastArea == areaCopy {
+					area = ""
+				}
+				log.Println("area2", area)
 				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%\n",
 					area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
 					info.NodeCount, info.NodePercent, info.NodePercentInIsp)
+				lastArea = areaCopy
 			}
 		}
 		info := provinceInfo["合计"]
