@@ -63,7 +63,7 @@ func ProvinceAreaRelation(province string) string {
 	switch province {
 	case "黑龙江", "吉林", "辽宁":
 		return "东北"
-	case "北京", "天津", "河北", "山西", "内蒙":
+	case "北京", "天津", "河北", "山西", "内蒙古":
 		return "华北"
 	case "河南", "湖北", "湖南":
 		return "华中"
@@ -79,6 +79,29 @@ func ProvinceAreaRelation(province string) string {
 		return "其它"
 	default:
 		return ""
+	}
+}
+
+func AreaProvinceRelation(area string) []string {
+	switch area {
+	case "东北":
+		return []string{"黑龙江", "吉林", "辽宁"}
+	case "华北":
+		return []string{"北京", "天津", "河北", "山西", "内蒙"}
+	case "华中":
+		return []string{"河南", "湖北", "湖南"}
+	case "华东":
+		return []string{"山东", "江苏", "安徽", "上海", "浙江", "江西", "福建"}
+	case "华南":
+		return []string{"广东", "广西", "海南"}
+	case "西北":
+		return []string{"陕西", "甘肃", "宁夏", "青海", "新疆"}
+	case "西南":
+		return []string{"四川", "贵州", "云南", "重庆", "西藏"}
+	case "其它":
+		return []string{"香港", "澳门", "台湾"}
+	default:
+		return nil
 	}
 }
 
@@ -158,6 +181,291 @@ func douyu_user() {
 
 }
 
+// 各个大区当前可用带宽
+/*
+func bps() {
+	b, err := ioutil.ReadFile("bps.csv")
+	if err != nil {
+		log.Println("read fail", "bps.csv", err)
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	for scanner.Scan() {
+		line := scanner.Text()
+		ss := strings.Split(line, ",")
+		sss := strings.Split(ss[0], "_")
+		region := sss[0]
+		isp := sss[1]
+	}
+}
+*/
+
+// 运营商各个大区用户占比
+func userDistribution(f, isp string, percent float64) string {
+	b, err := ioutil.ReadFile(f)
+	if err != nil {
+		log.Println("read fail", "bps.csv", err)
+		return ""
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	data := map[string]int{}
+	i := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if i == 0 {
+			i++
+			continue
+		}
+		ss := strings.Split(line, ";")
+		if _, ok := data[ss[0]]; !ok {
+			users, err := strconv.Atoi(ss[2])
+			if err != nil {
+				log.Fatal(err)
+			}
+			province := strings.Trim(ss[0], `"`)
+			data[province] = users
+		}
+		i++
+	}
+
+	log.Println(data)
+	rigionMap := map[string]int{}
+	for province, usercount := range data {
+		region := ProvinceAreaRelation(province)
+		if region != "" {
+			rigionMap[region] += usercount
+		} else {
+			log.Println("region is empty, province:", province)
+		}
+	}
+	log.Println(rigionMap)
+
+	var regionSlice []Pair
+	for k, v := range rigionMap {
+		regionSlice = append(regionSlice, Pair{Key: k, Value: v})
+	}
+	sort.Slice(regionSlice, func(i, j int) bool {
+		return regionSlice[i].Value > regionSlice[j].Value
+	})
+	log.Println(regionSlice)
+
+	/*
+		csv := ""
+		for _, s := range regionSlice {
+			region := s.Key
+			total := s.Value
+			provinces := AreaProvinceRelation(region)
+			for _, province := range provinces {
+				csv += fmt.Sprintf("%s, %s, %d, %d%%\n", region, province, data[province], data[province]*100/total)
+			}
+			csv += fmt.Sprintf("%s, total, %d, 100%%\n", region, total)
+		}
+	*/
+	allTotal := 0
+	csv := ""
+	for _, s := range regionSlice {
+		allTotal += s.Value
+	}
+	for _, s := range regionSlice {
+		csv += fmt.Sprintf("%s, %s, %d, %d%%, %.2fG\n", isp, s.Key, s.Value, s.Value*100/allTotal, 150*(float64(s.Value)/float64(allTotal))*percent)
+	}
+	return csv
+}
+
+func allDistribution() {
+	csv := "运营商, 大区, 用户数, 占比, 需要带宽\n"
+
+	txt := userDistribution("dx.csv", "电信", 0.46)
+	csv += txt
+
+	txt = userDistribution("用户分布-移动.csv", "移动", 0.35)
+	csv += txt
+
+	txt = userDistribution("用户分布-联通.csv", "联通", 0.18)
+	csv += txt
+
+	err := ioutil.WriteFile("user-distribution.csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+// 各个大区可用带宽
+func useableBandwidth() {
+	b, err := ioutil.ReadFile("bps5.csv")
+	if err != nil {
+		log.Println("read fail", "bps5.csv", err)
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	csv := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		ss := strings.Split(line, ",")
+		bwStr := strings.Trim(ss[1], " ")
+		bw, err := strconv.ParseFloat(bwStr, 64)
+		if err != nil {
+			fmt.Println("Error converting string to float64:", err)
+			return
+		}
+		bwG := bw * 8 / 1024
+		sss := strings.Split(ss[0], "_")
+		csv += fmt.Sprintf("%s, %s, %.2fG\n", sss[1], sss[0], bwG)
+	}
+	err = ioutil.WriteFile("bps-result.csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func nodeDistribution() {
+	b, err := ioutil.ReadFile("nodeinfo6.csv")
+	if err != nil {
+		log.Println("read fail", "nodeinfo6.csv", err)
+		return
+	}
+	lines := strings.Split(string(b), "\n")
+	// 获取所有isp+area的总节点数
+	ispAreaTotalNodes := map[string]int{}
+	for i := 0; i < len(lines); i++ {
+		if strings.Contains(lines[i], "Total") {
+			ss := strings.Split(lines[i], ",")
+			key := ss[1] + "_" + ss[0]
+			nodeCntStr := strings.Trim(ss[3], " ")
+			nodeCount, err := strconv.ParseInt(nodeCntStr, 10, 32)
+			if err != nil {
+				log.Println("Error converting string to int:", err)
+				return
+			}
+			ispAreaTotalNodes[key] = int(nodeCount)
+		}
+	}
+	csv := ""
+	for i := 0; i < len(lines)-1; i++ {
+		ss := strings.Split(lines[i], ",")
+		if len(ss) < 3 {
+			log.Fatalln(lines[i], i)
+		}
+		nodeCntStr := strings.Trim(ss[3], " ")
+		nodeCount, err := strconv.ParseInt(nodeCntStr, 10, 32)
+		if err != nil {
+			log.Println("Error converting string to int:", err)
+			return
+		}
+		key := ss[1] + "_" + ss[0]
+		total := ispAreaTotalNodes[key]
+		percent := float64(nodeCount*100) / float64(total)
+		csv += fmt.Sprintf("%s, %s, %s, %s, %.2f%%\n", ss[0], ss[1], ss[2], ss[3], percent)
+
+	}
+	err = ioutil.WriteFile("node-distribution.csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+
+}
+
+type Province struct {
+	UserCount   int
+	UserPercent float64
+	NodeCount   int
+	NodePercent float64
+	FreeBw      float64
+	NeedBw      float64
+}
+
+type Area struct {
+	Name      string
+	Provinces []Province
+}
+
+var isps = []string{"移动", "联通", "电信"}
+
+func loadfile(isp string) string {
+	file := ""
+	switch isp {
+	case "移动":
+		file = "yd.csv"
+	case "联通":
+		file = "lt.csv"
+	case "电信":
+		file = "dx.csv"
+	}
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		log.Println("read fail", file, err)
+		return ""
+	}
+	return string(b)
+}
+
+func dumpISP(isp string, areas map[string]map[string]Province) {
+	for area, provinceInfo := range areas {
+		for province, info := range provinceInfo {
+			log.Println(isp, area, province, info.UserCount)
+		}
+	}
+}
+
+// 运营商 --> 大区 --> 省份
+func douyuData() {
+	for _, isp := range isps {
+		areas := map[string]map[string]Province{}
+		raw := loadfile(isp)
+		if raw == "" {
+			log.Fatalln("load file err")
+		}
+		lines := strings.Split(raw, "\r\n")
+		for _, line := range lines[1:] {
+			ss := strings.Split(line, ";")
+			if len(ss) != 3 {
+				log.Fatalln("item not 3")
+			}
+			province := strings.ReplaceAll(ss[0], `"`, "")
+			area := ProvinceAreaRelation(province)
+			if province == "空" {
+				continue
+			}
+			userCount, err := strconv.ParseInt(ss[2], 10, 32)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			if provinces, ok := areas[area]; !ok {
+				provinces := map[string]Province{
+					province: Province{UserCount: int(userCount)},
+					"合计":     Province{UserCount: int(userCount)},
+				}
+				areas[area] = provinces
+			} else {
+				if _, ok := provinces[province]; !ok {
+					provinces[province] = Province{UserCount: int(userCount)}
+					info := provinces["合计"]
+					//log.Println("total", info, province, area)
+					info.UserCount += int(userCount)
+					provinces["合计"] = info
+				}
+				/*
+					provinces[province] = Province{UserCount: int(userCount)}
+					info := provinces["合计"]
+					log.Println("total", info, province, area)
+					info.UserCount += int(userCount)
+					provinces["合计"] = info
+				*/
+			}
+
+		}
+		//log.Println(areas)
+		dumpISP(isp, areas)
+	}
+
+}
+
 func main() {
-	douyu_user()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	//douyu_user()
+	//bps()
+	//allDistribution()
+	//useableBandwidth()
+	//nodeDistribution()
+	douyuData()
 }
