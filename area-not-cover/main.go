@@ -366,12 +366,14 @@ func nodeDistribution() {
 }
 
 type Province struct {
-	UserCount   int
-	UserPercent float64
-	NodeCount   int
-	NodePercent float64
-	FreeBw      float64
-	NeedBw      float64
+	UserCount        int
+	UserPercent      float64
+	UserPercentInIsp float64
+	NodeCount        int
+	NodePercent      float64
+	NodePercentInIsp float64
+	FreeBw           float64
+	NeedBw           float64
 }
 
 type Area struct {
@@ -399,11 +401,51 @@ func loadfile(isp string) string {
 	return string(b)
 }
 
+func readfile(f string) string {
+	b, err := ioutil.ReadFile(f)
+	if err != nil {
+		log.Println("read fail", f, err)
+		return ""
+	}
+	return string(b)
+}
+
+type Data struct {
+	Key   string
+	Value Province
+}
+
+func sortMapData(raw map[string]Province) []Data {
+	var datas []Data
+	for key, value := range raw {
+		datas = append(datas, Data{key, value})
+	}
+
+	sort.Slice(datas, func(i, j int) bool {
+		return datas[i].Value.UserCount > datas[j].Value.UserCount
+	})
+	return datas
+}
+
 func dumpISP(isp string, areas map[string]map[string]Province) {
+	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比\n"
 	for area, provinceInfo := range areas {
 		for province, info := range provinceInfo {
-			log.Println(isp, area, province, info.UserCount, info.UserPercent)
+			//log.Println(isp, area, province, info.UserCount, info.UserPercent, info.NodeCount, info.NodePercent)
+			if province != "合计" {
+				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%\n",
+					area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
+					info.NodeCount, info.NodePercent, info.NodePercentInIsp)
+			}
 		}
+		info := provinceInfo["合计"]
+		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%\n",
+			area, "合计", info.UserCount, info.UserPercent, info.UserPercentInIsp,
+			info.NodeCount, info.NodePercent, info.NodePercentInIsp)
+	}
+	err := ioutil.WriteFile(isp+".csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
 	}
 }
 
@@ -417,7 +459,8 @@ func calcUserPercentInArea(areas map[string]map[string]Province) {
 	}
 }
 
-func parseIspUserDistribution(isp string) map[string]map[string]Province {
+func parseIspUserDistribution(isp string) (int, map[string]map[string]Province) {
+	totalUserCount := 0
 	areas := map[string]map[string]Province{}
 	raw := loadfile(isp)
 	if raw == "" {
@@ -444,22 +487,80 @@ func parseIspUserDistribution(isp string) map[string]map[string]Province {
 				"合计":     Province{UserCount: int(userCount)},
 			}
 			areas[area] = provinces
+
+			totalUserCount += int(userCount)
 		} else if _, ok := provinces[province]; !ok {
 			provinces[province] = Province{UserCount: int(userCount)}
 			info := provinces["合计"]
 			info.UserCount += int(userCount)
 			provinces["合计"] = info
+
+			totalUserCount += int(userCount)
 		}
 	}
-	return areas
+	return totalUserCount, areas
+}
+
+// 移动_东北_黑龙江 --> 3
+func parseIspNodeDistribution() (int, map[string]int) {
+	nodeInfo := map[string]int{}
+	totalNodeCount := 0
+	raw := readfile("nodeinfo.csv")
+	if raw == "" {
+		log.Fatalln("read file err")
+	}
+	lines := strings.Split(raw, "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		ss := strings.Split(line, ",")
+		if len(ss) != 4 {
+			log.Fatalln("parse line err", line)
+		}
+		isp := strings.Trim(ss[0], " ")
+		area := strings.Trim(ss[1], " ")
+		province := strings.Trim(ss[2], " ")
+		nodeCountStr := strings.Trim(ss[3], " ")
+		key := isp + "_" + area + "_" + province
+		nodeCount, err := strconv.ParseInt(nodeCountStr, 10, 32)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		nodeInfo[key] = int(nodeCount)
+		if province != "Total" {
+			totalNodeCount += int(nodeCount)
+		}
+	}
+	return totalNodeCount, nodeInfo
+}
+
+func mergeData(isp string, totalUserCount int, areas map[string]map[string]Province, totalNodeCount int, nodeInfo map[string]int) {
+	for area, provinces := range areas {
+		totalKey := isp + "_" + area + "_Total"
+		total := nodeInfo[totalKey]
+		for province, info := range provinces {
+			key := isp + "_" + area + "_" + province
+			if province == "合计" {
+				key = totalKey
+			}
+			info.NodeCount = nodeInfo[key]
+			info.NodePercent = float64(info.NodeCount*100) / float64(total)
+			info.NodePercentInIsp = float64(info.NodeCount*100) / float64(totalNodeCount)
+			info.UserPercentInIsp = float64(info.UserCount*100) / float64(totalUserCount)
+			provinces[province] = info
+		}
+	}
 }
 
 // 运营商 --> 大区 --> 省份
 func douyuData() {
+	totalNodeCount, nodeInfo := parseIspNodeDistribution()
 	for _, isp := range isps {
-		areas := parseIspUserDistribution(isp)
+		totalUsercount, areas := parseIspUserDistribution(isp)
 		calcUserPercentInArea(areas)
 		//log.Println(areas)
+		mergeData(isp, totalUsercount, areas, totalNodeCount, nodeInfo)
 		dumpISP(isp, areas)
 	}
 
@@ -473,4 +574,5 @@ func main() {
 	//useableBandwidth()
 	//nodeDistribution()
 	douyuData()
+	//log.Println(nodeInfo)
 }
