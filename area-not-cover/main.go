@@ -452,7 +452,7 @@ func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
 }
 
 func dumpISP(isp string, areas map[string]map[string]Province) {
-	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比\n"
+	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, 可用带宽\n"
 	lastArea := ""
 	areaDatas := sortAreaMapData(areas)
 	for _, areaData := range areaDatas {
@@ -467,16 +467,16 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 				if lastArea != "" && lastArea == areaCopy {
 					area = ""
 				}
-				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%\n",
+				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
 					area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
-					info.NodeCount, info.NodePercent, info.NodePercentInIsp)
+					info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.FreeBw)
 				lastArea = areaCopy
 			}
 		}
 		info := provinceInfo["合计"]
-		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%\n",
+		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
 			areaCopy, "合计", info.UserCount, info.UserPercent, info.UserPercentInIsp,
-			info.NodeCount, info.NodePercent, info.NodePercentInIsp)
+			info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.FreeBw)
 	}
 	err := ioutil.WriteFile(isp+".csv", []byte(csv), 0644)
 	if err != nil {
@@ -572,7 +572,7 @@ func parseIspNodeDistribution() (map[string]int, map[string]int) {
 	return totalNodeCount, nodeInfo
 }
 
-func mergeData(isp string, totalUserCount int, areas map[string]map[string]Province, totalNodeCount map[string]int, nodeInfo map[string]int) {
+func mergeData(isp string, totalUserCount int, areas map[string]map[string]Province, totalNodeCount map[string]int, nodeInfo map[string]int, bwData map[string]float64) {
 	for area, provinces := range areas {
 		totalKey := isp + "_" + area + "_Total"
 		total := nodeInfo[totalKey]
@@ -583,22 +583,31 @@ func mergeData(isp string, totalUserCount int, areas map[string]map[string]Provi
 			}
 			info.NodeCount = nodeInfo[key]
 			info.NodePercent = float64(info.NodeCount*100) / float64(total)
+
 			info.NodePercentInIsp = float64(info.NodeCount*100) / float64(totalNodeCount[isp])
 			info.UserPercentInIsp = float64(info.UserCount*100) / float64(totalUserCount)
+
+			if province == "合计" {
+				key = isp + "_" + area
+			}
+			info.FreeBw = bwData[key]
+
 			provinces[province] = info
 		}
 	}
 }
 
 // 运营商 --> 大区 --> 省份
-func douyuData() {
+func douyuData(ipParser *ipdb.City) {
 	totalNodeCount, nodeInfo := parseIspNodeDistribution()
+	dnsRecord := getDnsRecord()
+	nodesData := getNodesData(ipParser, dnsRecord)
 	log.Println("总节点数:", totalNodeCount)
 	for _, isp := range isps {
 		totalUsercount, areas := parseIspUserDistribution(isp)
 		calcUserPercentInArea(areas)
 		//log.Println(areas)
-		mergeData(isp, totalUsercount, areas, totalNodeCount, nodeInfo)
+		mergeData(isp, totalUsercount, areas, totalNodeCount, nodeInfo, nodesData)
 		dumpISP(isp, areas)
 	}
 
@@ -715,13 +724,22 @@ type StreamdPorts struct {
 	Control int `json:"control" bson:"control"` // control
 }
 
+type ServiceStatus struct {
+	CPU    float64 `json:"cpu"` // cpu usage percent
+	RSS    int64   `json:"rss"` // resident set memory size
+	FD     int     `json:"fd"`
+	MaxFD  int     `json:"max_fd"`
+	Uptime int64   `json:"uptime"`
+}
+
 type RtNode struct {
 	Node
 
 	// runtime info
-	RuntimeStatus string       `json:"runtimeStatus"`
-	Ips           []RtIpStatus `json:"ips"`
-	StreamdPorts  StreamdPorts `json:"streamdPorts"`
+	RuntimeStatus string                   `json:"runtimeStatus"`
+	Ips           []RtIpStatus             `json:"ips"`
+	StreamdPorts  StreamdPorts             `json:"streamdPorts"`
+	Services      map[string]ServiceStatus `json:"services"`
 }
 
 var (
@@ -731,9 +749,17 @@ var (
 	privateIpCount       = 0
 	streamProbeFailCount = 0
 	speedErrCount        = 0
+	freeBwErrIpCount     = 0
+	totalNodeCount       = 0
+	totalIpCount         = 0
+	noDnsRecordCount     = 0
+	ipv6Count            = 0
+	allIpCount           = 0
+	canFrozenCount       = 0
+	servicesCount        = 0
 )
 
-func check(ip RtIpStatus) bool {
+func check(ip RtIpStatus, dnsRecord map[string]DynamicIpRecord) bool {
 	if ip.Forbidden {
 		forbiddenCount++
 		return false
@@ -753,6 +779,20 @@ func check(ip RtIpStatus) bool {
 		speedErrCount++
 		return false
 	}
+
+	if ip.OutMBps >= ip.MaxOutMBps*0.85 {
+		freeBwErrIpCount++
+		return false
+	}
+
+	if _, ok := dnsRecord[ip.Ip]; !ok {
+		noDnsRecordCount++
+		return false
+	}
+	if ip.IsIPv6 {
+		ipv6Count++
+		return false
+	}
 	return true
 }
 
@@ -765,6 +805,16 @@ func checkNode(node RtNode) bool {
 		portErrNodeCount++
 		return false
 	}
+	ability, ok := node.Abilities["live"]
+	if !ok || !ability.Can || ability.Frozen {
+		canFrozenCount++
+		return false
+	}
+
+	if _, ok = node.Services["live"]; !ok {
+		servicesCount++
+		return false
+	}
 	return true
 }
 
@@ -775,6 +825,14 @@ func dump() {
 	log.Println("private ip count:", privateIpCount)
 	log.Println("stream probe fail count:", streamProbeFailCount)
 	log.Println("speed err count:", speedErrCount)
+	log.Println("total node count:", totalNodeCount)
+	log.Println("total ip count:", totalIpCount)
+	log.Println("free bw not enough ip count:", freeBwErrIpCount)
+	log.Println("no dns record count:", noDnsRecordCount)
+	log.Println("ipv6 count:", ipv6Count)
+	log.Println("all ip count:", allIpCount)
+	log.Println("can frozen count:", canFrozenCount)
+	log.Println("services count:", servicesCount)
 }
 
 func getProvinceName(ip string, ipParser *ipdb.City) string {
@@ -785,20 +843,44 @@ func getProvinceName(ip string, ipParser *ipdb.City) string {
 	return locate.Region
 }
 
-func dumpBw(bwData map[string]float64) {
-	for key, bw := range bwData {
-		log.Println(key, bw)
+func dumpData(data map[string]float64) {
+	for key, value := range data {
+		log.Println(key, value)
 	}
 }
 
-func calcBw(isp string, nodes []RtNode, ipParser *ipdb.City) {
-	bwData := map[string]float64{}
+func getBw(isp, area, provinceName string, ip RtIpStatus, bwData map[string]float64) {
+	provinceKey := fmt.Sprintf("%s_%s_%s", isp, area, provinceName)
+	freeBw := (ip.MaxOutMBps*0.85 - ip.OutMBps) * 8 / 1024
+	bwData[provinceKey] += freeBw
+	areaKey := fmt.Sprintf("%s_%s", isp, area)
+	bwData[areaKey] += freeBw
+}
+
+func getNodeIpData(isp, area, provinceName string, nodeData map[string]float64) {
+	provinceIpKey := fmt.Sprintf("%s_%s_%s_ip", isp, area, provinceName)
+	nodeData[provinceIpKey] += 1
+	areaIpKey := fmt.Sprintf("%s_%s_ip", isp, area)
+	nodeData[areaIpKey] += 1
+	totalIpCount++
+}
+
+func getNodeData(isp, area, provinceName string, nodeData map[string]float64) {
+	provinceKey := fmt.Sprintf("%s_%s_%s", isp, area, provinceName)
+	nodeData[provinceKey] += 1
+	areaKey := fmt.Sprintf("%s_%s", isp, area)
+	nodeData[areaKey] += 1
+	totalNodeCount++
+}
+
+func calcData(isp string, nodes []RtNode, ipParser *ipdb.City, bwData map[string]float64, nodeData map[string]float64, dnsRecord map[string]DynamicIpRecord) {
 	for _, node := range nodes {
 		if !checkNode(node) {
 			continue
 		}
-		for _, ip := range node.Ips {
-			if !check(ip) {
+		for i, ip := range node.Ips {
+			allIpCount++
+			if !check(ip, dnsRecord) {
 				continue
 			}
 			if ip.Isp != isp {
@@ -806,18 +888,16 @@ func calcBw(isp string, nodes []RtNode, ipParser *ipdb.City) {
 			}
 			provinceName := getProvinceName(ip.Ip, ipParser)
 			area := ProvinceAreaRelation(provinceName)
-			provinceKey := fmt.Sprintf("%s_%s_%s", isp, area, provinceName)
-			freeBw := (ip.MaxOutMBps*0.85 - ip.OutMBps) * 8 / 1024
-			bwData[provinceKey] += freeBw
-			areaKey := fmt.Sprintf("%s_%s", isp, area)
-			bwData[areaKey] += freeBw
-
+			getBw(isp, area, provinceName, ip, bwData)
+			getNodeIpData(isp, area, provinceName, nodeData)
+			if i == 0 {
+				getNodeData(isp, area, provinceName, nodeData)
+			}
 		}
 	}
-	dumpBw(bwData)
 }
 
-func getBwData(ipParser *ipdb.City) {
+func getNodesData(ipParser *ipdb.City, dnsRecord map[string]DynamicIpRecord) map[string]float64 {
 	s, err := jumpboxCmd("curl -s http://10.34.139.33:2240/v1/runtime/nodes?dynamic=true")
 	if err != nil {
 		log.Fatalln(err)
@@ -825,13 +905,54 @@ func getBwData(ipParser *ipdb.City) {
 	nodes := []RtNode{}
 	if err := json.Unmarshal([]byte(s), &nodes); err != nil {
 		log.Println(err)
-		return
+		return nil
 	}
 	log.Println("total nodes:", len(nodes))
+	bwData := map[string]float64{}
+	nodeData := map[string]float64{}
 	for _, isp := range isps {
-		calcBw(isp, nodes, ipParser)
+		calcData(isp, nodes, ipParser, bwData, nodeData, dnsRecord)
 	}
+	dumpData(bwData)
+	dumpData(nodeData)
 	dump()
+	return bwData
+}
+
+type DynamicIpRecord struct {
+	Ip         string    `json:"ip"`
+	RecordType string    `json:"type"`
+	Value      string    `json:"value"`
+	Domain     string    `json:"domain"`
+	CommitId   string    `json:"commitId"`
+	CreateTime time.Time `json:"createTime"`
+}
+
+func getDnsRecord() map[string]DynamicIpRecord {
+	cmd := "echo \"hgetall miku_ip_domain_dns_map\" | redis-cli-5 -x -h 10.20.54.24 -p 8200 -c --raw"
+	resp, err := jumpboxCmd(cmd)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//log.Println(resp)
+	dnsRecord := map[string]DynamicIpRecord{}
+	lines := strings.Split(resp, "\r\n")
+
+	for i := 1; i < len(lines)-1; i += 2 {
+		record := DynamicIpRecord{}
+		if err := json.Unmarshal([]byte(lines[i+1]), &record); err != nil {
+			log.Fatalln(err, lines[i+1])
+		}
+		dnsRecord[lines[i]] = record
+	}
+	//log.Println(dnsRecord)
+	/*
+		for k, v := range dnsRecord {
+			log.Println("key is :", k, "val is:", v)
+		}
+	*/
+	log.Println("dns record len:", len(dnsRecord))
+	return dnsRecord
 }
 
 var (
@@ -853,12 +974,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("[IPDB NewCity] err: %+v\n", err)
 	}
-	getBwData(ipParser)
+	douyuData(ipParser)
 	//douyu_user()
 	//bps()
 	//allDistribution()
 	//useableBandwidth()
 	//nodeDistribution()
-	//douyuData()
 	//log.Println(nodeInfo)
 }
