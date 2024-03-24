@@ -815,7 +815,6 @@ func calcBw(isp string, nodes []RtNode, ipParser *ipdb.City) {
 		}
 	}
 	dumpBw(bwData)
-	dump()
 }
 
 func getBwData(ipParser *ipdb.City) {
@@ -829,7 +828,10 @@ func getBwData(ipParser *ipdb.City) {
 		return
 	}
 	log.Println("total nodes:", len(nodes))
-	calcBw("移动", nodes, ipParser)
+	for _, isp := range isps {
+		calcBw(isp, nodes, ipParser)
+	}
+	dump()
 }
 
 var (
