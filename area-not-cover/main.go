@@ -3,12 +3,20 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/qbox/pili/common/ipdb.v1"
+	qconfig "github.com/qiniu/x/config"
 )
 
 type Pair struct {
@@ -596,13 +604,259 @@ func douyuData() {
 
 }
 
+func RunCmd(cmdstr string) (string, error) {
+	cmd := exec.Command("bash", "-c", cmdstr)
+	fmt.Println(cmd)
+	//cmd.Stderr = os.Stderr
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(b), err
+	}
+	//return string(b), nil
+	raw := string(b)
+	//log.Println(raw)
+	if strings.Contains(raw, "Pseudo-terminal") {
+		new := ""
+		ss := strings.Split(raw, "\n")
+		if len(ss) == 1 {
+			return "", nil
+		}
+		for _, str := range ss {
+			if strings.Contains(str, "Pseudo-terminal") {
+				continue
+			}
+			if len(str) == 0 {
+				continue
+			}
+			//log.Println("str len:", len(str))
+			new += str + "\r\n"
+		}
+		//log.Println("new:", new)
+		return new, nil
+	}
+	return raw, nil
+}
+
+func jumpboxCmd(rawCmd string) (string, error) {
+	jumpbox := "ssh -t liyuanquan@10.20.34.27"
+	cmd := fmt.Sprintf("%s \" %s \"", jumpbox, rawCmd)
+	return RunCmd(cmd)
+}
+
+type NodeStatus string
+
+const (
+	NODE_PENDING    NodeStatus = "pending"
+	NODE_NORMAL     NodeStatus = "normal"
+	NODE_DISABLED   NodeStatus = "disabled"
+	NODE_UNKNOWN    NodeStatus = "unknown"
+	NODE_ANY_STATUS NodeStatus = ""
+)
+
+type Ability struct {
+	Can    bool `json:"can" bson:"can"`
+	Frozen bool `json:"frozen" bson:"frozen"`
+}
+
+type IpIsp struct {
+	Ip         string `bson:"ip" json:"ip"`
+	Isp        string `bson:"isp" json:"isp"`
+	Forbidden  bool   `bson:"forbidden,omitempty" json:"forbidden,omitempty"` // 单个 ip 封禁
+	ExternalIP string `bson:"externalIP,omitempty" json:"externalIP,omitempty"`
+
+	IsIPv6 bool `bson:"is_ipv6" json:"is_ipv6"`
+}
+
+type Node struct {
+	Id           string             `bson:"_id" json:"id"`
+	Idc          string             `bson:"idc" json:"idc"`
+	Provider     string             `bson:"provider" json:"provider"`
+	HostName     string             `bson:"host" json:"host"`
+	BandwidthMbs float64            `bson:"bwMbps" json:"bwMbps"`
+	LanIP        string             `bson:"lanIP" json:"lanIP"`
+	Status       NodeStatus         `bson:"status" json:"status"`
+	Abilities    map[string]Ability `bson:"abilities" json:"abilities,omitempty"` // fixme: key 形式待定
+	IpIsps       []IpIsp            `bson:"ipisps" json:"ipisps"`
+	Comment      string             `bson:"comment" json:"comment"`
+	UpdateTime   int64              `bson:"updateTime" json:"updateTime"`
+	IsDynamic    bool               `bson:"isDynamic" json:"isDynamic"`
+	IsMixture    bool               `bson:"isMixture" json:"isMixture"`
+	MachineId    string             `bson:"machineId" json:"machineId"`
+	RecordTime   time.Time          `bson:"recordTime" json:"recordTime"`
+	// fixme: oauth 相关信息记录
+}
+
+type IPStreamProbe struct {
+	State      int     `json:"state"`      // 定义同 `StreamProbeState`
+	Speed      float64 `json:"speed"`      // Mbps
+	UpdateTime int64   `json:"updateTime"` // s
+
+	// for sliding window
+	SlidingSpeeds [10]float64 `json:"slidingSpeeds"`
+	MinSpeed      float64     `json:"minSpeed"`
+}
+
+type RtIpStatus struct {
+	IpIsp
+	Interface  string  `json:"interface"`  // 网卡名称
+	InMBps     float64 `json:"inMBps"`     // 入流量带宽，单位：MBps
+	OutMBps    float64 `json:"outMBps"`    // 出流量带宽，单位：MBps
+	MaxInMBps  float64 `json:"maxInMBps"`  // 下行建设带宽, 单位：MBps
+	MaxOutMBps float64 `json:"maxOutMBps"` // 上行建设带宽，单位：MBps
+
+	IPStreamProbe IPStreamProbe `json:"ipStreamProbe"`
+}
+
+type StreamdPorts struct {
+	Http    int `json:"http" bson:"http"`       // http, ws
+	Https   int `json:"https" bson:"https"`     // https, wss
+	Wt      int `json:"wt" bson:"wt"`           // wt, quic
+	Rtmp    int `json:"rtmp" bson:"rtmp"`       // rtmp
+	Control int `json:"control" bson:"control"` // control
+}
+
+type RtNode struct {
+	Node
+
+	// runtime info
+	RuntimeStatus string       `json:"runtimeStatus"`
+	Ips           []RtIpStatus `json:"ips"`
+	StreamdPorts  StreamdPorts `json:"streamdPorts"`
+}
+
+var (
+	notServingNodeCount  = 0
+	portErrNodeCount     = 0
+	forbiddenCount       = 0
+	privateIpCount       = 0
+	streamProbeFailCount = 0
+	speedErrCount        = 0
+)
+
+func check(ip RtIpStatus) bool {
+	if ip.Forbidden {
+		forbiddenCount++
+		return false
+	}
+
+	if net.ParseIP(ip.Ip).IsPrivate() {
+		privateIpCount++
+		return false
+	}
+	if ip.IPStreamProbe.State != 1 {
+		streamProbeFailCount++
+		return false
+	}
+
+	if ip.IPStreamProbe.Speed < 20 &&
+		ip.IPStreamProbe.MinSpeed < 10 {
+		speedErrCount++
+		return false
+	}
+	return true
+}
+
+func checkNode(node RtNode) bool {
+	if node.RuntimeStatus != "Serving" {
+		notServingNodeCount++
+		return false
+	}
+	if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Https <= 0 || node.StreamdPorts.Wt <= 0 {
+		portErrNodeCount++
+		return false
+	}
+	return true
+}
+
+func dump() {
+	log.Println("not servint node count:", notServingNodeCount)
+	log.Println("port err node count:", portErrNodeCount)
+	log.Println("forbidden count:", forbiddenCount)
+	log.Println("private ip count:", privateIpCount)
+	log.Println("stream probe fail count:", streamProbeFailCount)
+	log.Println("speed err count:", speedErrCount)
+}
+
+func getProvinceName(ip string, ipParser *ipdb.City) string {
+	locate, err := ipParser.Find(ip)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return locate.Region
+}
+
+func dumpBw(bwData map[string]float64) {
+	for key, bw := range bwData {
+		log.Println(key, bw)
+	}
+}
+
+func calcBw(isp string, nodes []RtNode, ipParser *ipdb.City) {
+	bwData := map[string]float64{}
+	for _, node := range nodes {
+		if !checkNode(node) {
+			continue
+		}
+		for _, ip := range node.Ips {
+			if !check(ip) {
+				continue
+			}
+			if ip.Isp != isp {
+				continue
+			}
+			provinceName := getProvinceName(ip.Ip, ipParser)
+			area := ProvinceAreaRelation(provinceName)
+			provinceKey := fmt.Sprintf("%s_%s_%s", isp, area, provinceName)
+			freeBw := (ip.MaxOutMBps*0.85 - ip.OutMBps) * 8 / 1024
+			bwData[provinceKey] += freeBw
+			areaKey := fmt.Sprintf("%s_%s", isp, area)
+			bwData[areaKey] += freeBw
+
+		}
+	}
+	dumpBw(bwData)
+	dump()
+}
+
+func getBwData(ipParser *ipdb.City) {
+	s, err := jumpboxCmd("curl -s http://10.34.139.33:2240/v1/runtime/nodes?dynamic=true")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	nodes := []RtNode{}
+	if err := json.Unmarshal([]byte(s), &nodes); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("total nodes:", len(nodes))
+	calcBw("移动", nodes, ipParser)
+}
+
+var (
+	configFile = flag.String("f", "/usr/local/etc/miku.json", "the config file")
+)
+
+type Config struct {
+	IPDB ipdb.Config `json:"ipdb"`
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	conf := &Config{}
+	err := qconfig.LoadFile(conf, *configFile)
+	if err != nil {
+		log.Fatalf("load config file failed: %s\n", err.Error())
+	}
+	ipParser, err := ipdb.NewCity(conf.IPDB)
+	if err != nil {
+		log.Fatalf("[IPDB NewCity] err: %+v\n", err)
+	}
+	getBwData(ipParser)
 	//douyu_user()
 	//bps()
 	//allDistribution()
 	//useableBandwidth()
 	//nodeDistribution()
-	douyuData()
+	//douyuData()
 	//log.Println(nodeInfo)
 }
