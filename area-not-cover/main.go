@@ -374,14 +374,17 @@ func nodeDistribution() {
 }
 
 type Province struct {
-	UserCount        int
-	UserPercent      float64
-	UserPercentInIsp float64
-	NodeCount        int
-	NodePercent      float64
-	NodePercentInIsp float64
-	FreeBw           float64
-	NeedBw           float64
+	UserCount          int
+	UserPercent        float64
+	UserPercentInIsp   float64
+	NodeCount          int
+	NodePercent        float64
+	NodePercentInIsp   float64
+	NodeIpCount        int
+	NodeIpPercent      float64
+	NodeIpPercentInIsp float64
+	FreeBw             float64
+	NeedBw             float64
 }
 
 type Area struct {
@@ -452,7 +455,7 @@ func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
 }
 
 func dumpISP(isp string, areas map[string]map[string]Province) {
-	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, 可用带宽\n"
+	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 可用带宽\n"
 	lastArea := ""
 	areaDatas := sortAreaMapData(areas)
 	for _, areaData := range areaDatas {
@@ -467,16 +470,18 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 				if lastArea != "" && lastArea == areaCopy {
 					area = ""
 				}
-				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
+				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
 					area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
-					info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.FreeBw)
+					info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.NodeIpCount,
+					info.NodeIpPercent, info.NodeIpPercentInIsp, info.FreeBw)
 				lastArea = areaCopy
 			}
 		}
 		info := provinceInfo["合计"]
-		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
+		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f\n",
 			areaCopy, "合计", info.UserCount, info.UserPercent, info.UserPercentInIsp,
-			info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.FreeBw)
+			info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.NodeIpCount,
+			info.NodeIpPercent, info.NodeIpPercentInIsp, info.FreeBw)
 	}
 	err := ioutil.WriteFile(isp+".csv", []byte(csv), 0644)
 	if err != nil {
@@ -572,20 +577,27 @@ func parseIspNodeDistribution() (map[string]int, map[string]int) {
 	return totalNodeCount, nodeInfo
 }
 
-func mergeData(isp string, totalUserCount int, areas map[string]map[string]Province, totalNodeCount map[string]int, nodeInfo map[string]int, bwData map[string]float64) {
+func mergeData(isp string, totalUserCount int, areas map[string]map[string]Province, nodesData map[string]int, bwData map[string]float64) {
+	totalIspIp := nodesData[isp]
 	for area, provinces := range areas {
-		totalKey := isp + "_" + area + "_Total"
-		total := nodeInfo[totalKey]
+		totalKey := isp + "_" + area
+		total := nodesData[totalKey]
+		totalIp := nodesData[totalKey+"_ip"]
 		for province, info := range provinces {
 			key := isp + "_" + area + "_" + province
 			if province == "合计" {
 				key = totalKey
 			}
-			info.NodeCount = nodeInfo[key]
+			info.NodeCount = nodesData[key]
 			info.NodePercent = float64(info.NodeCount*100) / float64(total)
 
-			info.NodePercentInIsp = float64(info.NodeCount*100) / float64(totalNodeCount[isp])
+			info.NodePercentInIsp = float64(info.NodeCount*100) / float64(nodesData[isp])
 			info.UserPercentInIsp = float64(info.UserCount*100) / float64(totalUserCount)
+
+			ipKey := key + "_ip"
+			info.NodeIpCount = nodesData[ipKey]
+			info.NodeIpPercent = float64(info.NodeIpCount*100) / float64(totalIp)
+			info.NodeIpPercentInIsp = float64(info.NodeIpCount*100) / float64(totalIspIp)
 
 			if province == "合计" {
 				key = isp + "_" + area
@@ -599,15 +611,15 @@ func mergeData(isp string, totalUserCount int, areas map[string]map[string]Provi
 
 // 运营商 --> 大区 --> 省份
 func douyuData(ipParser *ipdb.City) {
-	totalNodeCount, nodeInfo := parseIspNodeDistribution()
+	//totalNodeCount, nodeInfo := parseIspNodeDistribution()
 	dnsRecord := getDnsRecord()
-	nodesData := getNodesData(ipParser, dnsRecord)
+	nodesData, bwData := getNodesData(ipParser, dnsRecord)
 	log.Println("总节点数:", totalNodeCount)
 	for _, isp := range isps {
 		totalUsercount, areas := parseIspUserDistribution(isp)
 		calcUserPercentInArea(areas)
 		//log.Println(areas)
-		mergeData(isp, totalUsercount, areas, totalNodeCount, nodeInfo, nodesData)
+		mergeData(isp, totalUsercount, areas, nodesData, bwData)
 		dumpISP(isp, areas)
 	}
 
@@ -843,7 +855,7 @@ func getProvinceName(ip string, ipParser *ipdb.City) string {
 	return locate.Region
 }
 
-func dumpData(data map[string]float64) {
+func dumpData(data map[string]int) {
 	for key, value := range data {
 		log.Println(key, value)
 	}
@@ -857,23 +869,26 @@ func getBw(isp, area, provinceName string, ip RtIpStatus, bwData map[string]floa
 	bwData[areaKey] += freeBw
 }
 
-func getNodeIpData(isp, area, provinceName string, nodeData map[string]float64) {
+func getNodeIpData(isp, area, provinceName string, nodeData map[string]int) {
 	provinceIpKey := fmt.Sprintf("%s_%s_%s_ip", isp, area, provinceName)
 	nodeData[provinceIpKey] += 1
 	areaIpKey := fmt.Sprintf("%s_%s_ip", isp, area)
 	nodeData[areaIpKey] += 1
+	ispKey := fmt.Sprintf("%s_ip", isp)
+	nodeData[ispKey] += 1
 	totalIpCount++
 }
 
-func getNodeData(isp, area, provinceName string, nodeData map[string]float64) {
+func getNodeData(isp, area, provinceName string, nodeData map[string]int) {
 	provinceKey := fmt.Sprintf("%s_%s_%s", isp, area, provinceName)
 	nodeData[provinceKey] += 1
 	areaKey := fmt.Sprintf("%s_%s", isp, area)
 	nodeData[areaKey] += 1
+	nodeData[isp] += 1
 	totalNodeCount++
 }
 
-func calcData(isp string, nodes []RtNode, ipParser *ipdb.City, bwData map[string]float64, nodeData map[string]float64, dnsRecord map[string]DynamicIpRecord) {
+func calcData(isp string, nodes []RtNode, ipParser *ipdb.City, bwData map[string]float64, nodeData map[string]int, dnsRecord map[string]DynamicIpRecord) {
 	for _, node := range nodes {
 		if !checkNode(node) {
 			continue
@@ -897,7 +912,7 @@ func calcData(isp string, nodes []RtNode, ipParser *ipdb.City, bwData map[string
 	}
 }
 
-func getNodesData(ipParser *ipdb.City, dnsRecord map[string]DynamicIpRecord) map[string]float64 {
+func getNodesData(ipParser *ipdb.City, dnsRecord map[string]DynamicIpRecord) (map[string]int, map[string]float64) {
 	s, err := jumpboxCmd("curl -s http://10.34.139.33:2240/v1/runtime/nodes?dynamic=true")
 	if err != nil {
 		log.Fatalln(err)
@@ -905,18 +920,18 @@ func getNodesData(ipParser *ipdb.City, dnsRecord map[string]DynamicIpRecord) map
 	nodes := []RtNode{}
 	if err := json.Unmarshal([]byte(s), &nodes); err != nil {
 		log.Println(err)
-		return nil
+		return nil, nil
 	}
 	log.Println("total nodes:", len(nodes))
 	bwData := map[string]float64{}
-	nodeData := map[string]float64{}
+	nodeData := map[string]int{}
 	for _, isp := range isps {
 		calcData(isp, nodes, ipParser, bwData, nodeData, dnsRecord)
 	}
-	dumpData(bwData)
+	//dumpData(bwData)
 	dumpData(nodeData)
 	dump()
-	return bwData
+	return nodeData, bwData
 }
 
 type DynamicIpRecord struct {
