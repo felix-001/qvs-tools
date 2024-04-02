@@ -934,6 +934,10 @@ func getNodesData(ipParser *ipdb.City, dnsRecord map[string]DynamicIpRecord) (ma
 	if err != nil {
 		log.Fatalln(err)
 	}
+	err = ioutil.WriteFile("nodes.json", []byte(s), 0644)
+	if err != nil {
+		log.Println(err)
+	}
 	nodes := []RtNode{}
 	if err := json.Unmarshal([]byte(s), &nodes); err != nil {
 		log.Println(err)
