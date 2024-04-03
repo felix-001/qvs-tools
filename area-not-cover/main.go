@@ -404,6 +404,7 @@ func loadfile(isp string) string {
 	case "电信":
 		file = "dx.csv"
 	}
+	log.Println(file)
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Println("read fail", file, err)
@@ -456,9 +457,8 @@ func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
 	return datas
 }
 
-func dumpISP(isp string, areas map[string]map[string]Province) {
+func dumpISP(isp string, areas map[string]map[string]Province) string {
 	//csv := "运营商, 大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
-	csv := "运营商, 大区, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
 	areaDatas := sortAreaMapData(areas)
 	var bwNeed float64 = 0
 	switch isp {
@@ -469,6 +469,7 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 	case "联通":
 		bwNeed = 150 * 0.3
 	}
+	csv := ""
 	for _, areaData := range areaDatas {
 		log.Println(areaData.Key)
 		area := areaData.Key
@@ -497,10 +498,7 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 			info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.NodeIpCount,
 			info.NodeIpPercent, info.NodeIpPercentInIsp, ispAreaBwNeed, info.FreeBw, needAddBw)
 	}
-	err := ioutil.WriteFile(isp+".csv", []byte(csv), 0644)
-	if err != nil {
-		log.Println(err)
-	}
+	return csv
 }
 
 func calcUserPercentInArea(areas map[string]map[string]Province) {
@@ -516,11 +514,13 @@ func calcUserPercentInArea(areas map[string]map[string]Province) {
 func parseIspUserDistribution(isp string) (int, map[string]map[string]Province) {
 	totalUserCount := 0
 	areas := map[string]map[string]Province{}
+	log.Println("load isp", isp)
 	raw := loadfile(isp)
 	if raw == "" {
 		log.Fatalln("load file err")
 	}
 	lines := strings.Split(raw, "\r\n")
+	log.Println("lines", len(lines))
 	for _, line := range lines[1:] {
 		ss := strings.Split(line, ",")
 		if len(ss) != 3 {
@@ -528,7 +528,7 @@ func parseIspUserDistribution(isp string) (int, map[string]map[string]Province) 
 		}
 		province := strings.ReplaceAll(ss[0], `"`, "")
 		area := ProvinceAreaRelation(province)
-		if province == "空" {
+		if province == "空" || area == "" {
 			continue
 		}
 		userCount, err := strconv.ParseInt(ss[2], 10, 32)
@@ -536,6 +536,7 @@ func parseIspUserDistribution(isp string) (int, map[string]map[string]Province) 
 			log.Fatalln(err)
 		}
 		if provinces, ok := areas[area]; !ok {
+			log.Println(area)
 			provinces := map[string]Province{
 				province: {UserCount: int(userCount)},
 				"合计":     {UserCount: int(userCount)},
@@ -633,12 +634,19 @@ func douyuData(ipParser *ipdb.City) {
 	dnsRecord := getDnsRecord()
 	nodesData, bwData := getNodesData(ipParser, dnsRecord)
 	log.Println("总节点数:", totalNodeCount)
+	csv := "运营商, 大区, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
 	for _, isp := range isps {
 		totalUsercount, areas := parseIspUserDistribution(isp)
+		fmt.Printf("%+v\n", areas)
+		log.Println("len:", len(areas))
 		calcUserPercentInArea(areas)
 		//log.Println(areas)
 		mergeData(isp, totalUsercount, areas, nodesData, bwData)
-		dumpISP(isp, areas)
+		csv += dumpISP(isp, areas)
+	}
+	err := ioutil.WriteFile("斗鱼带宽需求.csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
 	}
 
 }
