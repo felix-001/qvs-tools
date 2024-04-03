@@ -409,7 +409,9 @@ func loadfile(isp string) string {
 		log.Println("read fail", file, err)
 		return ""
 	}
-	return string(b)
+	res := strings.ReplaceAll(string(b), ";", ",")
+	res = strings.ReplaceAll(res, "\"", "")
+	return res
 }
 
 func readfile(f string) string {
@@ -455,7 +457,8 @@ func sortAreaMapData(raw map[string]map[string]Province) []AreaData {
 }
 
 func dumpISP(isp string, areas map[string]map[string]Province) {
-	csv := "大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
+	//csv := "运营商, 大区, 省份, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
+	csv := "运营商, 大区, 用户数, 用户数在大区占比, 用户数在isp占比, 节点数, 节点数在大区占比, 节点数在isp占比, ip数, ip数在大区占比, ip数在isp占比, 需要带宽(Gbps), 可用带宽(Gbps), 是否需要增加带宽\n"
 	areaDatas := sortAreaMapData(areas)
 	var bwNeed float64 = 0
 	switch isp {
@@ -467,19 +470,22 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 		bwNeed = 150 * 0.3
 	}
 	for _, areaData := range areaDatas {
+		log.Println(areaData.Key)
 		area := areaData.Key
 		provinceInfo := areaData.Value
-		provinces := sortMapData(provinceInfo)
-		for _, data := range provinces {
-			province := data.Key
-			info := data.Value
+		//provinces := sortMapData(provinceInfo)
+		//for _, data := range provinces {
+		//province := data.Key
+		//info := data.Value
+		/*
 			if province != "合计" {
-				csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, , %.1f\n",
-					area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
+				csv += fmt.Sprintf("%s, %s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, , %.1f\n",
+					isp, area, province, info.UserCount, info.UserPercent, info.UserPercentInIsp,
 					info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.NodeIpCount,
 					info.NodeIpPercent, info.NodeIpPercentInIsp, info.FreeBw)
 			}
-		}
+		*/
+		//}
 		info := provinceInfo["合计"]
 		ispAreaBwNeed := bwNeed * info.NodeIpPercentInIsp / 100
 		needAddBw := "否"
@@ -487,7 +493,7 @@ func dumpISP(isp string, areas map[string]map[string]Province) {
 			needAddBw = "是"
 		}
 		csv += fmt.Sprintf("%s, %s, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %d, %.1f%%, %.1f%%, %.1f,%.1f, %s\n",
-			area, "合计", info.UserCount, info.UserPercent, info.UserPercentInIsp,
+			isp, area, info.UserCount, info.UserPercent, info.UserPercentInIsp,
 			info.NodeCount, info.NodePercent, info.NodePercentInIsp, info.NodeIpCount,
 			info.NodeIpPercent, info.NodeIpPercentInIsp, ispAreaBwNeed, info.FreeBw, needAddBw)
 	}
@@ -516,9 +522,9 @@ func parseIspUserDistribution(isp string) (int, map[string]map[string]Province) 
 	}
 	lines := strings.Split(raw, "\r\n")
 	for _, line := range lines[1:] {
-		ss := strings.Split(line, ";")
+		ss := strings.Split(line, ",")
 		if len(ss) != 3 {
-			log.Fatalln("item not 3")
+			log.Fatalln("item not 3", line, len(ss))
 		}
 		province := strings.ReplaceAll(ss[0], `"`, "")
 		area := ProvinceAreaRelation(province)
@@ -921,9 +927,6 @@ func calcData(isp string, nodes []RtNode, ipParser *ipdb.City, bwData map[string
 			getNodeIpData(isp, area, provinceName, nodeData)
 		}
 		if provinceName != "" {
-			if area == "东北" && isp == "移动" {
-				log.Println("东北_移动:", node.Id)
-			}
 			getNodeData(isp, area, provinceName, nodeData)
 		}
 	}
