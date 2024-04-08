@@ -463,11 +463,11 @@ func dumpISP(isp string, areas map[string]map[string]Province) string {
 	var bwNeed float64 = 0
 	switch isp {
 	case "电信":
-		bwNeed = 150 * 0.4
+		bwNeed = 200 * 0.4
 	case "移动":
-		bwNeed = 150 * 0.3
+		bwNeed = 200 * 0.3
 	case "联通":
-		bwNeed = 150 * 0.3
+		bwNeed = 200 * 0.3
 	}
 	csv := ""
 	for _, areaData := range areaDatas {
@@ -1025,7 +1025,6 @@ func main() {
 	//douyu_user()
 	//bps()
 	//allDistribution()
-	//useableBandwidth()
-	//nodeDistribution()
+	//useableBandwidth()g	//nodeDistribution()
 	//log.Println(nodeInfo)
 }
