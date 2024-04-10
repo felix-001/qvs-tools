@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net"
 	"os"
+	"os/exec"
+	"strings"
 )
 
 func AreaProvinceRelation(area string) []string {
@@ -50,7 +54,43 @@ func ProvinceAreaRelation(province string) string {
 		return ""
 	}
 }
+
+func CheckIPv4(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	return ip != nil && ip.To4() != nil
+}
+
+func Exec(cmdstr string) (string, error) {
+	cmd := exec.Command("bash", "-c", cmdstr)
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println("cmd:", cmdstr, "err:", err)
+		return "", err
+	}
+	return string(b), nil
+}
+
+func getProvince(input string) string {
+	index := strings.Index(input, "[")
+	if index != -1 {
+		// 找到 "[" 符号的位置，其后面紧跟着的就是城市信息
+		province := input[index+1 : strings.Index(input[index:], "]")]
+		province = strings.ReplaceAll(province, "市", "")
+		province = strings.ReplaceAll(province, "省", "")
+		return province
+	}
+	return ""
+}
+
 func main() {
+	if CheckIPv4(os.Args[1]) {
+		cmd := fmt.Sprintf("nali %s ", os.Args[1])
+		if len(os.Args) == 3 {
+			cmd += os.Args[2]
+		}
+
+		return
+	}
 	data := AreaProvinceRelation(os.Args[1])
 	if len(data) != 0 {
 		fmt.Println(data)
