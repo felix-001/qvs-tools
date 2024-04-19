@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"time"
 
+	"github.com/qbox/mikud-live/common/model"
 	qconfig "github.com/qiniu/x/config"
 	"github.com/redis/go-redis/v9"
 )
@@ -19,11 +22,28 @@ type Config struct {
 
 type NetprobeSrv struct {
 	redisCli *redis.ClusterClient
+	conf     Config
 }
 
 func (s *NetprobeSrv) Run() {
-	res, err := s.redisCli.Keys(context.Background(), "*").Result()
-	log.Println(res, err)
+	var nodes []*model.RtNode
+	if err := qconfig.LoadFile(&nodes, s.conf.NodesDataFile); err != nil {
+		log.Fatalf("load config failed, err: %v", err)
+	}
+	log.Println("node count:", len(nodes))
+	for range time.Tick(time.Duration(10) * time.Second) {
+		for _, node := range nodes {
+			bytes, err := json.Marshal(node)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			_, err = s.redisCli.HSet(context.Background(), model.NetprobeRtNodesMap, node.Id, bytes).Result()
+			if err != nil {
+				log.Printf("write node info to redis err, %+v\n", err)
+			}
+		}
+	}
 }
 
 func main() {
@@ -42,6 +62,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
-	app := NetprobeSrv{redisCli: redisCli}
+	app := NetprobeSrv{redisCli: redisCli, conf: conf}
 	app.Run()
 }
