@@ -32,7 +32,7 @@ type Config struct {
 type NetprobeSrv struct {
 	redisCli *redis.ClusterClient
 	conf     Config
-	nodes    []model.RtNode
+	nodes    []*model.RtNode
 	ipParser *ipdb.City
 }
 
@@ -144,7 +144,7 @@ func (s *NetprobeSrv) NodeInfo(nodeId string) *model.RtNode {
 			log.Println("found the node")
 			//node.RuntimeStatus = "Offline"
 			fmt.Printf("%+v\n", node)
-			return &node
+			return node
 		}
 	}
 	log.Println("node not found:", nodeId)
@@ -165,6 +165,47 @@ func (s *NetprobeSrv) CostBw(nodeId string) {
 	log.Println("node not found:", nodeId)
 }
 
+func (s *NetprobeSrv) GetAreaIspRootBwInfo(areaIsp string) string {
+	res, err := s.redisCli.HGet(context.Background(), "miku_dynamic_root_nodes_map_douyu", areaIsp).Result()
+	if err != nil {
+		return fmt.Sprintf("err: %+v", err)
+	}
+	var rootNodeIds []string
+	if err := json.Unmarshal([]byte(res), &rootNodeIds); err != nil {
+		return fmt.Sprintf("err: %+v", err)
+	}
+	var totalInBw, totalOutBw, maxInBw, maxOutBw float64
+	nodeCnt := 0
+	for _, nodeId := range rootNodeIds {
+		for _, node := range s.nodes {
+			if node.Id != nodeId {
+				continue
+			}
+			for _, ip := range node.Ips {
+				totalInBw += ip.InMBps * 8
+				totalOutBw += ip.OutMBps * 8
+				maxInBw += ip.MaxInMBps * 8
+				maxOutBw += ip.MaxOutMBps * 8
+			}
+			nodeCnt++
+		}
+	}
+	result := map[string]float64{
+		"totalInBw":  totalInBw,
+		"maxInBw":    maxInBw,
+		"freeInBw":   maxInBw - totalInBw,
+		"totalOutBw": totalOutBw,
+		"maxOutBw":   maxOutBw,
+		"freeOutBw":  maxOutBw - totalOutBw,
+		"nodeCnt":    float64(nodeCnt),
+	}
+	jsonbody, err := json.Marshal(result)
+	if err != nil {
+		return fmt.Sprintf("err: %+v", err)
+	}
+	return string(jsonbody)
+}
+
 func (s *NetprobeSrv) GetAreaIspNodesInfo(needAreaIsp string) []*model.RtNode {
 	areaIspGroup := make(map[string][]*model.RtNode)
 	for _, node := range s.nodes {
@@ -176,12 +217,63 @@ func (s *NetprobeSrv) GetAreaIspNodesInfo(needAreaIsp string) []*model.RtNode {
 			}
 			areaIpsKey, _ := util.GetAreaIspKey(locate)
 			areaIsp := strings.TrimPrefix(areaIpsKey, util.AreaIspKeyPrefix)
-			areaIspGroup[areaIsp] = append(areaIspGroup[areaIsp], &node)
+			areaIspGroup[areaIsp] = append(areaIspGroup[areaIsp], node)
 			break
 		}
 	}
 	log.Println("node count:", len(areaIspGroup[needAreaIsp]))
 	return areaIspGroup[needAreaIsp]
+}
+
+func (s *NetprobeSrv) findNode(nodeId string) *model.RtNode {
+	for _, node := range s.nodes {
+		if node.Id == nodeId {
+			return node
+		}
+	}
+	return nil
+}
+
+func (s *NetprobeSrv) ClearBw(nodeId string) string {
+	for i, node := range s.nodes {
+		if node.Id == nodeId {
+			for j, _ := range node.Ips {
+				s.nodes[i].Ips[j].OutMBps = 0
+				s.nodes[i].Ips[j].InMBps = 0
+			}
+			break
+		}
+	}
+	return "success"
+}
+
+func (s *NetprobeSrv) FillOutBw(nodeId string) string {
+	for i, node := range s.nodes {
+		if node.Id == nodeId {
+			for j, ip := range node.Ips {
+				if ip.MaxOutMBps == 0 {
+					continue
+				}
+				s.nodes[i].Ips[j].OutMBps = ip.MaxOutMBps - 10
+				//s.nodes[i].Ips[j].InMBps =
+			}
+			break
+		}
+	}
+	return "success"
+}
+
+func (s *NetprobeSrv) FillInBw(nodeId string) string {
+	for i, node := range s.nodes {
+		if node.Id == nodeId {
+			for j, ip := range node.Ips {
+				s.nodes[i].Ips[j].InMBps = ip.MaxInMBps - 1000
+				//s.nodes[i].Ips[j].InMBps =
+			}
+			break
+		}
+	}
+	return "success"
 }
 
 func main() {
@@ -241,12 +333,40 @@ func main() {
 		}
 		fmt.Fprintf(w, string(jsonbody))
 	}
+	getAreaIspRootBwInfoHandler := func(w http.ResponseWriter, req *http.Request) {
+		areaIsp := mux.Vars(req)["areaIsp"]
+		info := app.GetAreaIspRootBwInfo(areaIsp)
+		fmt.Fprintf(w, info)
+	}
+
+	clearBwHandler := func(w http.ResponseWriter, req *http.Request) {
+		nodeId := mux.Vars(req)["id"]
+		app.ClearBw(nodeId)
+		fmt.Fprintf(w, "success")
+	}
+
+	fillInBwHandler := func(w http.ResponseWriter, req *http.Request) {
+		nodeId := mux.Vars(req)["id"]
+		app.FillInBw(nodeId)
+		fmt.Fprintf(w, "success")
+	}
+
+	fillOutBwHandler := func(w http.ResponseWriter, req *http.Request) {
+		nodeId := mux.Vars(req)["id"]
+		app.FillOutBw(nodeId)
+		fmt.Fprintf(w, "success")
+	}
+
 	go func() {
 		router := mux.NewRouter()
 		router.HandleFunc("/freeze/{id}", handler)
 		router.HandleFunc("/node/{id}", nodeInfoHandler)
 		router.HandleFunc("/costbw/{id}", costBwHandler)
 		router.HandleFunc("/nodes/{areaIsp}", getAreaIspNodesHandler)
+		router.HandleFunc("/area/{areaIsp}/rootBwInfo", getAreaIspRootBwInfoHandler)
+		router.HandleFunc("/node/{id}/clearbw", clearBwHandler)
+		router.HandleFunc("/node/{id}/fillInbw", fillInBwHandler)
+		router.HandleFunc("/node/{id}/fillOutbw", fillOutBwHandler)
 		http.Handle("/", router)
 		http.ListenAndServe(":9090", nil)
 	}()
