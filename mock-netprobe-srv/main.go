@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/common/model"
+	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 	"github.com/redis/go-redis/v9"
@@ -174,36 +175,34 @@ func (s *NetprobeSrv) GetAreaIspRootBwInfo(areaIsp string) string {
 	if err := json.Unmarshal([]byte(res), &rootNodeIds); err != nil {
 		return fmt.Sprintf("err: %+v", err)
 	}
-	var totalInBw, totalOutBw, maxInBw, maxOutBw float64
 	nodeCnt := 0
+	out := ""
 	for _, nodeId := range rootNodeIds {
 		for _, node := range s.nodes {
 			if node.Id != nodeId {
 				continue
 			}
+			var inBw, outBw, maxInBw, maxOutBw float64
 			for _, ip := range node.Ips {
-				totalInBw += ip.InMBps * 8
-				totalOutBw += ip.OutMBps * 8
+				if ip.IsIPv6 {
+					continue
+				}
+				if publicUtil.IsPrivateIP(ip.Ip) {
+					continue
+				}
+				inBw += ip.InMBps * 8
+				outBw += ip.OutMBps * 8
 				maxInBw += ip.MaxInMBps * 8
 				maxOutBw += ip.MaxOutMBps * 8
 			}
+			out += fmt.Sprintf("node: %s inMpbs: %.0f maxInMbps: %.0f inRatio: %.1f outMbps: %.0f maxOutMbps: %.0f outRatio: %.1f\n",
+				node.Id, inBw, maxInBw, inBw/maxInBw, outBw, maxOutBw, outBw/maxOutBw)
 			nodeCnt++
 		}
 	}
-	result := map[string]float64{
-		"totalInBw":  totalInBw,
-		"maxInBw":    maxInBw,
-		"freeInBw":   maxInBw - totalInBw,
-		"totalOutBw": totalOutBw,
-		"maxOutBw":   maxOutBw,
-		"freeOutBw":  maxOutBw - totalOutBw,
-		"nodeCnt":    float64(nodeCnt),
-	}
-	jsonbody, err := json.Marshal(result)
-	if err != nil {
-		return fmt.Sprintf("err: %+v", err)
-	}
-	return string(jsonbody)
+	out += fmt.Sprintf("node count: %d\n", nodeCnt)
+
+	return out
 }
 
 func (s *NetprobeSrv) GetAreaIspNodesInfo(needAreaIsp string) []*model.RtNode {
