@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -195,7 +196,7 @@ func (s *NetprobeSrv) GetAreaIspRootBwInfo(areaIsp string) string {
 				maxInBw += ip.MaxInMBps * 8
 				maxOutBw += ip.MaxOutMBps * 8
 			}
-			out += fmt.Sprintf("node: %s inMpbs: %.0f maxInMbps: %.0f inRatio: %.1f outMbps: %.0f maxOutMbps: %.0f outRatio: %.1f\n",
+			out += fmt.Sprintf("node: %s inMpbs: %.0f maxInMbps: %.0f inRatio: %.3f outMbps: %.0f maxOutMbps: %.0f outRatio: %.3f\n",
 				node.Id, inBw, maxInBw, inBw/maxInBw, outBw, maxOutBw, outBw/maxOutBw)
 			nodeCnt++
 		}
@@ -254,7 +255,6 @@ func (s *NetprobeSrv) FillOutBw(nodeId string) string {
 					continue
 				}
 				s.nodes[i].Ips[j].OutMBps = ip.MaxOutMBps - 10
-				//s.nodes[i].Ips[j].InMBps =
 			}
 			break
 		}
@@ -266,11 +266,82 @@ func (s *NetprobeSrv) FillInBw(nodeId string) string {
 	for i, node := range s.nodes {
 		if node.Id == nodeId {
 			for j, ip := range node.Ips {
-				s.nodes[i].Ips[j].InMBps = ip.MaxInMBps - 1000
-				//s.nodes[i].Ips[j].InMBps =
+				if ip.MaxInMBps == 0 {
+					continue
+				}
+				s.nodes[i].Ips[j].InMBps = ip.MaxInMBps * 0.8
 			}
 			break
 		}
+	}
+	return "success"
+}
+
+func (s *NetprobeSrv) GetAreaInfo(areaIsp string) string {
+	info := map[string]float64{}
+	for _, node := range s.nodes {
+		for _, ip := range node.Ips {
+			if ip.IsIPv6 {
+				continue
+			}
+			if publicUtil.IsPrivateIP(ip.Ip) {
+				continue
+			}
+			locate, err := s.ipParser.Find(ip.Ip)
+			if err != nil {
+				log.Println("get locate of ip", ip.Ip, "err", err)
+				continue
+			}
+			areaIpsKey, _ := util.GetAreaIspKey(locate)
+			areaIsp_ := strings.TrimPrefix(areaIpsKey, util.AreaIspKeyPrefix)
+			if areaIsp != areaIsp_ {
+				continue
+			}
+			info[node.Id] += ip.MaxOutMBps
+		}
+	}
+	pairs := SortFloatMap(info)
+	jsonbody, err := json.Marshal(pairs)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(jsonbody)
+}
+
+type Pair struct {
+	Key string
+	Val float64
+}
+
+func SortFloatMap(m map[string]float64) []Pair {
+	pairs := []Pair{}
+	for k, v := range m {
+		pairs = append(pairs, Pair{Key: k, Val: v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Val < pairs[j].Val
+	})
+	return pairs
+}
+
+func (s *NetprobeSrv) AddNodeStreamInfo(nodeId, stream string) string {
+	info := model.NodeStreamInfo{
+		Streams: []*model.StreamInfoRT{
+			{
+				Key: stream,
+			},
+		},
+	}
+	jsonbody, err := json.Marshal(info)
+	if err != nil {
+		log.Println(err)
+		return "marshal err"
+	}
+	log.Println(string(jsonbody))
+	_, err = s.redisCli.Set(context.Background(), util.GetStreamReportRedisKey(nodeId), string(jsonbody), 0).Result()
+	if err != nil {
+		log.Println(err)
+		return "redis set err"
 	}
 	return "success"
 }
@@ -338,6 +409,12 @@ func main() {
 		fmt.Fprintf(w, info)
 	}
 
+	getAreaInfoHandler := func(w http.ResponseWriter, req *http.Request) {
+		areaIsp := mux.Vars(req)["areaIsp"]
+		info := app.GetAreaInfo(areaIsp)
+		fmt.Fprintf(w, info)
+	}
+
 	clearBwHandler := func(w http.ResponseWriter, req *http.Request) {
 		nodeId := mux.Vars(req)["id"]
 		app.ClearBw(nodeId)
@@ -355,6 +432,13 @@ func main() {
 		app.FillOutBw(nodeId)
 		fmt.Fprintf(w, "success")
 	}
+	addNodeStreamInfoHandler := func(w http.ResponseWriter, req *http.Request) {
+		nodeId := mux.Vars(req)["id"]
+		stream := mux.Vars(req)["stream"]
+		log.Println(stream)
+		res := app.AddNodeStreamInfo(nodeId, stream)
+		fmt.Fprintf(w, res)
+	}
 
 	go func() {
 		router := mux.NewRouter()
@@ -366,6 +450,8 @@ func main() {
 		router.HandleFunc("/node/{id}/clearbw", clearBwHandler)
 		router.HandleFunc("/node/{id}/fillInbw", fillInBwHandler)
 		router.HandleFunc("/node/{id}/fillOutbw", fillOutBwHandler)
+		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
+		router.HandleFunc("/node/{id}/stream/{stream}", addNodeStreamInfoHandler)
 		http.Handle("/", router)
 		http.ListenAndServe(":9090", nil)
 	}()
