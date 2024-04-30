@@ -110,9 +110,6 @@ func (s *NetprobeSrv) Run() {
 			for i := range node.Ips {
 				node.Ips[i].IPStreamProbe.LowThresholdTime = time.Now().Unix()
 			}
-			if node.Id == "bf81488f-053b-3e70-b0a0-4aae62203e62-niulink64-site" {
-				log.Println(node.RuntimeStatus)
-			}
 			bytes, err := json.Marshal(node)
 			if err != nil {
 				log.Println(err)
@@ -206,6 +203,17 @@ func (s *NetprobeSrv) GetAreaIspRootBwInfo(areaIsp string) string {
 	return out
 }
 
+func (s *NetprobeSrv) getIpAreaIsp(ip string) string {
+	locate, err := s.ipParser.Find(ip)
+	if err != nil {
+		log.Println("get locate of ip", ip, "err", err)
+		return ""
+	}
+	areaIpsKey, _ := util.GetAreaIspKey(locate)
+	areaIsp := strings.TrimPrefix(areaIpsKey, util.AreaIspKeyPrefix)
+	return areaIsp
+}
+
 func (s *NetprobeSrv) GetAreaIspNodesInfo(needAreaIsp string) []*model.RtNode {
 	areaIspGroup := make(map[string][]*model.RtNode)
 	for _, node := range s.nodes {
@@ -272,6 +280,33 @@ func (s *NetprobeSrv) FillInBw(nodeId string) string {
 				s.nodes[i].Ips[j].InMBps = ip.MaxInMBps * 0.8
 			}
 			break
+		}
+	}
+	return "success"
+}
+
+func (s *NetprobeSrv) FillAreaBw(areaIsp string) string {
+	for i, node := range s.nodes {
+		for j, ip := range node.Ips {
+			areaIsp_ := s.getIpAreaIsp(ip.Ip)
+			if areaIsp_ == areaIsp {
+				s.nodes[i].Ips[j].OutMBps = ip.MaxOutMBps
+			}
+		}
+	}
+	return "success"
+}
+
+func (s *NetprobeSrv) FillIspBw(isp string) string {
+	for i, node := range s.nodes {
+		for j, ip := range node.Ips {
+			if ip.IpIsp.Isp == isp {
+				log.Println("clear bw", node.Id, isp)
+				if ip.MaxInMBps == 0 {
+					s.nodes[i].Ips[j].MaxOutMBps = 10
+				}
+				s.nodes[i].Ips[j].OutMBps = ip.MaxOutMBps
+			}
 		}
 	}
 	return "success"
@@ -427,6 +462,17 @@ func main() {
 		fmt.Fprintf(w, "success")
 	}
 
+	fillAreaBwHandler := func(w http.ResponseWriter, req *http.Request) {
+		areaIsp := mux.Vars(req)["area"]
+		app.FillAreaBw(areaIsp)
+		fmt.Fprintf(w, "success")
+	}
+	fillIspBwHandler := func(w http.ResponseWriter, req *http.Request) {
+		isp := mux.Vars(req)["isp"]
+		app.FillIspBw(isp)
+		fmt.Fprintf(w, "success")
+	}
+
 	fillOutBwHandler := func(w http.ResponseWriter, req *http.Request) {
 		nodeId := mux.Vars(req)["id"]
 		app.FillOutBw(nodeId)
@@ -450,6 +496,8 @@ func main() {
 		router.HandleFunc("/node/{id}/clearbw", clearBwHandler)
 		router.HandleFunc("/node/{id}/fillInbw", fillInBwHandler)
 		router.HandleFunc("/node/{id}/fillOutbw", fillOutBwHandler)
+		router.HandleFunc("/area/{area}/fillAreaBw", fillAreaBwHandler)
+		router.HandleFunc("/isp/{isp}/fillIspBw", fillIspBwHandler)
 		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
 		router.HandleFunc("/node/{id}/stream/{stream}", addNodeStreamInfoHandler)
 		http.Handle("/", router)
