@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -359,11 +360,28 @@ func SortFloatMap(m map[string]float64) []Pair {
 	return pairs
 }
 
-func (s *NetprobeSrv) AddNodeStreamInfo(nodeId, stream string) string {
+func (s *NetprobeSrv) AddNodeStreamInfo(paramMap map[string]string) string {
+	nodeId := paramMap["node"]
+	bw := paramMap["bw"]
+	stream := paramMap["stream"]
+	bwInt, err := strconv.ParseInt(bw, 10, 64)
+	if err != nil {
+		return err.Error()
+	}
+	log.Println("bw", bwInt)
 	info := model.NodeStreamInfo{
 		Streams: []*model.StreamInfoRT{
 			{
 				Key: stream,
+				Players: []*model.PlayerInfo{
+					{
+						Ips: []*model.IpInfo{
+							{
+								Bandwidth: uint64(bwInt),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -379,6 +397,16 @@ func (s *NetprobeSrv) AddNodeStreamInfo(nodeId, stream string) string {
 		return "redis set err"
 	}
 	return "success"
+}
+
+func (s *NetprobeSrv) Demo(paramMap map[string]string) string {
+	return "demo running " + paramMap["foo"] + " " + paramMap["test"]
+}
+
+type Router struct {
+	Path    string
+	Params  []string
+	Handler func(paramMap map[string]string) string
 }
 
 func main() {
@@ -478,12 +506,18 @@ func main() {
 		app.FillOutBw(nodeId)
 		fmt.Fprintf(w, "success")
 	}
-	addNodeStreamInfoHandler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		stream := mux.Vars(req)["stream"]
-		log.Println(stream)
-		res := app.AddNodeStreamInfo(nodeId, stream)
-		fmt.Fprintf(w, res)
+
+	routers := []Router{
+		{
+			"/demo",
+			[]string{"foo", "test"},
+			app.Demo,
+		},
+		{
+			"/streamreport",
+			[]string{"node", "stream", "bw"},
+			app.AddNodeStreamInfo,
+		},
 	}
 
 	go func() {
@@ -499,7 +533,18 @@ func main() {
 		router.HandleFunc("/area/{area}/fillAreaBw", fillAreaBwHandler)
 		router.HandleFunc("/isp/{isp}/fillIspBw", fillIspBwHandler)
 		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
-		router.HandleFunc("/node/{id}/stream/{stream}", addNodeStreamInfoHandler)
+		for _, r := range routers {
+			commonHandler := func(w http.ResponseWriter, req *http.Request) {
+				paramMap := map[string]string{}
+				for _, param := range r.Params {
+					val := req.URL.Query().Get(param)
+					paramMap[param] = val
+				}
+				res := r.Handler(paramMap)
+				fmt.Fprintln(w, res)
+			}
+			router.HandleFunc(r.Path, commonHandler)
+		}
 		http.Handle("/", router)
 		http.ListenAndServe(":9090", nil)
 	}()
