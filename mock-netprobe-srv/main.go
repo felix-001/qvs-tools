@@ -298,6 +298,32 @@ func (s *NetprobeSrv) FillAreaBw(areaIsp string) string {
 	return "success"
 }
 
+func (s *NetprobeSrv) FillBw(paramMap map[string]string) string {
+	nodeId := paramMap["node"]
+	fillType := paramMap["type"]
+	for i, node := range s.nodes {
+		if node.Id == nodeId {
+			for j, ip := range node.Ips {
+				if fillType == "in" {
+					if ip.MaxInMBps == 0 {
+						continue
+					}
+					s.nodes[i].Ips[j].InMBps = ip.MaxInMBps * 0.9
+					log.Printf("ip: %s InMBps: %.1f\n", ip.Ip, s.nodes[i].Ips[j].InMBps)
+				} else {
+					if ip.MaxOutMBps == 0 {
+						continue
+					}
+					s.nodes[i].Ips[j].OutMBps = ip.MaxOutMBps * 0.9
+					log.Printf("ip: %s OutMBps: %.1f\n", ip.Ip, s.nodes[i].Ips[j].OutMBps)
+				}
+			}
+			break
+		}
+	}
+	return "success"
+}
+
 func (s *NetprobeSrv) FillIspBw(isp string) string {
 	for i, node := range s.nodes {
 		for j, ip := range node.Ips {
@@ -484,12 +510,6 @@ func main() {
 		fmt.Fprintf(w, "success")
 	}
 
-	fillInBwHandler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		app.FillInBw(nodeId)
-		fmt.Fprintf(w, "success")
-	}
-
 	fillAreaBwHandler := func(w http.ResponseWriter, req *http.Request) {
 		areaIsp := mux.Vars(req)["area"]
 		app.FillAreaBw(areaIsp)
@@ -498,12 +518,6 @@ func main() {
 	fillIspBwHandler := func(w http.ResponseWriter, req *http.Request) {
 		isp := mux.Vars(req)["isp"]
 		app.FillIspBw(isp)
-		fmt.Fprintf(w, "success")
-	}
-
-	fillOutBwHandler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		app.FillOutBw(nodeId)
 		fmt.Fprintf(w, "success")
 	}
 
@@ -518,6 +532,11 @@ func main() {
 			[]string{"node", "stream", "bw"},
 			app.AddNodeStreamInfo,
 		},
+		{
+			"/fillbw",
+			[]string{"node", "type"},
+			app.FillBw,
+		},
 	}
 
 	go func() {
@@ -528,8 +547,6 @@ func main() {
 		router.HandleFunc("/nodes/{areaIsp}", getAreaIspNodesHandler)
 		router.HandleFunc("/area/{areaIsp}/rootBwInfo", getAreaIspRootBwInfoHandler)
 		router.HandleFunc("/node/{id}/clearbw", clearBwHandler)
-		router.HandleFunc("/node/{id}/fillInbw", fillInBwHandler)
-		router.HandleFunc("/node/{id}/fillOutbw", fillOutBwHandler)
 		router.HandleFunc("/area/{area}/fillAreaBw", fillAreaBwHandler)
 		router.HandleFunc("/isp/{isp}/fillIspBw", fillIspBwHandler)
 		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
