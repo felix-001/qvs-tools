@@ -125,6 +125,7 @@ func (s *NetprobeSrv) Run() {
 }
 
 func (s *NetprobeSrv) NodeFreeze(nodeId string) {
+
 	log.Println(len(s.nodes))
 	for i, node := range s.nodes {
 		if node.Id == nodeId {
@@ -137,18 +138,23 @@ func (s *NetprobeSrv) NodeFreeze(nodeId string) {
 	log.Println("node not found:", nodeId)
 }
 
-func (s *NetprobeSrv) NodeInfo(nodeId string) *model.RtNode {
+func (s *NetprobeSrv) NodeInfo(paramMap map[string]string) string {
+	nodeId := paramMap["node"]
 	log.Println(len(s.nodes))
 	for _, node := range s.nodes {
 		if node.Id == nodeId {
 			log.Println("found the node")
 			//node.RuntimeStatus = "Offline"
 			fmt.Printf("%+v\n", node)
-			return node
+			jsonbody, err := json.Marshal(node)
+			if err != nil {
+				log.Println(err)
+			}
+			return string(jsonbody)
 		}
 	}
 	log.Println("node not found:", nodeId)
-	return nil
+	return "fail"
 }
 
 func (s *NetprobeSrv) CostBw(nodeId string) {
@@ -324,6 +330,16 @@ func (s *NetprobeSrv) FillBw(paramMap map[string]string) string {
 	return "success"
 }
 
+func (s *NetprobeSrv) Offline(paramMap map[string]string) string {
+	nodeId := paramMap["node"]
+	for i, node := range s.nodes {
+		if node.Id == nodeId {
+			s.nodes[i].RuntimeStatus = model.StateOffline
+		}
+	}
+	return "success"
+}
+
 func (s *NetprobeSrv) FillIspBw(isp string) string {
 	for i, node := range s.nodes {
 		for j, ip := range node.Ips {
@@ -469,15 +485,6 @@ func main() {
 		app.NodeFreeze(nodeId)
 		fmt.Fprintf(w, "success")
 	}
-	nodeInfoHandler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		node := app.NodeInfo(nodeId)
-		jsonbody, err := json.Marshal(node)
-		if err != nil {
-			log.Println(err)
-		}
-		fmt.Fprintf(w, string(jsonbody))
-	}
 	costBwHandler := func(w http.ResponseWriter, req *http.Request) {
 		nodeId := mux.Vars(req)["id"]
 		app.NodeFreeze(nodeId)
@@ -537,12 +544,23 @@ func main() {
 			[]string{"node", "type"},
 			app.FillBw,
 		},
+		/*
+			{
+				"/offline",
+				[]string{"node"},
+				app.Offline,
+			},
+			{
+				"/nodeinfo",
+				[]string{"node"},
+				app.NodeInfo,
+			},
+		*/
 	}
 
 	go func() {
 		router := mux.NewRouter()
 		router.HandleFunc("/freeze/{id}", handler)
-		router.HandleFunc("/node/{id}", nodeInfoHandler)
 		router.HandleFunc("/costbw/{id}", costBwHandler)
 		router.HandleFunc("/nodes/{areaIsp}", getAreaIspNodesHandler)
 		router.HandleFunc("/area/{areaIsp}/rootBwInfo", getAreaIspRootBwInfoHandler)
@@ -551,7 +569,9 @@ func main() {
 		router.HandleFunc("/isp/{isp}/fillIspBw", fillIspBwHandler)
 		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
 		for _, r := range routers {
+			log.Println(r.Path, r.Handler)
 			commonHandler := func(w http.ResponseWriter, req *http.Request) {
+				log.Println(r.Path, r.Handler, req)
 				paramMap := map[string]string{}
 				for _, param := range r.Params {
 					val := req.URL.Query().Get(param)
