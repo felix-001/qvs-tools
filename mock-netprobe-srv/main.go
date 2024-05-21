@@ -124,20 +124,6 @@ func (s *NetprobeSrv) Run() {
 	}
 }
 
-func (s *NetprobeSrv) NodeFreeze(nodeId string) {
-
-	log.Println(len(s.nodes))
-	for i, node := range s.nodes {
-		if node.Id == nodeId {
-			log.Println("found the node")
-			s.nodes[i].RuntimeStatus = "Offline"
-			//node.RuntimeStatus = "Offline"
-			return
-		}
-	}
-	log.Println("node not found:", nodeId)
-}
-
 func (s *NetprobeSrv) NodeInfo(paramMap map[string]string) string {
 	nodeId := paramMap["node"]
 	log.Println(len(s.nodes))
@@ -330,11 +316,13 @@ func (s *NetprobeSrv) FillBw(paramMap map[string]string) string {
 	return "success"
 }
 
-func (s *NetprobeSrv) Offline(paramMap map[string]string) string {
+func (s *NetprobeSrv) SetNodeRuntimeState(paramMap map[string]string) string {
 	nodeId := paramMap["node"]
+	state := paramMap["state"]
+	log.Println(nodeId, state)
 	for i, node := range s.nodes {
 		if node.Id == nodeId {
-			s.nodes[i].RuntimeStatus = model.StateOffline
+			s.nodes[i].RuntimeStatus = state
 		}
 	}
 	return "success"
@@ -480,16 +468,7 @@ func main() {
 		app.NodeChk()
 		return
 	}
-	handler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		app.NodeFreeze(nodeId)
-		fmt.Fprintf(w, "success")
-	}
-	costBwHandler := func(w http.ResponseWriter, req *http.Request) {
-		nodeId := mux.Vars(req)["id"]
-		app.NodeFreeze(nodeId)
-		fmt.Fprintf(w, "success")
-	}
+
 	getAreaIspNodesHandler := func(w http.ResponseWriter, req *http.Request) {
 		areaIsp := mux.Vars(req)["areaIsp"]
 		nodes := app.GetAreaIspNodesInfo(areaIsp)
@@ -544,24 +523,20 @@ func main() {
 			[]string{"node", "type"},
 			app.FillBw,
 		},
-		/*
-			{
-				"/offline",
-				[]string{"node"},
-				app.Offline,
-			},
-			{
-				"/nodeinfo",
-				[]string{"node"},
-				app.NodeInfo,
-			},
-		*/
+		{
+			"/runtimeState",
+			[]string{"node", "state"},
+			app.SetNodeRuntimeState,
+		},
+		{
+			"/nodeinfo",
+			[]string{"node"},
+			app.NodeInfo,
+		},
 	}
 
 	go func() {
 		router := mux.NewRouter()
-		router.HandleFunc("/freeze/{id}", handler)
-		router.HandleFunc("/costbw/{id}", costBwHandler)
 		router.HandleFunc("/nodes/{areaIsp}", getAreaIspNodesHandler)
 		router.HandleFunc("/area/{areaIsp}/rootBwInfo", getAreaIspRootBwInfoHandler)
 		router.HandleFunc("/node/{id}/clearbw", clearBwHandler)
@@ -569,15 +544,24 @@ func main() {
 		router.HandleFunc("/isp/{isp}/fillIspBw", fillIspBwHandler)
 		router.HandleFunc("/area/{areaIsp}", getAreaInfoHandler)
 		for _, r := range routers {
-			log.Println(r.Path, r.Handler)
 			commonHandler := func(w http.ResponseWriter, req *http.Request) {
-				log.Println(r.Path, r.Handler, req)
+				log.Println(req)
+				var handler func(paramMap map[string]string) string
+				var params *[]string
+				for _, r := range routers {
+					if r.Path == req.URL.Path {
+						handler = r.Handler
+						params = &r.Params
+						break
+					}
+				}
+				//log.Println("params", *params)
 				paramMap := map[string]string{}
-				for _, param := range r.Params {
+				for _, param := range *params {
 					val := req.URL.Query().Get(param)
 					paramMap[param] = val
 				}
-				res := r.Handler(paramMap)
+				res := handler(paramMap)
 				fmt.Fprintln(w, res)
 			}
 			router.HandleFunc(r.Path, commonHandler)
