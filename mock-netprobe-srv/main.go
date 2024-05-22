@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"sort"
 	"strconv"
@@ -141,6 +142,66 @@ func (s *NetprobeSrv) NodeInfo(paramMap map[string]string) string {
 	}
 	log.Println("node not found:", nodeId)
 	return "fail"
+}
+
+func (s *NetprobeSrv) DumpAreaIsp(paramMap map[string]string) string {
+	areaIspMap := map[string]int{}
+	for _, node := range s.nodes {
+		for _, ip := range node.Ips {
+			if publicUtil.IsPrivateIP(ip.Ip) {
+				continue
+			}
+			areaIsp := s.getIpAreaIsp(ip.Ip)
+			areaIspMap[areaIsp] += 1
+			break
+		}
+	}
+	jsonbody, err := json.Marshal(areaIspMap)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(jsonbody)
+}
+
+func (s *NetprobeSrv) GeneOfflineData(paramMap map[string]string) string {
+	area := paramMap["area"]
+	offlineCntMap := map[string]int{}
+	pipe := s.redisCli.Pipeline()
+	for _, node := range s.nodes {
+		for _, ip := range node.Ips {
+			if publicUtil.IsPrivateIP(ip.Ip) {
+				continue
+			}
+			if node.ResourceType != "dedicated" {
+				continue
+			}
+			areaIsp := s.getIpAreaIsp(ip.Ip)
+			if areaIsp == area {
+				rand.Seed(time.Now().UnixNano())
+				cnt := rand.Intn(100)
+				offlineCntMap[node.Id] = cnt
+				for i := 0; i < cnt; i++ {
+					//log.Println("i", i)
+					_, err := pipe.ZAdd(context.Background(), "dynamic_node_offline_cnt_"+node.Id, redis.Z{
+						Member: time.Now().Unix() - int64(i),
+						Score:  float64(time.Now().Unix() - int64(i)),
+					}).Result()
+					if err != nil {
+						log.Println(err)
+					}
+				}
+			}
+		}
+	}
+	_, err := pipe.Exec(context.Background())
+	if err != nil {
+		log.Println("pipe exec err", err)
+	}
+	jsonbody, err := json.Marshal(offlineCntMap)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(jsonbody)
 }
 
 func (s *NetprobeSrv) CostBw(nodeId string) {
@@ -533,6 +594,16 @@ func main() {
 			[]string{"node"},
 			app.NodeInfo,
 		},
+		{
+			"/dumpAreaIsp",
+			[]string{""},
+			app.DumpAreaIsp,
+		},
+		{
+			"/genneOfflineData",
+			[]string{"area"},
+			app.GeneOfflineData,
+		},
 	}
 
 	go func() {
@@ -555,7 +626,6 @@ func main() {
 						break
 					}
 				}
-				//log.Println("params", *params)
 				paramMap := map[string]string{}
 				for _, param := range *params {
 					val := req.URL.Query().Get(param)
