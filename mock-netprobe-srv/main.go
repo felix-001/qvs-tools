@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -27,6 +28,11 @@ const (
 	confFile = "/usr/local/etc/mock-netprobe-srv.conf"
 )
 
+type NodeExtra struct {
+	StreamInfo       model.NodeStreamInfo
+	LowThresholdTime int64
+}
+
 type Config struct {
 	RedisAddrs    []string    `json:"redis_addrs"`
 	NodesDataFile string      `json:"nodes_data_file"`
@@ -34,10 +40,11 @@ type Config struct {
 }
 
 type NetprobeSrv struct {
-	redisCli *redis.ClusterClient
-	conf     Config
-	nodes    []*model.RtNode
-	ipParser *ipdb.City
+	redisCli   *redis.ClusterClient
+	conf       Config
+	nodes      []*model.RtNode
+	ipParser   *ipdb.City
+	nodeExtras map[string]*NodeExtra
 }
 
 func (s *NetprobeSrv) NodeChk() {
@@ -110,7 +117,11 @@ func (s *NetprobeSrv) Run() {
 		log.Println("update nodes, count:", len(s.nodes))
 		for _, node := range s.nodes {
 			for i := range node.Ips {
-				node.Ips[i].IPStreamProbe.LowThresholdTime = time.Now().Unix()
+				node.Ips[i].IPStreamProbe.LowThresholdTime = time.Now().Unix() - 3*3600
+				if extra, ok := s.nodeExtras[node.Id]; ok {
+					log.Println("found extra", node.Id, extra.LowThresholdTime)
+					node.Ips[i].IPStreamProbe.LowThresholdTime = extra.LowThresholdTime
+				}
 			}
 			bytes, err := json.Marshal(node)
 			if err != nil {
@@ -121,6 +132,26 @@ func (s *NetprobeSrv) Run() {
 			if err != nil {
 				log.Printf("write node info to redis err, %+v\n", err)
 			}
+			/*
+				nodeStreamInfo := model.NodeStreamInfo{
+					Streams: []*model.StreamInfoRT{
+						{
+							StreamName: "test",
+						},
+					},
+					NodeId:         node.Id,
+					LastUpdateTime: time.Now().Unix(),
+				}
+				data, err := json.Marshal(nodeStreamInfo)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				_, err = s.redisCli.Set(context.Background(), "stream_report_"+node.Id, string(data), time.Hour*24*30).Result()
+				if err != nil {
+					log.Println(err)
+				}
+			*/
 		}
 	}
 }
@@ -163,10 +194,49 @@ func (s *NetprobeSrv) DumpAreaIsp(paramMap map[string]string) string {
 	return string(jsonbody)
 }
 
+func (s *NetprobeSrv) StreamReport(paramMap map[string]string) string {
+	node := paramMap["node"]
+	body := paramMap["body"]
+	_, err := s.redisCli.Set(context.Background(), "stream_report_"+node, body, time.Hour*24*30).Result()
+	if err != nil {
+		log.Println(err)
+		return fmt.Sprintf("redis err, %v", err)
+	}
+	/*
+		var nodeStreamInfo model.NodeStreamInfo
+		if err := json.Unmarshal([]byte(body), &nodeStreamInfo); err != nil {
+			return fmt.Sprintf("unmashal err, %v", err)
+		}
+		if extra, ok := s.nodeExtras[node]; ok {
+			extra.StreamInfo = nodeStreamInfo
+		} else {
+			s.nodeExtras[node] = NodeExtra{StreamInfo: nodeStreamInfo}
+		}
+	*/
+
+	return "success"
+}
+
+func (s *NetprobeSrv) SetLowThresholdTime(paramMap map[string]string) string {
+	t := paramMap["time"]
+	node := paramMap["node"]
+	num, err := strconv.ParseInt(t, 10, 64)
+	if err != nil {
+		return fmt.Sprintf("parse int err, %v", err)
+	}
+	if extra, ok := s.nodeExtras[node]; ok {
+		extra.LowThresholdTime = num
+	} else {
+		s.nodeExtras[node] = &NodeExtra{LowThresholdTime: num}
+	}
+	return "success"
+}
+
 func (s *NetprobeSrv) GeneOfflineData(paramMap map[string]string) string {
 	area := paramMap["area"]
 	offlineCntMap := map[string]int{}
 	pipe := s.redisCli.Pipeline()
+	idx := 0
 	for _, node := range s.nodes {
 		for _, ip := range node.Ips {
 			if publicUtil.IsPrivateIP(ip.Ip) {
@@ -179,6 +249,10 @@ func (s *NetprobeSrv) GeneOfflineData(paramMap map[string]string) string {
 			if areaIsp == area {
 				rand.Seed(time.Now().UnixNano())
 				cnt := rand.Intn(100)
+				if idx == 2 {
+					log.Println("node", node.Id, "0")
+					cnt = 0
+				}
 				offlineCntMap[node.Id] = cnt
 				for i := 0; i < cnt; i++ {
 					//log.Println("i", i)
@@ -190,6 +264,7 @@ func (s *NetprobeSrv) GeneOfflineData(paramMap map[string]string) string {
 						log.Println(err)
 					}
 				}
+				idx++
 			}
 		}
 	}
@@ -451,45 +526,6 @@ func SortFloatMap(m map[string]float64) []Pair {
 	return pairs
 }
 
-func (s *NetprobeSrv) AddNodeStreamInfo(paramMap map[string]string) string {
-	nodeId := paramMap["node"]
-	bw := paramMap["bw"]
-	stream := paramMap["stream"]
-	bwInt, err := strconv.ParseInt(bw, 10, 64)
-	if err != nil {
-		return err.Error()
-	}
-	log.Println("bw", bwInt)
-	info := model.NodeStreamInfo{
-		Streams: []*model.StreamInfoRT{
-			{
-				Key: stream,
-				Players: []*model.PlayerInfo{
-					{
-						Ips: []*model.IpInfo{
-							{
-								Bandwidth: uint64(bwInt),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	jsonbody, err := json.Marshal(info)
-	if err != nil {
-		log.Println(err)
-		return "marshal err"
-	}
-	log.Println(string(jsonbody))
-	_, err = s.redisCli.Set(context.Background(), util.GetStreamReportRedisKey(nodeId), string(jsonbody), 0).Result()
-	if err != nil {
-		log.Println(err)
-		return "redis set err"
-	}
-	return "success"
-}
-
 func (s *NetprobeSrv) Demo(paramMap map[string]string) string {
 	return "demo running " + paramMap["foo"] + " " + paramMap["test"]
 }
@@ -523,7 +559,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}
-	app := NetprobeSrv{redisCli: redisCli, conf: conf, ipParser: ipParser}
+	app := NetprobeSrv{redisCli: redisCli, conf: conf, ipParser: ipParser, nodeExtras: make(map[string]*NodeExtra)}
 	app.Load()
 	if *nodeChk {
 		app.NodeChk()
@@ -575,11 +611,6 @@ func main() {
 			app.Demo,
 		},
 		{
-			"/streamreport",
-			[]string{"node", "stream", "bw"},
-			app.AddNodeStreamInfo,
-		},
-		{
 			"/fillbw",
 			[]string{"node", "type"},
 			app.FillBw,
@@ -604,6 +635,16 @@ func main() {
 			[]string{"area"},
 			app.GeneOfflineData,
 		},
+		{
+			"/streamreport",
+			[]string{"node"},
+			app.StreamReport,
+		},
+		{
+			"/lowThresholdTime",
+			[]string{"node", "time"},
+			app.SetLowThresholdTime,
+		},
 	}
 
 	go func() {
@@ -621,6 +662,7 @@ func main() {
 				var params *[]string
 				for _, r := range routers {
 					if r.Path == req.URL.Path {
+						log.Println(r.Path)
 						handler = r.Handler
 						params = &r.Params
 						break
@@ -631,6 +673,14 @@ func main() {
 					val := req.URL.Query().Get(param)
 					paramMap[param] = val
 				}
+				body, err := ioutil.ReadAll(req.Body)
+				if err != nil {
+					http.Error(w, "Error reading request body", http.StatusBadRequest)
+					return
+				}
+				defer req.Body.Close()
+				fmt.Println("Request Body:", string(body))
+				paramMap["body"] = string(body)
 				res := handler(paramMap)
 				fmt.Fprintln(w, res)
 			}
