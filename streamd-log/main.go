@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -107,6 +110,33 @@ func fetchLog10Min(date, t, str, path string, idx int, f *os.File) {
 	wg.Wait()
 }
 
+type WeComNotfiy struct {
+	Msgtype  string `json:"msgtype"`
+	Markdown struct {
+		Content string `json:"content"`
+	} `json:"markdown"`
+}
+
+func wecomNotify(content string) {
+	notify := WeComNotfiy{
+		Msgtype: "markdown",
+		Markdown: struct {
+			Content string `json:"content"`
+		}{Content: content},
+	}
+	body, err := json.Marshal(&notify)
+	if err != nil {
+		log.Println(err)
+	}
+	resp, err := http.Post("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=779b4815-6369-451b-a817-56189c97b549", "application/json", bytes.NewReader(body))
+	if err != nil {
+		log.Println(err)
+	}
+	if resp.StatusCode != 200 {
+		log.Println("http code err:", resp.StatusCode, resp.Status)
+	}
+}
+
 var count int = 0
 
 func main() {
@@ -132,7 +162,12 @@ func main() {
 	if typ == "audit" {
 		path = "FLOWD_MIKU-STREAMD"
 	}
-	fileName := fmt.Sprintf("%s-%s-%d.log", date, t, time.Now().Unix())
+	searchStr := strings.ReplaceAll(str, " ", "-")
+	searchStr = strings.ReplaceAll(searchStr, ".", "-")
+	searchStr = strings.ReplaceAll(searchStr, "*", "-")
+	searchStr = strings.ReplaceAll(searchStr, "=", "-")
+	searchStr = strings.ReplaceAll(searchStr, ":", "-")
+	fileName := fmt.Sprintf("%s-%s-%s-%d.log", searchStr, date, t, time.Now().Unix())
 	f, err := os.Create(fileName)
 	if err != nil {
 		fmt.Println("无法创建文件:", err)
@@ -166,4 +201,6 @@ func main() {
 		}
 	*/
 	log.Println("cost", time.Now().Sub(start))
+	content := fmt.Sprintf("search streamd log done, cost: %+v <@liyuanquan>", time.Now().Sub(start))
+	wecomNotify(content)
 }
