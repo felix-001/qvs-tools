@@ -167,6 +167,11 @@ func main() {
 	searchStr = strings.ReplaceAll(searchStr, "*", "-")
 	searchStr = strings.ReplaceAll(searchStr, "=", "-")
 	searchStr = strings.ReplaceAll(searchStr, ":", "-")
+	if searchStr[0] == '-' {
+		searchStr = "1" + searchStr
+	}
+
+	str = strings.ReplaceAll(str, "-", "\\-")
 	fileName := fmt.Sprintf("%s-%s-%s-%d.log", searchStr, date, t, time.Now().Unix())
 	f, err := os.Create(fileName)
 	if err != nil {
