@@ -74,6 +74,7 @@ func aggByDay(paths []PathQuery) {
 	pathsByDay := map[string][]PathQuery{}
 	for _, path := range paths {
 		ss := strings.Split(path.T, " ")
+		//log.Println(ss[0])
 		if _, ok := pathsByDay[ss[0]]; !ok {
 			pathsByDay[ss[0]] = []PathQuery{path}
 		} else {
@@ -116,7 +117,7 @@ func aggByDay(paths []PathQuery) {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var file string
-	flag.StringVar(&file, "f", "/Users/rigensen/Downloads/pathquery.csv", "文件")
+	flag.StringVar(&file, "f", "/Users/liyuanquan/Downloads/pathquery.csv", "文件")
 	flag.Parse()
 
 	b, err := ioutil.ReadFile(file)
