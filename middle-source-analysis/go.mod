@@ -3,17 +3,20 @@ module middle-source-analysis
 go 1.20
 
 require (
-	github.com/qbox/mikud-live v1.5.0
+	github.com/qbox/mikud-live v1.5.1-0.20240628104913-335e9e2df1b9
 	github.com/qbox/pili v1.0.33
 	github.com/qiniu/x v1.13.10
 	github.com/redis/go-redis/v9 v9.5.3
 )
 
+//require github.com/qbox/mikud-live v0.0.0-00010101000000-000000000000
+
 require (
 	github.com/armon/go-metrics v0.3.9 // indirect
-	github.com/bytedance/sonic v1.8.0 // indirect
+	github.com/bytedance/sonic v1.10.2 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
+	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
+	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -57,6 +60,9 @@ require (
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+//replace github.com/qbox/mikud-live => github.com/qbox/mikud-live v1.5.1-0.335e9e2df1b9a867726dd77327e3623f646a4fb8
