@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
 	"time"
@@ -187,14 +188,56 @@ func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 	return nodeMap
 }
 
+var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
+var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 放大比\n"
+
 func (s *Parser) dump() {
+	csv := hdr
+	cnt := 0
+	var totalBw float64
+	var totalRelayBw float64
+	streamRatioMap := make(map[string]float64)
+	streamRatioCsv := streamRatioHdr
 	for streamId, streamDetail := range s.streamDetailMap {
+		cnt++
+		var streamTotalBw float64
+		var streamTotalRelayBw float64
+		var streamTotalOnlineNum int
+		var streamTotalEdgeNodeCount int
+		var streamTotalRootNodeCount int
 		for isp, detail := range streamDetail {
 			for area, streamInfo := range detail {
-				log.Println(streamId, isp, area, streamInfo.OnlineNum, streamInfo.Ratio, streamInfo.EdgeNodeNum, streamInfo.RootNodeNum)
+				ratio := streamInfo.Bw / streamInfo.RelayBw
+				csv += fmt.Sprintf("%s, %s, %s, %d, %d, %d, %.1f, %+v, %+v\n", streamId, isp, area,
+					streamInfo.OnlineNum, len(streamInfo.EdgeNodes),
+					len(streamInfo.RootNodes), ratio, streamInfo.EdgeNodes,
+					streamInfo.RootNodes)
+				totalBw += streamInfo.Bw
+				totalRelayBw += streamInfo.RelayBw
+				streamTotalBw += streamInfo.Bw
+				streamTotalRelayBw += streamInfo.RelayBw
+				streamTotalOnlineNum += int(streamInfo.OnlineNum)
+				streamTotalEdgeNodeCount += len(streamInfo.EdgeNodes)
+				streamTotalRootNodeCount += len(streamInfo.RootNodes)
 			}
 		}
+		streamRatioMap[streamId] = streamTotalBw / streamTotalRelayBw
+		streamRatioCsv += fmt.Sprintf("%s, %d, %d, %d, %.1f\n", streamId,
+			streamTotalOnlineNum, streamTotalEdgeNodeCount,
+			streamTotalRootNodeCount, streamTotalBw/streamTotalRelayBw)
 	}
+	file := fmt.Sprintf("%d.csv", time.Now().Unix())
+	err := ioutil.WriteFile(file, []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	err = ioutil.WriteFile("streamRatio.csv", []byte(streamRatioCsv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("cnt:", cnt)
+	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
+		totalRelayBw, totalBw/totalRelayBw)
 	/*
 		log.Println("nodesMap len:", len(nodeMap))
 		total := 0
@@ -231,12 +274,6 @@ func (s *Parser) buildRootNodesMap() {
 	}
 }
 
-func (s *Parser) Run(sid, bkt string) {
-	//nodeMap := s.getStreamNodes(sid, bkt)
-	//s.dump(nodeMap)
-	//s.buildBucketStreamsInfo()
-}
-
 type NodeDetail struct {
 	OnlineNum uint32
 	RelayBw   float64
@@ -249,14 +286,11 @@ type NodeDetail struct {
 }
 
 type StreamInfo struct {
-	EdgeNodeNum int
-	EdgeNodes   []NodeDetail
-	RootNodeNum int
-	RootNodes   []NodeDetail
-	RelayBw     float64
-	Bw          float64
-	OnlineNum   uint32
-	Ratio       float64
+	EdgeNodes []string
+	RootNodes []string
+	RelayBw   float64
+	Bw        float64
+	OnlineNum uint32
 }
 
 func convertMbps(bw uint64) float64 {
@@ -352,7 +386,7 @@ func (s *Parser) checkNodeStreamIpLocate(stream *model.StreamInfoRT, node *model
 	}
 }
 
-func (s *Parser) getNodeStreaemDetail(stream *model.StreamInfoRT) (int, float64) {
+func (s *Parser) getNodeStreamDetail(stream *model.StreamInfoRT) (int, float64) {
 	totalOnlineNum := 0
 	var totalBw float64
 	for _, player := range stream.Players {
@@ -479,7 +513,7 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 			if _, ok := s.streamDetailMap[stream.Key][isp]; !ok {
 				s.streamDetailMap[stream.Key][isp] = make(map[string]*StreamInfo)
 			}
-			onlineNum, bw := s.getNodeStreaemDetail(stream)
+			onlineNum, bw := s.getNodeStreamDetail(stream)
 			isRoot := s.isRoot(node)
 			if streamInfo, ok := s.streamDetailMap[stream.Key][isp][area]; !ok {
 				s.streamDetailMap[stream.Key][isp][area] = &StreamInfo{
@@ -489,26 +523,18 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				}
 				streamInfo := s.streamDetailMap[stream.Key][isp][area]
 				if !isRoot {
-					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, NodeDetail{
-						NodeId: node.Id,
-					})
+					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
 				} else {
-					streamInfo.RootNodes = append(streamInfo.RootNodes, NodeDetail{
-						NodeId: node.Id,
-					})
+					streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
 				}
 			} else {
 				streamInfo.OnlineNum += uint32(onlineNum)
 				streamInfo.Bw += bw
 				streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
 				if !isRoot {
-					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, NodeDetail{
-						NodeId: node.Id,
-					})
+					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
 				} else {
-					streamInfo.RootNodes = append(streamInfo.RootNodes, NodeDetail{
-						NodeId: node.Id,
-					})
+					streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
 				}
 			}
 		}
@@ -516,13 +542,13 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 	log.Println("total:", len(s.streamDetailMap))
 }
 
-func (s *Parser) calcRatioByStream() {
-	for _, streamDetail := range s.streamDetailMap {
-		for _, detail := range streamDetail {
-			for _, streamInfo := range detail {
-				streamInfo.Ratio = streamInfo.Bw / streamInfo.RelayBw
-				streamInfo.EdgeNodeNum = len(streamInfo.EdgeNodes)
-				streamInfo.RootNodeNum = len(streamInfo.RootNodes)
+func (s *Parser) dumpNodeStreams(node string) {
+	for _, stream := range s.nodeStremasMap[node].Streams {
+		fmt.Println("bucket:", stream.AppName, "stream:", stream.Key)
+		for _, player := range stream.Players {
+			fmt.Printf("\t%s\n", player.Protocol)
+			for _, ipInfo := range player.Ips {
+				fmt.Printf("\t\t ip: %s, onlineNum: %d, bw: %d\n", ipInfo.Ip, ipInfo.OnlineNum, ipInfo.Bandwidth)
 			}
 		}
 	}
@@ -530,10 +556,10 @@ func (s *Parser) calcRatioByStream() {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	//sid := flag.String("sid", "", "流ID")
 	bkt := flag.String("bkt", "douyu", "bucket ID")
+	node := flag.String("node", "", "node ID")
 	flag.Parse()
-	if /**sid == "" || */ *bkt == "" {
+	if *bkt == "" {
 		flag.PrintDefaults()
 		return
 	}
@@ -545,9 +571,10 @@ func main() {
 	parser.buildAllNodesMap()
 	parser.buildNodeStreamsMap()
 	parser.buildRootNodesMap()
+	if *node != "" {
+		parser.dumpNodeStreams(*node)
+		return
+	}
 	parser.buildBucketStreamsInfo(*bkt)
-	parser.calcRatioByStream()
 	parser.dump()
-	//parser.Run(*sid, *bkt)
-
 }
