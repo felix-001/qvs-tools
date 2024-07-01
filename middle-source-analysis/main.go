@@ -238,20 +238,6 @@ func (s *Parser) dump() {
 	log.Println("cnt:", cnt)
 	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
 		totalRelayBw, totalBw/totalRelayBw)
-	/*
-		log.Println("nodesMap len:", len(nodeMap))
-		total := 0
-		for areaIsp, nodes := range nodeMap {
-			log.Println(areaIsp, ":", len(nodes))
-			fmt.Printf("\t")
-			for _, node := range nodes {
-				fmt.Printf("%s ", node.Id)
-			}
-			total += len(nodes)
-			fmt.Println("")
-		}
-		log.Println("total:", total)
-	*/
 }
 
 func (s *Parser) buildRootNodesMap() {
