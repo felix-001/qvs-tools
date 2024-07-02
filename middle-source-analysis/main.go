@@ -19,6 +19,7 @@ import (
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 	"github.com/redis/go-redis/v9"
+	zlog "github.com/rs/zerolog/log"
 )
 
 const (
@@ -38,9 +39,10 @@ type Parser struct {
 	allRootNodesMapByAreaIsp map[string][]*DynamicRootNode
 	allRootNodesMapByNodeId  map[string]*model.RtNode
 	streamDetailMap          map[string]map[string]map[string]*StreamInfo
+	needCheckNode            bool
 }
 
-func newParser(conf *Config) *Parser {
+func newParser(conf *Config, checkNode bool) *Parser {
 	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:      conf.RedisAddrs,
 		MaxRetries: 3,
@@ -54,7 +56,7 @@ func newParser(conf *Config) *Parser {
 	if err != nil {
 		log.Fatalf("[IPDB NewCity] err: %+v\n", err)
 	}
-	return &Parser{redisCli: redisCli, ipParser: ipParser}
+	return &Parser{redisCli: redisCli, ipParser: ipParser, needCheckNode: checkNode}
 }
 
 func (s *Parser) getNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error) {
@@ -385,6 +387,10 @@ func (s *Parser) getNodeStreamDetail(stream *model.StreamInfoRT) (int, float64) 
 }
 
 func (s *Parser) check(node *model.RtNode, streamInfo *model.NodeStreamInfo) bool {
+	if s.needCheckNode && !s.checkNode(node) {
+		log.Println("check node status err", node.Id)
+		return false
+	}
 	if !node.IsDynamic {
 		return false
 	}
@@ -462,6 +468,25 @@ func getNodeLocate(node *model.RtNode, ipParser *ipdb.City) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+func (s *Parser) checkNode(node *model.RtNode) bool {
+	if node == nil || !node.IsDynamic || node.RuntimeStatus != model.StateServing {
+		return false
+	}
+
+	// 检查节点能力：状态、ability、service
+	if !util.CheckNodeUsable(zlog.Logger, node, consts.TypeLive) {
+		log.Printf("checkNode nodeId:%s, machineId:%s check not pass, type: %s\n",
+			node.Id, node.MachineId, node.ResourceType)
+		return false
+	}
+
+	if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Https <= 0 || node.StreamdPorts.Wt <= 0 {
+		log.Printf("getAllDynamicNodesReport check http,https,wt port failed, nodeId:%s\n", node.Id)
+		return false
+	}
+	return true
 }
 
 /*
@@ -544,6 +569,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	bkt := flag.String("bkt", "douyu", "bucket ID")
 	node := flag.String("node", "", "node ID")
+	checkNode := flag.Bool("chknode", false, "是否需要检查节点的状态")
 	flag.Parse()
 	if *bkt == "" {
 		flag.PrintDefaults()
@@ -553,7 +579,7 @@ func main() {
 	if err := qconfig.LoadFile(&conf, confFile); err != nil {
 		log.Fatalf("load config failed, err: %v", err)
 	}
-	parser := newParser(&conf)
+	parser := newParser(&conf, *checkNode)
 	parser.buildAllNodesMap()
 	parser.buildNodeStreamsMap()
 	parser.buildRootNodesMap()
