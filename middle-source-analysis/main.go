@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode"
 
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
@@ -190,6 +191,22 @@ func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 	return nodeMap
 }
 
+func splitString(s string) (string, string) {
+	// 从左到右遍历，找到最后一个数字的位置
+	var lastDigitIndex int
+	for i, char := range s {
+		if !unicode.IsDigit(char) {
+			lastDigitIndex = i
+			break
+		}
+	}
+
+	// 根据最后一个数字的位置分割字符串
+	part1, part2 := s[:lastDigitIndex], s[lastDigitIndex:]
+
+	return part1, part2
+}
+
 var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
 var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 放大比\n"
 
@@ -200,7 +217,11 @@ func (s *Parser) dump() {
 	var totalRelayBw float64
 	streamRatioMap := make(map[string]float64)
 	streamRatioCsv := streamRatioHdr
+	roomMap := make(map[string][]string)
+	roomOnlineMap := make(map[string]int)
 	for streamId, streamDetail := range s.streamDetailMap {
+		roomId, id := splitString(streamId)
+		roomMap[roomId] = append(roomMap[roomId], id)
 		cnt++
 		var streamTotalBw float64
 		var streamTotalRelayBw float64
@@ -221,6 +242,7 @@ func (s *Parser) dump() {
 				streamTotalOnlineNum += int(streamInfo.OnlineNum)
 				streamTotalEdgeNodeCount += len(streamInfo.EdgeNodes)
 				streamTotalRootNodeCount += len(streamInfo.RootNodes)
+				roomOnlineMap[roomId] += int(streamInfo.OnlineNum)
 			}
 		}
 		streamRatioMap[streamId] = streamTotalBw / streamTotalRelayBw
@@ -240,6 +262,14 @@ func (s *Parser) dump() {
 	log.Println("cnt:", cnt)
 	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
 		totalRelayBw, totalBw/totalRelayBw)
+	log.Println("room count:", len(roomMap))
+	for roomId, ids := range roomMap {
+		fmt.Println(roomId, ids)
+	}
+	log.Println("room - onlineNum info")
+	for roomId, onlineNum := range roomOnlineMap {
+		fmt.Println(roomId, onlineNum)
+	}
 }
 
 func (s *Parser) buildRootNodesMap() {
@@ -518,6 +548,11 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 			if lastStream == "" {
 				lastStream = stream.Key
 			}
+			/*
+				if stream.RelayType != 0 {
+					log.Println("stream", stream.Key, "node", node.Id, "relaytype:", stream.RelayType)
+				}
+			*/
 			if _, ok := s.streamDetailMap[stream.Key]; !ok {
 				s.streamDetailMap[stream.Key] = make(map[string]map[string]*StreamInfo)
 			}
@@ -530,7 +565,7 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				s.streamDetailMap[stream.Key][isp][area] = &StreamInfo{
 					OnlineNum: uint32(onlineNum),
 					Bw:        bw,
-					RelayBw:   convertMbps(stream.RelayBandwidth),
+					//RelayBw:   convertMbps(stream.RelayBandwidth),
 				}
 				streamInfo := s.streamDetailMap[stream.Key][isp][area]
 				if !isRoot {
@@ -538,10 +573,15 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				} else {
 					streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
 				}
+				if stream.RelayType == 2 {
+					streamInfo.RelayBw = convertMbps(stream.RelayBandwidth)
+				}
 			} else {
 				streamInfo.OnlineNum += uint32(onlineNum)
 				streamInfo.Bw += bw
-				streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
+				if stream.RelayType == 2 {
+					streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
+				}
 				if !isRoot {
 					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
 				} else {
