@@ -217,6 +217,7 @@ func (s *Parser) dump() {
 	var totalRelayBw float64
 	streamRatioMap := make(map[string]float64)
 	streamRatioCsv := streamRatioHdr
+	rooms := make([]string, 0)
 	roomMap := make(map[string][]string)
 	roomOnlineMap := make(map[string]int)
 	for streamId, streamDetail := range s.streamDetailMap {
@@ -255,7 +256,8 @@ func (s *Parser) dump() {
 	if err != nil {
 		log.Println(err)
 	}
-	err = ioutil.WriteFile("streamRatio.csv", []byte(streamRatioCsv), 0644)
+	file = fmt.Sprintf("streams-%d.csv", time.Now().Unix())
+	err = ioutil.WriteFile(file, []byte(streamRatioCsv), 0644)
 	if err != nil {
 		log.Println(err)
 	}
