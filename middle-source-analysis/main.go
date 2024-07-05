@@ -207,6 +207,10 @@ func splitString(s string) (string, string) {
 	return part1, part2
 }
 
+func (s *Parser) getStreamSourceNodeMap() {
+
+}
+
 var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
 var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 放大比\n"
 
@@ -217,7 +221,7 @@ func (s *Parser) dump() {
 	var totalRelayBw float64
 	streamRatioMap := make(map[string]float64)
 	streamRatioCsv := streamRatioHdr
-	rooms := make([]string, 0)
+	//rooms := make([]string, 0)
 	roomMap := make(map[string][]string)
 	roomOnlineMap := make(map[string]int)
 	for streamId, streamDetail := range s.streamDetailMap {
