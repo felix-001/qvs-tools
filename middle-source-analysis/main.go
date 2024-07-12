@@ -4,14 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"log"
-	"strings"
 	"time"
-	"unicode"
 
-	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/dal"
@@ -26,22 +21,6 @@ import (
 const (
 	confFile = "./middle-source.json"
 )
-
-type Config struct {
-	RedisAddrs []string    `json:"redis_addrs"`
-	IPDB       ipdb.Config `json:"ipdb"`
-}
-
-type Parser struct {
-	redisCli                 *redis.ClusterClient
-	ipParser                 *ipdb.City
-	nodeStremasMap           map[string]*model.NodeStreamInfo
-	allNodesMap              map[string]*model.RtNode
-	allRootNodesMapByAreaIsp map[string][]*DynamicRootNode
-	allRootNodesMapByNodeId  map[string]*model.RtNode
-	streamDetailMap          map[string]map[string]map[string]*StreamInfo
-	needCheckNode            bool
-}
 
 func newParser(conf *Config, checkNode bool) *Parser {
 	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
@@ -72,37 +51,6 @@ func (s *Parser) getNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error)
 		return nil, err
 	}
 	return &nodeStreamInfo, nil
-}
-
-type DynamicRootNode struct {
-	NodeId        string
-	Forbidden     bool
-	Err           string
-	ForbiddenTime int64
-}
-
-func GetDynamicRootNodes(redisCli *redis.ClusterClient) (
-	map[string][]*DynamicRootNode, error) {
-
-	dynamicRootNodesMap := make(map[string][]*DynamicRootNode)
-	ctx := context.Background()
-	res, err := redisCli.HGetAll(ctx, "miku_dynamic_root_nodes_map").Result()
-	if err != nil {
-		log.Println(err)
-		return dynamicRootNodesMap, consts.ErrRedisHGetAll
-	}
-
-	for areaIsp, value := range res {
-		var nodes []*DynamicRootNode
-		if err = json.Unmarshal([]byte(value), &nodes); err != nil {
-			log.Println(err)
-			continue
-		}
-
-		dynamicRootNodesMap[areaIsp] = nodes
-	}
-
-	return dynamicRootNodesMap, nil
 }
 
 func (s *Parser) buildAllNodesMap() {
@@ -141,27 +89,6 @@ func (s *Parser) getNodeOnlineNum(streamInfo *model.StreamInfoRT) int {
 	return totalOnlineNum
 }
 
-func getIpAreaIsp(ipParser *ipdb.City, ip string) (string, string, error) {
-	locate, err := ipParser.Find(ip)
-	if err != nil {
-		return "", "", err
-	}
-	areaIspKey, _ := util.GetAreaIspKey(locate)
-	parts := strings.Split(areaIspKey, "_")
-	if len(parts) != 5 {
-		return "", "", fmt.Errorf("parse areaIspKey err, %s", areaIspKey)
-	}
-	area := parts[3]
-	isp := parts[4]
-	if area == "" {
-		return "", "", fmt.Errorf("area empty")
-	}
-	if isp == "" {
-		return "", "", fmt.Errorf("isp empty")
-	}
-	return area, isp, nil
-}
-
 func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 	nodeMap := make(map[string][]*model.RtNode)
 	for areaIsp, nodes := range s.allRootNodesMapByAreaIsp {
@@ -189,136 +116,6 @@ func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 		}
 	}
 	return nodeMap
-}
-
-func splitString(s string) (string, string) {
-	// 从左到右遍历，找到最后一个数字的位置
-	var lastDigitIndex int
-	for i, char := range s {
-		if !unicode.IsDigit(char) {
-			lastDigitIndex = i
-			break
-		}
-	}
-
-	// 根据最后一个数字的位置分割字符串
-	part1, part2 := s[:lastDigitIndex], s[lastDigitIndex:]
-
-	return part1, part2
-}
-
-func (s *Parser) getStreamSourceNodeMap() {
-
-}
-
-var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
-var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 放大比\n"
-
-func (s *Parser) dump() {
-	csv := hdr
-	cnt := 0
-	var totalBw float64
-	var totalRelayBw float64
-	streamRatioMap := make(map[string]float64)
-	streamRatioCsv := streamRatioHdr
-	//rooms := make([]string, 0)
-	roomMap := make(map[string][]string)
-	roomOnlineMap := make(map[string]int)
-	for streamId, streamDetail := range s.streamDetailMap {
-		roomId, id := splitString(streamId)
-		roomMap[roomId] = append(roomMap[roomId], id)
-		cnt++
-		var streamTotalBw float64
-		var streamTotalRelayBw float64
-		var streamTotalOnlineNum int
-		var streamTotalEdgeNodeCount int
-		var streamTotalRootNodeCount int
-		for isp, detail := range streamDetail {
-			for area, streamInfo := range detail {
-				ratio := streamInfo.Bw / streamInfo.RelayBw
-				csv += fmt.Sprintf("%s, %s, %s, %d, %d, %d, %.1f, %+v, %+v\n", streamId, isp, area,
-					streamInfo.OnlineNum, len(streamInfo.EdgeNodes),
-					len(streamInfo.RootNodes), ratio, streamInfo.EdgeNodes,
-					streamInfo.RootNodes)
-				totalBw += streamInfo.Bw
-				totalRelayBw += streamInfo.RelayBw
-				streamTotalBw += streamInfo.Bw
-				streamTotalRelayBw += streamInfo.RelayBw
-				streamTotalOnlineNum += int(streamInfo.OnlineNum)
-				streamTotalEdgeNodeCount += len(streamInfo.EdgeNodes)
-				streamTotalRootNodeCount += len(streamInfo.RootNodes)
-				roomOnlineMap[roomId] += int(streamInfo.OnlineNum)
-			}
-		}
-		streamRatioMap[streamId] = streamTotalBw / streamTotalRelayBw
-		streamRatioCsv += fmt.Sprintf("%s, %d, %d, %d, %.1f\n", streamId,
-			streamTotalOnlineNum, streamTotalEdgeNodeCount,
-			streamTotalRootNodeCount, streamTotalBw/streamTotalRelayBw)
-	}
-	file := fmt.Sprintf("%d.csv", time.Now().Unix())
-	err := ioutil.WriteFile(file, []byte(csv), 0644)
-	if err != nil {
-		log.Println(err)
-	}
-	file = fmt.Sprintf("streams-%d.csv", time.Now().Unix())
-	err = ioutil.WriteFile(file, []byte(streamRatioCsv), 0644)
-	if err != nil {
-		log.Println(err)
-	}
-	log.Println("cnt:", cnt)
-	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
-		totalRelayBw, totalBw/totalRelayBw)
-	log.Println("room count:", len(roomMap))
-	for roomId, ids := range roomMap {
-		fmt.Println(roomId, ids)
-	}
-	log.Println("room - onlineNum info")
-	for roomId, onlineNum := range roomOnlineMap {
-		fmt.Println(roomId, onlineNum)
-	}
-}
-
-func (s *Parser) buildRootNodesMap() {
-	dynamicRootNodesMap, err := GetDynamicRootNodes(s.redisCli)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("map len", len(dynamicRootNodesMap))
-	s.allRootNodesMapByNodeId = make(map[string]*model.RtNode)
-	s.allRootNodesMapByAreaIsp = dynamicRootNodesMap
-	for _, rootNodes := range dynamicRootNodesMap {
-		for _, rootNode := range rootNodes {
-			node, ok := s.allNodesMap[rootNode.NodeId]
-			if !ok {
-				log.Println("not found root node in all nodes buf", rootNode.NodeId)
-				continue
-			}
-			s.allRootNodesMapByNodeId[rootNode.NodeId] = node
-		}
-	}
-}
-
-type NodeDetail struct {
-	OnlineNum uint32
-	RelayBw   float64
-	Bw        float64
-	MaxBw     float64
-	Ratio     float64
-	RelayType uint32
-	Protocol  string
-	NodeId    string
-}
-
-type StreamInfo struct {
-	EdgeNodes []string
-	RootNodes []string
-	RelayBw   float64
-	Bw        float64
-	OnlineNum uint32
-}
-
-func convertMbps(bw uint64) float64 {
-	return float64(bw) * 8 / 1e6
 }
 
 // TODO: 节点的每个网卡的带宽利用率, 这里的出口带宽不能使用streamreport上报的，其他业务线，
@@ -456,54 +253,10 @@ func (s *Parser) calcRelayBw(streamDetail map[string]map[string]*StreamInfo, str
 	}
 }
 
-func ContainInStringSlice(target string, slice []string) bool {
-	for _, item := range slice {
-		if item == target {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (s *Parser) isRoot(node *model.RtNode) bool {
-	_, ok := s.allRootNodesMapByNodeId[node.Id]
-	return ok
-}
-
 func (s *Parser) dumpStreams(streamInfo *model.NodeStreamInfo) {
 	for _, stream := range streamInfo.Streams {
 		log.Printf("%+v", *stream)
 	}
-}
-
-func getLocate(ip string, ipParser *ipdb.City) (string, string, string) {
-	locate, err := ipParser.Find(ip)
-	if err != nil {
-		log.Println(err)
-		return "", "", ""
-	}
-	if locate.Isp == "" {
-		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
-	}
-	area := monitorUtil.ProvinceAreaRelation(locate.Region)
-	return locate.Isp, area, locate.Region
-}
-
-func getNodeLocate(node *model.RtNode, ipParser *ipdb.City) (string, string) {
-	for _, ip := range node.Ips {
-		if ip.IsIPv6 {
-			continue
-		}
-		if publicUtil.IsPrivateIP(ip.Ip) {
-			continue
-		}
-		isp, area, _ := getLocate(ip.Ip, ipParser)
-		if area != "" {
-			return isp, area
-		}
-	}
-	return "", ""
 }
 
 func (s *Parser) checkNode(node *model.RtNode) bool {
@@ -599,18 +352,6 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 	log.Println("total:", len(s.streamDetailMap))
 }
 
-func (s *Parser) dumpNodeStreams(node string) {
-	for _, stream := range s.nodeStremasMap[node].Streams {
-		fmt.Println("bucket:", stream.AppName, "stream:", stream.Key)
-		for _, player := range stream.Players {
-			fmt.Printf("\t%s\n", player.Protocol)
-			for _, ipInfo := range player.Ips {
-				fmt.Printf("\t\t ip: %s, onlineNum: %d, bw: %d\n", ipInfo.Ip, ipInfo.OnlineNum, ipInfo.Bandwidth)
-			}
-		}
-	}
-}
-
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	bkt := flag.String("bkt", "douyu", "bucket ID")
@@ -635,4 +376,5 @@ func main() {
 	}
 	parser.buildBucketStreamsInfo(*bkt)
 	parser.dump()
+	parser.dumpStreamsDetail(*bkt)
 }
