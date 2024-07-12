@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 	"unicode"
@@ -17,6 +18,7 @@ import (
 	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
+	qlog "github.com/qbox/pili/base/qiniu/log.v1"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 	"github.com/redis/go-redis/v9"
@@ -41,6 +43,7 @@ type Parser struct {
 	allRootNodesMapByNodeId  map[string]*model.RtNode
 	streamDetailMap          map[string]map[string]map[string]*StreamInfo
 	needCheckNode            bool
+	file                     *os.File
 }
 
 func newParser(conf *Config, checkNode bool) *Parser {
@@ -265,17 +268,19 @@ func (s *Parser) dump() {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("cnt:", cnt)
-	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
-		totalRelayBw, totalBw/totalRelayBw)
-	log.Println("room count:", len(roomMap))
-	for roomId, ids := range roomMap {
-		fmt.Println(roomId, ids)
-	}
-	log.Println("room - onlineNum info")
-	for roomId, onlineNum := range roomOnlineMap {
-		fmt.Println(roomId, onlineNum)
-	}
+	/*
+		log.Println("cnt:", cnt)
+		log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
+			totalRelayBw, totalBw/totalRelayBw)
+		log.Println("room count:", len(roomMap))
+		for roomId, ids := range roomMap {
+			fmt.Println(roomId, ids)
+		}
+		log.Println("room - onlineNum info")
+		for roomId, onlineNum := range roomOnlineMap {
+			fmt.Println(roomId, onlineNum)
+		}
+	*/
 }
 
 func (s *Parser) buildRootNodesMap() {
@@ -615,6 +620,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	bkt := flag.String("bkt", "douyu", "bucket ID")
 	node := flag.String("node", "", "node ID")
+	monitor := flag.Bool("monitor", false, "node monitor")
 	checkNode := flag.Bool("chknode", false, "是否需要检查节点的状态")
 	flag.Parse()
 	if *bkt == "" {
@@ -625,7 +631,12 @@ func main() {
 	if err := qconfig.LoadFile(&conf, confFile); err != nil {
 		log.Fatalf("load config failed, err: %v", err)
 	}
+	qlog.SetOutputLevel(5)
 	parser := newParser(&conf, *checkNode)
+	if *monitor {
+		parser.nodeMonitor()
+		return
+	}
 	parser.buildAllNodesMap()
 	parser.buildNodeStreamsMap()
 	parser.buildRootNodesMap()
@@ -635,4 +646,5 @@ func main() {
 	}
 	parser.buildBucketStreamsInfo(*bkt)
 	parser.dump()
+	parser.nodesNetinterfaceStatistics()
 }
