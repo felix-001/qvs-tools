@@ -23,7 +23,7 @@ func (s *Parser) getStreamSourceNodeMap(bkt string) map[string][]string {
 	return streamSourceNodesMap
 }
 
-var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 回源节点个数, 放大比, 回源节点详情\n"
+var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 回源节点个数, 回源带宽, 放大比, 回源节点详情\n"
 
 func (s *Parser) dumpStreamsDetail(bkt string) {
 	streamSourceNodesMap := s.getStreamSourceNodeMap(bkt)
@@ -40,10 +40,10 @@ func (s *Parser) dumpStreamsDetail(bkt string) {
 				streamTotalRootNodeCount += len(streamInfo.RootNodes)
 			}
 		}
-		streamRatioCsv += fmt.Sprintf("%s, %d, %d, %d, %d, %.1f, %+v\n", streamId,
+		streamRatioCsv += fmt.Sprintf("%s, %d, %d, %d, %d, %.1f, %.1f, %+v\n", streamId,
 			streamTotalOnlineNum, streamTotalEdgeNodeCount,
 			streamTotalRootNodeCount, len(streamSourceNodesMap[streamId]),
-			streamTotalBw/streamTotalRelayBw, streamSourceNodesMap[streamId])
+			streamTotalRelayBw, streamTotalBw/streamTotalRelayBw, streamSourceNodesMap[streamId])
 	}
 	file := fmt.Sprintf("streams-%d.csv", time.Now().Unix())
 	err := ioutil.WriteFile(file, []byte(streamRatioCsv), 0644)
