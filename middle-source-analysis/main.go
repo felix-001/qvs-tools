@@ -41,6 +41,7 @@ type Parser struct {
 	allNodesMap              map[string]*model.RtNode
 	allRootNodesMapByAreaIsp map[string][]*DynamicRootNode
 	allRootNodesMapByNodeId  map[string]*model.RtNode
+	allNodeInfoMap           map[string]*NodeInfo
 	streamDetailMap          map[string]map[string]map[string]*StreamInfo
 	needCheckNode            bool
 	file                     *os.File

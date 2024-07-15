@@ -175,7 +175,32 @@ func createDirIfNotExist(dir string) error {
 	return nil
 }
 
+func (s *Parser) isNodeInfoChanged(old, new *NodeInfo) bool {
+	if old.RuntimeStatus != new.RuntimeStatus {
+		return true
+	}
+	if old.AvailableIpCnt != new.AvailableIpCnt {
+		return true
+	}
+	if old.StreamdPorts != new.StreamdPorts {
+		return true
+	}
+	for _, newErrIp := range new.ErrIps {
+		for _, oldErrIp := range old.ErrIps {
+			if oldErrIp.IP != newErrIp.IP {
+				continue
+			}
+			if oldErrIp.Status != newErrIp.Status {
+				return true
+			}
+			break
+		}
+	}
+	return false
+}
+
 func (s *Parser) nodeMonitor() {
+	s.allNodeInfoMap = make(map[string]*NodeInfo)
 	ticker := time.NewTicker(time.Duration(15) * time.Second)
 	defer ticker.Stop()
 
@@ -189,7 +214,12 @@ func (s *Parser) nodeMonitor() {
 				continue
 			}
 			nodeInfo := s.buildNodeInfo(node)
-			s.writeToFile(nodeInfo)
+			if old, ok := s.allNodeInfoMap[nodeInfo.NodeId]; !ok {
+				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
+			} else if s.isNodeInfoChanged(old, nodeInfo) {
+				s.writeToFile(nodeInfo)
+				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
+			}
 		}
 		deleteOldFiles()
 	}
