@@ -29,26 +29,56 @@ func (s *NetprobeSrv) Run() {
 			if err != nil {
 				log.Printf("write node info to redis err, %+v\n", err)
 			}
-			/*
-				nodeStreamInfo := model.NodeStreamInfo{
-					Streams: []*model.StreamInfoRT{
-						{
-							StreamName: "test",
+		}
+		for bucket, bucketMap := range s.streamReportMap {
+			for stream, streamMap := range bucketMap {
+				for nodeId, nodeMap := range streamMap {
+					nodeStreamInfo := model.NodeStreamInfo{
+						Streams: []*model.StreamInfoRT{
+							{
+								StreamName: stream,
+								Key:        stream,
+								Bucket:     bucket,
+								Players: []*model.PlayerInfo{
+									{
+										Protocol: "flv",
+										Ips:      make([]*model.IpInfo, 0),
+									},
+								},
+							},
 						},
-					},
-					NodeId:         node.Id,
-					LastUpdateTime: time.Now().Unix(),
+						NodeId:         nodeId,
+						LastUpdateTime: time.Now().Unix(),
+					}
+					for ip, onlineNum := range nodeMap {
+						record := model.DynamicIpRecord{
+							Ip:    ip,
+							Value: "www.example.com",
+						}
+						bytes, err := json.Marshal(record)
+						if err != nil {
+							log.Println(err)
+							continue
+						}
+						_, err = s.redisCli.HSet(context.Background(), "miku_ip_domain_dns_map", ip, string(bytes)).Result()
+						if err != nil {
+							log.Println(err)
+						}
+						nodeStreamInfo.Streams[0].Players[0].Ips = append(
+							nodeStreamInfo.Streams[0].Players[0].Ips,
+							&model.IpInfo{Ip: ip, OnlineNum: uint32(onlineNum)})
+					}
+					bytes, err := json.Marshal(nodeStreamInfo)
+					if err != nil {
+						log.Println(err)
+						continue
+					}
+					_, err = s.redisCli.Set(context.Background(), "stream_report_"+nodeId, string(bytes), time.Hour*24*30).Result()
+					if err != nil {
+						log.Println(err)
+					}
 				}
-				data, err := json.Marshal(nodeStreamInfo)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				_, err = s.redisCli.Set(context.Background(), "stream_report_"+node.Id, string(data), time.Hour*24*30).Result()
-				if err != nil {
-					log.Println(err)
-				}
-			*/
+			}
 		}
 	}
 }

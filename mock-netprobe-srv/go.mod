@@ -3,8 +3,10 @@ module mock-netprobe-srv
 go 1.20
 
 require (
+	github.com/qbox/pili v1.0.25
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/zerolog v1.29.1
+	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 )
 
 require (
@@ -25,7 +27,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
-	github.com/qbox/pili v1.0.25 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
 	go.mongodb.org/mongo-driver v1.12.1 // indirect
