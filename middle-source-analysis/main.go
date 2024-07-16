@@ -357,6 +357,7 @@ func main() {
 	bkt := flag.String("bkt", "douyu", "bucket ID")
 	node := flag.String("node", "", "node ID")
 	checkNode := flag.Bool("chknode", false, "是否需要检查节点的状态")
+	monitor := flag.Bool("monitor", false, "node monitor")
 	flag.Parse()
 	if *bkt == "" {
 		flag.PrintDefaults()
@@ -367,6 +368,10 @@ func main() {
 		log.Fatalf("load config failed, err: %v", err)
 	}
 	parser := newParser(&conf, *checkNode)
+	if *monitor {
+		parser.nodeMonitor()
+		return
+	}
 	parser.buildAllNodesMap()
 	parser.buildNodeStreamsMap()
 	parser.buildRootNodesMap()

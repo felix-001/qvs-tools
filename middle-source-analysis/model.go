@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
@@ -18,9 +20,11 @@ type Parser struct {
 	allNodesMap              map[string]*model.RtNode
 	allRootNodesMapByAreaIsp map[string][]*DynamicRootNode
 	allRootNodesMapByNodeId  map[string]*model.RtNode
+	allNodeInfoMap           map[string]*NodeInfo
 	// key1: streamId key2: isp key3: area
 	streamDetailMap map[string]map[string]map[string]*StreamInfo
 	needCheckNode   bool
+	file            *os.File
 }
 
 type DynamicRootNode struct {
