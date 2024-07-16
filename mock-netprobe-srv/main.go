@@ -112,50 +112,6 @@ func (s *NetprobeSrv) Load() {
 	log.Println("node count:", len(s.nodes))
 }
 
-func (s *NetprobeSrv) Run() {
-	for range time.Tick(time.Duration(10) * time.Second) {
-		log.Println("update nodes, count:", len(s.nodes))
-		for _, node := range s.nodes {
-			for i := range node.Ips {
-				node.Ips[i].IPStreamProbe.LowThresholdTime = time.Now().Unix() - 3*3600
-				if extra, ok := s.nodeExtras[node.Id]; ok {
-					log.Println("found extra", node.Id, extra.LowThresholdTime)
-					node.Ips[i].IPStreamProbe.LowThresholdTime = extra.LowThresholdTime
-				}
-			}
-			bytes, err := json.Marshal(node)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			_, err = s.redisCli.HSet(context.Background(), model.NetprobeRtNodesMap, node.Id, bytes).Result()
-			if err != nil {
-				log.Printf("write node info to redis err, %+v\n", err)
-			}
-			/*
-				nodeStreamInfo := model.NodeStreamInfo{
-					Streams: []*model.StreamInfoRT{
-						{
-							StreamName: "test",
-						},
-					},
-					NodeId:         node.Id,
-					LastUpdateTime: time.Now().Unix(),
-				}
-				data, err := json.Marshal(nodeStreamInfo)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				_, err = s.redisCli.Set(context.Background(), "stream_report_"+node.Id, string(data), time.Hour*24*30).Result()
-				if err != nil {
-					log.Println(err)
-				}
-			*/
-		}
-	}
-}
-
 func (s *NetprobeSrv) NodeInfo(paramMap map[string]string) string {
 	nodeId := paramMap["node"]
 	log.Println(len(s.nodes))
@@ -192,57 +148,6 @@ func (s *NetprobeSrv) DumpAreaIsp(paramMap map[string]string) string {
 		log.Println(err)
 	}
 	return string(jsonbody)
-}
-
-func (s *NetprobeSrv) StreamReport(paramMap map[string]string) string {
-	node := paramMap["node"]
-	body := paramMap["body"]
-	stream := paramMap["stream"]
-	bucket := paramMap["bucket"]
-
-	ipOnlineNumMap := map[string]int{}
-	if err := json.Unmarshal([]byte(body), &ipOnlineNumMap); err != nil {
-		return fmt.Sprintf("unmashal err, %v", err)
-	}
-
-	var ips []*model.IpInfo
-	for ip, onlineNum := range ipOnlineNumMap {
-		ipInfo := &model.IpInfo{
-			Ip:        ip,
-			OnlineNum: uint32(onlineNum),
-		}
-		ips = append(ips, ipInfo)
-	}
-	nodeStreamInfo := model.NodeStreamInfo{
-		NodeId:         node,
-		LastUpdateTime: time.Now().Unix(),
-		Streams: []*model.StreamInfoRT{
-			{
-				AppName:    bucket,
-				Bucket:     bucket,
-				Key:        stream,
-				StreamName: stream,
-				Players: []*model.PlayerInfo{
-					{
-						Ips: ips,
-					},
-				},
-			},
-		},
-	}
-
-	bytes, err := json.Marshal(&nodeStreamInfo)
-	if err != nil {
-		return fmt.Sprintf("marshal err, %v", err)
-	}
-
-	_, err = s.redisCli.Set(context.Background(), "stream_report_"+node, bytes, time.Hour*24*30).Result()
-	if err != nil {
-		log.Println(err)
-		return fmt.Sprintf("redis err, %v", err)
-	}
-
-	return "success"
 }
 
 func (s *NetprobeSrv) SetLowThresholdTime(paramMap map[string]string) string {
