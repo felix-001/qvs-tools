@@ -20,7 +20,7 @@ func newCk(config *Config) driver.Conn {
 			Username: ckConf.User,
 			Password: ckConf.Passwd,
 		},
-		Debug:        true,
+		Debug:        false,
 		DialTimeout:  time.Second * time.Duration(30),
 		MaxOpenConns: 10,
 		MaxIdleConns: 10,
