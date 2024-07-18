@@ -43,15 +43,17 @@ func (s *Parser) dump() {
 		log.Println(err)
 	}
 
-	log.Println("cnt:", cnt)
-	log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
-		totalRelayBw, totalBw/totalRelayBw)
-	log.Println("room count:", len(roomMap))
-	for roomId, ids := range roomMap {
-		fmt.Println(roomId, ids)
-	}
-	log.Println("room - onlineNum info")
-	for roomId, onlineNum := range roomOnlineMap {
-		fmt.Println(roomId, onlineNum)
-	}
+	/*
+		log.Println("cnt:", cnt)
+		log.Printf("totalBw: %.1f, totalRelayBw: %.1f, totalRatio: %.1f", totalBw,
+			totalRelayBw, totalBw/totalRelayBw)
+		log.Println("room count:", len(roomMap))
+		for roomId, ids := range roomMap {
+			fmt.Println(roomId, ids)
+		}
+		log.Println("room - onlineNum info")
+		for roomId, onlineNum := range roomOnlineMap {
+			fmt.Println(roomId, onlineNum)
+		}
+	*/
 }

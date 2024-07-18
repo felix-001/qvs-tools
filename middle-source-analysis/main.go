@@ -357,6 +357,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	bkt := flag.String("bkt", "douyu", "bucket ID")
 	node := flag.String("node", "", "node ID")
+	stream := flag.String("stream", "", "stream ID")
 	checkNode := flag.Bool("chknode", false, "是否需要检查节点的状态")
 	monitor := flag.Bool("monitor", false, "node monitor")
 	flag.Parse()
@@ -381,7 +382,10 @@ func main() {
 		return
 	}
 	parser.buildBucketStreamsInfo(*bkt)
+	if *stream != "" {
+		parser.dumpStreamDetail(*bkt, *stream)
+		return
+	}
 	parser.dump()
 	parser.dumpStreamsDetail(*bkt)
-	parser.GetStreamNodeInfo()
 }

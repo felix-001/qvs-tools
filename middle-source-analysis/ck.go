@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -40,17 +41,30 @@ func newCk(config *Config) driver.Conn {
 	return conn
 }
 
-func (s *Parser) GetStreamNodeInfo() {
+func getMidnight() string {
+	now := time.Now()
+
+	// 获取当前日期的 0 点时间
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// 格式化时间字符串，去掉时区信息
+	midnightStr := midnight.Format("2006-01-02T15:04:05")
+	return midnightStr
+}
+
+func (s *Parser) GetStreamNodeInfo(reqId, nodeId string) int64 {
+	midnight := getMidnight()
 	query := `
-SELECT  CustomerSource, RequestID, StartTime, NodeID, Status
+SELECT  CustomerSource, RequestID, StartTime, Status
 FROM miku_data.streamd_qos 
-WHERE RequestID == 'LhUNeIT1dVScoeIX' AND Ts > '2024-07-17T00:00:00' AND NodeID == 'd6c9c262-8d68-3378-a08a-a7acdf91548a-niulink64-site'
+WHERE RequestID == '%s' AND Ts > '%s' AND NodeID == '%s'
 LIMIT 1;
 `
+	query = fmt.Sprintf(query, reqId, midnight, nodeId)
 	rows, err := s.ck.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("query rows failed, err: %+v\n", err)
-		return
+		return 0
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -59,6 +73,7 @@ LIMIT 1;
 			log.Printf("rows ScanStruct failed, err: %+v\n", err)
 			continue
 		}
-		log.Printf("%+v\n", obj)
+		return obj.StartTime
 	}
+	return 0
 }

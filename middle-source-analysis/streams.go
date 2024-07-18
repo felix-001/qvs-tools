@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"time"
+
+	"github.com/qbox/mikud-live/common/model"
 )
 
 func (s *Parser) getStreamSourceNodeMap(bkt string) (map[string][]string, map[string][]string) {
@@ -60,5 +62,35 @@ func (s *Parser) dumpStreamsDetail(bkt string) {
 	err := ioutil.WriteFile(file, []byte(streamRatioCsv), 0644)
 	if err != nil {
 		log.Println(err)
+	}
+}
+
+func (s *Parser) getStreamInfo(nodeId, streamId string) *model.StreamInfoRT {
+	streamInfo := s.nodeStremasMap[nodeId]
+	for _, stream := range streamInfo.Streams {
+		if stream.Key == streamId {
+			return stream
+		}
+	}
+	return nil
+}
+
+func (s *Parser) dumpStreamDetail(bucket, stream string) {
+	streamSourceNodesMap, _ := s.getStreamSourceNodeMap(bucket)
+	nodeIds := streamSourceNodesMap[stream]
+	if len(nodeIds) == 0 {
+		log.Println("get stream source nodes err", bucket, stream)
+		return
+	}
+	for _, nodeId := range nodeIds {
+		streamInfo := s.getStreamInfo(nodeId, stream)
+		node := s.allNodesMap[nodeId]
+		if node == nil {
+			log.Println("get node err", nodeId)
+			continue
+		}
+		startTime := s.GetStreamNodeInfo(streamInfo.Pusher[0].ConnectId, nodeId)
+		log.Println("reqId:", streamInfo.Pusher[0].ConnectId, "startTime:", startTime, "nodeId:", nodeId, "machineId", node.MachineId)
+
 	}
 }
