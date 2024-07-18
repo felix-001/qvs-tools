@@ -11,5 +11,8 @@ func (s *Parser) dumpNodeStreams(node string) {
 				fmt.Printf("\t\t ip: %s, onlineNum: %d, bw: %d\n", ipInfo.Ip, ipInfo.OnlineNum, ipInfo.Bandwidth)
 			}
 		}
+		for _, pusher := range stream.Pusher {
+			fmt.Println(pusher.ConnectId)
+		}
 	}
 }

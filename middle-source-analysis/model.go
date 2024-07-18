@@ -3,14 +3,24 @@ package main
 import (
 	"os"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
 )
 
+type CkConfig struct {
+	Host   []string `json:"host"`
+	DB     string   `json:"db"`
+	User   string   `json:"user"`
+	Passwd string   `json:"passwd"`
+	Table  string   `json:"table"`
+}
+
 type Config struct {
 	RedisAddrs []string    `json:"redis_addrs"`
 	IPDB       ipdb.Config `json:"ipdb"`
+	CK         CkConfig    `json:"ck"`
 }
 
 type Parser struct {
@@ -25,6 +35,7 @@ type Parser struct {
 	streamDetailMap map[string]map[string]map[string]*StreamInfo
 	needCheckNode   bool
 	file            *os.File
+	ck              driver.Conn
 }
 
 type DynamicRootNode struct {

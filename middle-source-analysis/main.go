@@ -36,7 +36,8 @@ func newParser(conf *Config, checkNode bool) *Parser {
 	if err != nil {
 		log.Fatalf("[IPDB NewCity] err: %+v\n", err)
 	}
-	return &Parser{redisCli: redisCli, ipParser: ipParser, needCheckNode: checkNode}
+	ck := newCk(conf)
+	return &Parser{redisCli: redisCli, ipParser: ipParser, needCheckNode: checkNode, ck: ck}
 }
 
 func (s *Parser) getNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error) {
@@ -382,4 +383,5 @@ func main() {
 	parser.buildBucketStreamsInfo(*bkt)
 	parser.dump()
 	parser.dumpStreamsDetail(*bkt)
+	parser.GetStreamNodeInfo()
 }
