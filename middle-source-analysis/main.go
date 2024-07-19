@@ -12,6 +12,7 @@ import (
 	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
+	qlog "github.com/qbox/pili/base/qiniu/log.v1"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 	"github.com/redis/go-redis/v9"
@@ -360,6 +361,7 @@ func main() {
 	stream := flag.String("stream", "", "stream ID")
 	checkNode := flag.Bool("chknode", false, "是否需要检查节点的状态")
 	monitor := flag.Bool("monitor", false, "node monitor")
+	qlog.SetOutputLevel(5)
 	flag.Parse()
 	if *bkt == "" {
 		flag.PrintDefaults()
@@ -383,6 +385,8 @@ func main() {
 	}
 	parser.buildBucketStreamsInfo(*bkt)
 	if *stream != "" {
+		parser.getNodeUnavailableDetail("e7feb466-2b94-37d7-82d4-7f1002f6beb0-niulink64-site",
+			"./node_info/nodeinfo-20240716094447.json")
 		parser.dumpStreamDetail(*bkt, *stream)
 		return
 	}

@@ -63,3 +63,10 @@ type StreamInfo struct {
 	Bw        float64
 	OnlineNum uint32
 }
+
+type NodeUnavailableDetail struct {
+	Start  string
+	End    string
+	Reason string
+	Detail string
+}

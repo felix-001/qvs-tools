@@ -52,6 +52,17 @@ func getMidnight() string {
 	return midnightStr
 }
 
+func getMidnight2() string {
+	now := time.Now()
+
+	// 获取当前日期的 0 点时间
+	midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// 格式化时间字符串，去掉时区信息
+	midnightStr := midnight.Format("2006-01-02 15:04:05")
+	return midnightStr
+}
+
 func (s *Parser) GetStreamNodeInfo(reqId, nodeId string) int64 {
 	midnight := getMidnight()
 	query := `
