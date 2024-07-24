@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-func (s *Parser) dumpNodeStreams(node string) {
+func (s *Parser) dumpNodeStreams() {
+	node := s.conf.Node
 	for _, stream := range s.nodeStremasMap[node].Streams {
 		fmt.Println("bucket:", stream.AppName, "stream:", stream.Key)
 		for _, player := range stream.Players {

@@ -94,3 +94,56 @@ func (s *Parser) dumpStreamDetail(bucket, stream string) {
 
 	}
 }
+
+const (
+	NodeTypeRoot    = "root"
+	NodeTypeEdge    = "edge"
+	NodeTypeOffline = "offline"
+)
+
+func (s *Parser) getNodeType(node *model.RtNode) string {
+	if node.RuntimeStatus != "Serving" {
+		return NodeTypeOffline
+	}
+	if _, ok := s.allRootNodesMapByNodeId[node.Id]; ok {
+		return NodeTypeRoot
+	}
+	return NodeTypeEdge
+}
+
+func (s *Parser) dumpStreams() {
+	streamInfoMap := make(map[string]*StreamInfo)
+	for _, node := range s.allNodesMap {
+		report := s.nodeStremasMap[node.Id]
+		if report == nil {
+			continue
+		}
+		for _, streamInfoRT := range report.Streams {
+			if s.conf.Bucket != streamInfoRT.Bucket {
+				continue
+			}
+			streamInfo, ok := streamInfoMap[streamInfoRT.Key]
+			if !ok {
+				streamInfoMap[streamInfoRT.Key] = &StreamInfo{}
+				streamInfo = streamInfoMap[streamInfoRT.Key]
+			}
+			onlineNum, bw := s.getStreamDetail(streamInfoRT)
+			streamInfo.Bw += bw
+			streamInfo.RelayBw += streamInfo.RelayBw
+			streamInfo.OnlineNum += uint32(onlineNum)
+			if streamInfoRT.RelayBandwidth == 0 || streamInfoRT.RelayType != 2 {
+				continue
+			}
+			nodeType := s.getNodeType(node)
+			switch nodeType {
+			case NodeTypeRoot:
+				streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
+			case NodeTypeOffline:
+				streamInfo.EdgeNodes = append(streamInfo.OfflineNodes, node.Id)
+			default:
+				streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
+			}
+		}
+	}
+	log.Println("streams:", len(streamInfoMap))
+}

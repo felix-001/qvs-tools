@@ -57,3 +57,9 @@ func (s *Parser) dump() {
 		}
 	*/
 }
+
+func (s *Parser) dumpStream() {
+	s.getNodeUnavailableDetail("e7feb466-2b94-37d7-82d4-7f1002f6beb0-niulink64-site",
+		"./node_info/nodeinfo-20240716094447.json")
+	s.dumpStreamDetail(s.conf.Bucket, s.conf.Stream)
+}

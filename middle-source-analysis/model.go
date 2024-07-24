@@ -18,9 +18,16 @@ type CkConfig struct {
 }
 
 type Config struct {
-	RedisAddrs []string    `json:"redis_addrs"`
-	IPDB       ipdb.Config `json:"ipdb"`
-	CK         CkConfig    `json:"ck"`
+	RedisAddrs  []string    `json:"redis_addrs"`
+	IPDB        ipdb.Config `json:"ipdb"`
+	CK          CkConfig    `json:"ck"`
+	Bucket      string
+	Stream      string
+	Node        string
+	CheckNode   bool
+	Monitor     bool
+	NeedIpParer bool
+	Streams     bool
 }
 
 type Parser struct {
@@ -33,9 +40,9 @@ type Parser struct {
 	allNodeInfoMap           map[string]*NodeInfo
 	// key1: streamId key2: isp key3: area
 	streamDetailMap map[string]map[string]map[string]*StreamInfo
-	needCheckNode   bool
 	file            *os.File
 	ck              driver.Conn
+	conf            *Config
 }
 
 type DynamicRootNode struct {
@@ -57,11 +64,12 @@ type NodeDetail struct {
 }
 
 type StreamInfo struct {
-	EdgeNodes []string
-	RootNodes []string
-	RelayBw   float64
-	Bw        float64
-	OnlineNum uint32
+	EdgeNodes    []string
+	RootNodes    []string
+	OfflineNodes []string
+	RelayBw      float64
+	Bw           float64
+	OnlineNum    uint32
 }
 
 type NodeUnavailableDetail struct {

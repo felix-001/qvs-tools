@@ -97,3 +97,34 @@ func splitString(s string) (string, string) {
 func convertMbps(bw uint64) float64 {
 	return float64(bw) * 8 / 1e6
 }
+
+func (s *Parser) getStreamDetail(stream *model.StreamInfoRT) (int, float64) {
+	totalOnlineNum := 0
+	var totalBw float64
+	for _, player := range stream.Players {
+		for _, ipInfo := range player.Ips {
+			totalOnlineNum += int(ipInfo.OnlineNum)
+			totalBw += convertMbps(ipInfo.Bandwidth)
+		}
+	}
+	return totalOnlineNum, totalBw
+}
+
+func (s *Parser) calcRelayBw(streamDetail map[string]map[string]*StreamInfo, stream *model.StreamInfoRT, node *model.RtNode) {
+	for _, detail := range streamDetail {
+		for _, streamInfo := range detail {
+			streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
+		}
+	}
+}
+
+func (s *Parser) getNodeOnlineNum(streamInfo *model.StreamInfoRT) int {
+	totalOnlineNum := 0
+	for _, player := range streamInfo.Players {
+		for _, ipInfo := range player.Ips {
+			totalOnlineNum += int(ipInfo.OnlineNum)
+			log.Println("protocol:", player.Protocol)
+		}
+	}
+	return totalOnlineNum
+}
