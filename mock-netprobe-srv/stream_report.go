@@ -28,57 +28,5 @@ func (s *NetprobeSrv) StreamReport(paramMap map[string]string) string {
 	for nodeId, ips := range nodeStreamInfoMap {
 		s.streamReportMap[bucket][stream][nodeId] = ips
 	}
-
-	/*
-		for bucket, bucketMap := range s.streamReportMap {
-			for stream, streamMap := range bucketMap {
-				for nodeId, nodeMap := range streamMap {
-					for ip, onlineNum := range nodeMap {
-						log.Println(bucket, stream, nodeId, ip, onlineNum)
-					}
-				}
-			}
-		}
-	*/
-
-	/*
-		var ips []*model.IpInfo
-		for ip, onlineNum := range ipOnlineNumMap {
-			ipInfo := &model.IpInfo{
-				Ip:        ip,
-				OnlineNum: uint32(onlineNum),
-			}
-			ips = append(ips, ipInfo)
-		}
-		nodeStreamInfo := model.NodeStreamInfo{
-			NodeId:         node,
-			LastUpdateTime: time.Now().Unix(),
-			Streams: []*model.StreamInfoRT{
-				{
-					AppName:    bucket,
-					Bucket:     bucket,
-					Key:        stream,
-					StreamName: stream,
-					Players: []*model.PlayerInfo{
-						{
-							Ips: ips,
-						},
-					},
-				},
-			},
-		}
-
-		bytes, err := json.Marshal(&nodeStreamInfo)
-		if err != nil {
-			return fmt.Sprintf("marshal err, %v", err)
-		}
-
-		_, err = s.redisCli.Set(context.Background(), "stream_report_"+node, bytes, time.Hour*24*30).Result()
-		if err != nil {
-			log.Println(err)
-			return fmt.Sprintf("redis err, %v", err)
-		}
-	*/
-
 	return "success"
 }

@@ -7,6 +7,7 @@ require (
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/rs/zerolog v1.29.1
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
+	gorm.io/gorm v1.24.6
 )
 
 require (
