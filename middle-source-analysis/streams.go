@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os/exec"
 	"time"
 
 	"github.com/qbox/mikud-live/common/model"
@@ -35,7 +36,7 @@ func (s *Parser) getStreamSourceNodeMap(bkt string) (map[string][]string, map[st
 	return streamSourceNodesMap, notServingNodesMap
 }
 
-var streamRatioHdr = "流ID, 在线人数, 边缘节点个数, ROOT节点个数, 回源节点个数, 非serving的回源节点个数, 回源带宽, 放大比, 回源节点详情, 非serving回源节点详情\n"
+var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 拉流带宽, 回源带宽, 放大比, 回源节点详情\n"
 
 func (s *Parser) dumpStreamsDetail(bkt string) {
 	streamSourceNodesMap, notServingNodesMap := s.getStreamSourceNodeMap(bkt)
@@ -111,25 +112,40 @@ func (s *Parser) getNodeType(node *model.RtNode) string {
 	return NodeTypeEdge
 }
 
+func (s *Parser) getNodeIsp(node *model.RtNode) string {
+	for _, ipInfo := range node.Ips {
+		if !checkIp(ipInfo) {
+			continue
+		}
+		return ipInfo.Isp
+	}
+	return "unknow"
+}
+
 func (s *Parser) dumpStreams() {
-	streamInfoMap := make(map[string]*StreamInfo)
+	streamInfoMap := make(map[string]map[string]*StreamInfo) // key1: streamId key2: isp
 	for _, node := range s.allNodesMap {
 		report := s.nodeStremasMap[node.Id]
 		if report == nil {
 			continue
 		}
+		isp := s.getNodeIsp(node)
 		for _, streamInfoRT := range report.Streams {
 			if s.conf.Bucket != streamInfoRT.Bucket {
 				continue
 			}
-			streamInfo, ok := streamInfoMap[streamInfoRT.Key]
+			_, ok := streamInfoMap[streamInfoRT.Key]
 			if !ok {
-				streamInfoMap[streamInfoRT.Key] = &StreamInfo{}
-				streamInfo = streamInfoMap[streamInfoRT.Key]
+				streamInfoMap[streamInfoRT.Key] = make(map[string]*StreamInfo)
+			}
+			streamInfo, ok := streamInfoMap[streamInfoRT.Key][isp]
+			if !ok {
+				streamInfo = &StreamInfo{}
+				streamInfoMap[streamInfoRT.Key][isp] = streamInfo
 			}
 			onlineNum, bw := s.getStreamDetail(streamInfoRT)
 			streamInfo.Bw += bw
-			streamInfo.RelayBw += streamInfo.RelayBw
+			streamInfo.RelayBw += convertMbps(streamInfoRT.RelayBandwidth)
 			streamInfo.OnlineNum += uint32(onlineNum)
 			if streamInfoRT.RelayBandwidth == 0 || streamInfoRT.RelayType != 2 {
 				continue
@@ -139,11 +155,41 @@ func (s *Parser) dumpStreams() {
 			case NodeTypeRoot:
 				streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
 			case NodeTypeOffline:
-				streamInfo.EdgeNodes = append(streamInfo.OfflineNodes, node.Id)
+				streamInfo.OfflineNodes = append(streamInfo.OfflineNodes, node.Id)
 			default:
 				streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
 			}
 		}
 	}
+	s.streamInfoMap = streamInfoMap
 	log.Println("streams:", len(streamInfoMap))
+	s.saveStreamsInfoToCSV()
+}
+
+func (s *Parser) saveStreamsInfoToCSV() {
+	csv := streamRatioHdr
+	for streamId, ispDetail := range s.streamInfoMap {
+		for isp, detail := range ispDetail {
+			ratio := detail.Bw / detail.RelayBw
+			nodeCnt := len(detail.EdgeNodes) + len(detail.RootNodes)
+			nodesDetail := fmt.Sprintf("edgeNodesCnt: %d edgeNodesDetail: %+v rootNodesCnt: %d rootNodesDetail: %+v offlineNodesCnt: %d offlineNodesDetail: %+v",
+				len(detail.EdgeNodes), detail.EdgeNodes, len(detail.RootNodes), detail.RootNodes,
+				len(detail.OfflineNodes), detail.OfflineNodes)
+			csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f, %s\n", streamId, isp, detail.OnlineNum, nodeCnt,
+				detail.Bw, detail.RelayBw, ratio, nodesDetail)
+		}
+	}
+
+	file := fmt.Sprintf("streams-%d.csv", time.Now().Unix())
+	err := ioutil.WriteFile(file, []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	cmd := exec.Command("./qup", file)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return
+	}
+	fmt.Println(string(output))
 }

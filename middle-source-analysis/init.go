@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
 )
@@ -43,4 +44,5 @@ func (s *Parser) init() {
 	s.buildAllNodesMap()
 	s.buildNodeStreamsMap()
 	s.buildRootNodesMap()
+	prometheus.MustRegister(dynIpStatusMetric)
 }

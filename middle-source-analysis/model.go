@@ -18,16 +18,17 @@ type CkConfig struct {
 }
 
 type Config struct {
-	RedisAddrs  []string    `json:"redis_addrs"`
-	IPDB        ipdb.Config `json:"ipdb"`
-	CK          CkConfig    `json:"ck"`
-	Bucket      string
-	Stream      string
-	Node        string
-	CheckNode   bool
-	Monitor     bool
-	NeedIpParer bool
-	Streams     bool
+	RedisAddrs     []string    `json:"redis_addrs"`
+	IPDB           ipdb.Config `json:"ipdb"`
+	CK             CkConfig    `json:"ck"`
+	Bucket         string
+	Stream         string
+	Node           string
+	CheckNode      bool
+	Monitor        bool
+	NeedIpParer    bool
+	Streams        bool
+	PrometheusAddr string
 }
 
 type Parser struct {
@@ -43,6 +44,7 @@ type Parser struct {
 	file            *os.File
 	ck              driver.Conn
 	conf            *Config
+	streamInfoMap   map[string]map[string]*StreamInfo
 }
 
 type DynamicRootNode struct {

@@ -19,6 +19,9 @@ const (
 	IpStatusStreamProbeStateFail = "StreamProbeStateFail"
 	IpStatusStreamProbeSpeedFail = "StreamProbeSpeedFail"
 	IpStatusForbidden            = "IpForbidden"
+	IpStatusOffline              = "Offline"
+	IpStatusBanProv              = "BanProv"
+	IpStatusNoPorts              = "noPorts"
 )
 
 type IpInfo struct {
@@ -199,6 +202,7 @@ func (s *Parser) nodeMonitor() {
 	defer ticker.Stop()
 
 	for range ticker.C {
+		ipStatusMap := make(map[string]int)
 		allNodes, err := dal.GetAllNode(s.redisCli)
 		if err != nil {
 			log.Fatalln(err)
@@ -214,7 +218,45 @@ func (s *Parser) nodeMonitor() {
 				s.writeToFile(nodeInfo)
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}
+			s.fillIpStatus(ipStatusMap, node)
 		}
+		s.dynIpMonitor(ipStatusMap)
 		deleteOldFiles()
+	}
+}
+
+func (s *Parser) fillIpStatus(ipStatusMap map[string]int, node *model.RtNode) {
+	for _, ipInfo := range node.Ips {
+		if !checkIp(ipInfo) {
+			continue
+		}
+		if node.RuntimeStatus != "Serving" {
+			ipStatusMap[IpStatusOffline]++
+			continue
+		}
+		if node.IsBanTransProv {
+			ipStatusMap[IpStatusBanProv]++
+			continue
+		}
+		if noStreamdPorts(node) {
+			ipStatusMap[IpStatusNoPorts]++
+			continue
+		}
+		if ipInfo.Forbidden {
+			ipStatusMap[IpStatusForbidden]++
+			continue
+		}
+		if ipInfo.IPStreamProbe.State != model.StreamProbeStateSuccess {
+			ipStatusMap[IpStatusStreamProbeStateFail]++
+			continue
+		}
+		if ipInfo.IPStreamProbe.Speed < 12 && ipInfo.IPStreamProbe.MinSpeed < 10 {
+			ipStatusMap[IpStatusStreamProbeSpeedFail]++
+			continue
+		}
+		if ipInfo.OutMBps >= ipInfo.MaxOutMBps*0.8 {
+			ipStatusMap[IpStatusBwLimit]++
+			continue
+		}
 	}
 }
