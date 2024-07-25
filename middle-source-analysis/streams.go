@@ -99,8 +99,10 @@ func (s *Parser) getStreamSchedInfos() []SchedInfo {
 			continue
 		}
 		startTime := s.GetStreamNodeInfo(streamInfo.Pusher[0].ConnectId, nodeId)
-		log.Println("reqId:", streamInfo.Pusher[0].ConnectId, "startTime:", startTime, "nodeId:", nodeId,
-			"machineId", node.MachineId)
+		/*
+			log.Println("reqId:", streamInfo.Pusher[0].ConnectId, "startTime:", startTime, "nodeId:", nodeId,
+				"machineId", node.MachineId)
+		*/
 		schedInfo := SchedInfo{
 			ConnId:    streamInfo.Pusher[0].ConnectId,
 			StartTime: startTime,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 	"unicode"
 
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
@@ -127,4 +128,11 @@ func (s *Parser) getNodeOnlineNum(streamInfo *model.StreamInfoRT) int {
 		}
 	}
 	return totalOnlineNum
+}
+
+func unixToTimeStr(t int64) string {
+	timestamp := int64(t)
+	timeObj := time.Unix(timestamp, 0)
+	formattedTime := timeObj.Format(time.DateTime)
+	return formattedTime
 }
