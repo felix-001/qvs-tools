@@ -76,24 +76,40 @@ func (s *Parser) getStreamInfo(nodeId, streamId string) *model.StreamInfoRT {
 	return nil
 }
 
-func (s *Parser) dumpStreamDetail(bucket, stream string) {
-	streamSourceNodesMap, _ := s.getStreamSourceNodeMap(bucket)
-	nodeIds := streamSourceNodesMap[stream]
+type SchedInfo struct {
+	ConnId    string
+	StartTime int64
+	NodeId    string
+	MachindId string
+}
+
+func (s *Parser) getStreamSchedInfos() []SchedInfo {
+	streamSourceNodesMap, _ := s.getStreamSourceNodeMap(s.conf.Bucket)
+	nodeIds := streamSourceNodesMap[s.conf.Stream]
 	if len(nodeIds) == 0 {
-		log.Println("get stream source nodes err", bucket, stream)
-		return
+		log.Println("get stream source nodes err", s.conf.Bucket, s.conf.Stream)
+		return nil
 	}
+	schedInfos := make([]SchedInfo, 0)
 	for _, nodeId := range nodeIds {
-		streamInfo := s.getStreamInfo(nodeId, stream)
+		streamInfo := s.getStreamInfo(nodeId, s.conf.Stream)
 		node := s.allNodesMap[nodeId]
 		if node == nil {
 			log.Println("get node err", nodeId)
 			continue
 		}
 		startTime := s.GetStreamNodeInfo(streamInfo.Pusher[0].ConnectId, nodeId)
-		log.Println("reqId:", streamInfo.Pusher[0].ConnectId, "startTime:", startTime, "nodeId:", nodeId, "machineId", node.MachineId)
-
+		log.Println("reqId:", streamInfo.Pusher[0].ConnectId, "startTime:", startTime, "nodeId:", nodeId,
+			"machineId", node.MachineId)
+		schedInfo := SchedInfo{
+			ConnId:    streamInfo.Pusher[0].ConnectId,
+			StartTime: startTime,
+			NodeId:    nodeId,
+			MachindId: node.MachineId,
+		}
+		schedInfos = append(schedInfos, schedInfo)
 	}
+	return schedInfos
 }
 
 const (

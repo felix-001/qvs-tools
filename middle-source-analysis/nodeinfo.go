@@ -25,6 +25,17 @@ func (s *Parser) dumpNodeStreams() {
 	}
 }
 
+func TimeStrSub(s string, subVal int) string {
+	layout := "2006-01-02 15:04:05"
+	t, err := time.Parse(layout, s)
+	if err != nil {
+		fmt.Printf("解析时间失败: %v\n", err)
+		return ""
+	}
+	t = t.Add(-time.Duration(subVal) * time.Second)
+	return t.Format(layout)
+}
+
 func (s *Parser) loadNodePoint(file string) []NodeInfo {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -126,14 +137,17 @@ func (s *Parser) getDuration(start, end string) time.Duration {
 	return duration
 }
 
-func (s *Parser) getNodeUnavailableDetail(nodeId, file string) {
+func (s *Parser) getNodeUnavailableDetail(file string) map[string][]NodeUnavailableDetail {
 	nodeInfos := s.loadNodePoint(file)
 	nodeUnavailableDetailMap := s.buildNodeUnavailableDetailMap(nodeInfos)
-	unavailableDetail := nodeUnavailableDetailMap[nodeId]
+	/*
+		unavailableDetail := nodeUnavailableDetailMap[nodeId]
 
-	for _, detail := range unavailableDetail {
-		duration := s.getDuration(detail.Start, detail.End)
-		fmt.Printf("%s - %s : duration: %.0f reason: %s detail: %s\n",
-			detail.Start, detail.End, duration.Seconds(), detail.Reason, detail.Detail)
-	}
+		for _, detail := range unavailableDetail {
+			duration := s.getDuration(detail.Start, detail.End)
+			fmt.Printf("%s - %s : duration: %.0f reason: %s detail: %s\n",
+				detail.Start, detail.End, duration.Seconds(), detail.Reason, detail.Detail)
+		}
+	*/
+	return nodeUnavailableDetailMap
 }

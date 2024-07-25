@@ -141,7 +141,7 @@ func (s *Parser) writeToFile(nodeInfo *NodeInfo) {
 			log.Println("err:", err)
 			return
 		}
-	} else if fileInfo, err := s.file.Stat(); err == nil && fileInfo.Size() > 300000000 {
+	} else if fileInfo, err := s.file.Stat(); err == nil && fileInfo.Size() > 100000000 {
 		// 文件超过500M，创建新文件
 		s.file.Close()
 		fileName := createFileName()
