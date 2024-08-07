@@ -6,7 +6,6 @@ import (
 	"log"
 	"os/exec"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -71,41 +70,69 @@ func str2unix(s string) (int64, error) {
 	return the_time.Unix(), nil
 }
 
+func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]NodeUnavailableDetail, schedInfos []SchedInfo) {
+	csv := "开始时间, 结束时间, 原因, 详细\n"
+	for _, schedInfo := range schedInfos {
+		csv += schedInfo.NodeId + "\n"
+		details := nodeUnavailableDetail[schedInfo.NodeId]
+		for _, detail := range details {
+			csv += fmt.Sprintf("%s, %s, %s, %s\n", detail.Start, detail.End, detail.Reason, detail.Detail)
+		}
+	}
+	file := fmt.Sprintf("%s-nodes-detail-%d.csv", s.conf.Stream, time.Now().Unix())
+	err := ioutil.WriteFile(file, []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	cmd := exec.Command("./qup", file)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return
+	}
+	fmt.Println(string(output))
+}
+
 func (s *Parser) dumpStream() {
-	nodeUnavailableDetailMap := s.getNodeUnavailableDetail("./node_info/nodeinfo-20240725140624.json")
+	nodeUnavailableDetailMap := s.getNodeUnavailableDetail("./node_info/nodeinfo-20240806222739.json", "2024-08-07 00:00:00",
+		"2024-08-08 00:00:00")
 	streamSchedInfos := s.getStreamSchedInfos()
 	sort.Slice(streamSchedInfos, func(i, j int) bool {
 		return streamSchedInfos[i].StartTime < streamSchedInfos[j].StartTime
 	})
-	nodeDetailMap := make(map[string][]NodeUnavailableDetail)
-	start := streamSchedInfos[0].StartTime / 1000
-	end := streamSchedInfos[len(streamSchedInfos)-1].StartTime / 1000
-	for _, schedInfo := range streamSchedInfos {
-		if _, ok := nodeDetailMap[schedInfo.NodeId]; !ok {
-			nodeDetailMap[schedInfo.NodeId] = make([]NodeUnavailableDetail, 0)
-		}
-		details := nodeUnavailableDetailMap[schedInfo.NodeId]
-		log.Println("node unavailable details:", len(details))
-		for _, detail := range details {
-			detailStart, err := str2unix(detail.Start)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			detailEnd, err := str2unix(detail.End)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			if detailEnd > start && detailStart < end {
-				detail.Detail = strings.ReplaceAll(detail.Detail, ",", " ")
-				nodeDetailMap[schedInfo.NodeId] = append(nodeDetailMap[schedInfo.NodeId], detail)
-			}
-		}
-	}
-
-	s.saveNodeDetailToCsv(nodeDetailMap)
 	s.saveStreamSchedInfosToCsv(streamSchedInfos)
+	s.saveNodesStatusDetailToCsv(nodeUnavailableDetailMap, streamSchedInfos)
+
+	/*
+		nodeDetailMap := make(map[string][]NodeUnavailableDetail)
+		start := streamSchedInfos[0].StartTime / 1000
+		end := streamSchedInfos[len(streamSchedInfos)-1].StartTime / 1000
+		for _, schedInfo := range streamSchedInfos {
+			if _, ok := nodeDetailMap[schedInfo.NodeId]; !ok {
+				nodeDetailMap[schedInfo.NodeId] = make([]NodeUnavailableDetail, 0)
+			}
+			details := nodeUnavailableDetailMap[schedInfo.NodeId]
+			log.Println("node unavailable details:", len(details))
+			for _, detail := range details {
+				detailStart, err := str2unix(detail.Start)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				detailEnd, err := str2unix(detail.End)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				if detailEnd > start && detailStart < end {
+					detail.Detail = strings.ReplaceAll(detail.Detail, ",", " ")
+					nodeDetailMap[schedInfo.NodeId] = append(nodeDetailMap[schedInfo.NodeId], detail)
+				}
+			}
+		}
+
+		s.saveNodeDetailToCsv(nodeDetailMap)
+	*/
 
 }
 

@@ -38,6 +38,8 @@ type NodeInfo struct {
 	//AvailableIpCnt int      `json:"available_ip_cnt"`
 	ErrIps    []IpInfo `json:"err_ips"`
 	TimeStamp string   `json:"timestamp"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
 }
 
 func noStreamdPorts(node *model.RtNode) bool {
@@ -61,9 +63,10 @@ func (s *Parser) buildNodeInfo(node *model.RtNode) *NodeInfo {
 	nodeInfo := NodeInfo{
 		RuntimeStatus: node.RuntimeStatus,
 		StreamdPorts:  !noStreamdPorts(node),
-		TimeStamp:     time.Now().Format("2006-01-02 15:04:05"),
-		NodeId:        node.Id,
-		MachindId:     node.MachineId,
+		//TimeStamp:     time.Now().Format("2006-01-02 15:04:05"),
+		StartTime: time.Now().Format("2006-01-02 15:04:05"),
+		NodeId:    node.Id,
+		MachindId: node.MachineId,
 	}
 	availabeIpCnt := 0
 	for _, ipInfo := range node.Ips {
@@ -215,7 +218,10 @@ func (s *Parser) nodeMonitor() {
 			if old, ok := s.allNodeInfoMap[nodeInfo.NodeId]; !ok {
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			} else if s.isNodeInfoChanged(old, nodeInfo) {
-				s.writeToFile(nodeInfo)
+				if !s.isNodeAvailable(old) && s.isNodeAvailable(nodeInfo) {
+					nodeInfo.EndTime = time.Now().Format("2006-01-02 15:04:05")
+					s.writeToFile(nodeInfo)
+				}
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}
 			s.fillIpStatus(ipStatusMap, node)

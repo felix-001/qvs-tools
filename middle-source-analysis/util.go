@@ -136,3 +136,8 @@ func unixToTimeStr(t int64) string {
 	formattedTime := timeObj.Format(time.DateTime)
 	return formattedTime
 }
+
+// TODO
+func (s *Parser) isNodeUsable(node *model.RtNode) bool {
+	return true
+}

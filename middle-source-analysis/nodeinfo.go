@@ -56,7 +56,7 @@ func (s *Parser) loadNodePoint(file string) []NodeInfo {
 	return nodeInfos
 }
 
-func (s *Parser) isNodeAvailable(nodeInfo NodeInfo) bool {
+func (s *Parser) isNodeAvailable(nodeInfo *NodeInfo) bool {
 	if nodeInfo.RuntimeStatus != "Serving" {
 		return false
 	}
@@ -82,17 +82,17 @@ func (s *Parser) getUnavailableReasion(nodeInfo *NodeInfo) string {
 	return "ok"
 }
 
-func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo) map[string][]NodeUnavailableDetail {
-	midnight := getMidnight2()
+func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, start, end string) map[string][]NodeUnavailableDetail {
+	//midnight := getMidnight2()
 	nodeUnavailableDetailMap := make(map[string][]NodeUnavailableDetail)
 	lastNodeInfoMap := make(map[string]*NodeInfo)
 	for _, nodeInfo := range nodeInfos {
-		if nodeInfo.TimeStamp < midnight {
+		if nodeInfo.TimeStamp < end && nodeInfo.TimeStamp > start {
 			continue
 		}
 		last, ok := lastNodeInfoMap[nodeInfo.NodeId]
 		if !ok || last == nil {
-			if s.isNodeAvailable(nodeInfo) {
+			if s.isNodeAvailable(&nodeInfo) {
 				continue
 			}
 			info := nodeInfo
@@ -137,9 +137,9 @@ func (s *Parser) getDuration(start, end string) time.Duration {
 	return duration
 }
 
-func (s *Parser) getNodeUnavailableDetail(file string) map[string][]NodeUnavailableDetail {
+func (s *Parser) getNodeUnavailableDetail(file, start, end string) map[string][]NodeUnavailableDetail {
 	nodeInfos := s.loadNodePoint(file)
-	nodeUnavailableDetailMap := s.buildNodeUnavailableDetailMap(nodeInfos)
+	nodeUnavailableDetailMap := s.buildNodeUnavailableDetailMap(nodeInfos, start, end)
 	/*
 		unavailableDetail := nodeUnavailableDetailMap[nodeId]
 

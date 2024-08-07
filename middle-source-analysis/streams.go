@@ -87,7 +87,7 @@ func (s *Parser) getStreamSchedInfos() []SchedInfo {
 	streamSourceNodesMap, _ := s.getStreamSourceNodeMap(s.conf.Bucket)
 	nodeIds := streamSourceNodesMap[s.conf.Stream]
 	if len(nodeIds) == 0 {
-		log.Println("get stream source nodes err", s.conf.Bucket, s.conf.Stream)
+		log.Println("get stream source nodes err, len(nodeIds) = 0", s.conf.Bucket, s.conf.Stream)
 		return nil
 	}
 	schedInfos := make([]SchedInfo, 0)
@@ -169,6 +169,9 @@ func (s *Parser) dumpStreams() {
 				continue
 			}
 			nodeType := s.getNodeType(node)
+			if time.Now().Unix()-report.LastUpdateTime > 300 {
+				nodeType = NodeTypeOffline
+			}
 			switch nodeType {
 			case NodeTypeRoot:
 				streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
