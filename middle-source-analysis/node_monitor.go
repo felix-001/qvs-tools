@@ -40,6 +40,7 @@ type NodeInfo struct {
 	TimeStamp string   `json:"timestamp"`
 	StartTime string   `json:"start_time"`
 	EndTime   string   `json:"end_time"`
+	Duration  string   `json:"duration"`
 }
 
 func noStreamdPorts(node *model.RtNode) bool {
@@ -107,9 +108,10 @@ func (s *Parser) buildNodeInfo(node *model.RtNode) *NodeInfo {
 	return &nodeInfo
 }
 
-func createFileName() string {
-	timestamp := time.Now().Format("20060102150405") // 年月日时分秒
-	return fmt.Sprintf("nodeinfo-%s.json", timestamp)
+func genFileName() string {
+	timestamp := time.Now().Format("2006_01_02") // 年月日
+	//return fmt.Sprintf("nodeinfo-%s.json", timestamp)
+	return timestamp
 }
 
 func deleteOldFiles() error {
@@ -135,8 +137,13 @@ var path = "./node_info"
 
 func (s *Parser) writeToFile(nodeInfo *NodeInfo) {
 	createDirIfNotExist(path)
+	latestFile, err := findLatestFile(path)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	fileName := genFileName()
 	if s.file == nil {
-		fileName := createFileName()
 		filePath := filepath.Join(path, fileName)
 		var err error
 		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -144,10 +151,8 @@ func (s *Parser) writeToFile(nodeInfo *NodeInfo) {
 			log.Println("err:", err)
 			return
 		}
-	} else if fileInfo, err := s.file.Stat(); err == nil && fileInfo.Size() > 100000000 {
-		// 文件超过500M，创建新文件
+	} else if fileName != latestFile {
 		s.file.Close()
-		fileName := createFileName()
 		filePath := filepath.Join(path, fileName)
 		var err error
 		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -219,8 +224,14 @@ func (s *Parser) nodeMonitor() {
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			} else if s.isNodeInfoChanged(old, nodeInfo) {
 				if !s.isNodeAvailable(old) && s.isNodeAvailable(nodeInfo) {
-					nodeInfo.EndTime = time.Now().Format("2006-01-02 15:04:05")
-					s.writeToFile(nodeInfo)
+					old.EndTime = time.Now().Format("2006-01-02 15:04:05")
+					start, err := str2time(old.StartTime)
+					if err != nil {
+						log.Println(err, old.StartTime)
+						continue
+					}
+					old.Duration = fmt.Sprintf("%+v", time.Since(start))
+					s.writeToFile(old)
 				}
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}

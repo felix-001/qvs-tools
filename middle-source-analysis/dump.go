@@ -70,6 +70,11 @@ func str2unix(s string) (int64, error) {
 	return the_time.Unix(), nil
 }
 
+func str2time(s string) (time.Time, error) {
+	loc, _ := time.LoadLocation("Local")
+	return time.ParseInLocation("2006-01-02 15:04:05", s, loc)
+}
+
 func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]NodeUnavailableDetail, schedInfos []SchedInfo) {
 	csv := "开始时间, 结束时间, 原因, 详细\n"
 	for _, schedInfo := range schedInfos {

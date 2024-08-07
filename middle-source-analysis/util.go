@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -140,4 +142,38 @@ func unixToTimeStr(t int64) string {
 // TODO
 func (s *Parser) isNodeUsable(node *model.RtNode) bool {
 	return true
+}
+
+func findLatestFile(dir string) (string, error) {
+	var latestFile string
+	latestTime := time.Unix(0, 0) // 初始化为 Unix 纪元时间，即1970-01-01 00:00:00 +0000 UTC
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// 忽略目录
+		if info.IsDir() {
+			return nil
+		}
+
+		// 检查文件修改时间，并更新最新的文件信息
+		if info.ModTime().After(latestTime) {
+			latestTime = info.ModTime()
+			latestFile = path
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if latestFile == "" {
+		return "", fmt.Errorf("no files found in directory")
+	}
+
+	return latestFile, nil
 }
