@@ -76,12 +76,12 @@ func str2time(s string) (time.Time, error) {
 }
 
 func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]NodeUnavailableDetail, schedInfos []SchedInfo) {
-	csv := "开始时间, 结束时间, 原因, 详细\n"
+	csv := "开始时间, 结束时间, 时长, 原因, 详细\n"
 	for _, schedInfo := range schedInfos {
 		csv += schedInfo.NodeId + "\n"
 		details := nodeUnavailableDetail[schedInfo.NodeId]
 		for _, detail := range details {
-			csv += fmt.Sprintf("%s, %s, %s, %s\n", detail.Start, detail.End, detail.Reason, detail.Detail)
+			csv += fmt.Sprintf("%s, %s, %s, %s, %s\n", detail.Start, detail.End, detail.Duration, detail.Reason, detail.Detail)
 		}
 	}
 	file := fmt.Sprintf("%s-nodes-detail-%d.csv", s.conf.Stream, time.Now().Unix())
@@ -99,8 +99,7 @@ func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]N
 }
 
 func (s *Parser) dumpStream() {
-	nodeUnavailableDetailMap := s.getNodeUnavailableDetail("./node_info/nodeinfo-20240806222739.json", "2024-08-07 00:00:00",
-		"2024-08-08 00:00:00")
+	nodeUnavailableDetailMap := s.getNodeUnavailableDetail(1)
 	streamSchedInfos := s.getStreamSchedInfos()
 	sort.Slice(streamSchedInfos, func(i, j int) bool {
 		return streamSchedInfos[i].StartTime < streamSchedInfos[j].StartTime

@@ -177,3 +177,29 @@ func findLatestFile(dir string) (string, error) {
 
 	return latestFile, nil
 }
+
+// generateDateRange 生成一个日期范围的切片
+func generateDateRange(date string, days int) []string {
+	// 解析日期字符串
+	parsedDate, err := time.Parse("2006_01_02", date)
+	if err != nil {
+		fmt.Println("Error parsing date:", err)
+		return nil
+	}
+
+	// 创建一个切片来存储日期
+	dateRange := make([]string, 0, days)
+
+	// 计算日期范围并填充切片
+	for i := 0; i < days; i++ {
+		dateStr := parsedDate.AddDate(0, 0, -i).Format("2006_01_02")
+		dateRange = append(dateRange, dateStr)
+	}
+
+	// 因为我们需要从当前日期到（当前日期 - days + 1），所以返回翻转的切片
+	for i, j := 0, len(dateRange)-1; i < j; i, j = i+1, j-1 {
+		dateRange[i], dateRange[j] = dateRange[j], dateRange[i]
+	}
+
+	return dateRange
+}

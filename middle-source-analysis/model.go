@@ -75,8 +75,9 @@ type StreamInfo struct {
 }
 
 type NodeUnavailableDetail struct {
-	Start  string
-	End    string
-	Reason string
-	Detail string
+	Start    string
+	End      string
+	Duration string
+	Reason   string
+	Detail   string
 }

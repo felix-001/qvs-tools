@@ -30,17 +30,16 @@ type IpInfo struct {
 }
 
 type NodeInfo struct {
-	NodeId          string `json:"nodeid"`
-	MachindId       string `json:"machineid"`
-	RuntimeStatus   string `json:"runtime_status"`
-	StreamdPorts    bool   `json:"streamd_ports"`
-	HaveAvailableIp bool   `json:"hava_available_ip"`
-	//AvailableIpCnt int      `json:"available_ip_cnt"`
-	ErrIps    []IpInfo `json:"err_ips"`
-	TimeStamp string   `json:"timestamp"`
-	StartTime string   `json:"start_time"`
-	EndTime   string   `json:"end_time"`
-	Duration  string   `json:"duration"`
+	NodeId          string   `json:"nodeid"`
+	MachindId       string   `json:"machineid"`
+	RuntimeStatus   string   `json:"runtime_status"`
+	StreamdPorts    bool     `json:"streamd_ports"`
+	HaveAvailableIp bool     `json:"hava_available_ip"`
+	ErrIps          []IpInfo `json:"err_ips"`
+	//TimeStamp string   `json:"timestamp"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+	Duration  string `json:"duration"`
 }
 
 func noStreamdPorts(node *model.RtNode) bool {
@@ -115,7 +114,7 @@ func genFileName() string {
 }
 
 func deleteOldFiles() error {
-	cutoff := time.Now().Add(-3 * 24 * time.Hour) // 3天前的日期
+	cutoff := time.Now().Add(-8 * 24 * time.Hour) // 3天前的日期
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return err
@@ -223,16 +222,14 @@ func (s *Parser) nodeMonitor() {
 			if old, ok := s.allNodeInfoMap[nodeInfo.NodeId]; !ok {
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			} else if s.isNodeInfoChanged(old, nodeInfo) {
-				if !s.isNodeAvailable(old) && s.isNodeAvailable(nodeInfo) {
-					old.EndTime = time.Now().Format("2006-01-02 15:04:05")
-					start, err := str2time(old.StartTime)
-					if err != nil {
-						log.Println(err, old.StartTime)
-						continue
-					}
-					old.Duration = fmt.Sprintf("%+v", time.Since(start))
-					s.writeToFile(old)
+				old.EndTime = time.Now().Format("2006-01-02 15:04:05")
+				start, err := str2time(old.StartTime)
+				if err != nil {
+					log.Println(err, old.StartTime)
+					continue
 				}
+				old.Duration = fmt.Sprintf("%+v", time.Since(start))
+				s.writeToFile(old)
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}
 			s.fillIpStatus(ipStatusMap, node)

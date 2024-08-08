@@ -82,19 +82,12 @@ func (s *Parser) getUnavailableReasion(nodeInfo *NodeInfo) string {
 	return "ok"
 }
 
-func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, start, end string) map[string][]NodeUnavailableDetail {
+func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavailableDetailMap map[string][]NodeUnavailableDetail) {
 	//midnight := getMidnight2()
-	nodeUnavailableDetailMap := make(map[string][]NodeUnavailableDetail)
 	lastNodeInfoMap := make(map[string]*NodeInfo)
 	for _, nodeInfo := range nodeInfos {
-		if nodeInfo.TimeStamp < end && nodeInfo.TimeStamp > start {
-			continue
-		}
 		last, ok := lastNodeInfoMap[nodeInfo.NodeId]
 		if !ok || last == nil {
-			if s.isNodeAvailable(&nodeInfo) {
-				continue
-			}
 			info := nodeInfo
 			lastNodeInfoMap[nodeInfo.NodeId] = &info
 			continue
@@ -109,17 +102,18 @@ func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, start, end 
 			log.Println(err)
 			continue
 		}
+		detail := strings.ReplaceAll(string(bytes), ",", " ")
 		nodeUnavailableDetailMap[nodeInfo.NodeId] = append(nodeUnavailableDetailMap[nodeInfo.NodeId],
 			NodeUnavailableDetail{
-				Start:  last.TimeStamp,
-				End:    nodeInfo.TimeStamp,
-				Reason: reason,
-				Detail: string(bytes),
+				Start:    nodeInfo.StartTime,
+				End:      nodeInfo.EndTime,
+				Reason:   reason,
+				Detail:   detail,
+				Duration: nodeInfo.Duration,
 			})
 
 		lastNodeInfoMap[nodeInfo.NodeId] = nil
 	}
-	return nodeUnavailableDetailMap
 }
 
 func (s *Parser) getDuration(start, end string) time.Duration {
@@ -137,17 +131,14 @@ func (s *Parser) getDuration(start, end string) time.Duration {
 	return duration
 }
 
-func (s *Parser) getNodeUnavailableDetail(file, start, end string) map[string][]NodeUnavailableDetail {
-	nodeInfos := s.loadNodePoint(file)
-	nodeUnavailableDetailMap := s.buildNodeUnavailableDetailMap(nodeInfos, start, end)
-	/*
-		unavailableDetail := nodeUnavailableDetailMap[nodeId]
-
-		for _, detail := range unavailableDetail {
-			duration := s.getDuration(detail.Start, detail.End)
-			fmt.Printf("%s - %s : duration: %.0f reason: %s detail: %s\n",
-				detail.Start, detail.End, duration.Seconds(), detail.Reason, detail.Detail)
-		}
-	*/
+func (s *Parser) getNodeUnavailableDetail(days int) map[string][]NodeUnavailableDetail {
+	cur := time.Now().Format("2006_01_02")
+	dates := generateDateRange(cur, days)
+	nodeUnavailableDetailMap := make(map[string][]NodeUnavailableDetail)
+	for _, filename := range dates {
+		filename = path + "/" + filename
+		nodeInfos := s.loadNodePoint(filename)
+		s.buildNodeUnavailableDetailMap(nodeInfos, nodeUnavailableDetailMap)
+	}
 	return nodeUnavailableDetailMap
 }
