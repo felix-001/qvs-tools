@@ -36,10 +36,7 @@ type NodeInfo struct {
 	StreamdPorts    bool     `json:"streamd_ports"`
 	HaveAvailableIp bool     `json:"hava_available_ip"`
 	ErrIps          []IpInfo `json:"err_ips"`
-	//TimeStamp string   `json:"timestamp"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Duration  string `json:"duration"`
+	TimeStamp       string   `json:"timestamp"`
 }
 
 func noStreamdPorts(node *model.RtNode) bool {
@@ -63,10 +60,9 @@ func (s *Parser) buildNodeInfo(node *model.RtNode) *NodeInfo {
 	nodeInfo := NodeInfo{
 		RuntimeStatus: node.RuntimeStatus,
 		StreamdPorts:  !noStreamdPorts(node),
-		//TimeStamp:     time.Now().Format("2006-01-02 15:04:05"),
-		StartTime: time.Now().Format("2006-01-02 15:04:05"),
-		NodeId:    node.Id,
-		MachindId: node.MachineId,
+		TimeStamp:     time.Now().Format("2006-01-02 15:04:05"),
+		NodeId:        node.Id,
+		MachindId:     node.MachineId,
 	}
 	availabeIpCnt := 0
 	for _, ipInfo := range node.Ips {
@@ -222,13 +218,6 @@ func (s *Parser) nodeMonitor() {
 			if old, ok := s.allNodeInfoMap[nodeInfo.NodeId]; !ok {
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			} else if s.isNodeInfoChanged(old, nodeInfo) {
-				old.EndTime = time.Now().Format("2006-01-02 15:04:05")
-				start, err := str2time(old.StartTime)
-				if err != nil {
-					log.Println(err, old.StartTime)
-					continue
-				}
-				old.Duration = fmt.Sprintf("%+v", time.Since(start))
 				s.writeToFile(old)
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}
