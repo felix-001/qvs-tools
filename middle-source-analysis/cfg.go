@@ -23,6 +23,9 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.CheckNode, "chknode", false, "是否需要检查节点的状态")
 	flag.BoolVar(&conf.Monitor, "monitor", false, "node monitor")
 	flag.BoolVar(&conf.NeedIpParer, "ipparser", false, "是否需要ip库")
+	flag.BoolVar(&conf.NeedCk, "ck", false, "是否需要clickhouse")
+	flag.BoolVar(&conf.NeedNodeStreamInfo, "streamNodes", false, "是否需要流所在的节点信息")
+	flag.BoolVar(&conf.Bw, "bw", false, "获取总建设带宽+总可用带宽")
 	flag.Parse()
 	return &conf
 }

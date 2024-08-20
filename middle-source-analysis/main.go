@@ -26,5 +26,11 @@ func main() {
 		return
 	}
 
-	parser.dumpStreams()
+	if conf.Streams {
+		parser.dumpStreams()
+	}
+
+	if conf.Bw {
+		parser.CalcTotalBw()
+	}
 }

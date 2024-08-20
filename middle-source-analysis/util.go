@@ -203,3 +203,13 @@ func generateDateRange(date string, days int) []string {
 
 	return dateRange
 }
+
+func checkDynamicNodesPort(node *model.RtNode) bool {
+	if node.IsDynamic {
+		// 检查节点端口：http、wt
+		if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
+			return false
+		}
+	}
+	return true
+}

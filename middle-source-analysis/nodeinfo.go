@@ -105,11 +105,11 @@ func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavail
 		detail := strings.ReplaceAll(string(bytes), ",", " ")
 		nodeUnavailableDetailMap[nodeInfo.NodeId] = append(nodeUnavailableDetailMap[nodeInfo.NodeId],
 			NodeUnavailableDetail{
-				Start:    nodeInfo.StartTime,
-				End:      nodeInfo.EndTime,
-				Reason:   reason,
-				Detail:   detail,
-				Duration: nodeInfo.Duration,
+				//Start:    nodeInfo.StartTime,
+				//End:      nodeInfo.EndTime,
+				Reason: reason,
+				Detail: detail,
+				//Duration: nodeInfo.Duration,
 			})
 
 		lastNodeInfoMap[nodeInfo.NodeId] = nil

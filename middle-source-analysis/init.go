@@ -42,7 +42,9 @@ func (s *Parser) buildNodeStreamsMap() {
 
 func (s *Parser) init() {
 	s.buildAllNodesMap()
-	s.buildNodeStreamsMap()
+	if s.conf.NeedNodeStreamInfo {
+		s.buildNodeStreamsMap()
+	}
 	s.buildRootNodesMap()
 	prometheus.MustRegister(dynIpStatusMetric)
 }
