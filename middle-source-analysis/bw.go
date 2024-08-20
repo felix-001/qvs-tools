@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Parser) CalcTotalBw() {
-	var totalBwMbps float64 = 0
+	var totalBwGbps float64 = 0
 	logger := zlog.Logger
 	logger = logger.Level(3)
 	for _, node := range s.allNodesMap {
@@ -44,9 +44,10 @@ func (s *Parser) CalcTotalBw() {
 				s.NetProbeSpeedErrIpCnt++
 				continue
 			}
-			totalBwMbps += ((ipInfo.MaxOutMBps * 8) / 1000)
+			totalBwGbps += (ipInfo.MaxOutMBps * 8)
+			//totalBwGbps += ipInfo.MaxOutMBps
 		}
 	}
 	fmt.Printf("totalBw: %.0f, NodeUnavailableCnt: %d, NodeNoPortsCnt: %d, PrivateIpCnt: %d, NetProbeStateErrIpCnt: %d, NetProbeStateErrIpCnt: %d, IpV6Cnt: %d\n",
-		totalBwMbps, s.NodeUnavailableCnt, s.NodeNoPortsCnt, s.PrivateIpCnt, s.NetProbeStateErrIpCnt, s.NetProbeSpeedErrIpCnt, s.IpV6Cnt)
+		totalBwGbps, s.NodeUnavailableCnt, s.NodeNoPortsCnt, s.PrivateIpCnt, s.NetProbeStateErrIpCnt, s.NetProbeSpeedErrIpCnt, s.IpV6Cnt)
 }

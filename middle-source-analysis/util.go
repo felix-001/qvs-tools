@@ -213,3 +213,26 @@ func checkDynamicNodesPort(node *model.RtNode) bool {
 	}
 	return true
 }
+
+func checkCanScheduleOfTimeLimit(node *model.RtNode, coolingSeconds int) bool {
+	if node == nil {
+		return false
+	}
+
+	if len(node.Schedules) == 0 {
+		return true
+	}
+
+	for _, limit := range node.Schedules {
+		if limit.ScheduledStart == 0 && limit.ScheduledEnd == consts.SecondsOfDay {
+			return true
+		}
+
+		now := int(util.GetSecondsSinceToday())
+		if now >= limit.ScheduledStart && now <= (limit.ScheduledEnd-coolingSeconds) {
+			return true
+		}
+	}
+
+	return false
+}

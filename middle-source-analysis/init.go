@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,6 +19,7 @@ func (s *Parser) buildAllNodesMap() {
 		allNodesMap[node.Id] = node
 	}
 	s.allNodesMap = allNodesMap
+	fmt.Println("all nodes count:", len(s.allNodesMap))
 }
 
 func (s *Parser) buildNodeStreamsMap() {
