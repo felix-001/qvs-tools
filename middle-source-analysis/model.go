@@ -43,17 +43,23 @@ type Parser struct {
 	allRootNodesMapByNodeId  map[string]*model.RtNode
 	allNodeInfoMap           map[string]*NodeInfo
 	// key1: streamId key2: isp key3: area
-	streamDetailMap       map[string]map[string]map[string]*StreamInfo
-	file                  *os.File
-	ck                    driver.Conn
-	conf                  *Config
-	streamInfoMap         map[string]map[string]*StreamInfo
-	NodeUnavailableCnt    int
-	NodeNoPortsCnt        int
-	PrivateIpCnt          int
-	NetProbeStateErrIpCnt int
-	NetProbeSpeedErrIpCnt int
-	IpV6Cnt               int
+	streamDetailMap                   map[string]map[string]map[string]*StreamInfo
+	file                              *os.File
+	ck                                driver.Conn
+	conf                              *Config
+	streamInfoMap                     map[string]map[string]*StreamInfo
+	NodeUnavailableCnt                int
+	NodeNoPortsCnt                    int
+	PrivateIpCnt                      int
+	NetProbeStateErrIpCnt             int
+	NetProbeSpeedErrIpCnt             int
+	IpV6Cnt                           int
+	TimeLimitCnt                      int
+	TotalDynNoeCnt                    int
+	AvailableDynNodeCnt               int
+	AvailableDynNodeAfterTimeLimitCnt int
+	AvailableIpCnt                    int
+	BanTransProvNodeCnt               int
 }
 
 type DynamicRootNode struct {

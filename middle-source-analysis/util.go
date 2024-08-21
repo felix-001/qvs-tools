@@ -60,6 +60,16 @@ func ContainInStringSlice(target string, slice []string) bool {
 	return false
 }
 
+func ContainInIntSlice(target uint32, slice []uint32) bool {
+	for _, item := range slice {
+		if item == target {
+			return true
+		}
+	}
+
+	return false
+}
+
 func getIpAreaIsp(ipParser *ipdb.City, ip string) (string, string, error) {
 	locate, err := ipParser.Find(ip)
 	if err != nil {
@@ -224,7 +234,7 @@ func checkCanScheduleOfTimeLimit(node *model.RtNode, coolingSeconds int) bool {
 	}
 
 	for _, limit := range node.Schedules {
-		if limit.ScheduledStart == 0 && limit.ScheduledEnd == consts.SecondsOfDay {
+		if limit.ScheduledStart == 0 && limit.ScheduledEnd == 86400 {
 			return true
 		}
 
