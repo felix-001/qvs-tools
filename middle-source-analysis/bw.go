@@ -21,6 +21,8 @@ func (s *Parser) CalcTotalBw() {
 	var totalOutBwGbps float64 = 0
 	var specialMaxBw float64 = 0
 
+	var mikuLowRatioNodeCnt = 0
+
 	machinelist := ""
 
 	customerMap := make(map[uint32]int)
@@ -57,8 +59,14 @@ func (s *Parser) CalcTotalBw() {
 		if !ContainInIntSlice(1380460970, node.CustomerIds) {
 			continue
 		}
+		if node.MachineId != "a71163883d96c375deef28ef8612b242" {
+			continue
+		}
 		s.AvailableDynNodeAfterTimeLimitCnt++
 		machinelist += node.MachineId + "\n"
+		var totalMikuBw float64 = 0
+		var nodeMaxOutBw float64 = 0
+		var nodeOutBw float64 = 0
 		for _, ipInfo := range node.Ips {
 			if publicUtil.IsPrivateIP(ipInfo.Ip) {
 				s.PrivateIpCnt++
@@ -81,14 +89,35 @@ func (s *Parser) CalcTotalBw() {
 				specialMaxBw += ipInfo.MaxInMBps * 8 / 1000
 			}
 			s.AvailableIpCnt++
-			totalMaxBwGbps += ipInfo.MaxOutMBps * 8 / 1000
-			totalOutBwGbps += ipInfo.OutMBps * 8 / 1000
+			totalMaxBwGbps += ipInfo.MaxOutMBps * 8
+			totalOutBwGbps += ipInfo.OutMBps * 8
+			nodeMaxOutBw += ipInfo.MaxOutMBps * 8
+			nodeOutBw += ipInfo.OutMBps * 8
+			//totalMaxBwGbps += ipInfo.MaxOutMBps * 8 / 1000
+			//totalOutBwGbps += ipInfo.OutMBps * 8 / 1000
 			//totalBwGbps += ipInfo.MaxOutMBps
 		}
+
+		nodeStreams := s.nodeStremasMap[node.Id]
+		for _, streamInfo := range nodeStreams.Streams {
+			for _, player := range streamInfo.Players {
+				for _, ipInfo := range player.Ips {
+					totalMikuBw += float64(ipInfo.Bandwidth * 8 / 1000000)
+					fmt.Println(player.Protocol, float64(ipInfo.Bandwidth*8)/1000000, ipInfo.Ip, streamInfo.Key)
+				}
+			}
+		}
+		ratio := totalMikuBw / nodeOutBw
+		if ratio < 0.3 && nodeMaxOutBw > 9000 {
+			log.Println(node.Id, node.MachineId, totalMikuBw, nodeMaxOutBw, nodeOutBw)
+			mikuLowRatioNodeCnt++
+		}
 	}
+
 	fmt.Printf(`totalMaxBwGbps: %.0fGbps
-rawTotalMaxBwGbps: %.0fGbps
-totalOutBwGbps: %.0fGbps
+mikuLowRatioNodeCnt: %d
+rawTotalMaxBwGbps: %.0fMbps
+totalOutBwGbps: %.0fMbps
 specialMaxBw: %.0fGbps
 NodeUnavailableCnt: %d
 NodeNoPortsCnt: %d
@@ -104,6 +133,7 @@ BanTransProvNodeCnt: %d
 timelimitCnt: %d
 `,
 		totalMaxBwGbps,
+		mikuLowRatioNodeCnt,
 		rawTotalMaxBwGbps,
 		totalOutBwGbps,
 		specialMaxBw,
