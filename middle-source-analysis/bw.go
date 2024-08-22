@@ -144,7 +144,7 @@ func (s *Parser) CalcTotalBw() {
 			counterMap[MikuLowUtilizationNodeCnt]++
 		}
 	}
-	bwMap[TotalAvailableBwGbps] = bwMap[TotalMaxBwGbps] - bwMap[TotalOutBwGbps]
+	bwMap[TotalAvailableBwGbps] = bwMap[TotalMaxBwGbps]*0.8 - bwMap[TotalOutBwGbps]
 
 	s.dumpBw(bwMap, counterMap)
 
