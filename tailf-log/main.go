@@ -19,6 +19,7 @@ type Logger struct {
 	LastChildCtx      context.Context
 	LastChildCancel   context.CancelFunc
 	LogFileNamePrefix string
+	Regex             string
 }
 
 func (s *Logger) findLatestFile(dir string) (string, error) {
@@ -66,12 +67,13 @@ func (s *Logger) findLatestFile(dir string) (string, error) {
 
 func (s *Logger) Run(dir string) {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for {
 		filename, err := s.findLatestFile(dir)
 		if err != nil {
 			log.Printf("dir: %s, err: %v\n", dir, err)
-			continue
+			return
 		}
 		if s.LastLogFile == filename {
 			time.Sleep(time.Second)
@@ -121,8 +123,8 @@ func (s *Logger) Run(dir string) {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	if len(os.Args) != 2 {
-		log.Println("logger <service>")
+	if len(os.Args) != 3 {
+		log.Println("logger <service> <regex>")
 		return
 	}
 	dir := ""
@@ -141,6 +143,6 @@ func main() {
 		dir = os.Args[1]
 		logFileNamePrefix = "miku-sched.log-"
 	}
-	logger := &Logger{LogFileNamePrefix: logFileNamePrefix}
+	logger := &Logger{LogFileNamePrefix: logFileNamePrefix, Regex: os.Args[2]}
 	logger.Run(dir)
 }
