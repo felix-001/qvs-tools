@@ -19,7 +19,6 @@ type Logger struct {
 	LastChildCtx      context.Context
 	LastChildCancel   context.CancelFunc
 	LogFileNamePrefix string
-	Regex             string
 }
 
 func (s *Logger) findLatestFile(dir string) (string, error) {
@@ -41,7 +40,7 @@ func (s *Logger) findLatestFile(dir string) (string, error) {
 			return nil
 		}
 
-		if !strings.HasPrefix(path, s.LogFileNamePrefix) {
+		if !strings.HasPrefix(filepath.Base(path), s.LogFileNamePrefix) {
 			return nil
 		}
 
@@ -124,25 +123,11 @@ func (s *Logger) Run(dir string) {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if len(os.Args) != 3 {
-		log.Println("logger <service> <regex>")
+		log.Println("logger <dir> <logFileNamePrefix>")
 		return
 	}
-	dir := ""
-	logFileNamePrefix := ""
-	switch os.Args[1] {
-	case "sched":
-		dir = "/home/qboxserver/miku-sched/_package/run"
-		logFileNamePrefix = "miku-sched.log-"
-	case "lived":
-		dir = "/home/qboxserver/miku-lived/_package/run"
-		logFileNamePrefix = "miku-lived.log-"
-	case "monitor":
-		dir = "/home/qboxserver/miku-monitor/_package/run"
-		logFileNamePrefix = "miku-monitor.log-"
-	default:
-		dir = os.Args[1]
-		logFileNamePrefix = "miku-sched.log-"
-	}
-	logger := &Logger{LogFileNamePrefix: logFileNamePrefix, Regex: os.Args[2]}
+	dir := os.Args[1]
+	logFileNamePrefix := os.Args[2]
+	logger := &Logger{LogFileNamePrefix: logFileNamePrefix}
 	logger.Run(dir)
 }
