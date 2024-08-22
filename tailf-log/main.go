@@ -2,18 +2,23 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 type Logger struct {
-	LastLogFile string
-	Cmd         *exec.Cmd
+	LastLogFile       string
+	Cmd               *exec.Cmd
+	LastChildCtx      context.Context
+	LastChildCancel   context.CancelFunc
+	LogFileNamePrefix string
 }
 
 func (s *Logger) findLatestFile(dir string) (string, error) {
@@ -25,12 +30,17 @@ func (s *Logger) findLatestFile(dir string) (string, error) {
 			return err
 		}
 
+		//log.Println(path)
 		// 忽略目录
 		if info.IsDir() {
 			return nil
 		}
 
 		if filepath.Ext(path) == ".swp" {
+			return nil
+		}
+
+		if !strings.HasPrefix(path, s.LogFileNamePrefix) {
 			return nil
 		}
 
@@ -55,72 +65,56 @@ func (s *Logger) findLatestFile(dir string) (string, error) {
 }
 
 func (s *Logger) Run(dir string) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	for {
-		file, err := s.findLatestFile(dir)
+		filename, err := s.findLatestFile(dir)
 		if err != nil {
 			log.Printf("dir: %s, err: %v\n", dir, err)
 			continue
 		}
-		if s.LastLogFile == file {
+		if s.LastLogFile == filename {
 			time.Sleep(time.Second)
 			continue
 		}
-		log.Printf("latest file: %s\n", file)
-		if s.Cmd != nil {
-			if err := s.Cmd.Process.Kill(); err != nil {
-				log.Println("Error killing command:", err)
-			} else {
-				log.Printf("kill old success, %s\n", s.LastLogFile)
-			}
+		log.Printf("latest file: %s\n", filename)
+		if s.LastChildCancel != nil {
+			s.LastChildCancel()
+			<-ctx.Done()
 		}
-		go func() {
-			file, err := os.Open("./new.txt") //针对test.log文件
+		s.LastChildCtx, s.LastChildCancel = context.WithCancel(context.Background())
+		go func(filename string, childCtx context.Context) {
+			file, err := os.Open(filename)
 			if err != nil {
 				log.Fatalf("Open file fail:%v", err)
 			}
 			defer file.Close()
 			reader := bufio.NewReader(file)
+
 			for {
-				line, err := reader.ReadString('\n')
-				if err != nil {
-					if err == io.EOF {
-						time.Sleep(100 * time.Millisecond)
-					} else {
-						log.Println("err")
-						break
+				select {
+				case <-childCtx.Done():
+					cancel()
+					log.Println(filename, "quit")
+					return
+				default:
+					line, err := reader.ReadString('\n')
+					if err != nil {
+						if err == io.EOF {
+							time.Sleep(200 * time.Millisecond)
+						} else {
+							log.Println("err")
+							break
+						}
 					}
+					fmt.Print(string(line))
 				}
-				fmt.Print(string(line))
+
 			}
 
-			/*
-				s.Cmd = exec.Command("tail", "-f", file)
-				output, err := s.Cmd.StdoutPipe()
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer output.Close()
+		}(filename, s.LastChildCtx)
 
-				// 启动命令
-				if err := s.Cmd.Start(); err != nil {
-					log.Fatal(err)
-				}
-
-				bigreader := bufio.NewReader(output)
-				line, isPrefix, err := bigreader.ReadLine()
-				for err == nil && !isPrefix {
-					log.Println(string(line))
-					line, isPrefix, err = bigreader.ReadLine()
-				}
-
-				// 等待命令结束
-				if err := s.Cmd.Wait(); err != nil {
-					log.Println(err, file)
-				}
-				log.Printf("file %s end", file)
-			*/
-		}()
-		s.LastLogFile = file
+		s.LastLogFile = filename
 		time.Sleep(time.Second)
 	}
 }
@@ -132,36 +126,21 @@ func main() {
 		return
 	}
 	dir := ""
+	logFileNamePrefix := ""
 	switch os.Args[1] {
 	case "sched":
 		dir = "/home/qboxserver/miku-sched/_package/run"
+		logFileNamePrefix = "miku-sched.log-"
 	case "lived":
 		dir = "/home/qboxserver/miku-lived/_package/run"
+		logFileNamePrefix = "miku-lived.log-"
 	case "monitor":
 		dir = "/home/qboxserver/miku-monitor/_package/run"
+		logFileNamePrefix = "miku-monitor.log-"
 	default:
 		dir = os.Args[1]
+		logFileNamePrefix = "miku-sched.log-"
 	}
-	logger := &Logger{}
+	logger := &Logger{LogFileNamePrefix: logFileNamePrefix}
 	logger.Run(dir)
-}
-
-func main1() {
-	file, err := os.Open("./new.txt") //针对test.log文件
-	if err != nil {
-		log.Fatalf("Open file fail:%v", err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				time.Sleep(100 * time.Millisecond)
-			} else {
-				break
-			}
-		}
-		fmt.Print(string(line))
-	}
 }
