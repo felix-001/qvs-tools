@@ -84,17 +84,7 @@ func (s *Parser) LagAnalysis() {
 	log.Println("region lag map:")
 	pairs = SortIntMap(regionLagCntMap)
 	DumpSlice(pairs)
-	/*
-		sortedDatas := make([]StreamdQos, 0)
-		for nodeId, lagCount := range nodeLagCntMap {
-			sortedDatas = append(sortedDatas, StreamdQos{NodeId: nodeId, LagCount: lagCount})
-
-		}
-		sort.Slice(sortedDatas, func(i, j int) bool {
-			return sortedDatas[i].LagCount > sortedDatas[j].LagCount
-		})
-		for _, data := range sortedDatas {
-			fmt.Println(data.NodeId, data.LagCount)
-		}
-	*/
+	log.Println("area lag map:")
+	pairs = SortIntMap(areaLagCntMap)
+	DumpSlice(pairs)
 }
