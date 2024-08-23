@@ -26,6 +26,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.NeedCk, "ck", false, "是否需要clickhouse")
 	flag.BoolVar(&conf.NeedNodeStreamInfo, "streamNodes", false, "是否需要流所在的节点信息")
 	flag.BoolVar(&conf.Bw, "bw", false, "获取总建设带宽+总可用带宽")
+	flag.BoolVar(&conf.Streams, "streams", false, "dump所有流信息")
 	flag.Parse()
 	return &conf
 }
