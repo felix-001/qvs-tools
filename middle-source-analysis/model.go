@@ -32,6 +32,10 @@ type Config struct {
 	PrometheusAddr     string
 	NeedNodeStreamInfo bool
 	Bw                 bool
+	LagFile            string
+	NodeInfo           bool
+	Prometheus         bool
+	Redis              bool
 }
 
 type Parser struct {

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -245,4 +246,26 @@ func checkCanScheduleOfTimeLimit(node *model.RtNode, coolingSeconds int) bool {
 	}
 
 	return false
+}
+
+type Pair struct {
+	Key   string
+	Value int
+}
+
+func SortIntMap(m map[string]int) []Pair {
+	pairs := make([]Pair, 0)
+	for k, v := range m {
+		pairs = append(pairs, Pair{Key: k, Value: v})
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Value > pairs[j].Value
+	})
+	return pairs
+}
+
+func DumpSlice(pairs []Pair) {
+	for _, pair := range pairs {
+		fmt.Println(pair.Key, pair.Value)
+	}
 }

@@ -33,4 +33,8 @@ func main() {
 	if conf.Bw {
 		parser.CalcTotalBw()
 	}
+
+	if conf.LagFile != "" {
+		parser.LagAnalysis()
+	}
 }

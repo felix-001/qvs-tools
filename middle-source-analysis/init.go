@@ -43,10 +43,14 @@ func (s *Parser) buildNodeStreamsMap() {
 }
 
 func (s *Parser) init() {
-	s.buildAllNodesMap()
+	if s.conf.NodeInfo {
+		s.buildAllNodesMap()
+		s.buildRootNodesMap()
+	}
 	if s.conf.NeedNodeStreamInfo {
 		s.buildNodeStreamsMap()
 	}
-	s.buildRootNodesMap()
-	prometheus.MustRegister(dynIpStatusMetric)
+	if s.conf.Prometheus {
+		prometheus.MustRegister(dynIpStatusMetric)
+	}
 }

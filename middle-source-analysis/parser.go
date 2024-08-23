@@ -10,18 +10,23 @@ import (
 )
 
 func newParser(conf *Config) *Parser {
-	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:      conf.RedisAddrs,
-		MaxRetries: 3,
-		PoolSize:   30,
-	})
-	err := redisCli.Ping(context.Background()).Err()
-	if err != nil {
-		log.Fatalf("%+v", err)
+	redisCli := &redis.ClusterClient{}
+	if conf.Redis {
+		redisCli = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:      conf.RedisAddrs,
+			MaxRetries: 3,
+			PoolSize:   30,
+		})
+
+		err := redisCli.Ping(context.Background()).Err()
+		if err != nil {
+			log.Fatalf("%+v", err)
+		}
 	}
 	var ipParser *ipdb.City
 	if conf.NeedIpParer {
 		qlog.SetOutputLevel(5)
+		var err error
 		ipParser, err = ipdb.NewCity(conf.IPDB)
 		if err != nil {
 			log.Fatalf("[IPDB NewCity] err: %+v\n", err)
