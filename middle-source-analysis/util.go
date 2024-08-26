@@ -20,7 +20,7 @@ import (
 func getLocate(ip string, ipParser *ipdb.City) (string, string, string) {
 	locate, err := ipParser.Find(ip)
 	if err != nil {
-		log.Println(err)
+		log.Println(err, ip)
 		return "", "", ""
 	}
 	if locate.Isp == "" {
