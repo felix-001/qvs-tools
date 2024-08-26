@@ -36,6 +36,7 @@ type Config struct {
 	NodeInfo           bool
 	Prometheus         bool
 	Redis              bool
+	Pcdn               bool
 }
 
 type Parser struct {

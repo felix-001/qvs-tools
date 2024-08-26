@@ -31,6 +31,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.NodeInfo, "nodeinfo", false, "是否需要查询redis获取节点数据")
 	flag.BoolVar(&conf.Prometheus, "prometheusEnable", false, "是否需要加载prometheus")
 	flag.BoolVar(&conf.Redis, "redis", false, "是否需要加载redis")
+	flag.BoolVar(&conf.Pcdn, "pcdn", false, "调试pcdn请求")
 	flag.Parse()
 	return &conf
 }

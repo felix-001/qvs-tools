@@ -37,4 +37,8 @@ func main() {
 	if conf.LagFile != "" {
 		parser.LagAnalysis()
 	}
+
+	if conf.Pcdn {
+		parser.PcdnDbg()
+	}
 }
