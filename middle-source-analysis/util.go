@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"sort"
@@ -267,5 +268,18 @@ func SortIntMap(m map[string]int) []Pair {
 func DumpSlice(pairs []Pair) {
 	for _, pair := range pairs {
 		fmt.Println(pair.Key, pair.Value)
+	}
+}
+
+func IsIpv6(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		fmt.Println("IP address is not valid")
+		return false
+	}
+	if ip.To4() == nil {
+		return true
+	} else {
+		return false
 	}
 }

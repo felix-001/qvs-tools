@@ -88,6 +88,8 @@ func (s *Parser) PcdnDbg() {
 	}
 	log.Println("province ip map cnt: ", len(provinceIpMap))
 	cnt := 0
+	totalCnt := 0
+	ipV6Cnt := 0
 	for isp, data := range provinceIpMap {
 		for province, ip := range data {
 			if ip == "" {
@@ -100,6 +102,10 @@ func (s *Parser) PcdnDbg() {
 				log.Println(err, resp.Url302)
 				continue
 			}
+			if IsIpv6(u.Hostname()) {
+				ipV6Cnt++
+			}
+			totalCnt++
 			//log.Println("redirectUr:", resp.Url302)
 			nodeIsp, _, nodeProvince := getLocate(u.Hostname(), s.ipParser)
 			if nodeIsp != isp {
@@ -107,6 +113,7 @@ func (s *Parser) PcdnDbg() {
 					nodeIsp, "ip:", ip, "nodeIp:", u.Hostname(), "province:", province,
 					"nodeProvince:", nodeProvince)
 				cnt++
+				continue
 			}
 			if province != nodeProvince {
 				log.Println("province not match, ", "province:", province,
@@ -114,9 +121,10 @@ func (s *Parser) PcdnDbg() {
 					u.Hostname(), "isp:", isp, "nodeIsp:",
 					nodeIsp)
 				cnt++
+				continue
 			}
 			time.Sleep(time.Millisecond * 10)
 		}
 	}
-	log.Println("cnt:", cnt)
+	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt)
 }
