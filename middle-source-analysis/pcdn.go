@@ -51,7 +51,7 @@ func (s *Parser) playcheck(ip string) *PlayCheckResp {
 		return nil
 	}
 	var resp PlayCheckResp
-	addr := "http://localhost:6060/api/v1/playcheck"
+	addr := "http://10.34.146.62:6060/api/v1/playcheck"
 	if err := s.post(addr, string(bytes), &resp); err != nil {
 		log.Println(err)
 		return nil
