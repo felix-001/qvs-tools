@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -87,4 +88,34 @@ LIMIT 1;
 		return obj.StartTime
 	}
 	return 0
+}
+
+func (s *Parser) GetIpByProvinceIsp(province, isp string) string {
+	query := `
+SELECT  Region, Isp, RemoteAddr  
+from miku_data.streamd_qos 
+WHERE Type = 'player' AND Region  = '%s' AND Isp = '%s' 
+LIMIT 1;
+`
+	query = fmt.Sprintf(query, province, isp)
+	rows, err := s.ck.Query(context.Background(), query)
+	if err != nil {
+		log.Printf("query rows failed, err: %+v\n", err)
+		return ""
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var obj data.MikuQosObject
+		if err := rows.ScanStruct(&obj); err != nil {
+			log.Printf("rows ScanStruct failed, err: %+v\n", err)
+			continue
+		}
+		parts := strings.Split(obj.RemoteAddr, ":")
+		if len(parts) != 2 {
+			log.Printf("parse remote addr err: %s\n", obj.RemoteAddr)
+			continue
+		}
+		return parts[0]
+	}
+	return ""
 }

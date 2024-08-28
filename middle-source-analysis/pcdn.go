@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"time"
-
-	"github.com/qbox/mikud-live/common/util"
 )
 
 type PlaycheckReq struct {
@@ -61,32 +60,75 @@ func (s *Parser) playcheck(ip string) *PlayCheckResp {
 
 func (s *Parser) PcdnDbg() {
 	provinceIpMap := make(map[string]map[string]string) // key1: isp, key2: province, value: ip
-	for _, node := range s.allNodesMap {
-		for _, ipInfo := range node.Ips {
-			if util.IsPrivateIP(ipInfo.Ip) {
-				continue
+	/*
+		for _, node := range s.allNodesMap {
+			for _, ipInfo := range node.Ips {
+				if util.IsPrivateIP(ipInfo.Ip) {
+					continue
+				}
+				if ipInfo.IsIPv6 {
+					continue
+				}
+				if ipInfo.Ip == "" {
+					log.Println("ip empty")
+					continue
+				}
+				isp, _, province := getLocate(ipInfo.Ip, s.ipParser)
+				if province == "" {
+					continue
+				}
+				if isp != "联通" && isp != "电信" && isp != "移动" {
+					continue
+				}
+				if _, ok := provinceIpMap[isp]; !ok {
+					provinceIpMap[isp] = make(map[string]string)
+				}
+				provinceIpMap[isp][province] = ipInfo.Ip
 			}
-			if ipInfo.IsIPv6 {
-				continue
-			}
-			if ipInfo.Ip == "" {
-				log.Println("ip empty")
-				continue
-			}
-			isp, _, province := getLocate(ipInfo.Ip, s.ipParser)
-			if province == "" {
-				continue
-			}
-			if isp != "联通" && isp != "电信" && isp != "移动" {
+		}
+
+		provinceIpMap["移动"]["海南"] = "39.144.69.6"
+		provinceIpMap["移动"]["吉林"] = "111.25.222.173"
+		provinceIpMap["移动"]["甘肃"] = "36.142.174.134"
+		provinceIpMap["移动"]["北京"] = "120.244.220.122"
+		provinceIpMap["移动"]["广西"] = "117.140.254.74"
+		provinceIpMap["移动"]["青海"] = "111.44.149.212"
+
+		provinceIpMap["电信"]["青海"] = "116.8.45.83"
+		provinceIpMap["电信"]["甘肃"] = "27.226.147.34"
+		provinceIpMap["电信"]["吉林"] = "36.48.109.133"
+		provinceIpMap["电信"]["北京"] = "106.121.70.41"
+		provinceIpMap["电信"]["广西"] = "171.108.54.241"
+		provinceIpMap["电信"]["海南"] = "61.186.26.109"
+	*/
+
+	provinces := []string{"湖南", "内蒙古", "贵州", "山西", "河南", "天津", "江苏", "四川", "西藏", "湖北", "上海", "江西", "广东", "陕西", "辽宁", "河北", "山东", "福建", "云南", "新疆", "黑龙江", "宁夏", "安徽", "重庆", "浙江", "吉林", "海南", "甘肃", "青海", "北京", "广西"}
+	log.Println("len(provinces)", len(provinces))
+	isps := []string{"移动", "电信", "联通"}
+
+	for _, province := range provinces {
+		for _, isp := range isps {
+			ip := s.GetIpByProvinceIsp(province, isp)
+			if ip == "" {
+				log.Println(province, isp, "ip empty")
 				continue
 			}
 			if _, ok := provinceIpMap[isp]; !ok {
 				provinceIpMap[isp] = make(map[string]string)
 			}
-			provinceIpMap[isp][province] = ipInfo.Ip
+			provinceIpMap[isp][province] = ip
 		}
 	}
-	log.Println("province ip map cnt: ", len(provinceIpMap))
+	jsonbody, err := json.Marshal(provinceIpMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = ioutil.WriteFile("ips.json", jsonbody, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	cnt := 0
 	totalCnt := 0
 	ipV6Cnt := 0
