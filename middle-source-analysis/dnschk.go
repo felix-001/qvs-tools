@@ -50,7 +50,7 @@ func (s *Parser) DnsChk() {
 			log.Println("dummy isp:", provinceIsp)
 			continue
 		}
-		ips := strings.Split(result, "\n")
+		ips := strings.Split(result, "\r\n")
 		validIp := ""
 		for _, ip := range ips {
 			if net.ParseIP(ip) != nil {
