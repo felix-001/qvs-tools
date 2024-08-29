@@ -42,24 +42,29 @@ func (s *Parser) DnsChk() {
 		}
 		isp := ""
 		for _, _isp := range Isps {
-			if strings.Contains(provinceIsp, isp) {
+			if strings.Contains(provinceIsp, _isp) {
 				isp = _isp
+				break
 			}
 		}
 		if isp == "" {
 			log.Println("dummy isp:", provinceIsp)
 			continue
 		}
-		ips := strings.Split(result, "\r\n")
+		ips := strings.Split(result, "\n\r")
+		if len(ips) == 0 {
+			log.Println("split ips err", result)
+		}
 		validIp := ""
 		for _, ip := range ips {
+			ip = strings.TrimSpace(ip)
 			if net.ParseIP(ip) != nil {
 				validIp = ip
 				break
 			}
 		}
 		if validIp == "" {
-			log.Println("no valid ip", result)
+			log.Println("no valid ip", result, provinceIsp)
 			continue
 		}
 		areaResult, ispResult, err := getIpAreaIsp(s.ipParser, validIp)
@@ -68,10 +73,10 @@ func (s *Parser) DnsChk() {
 			continue
 		}
 		if areaResult != area {
-			log.Println("area not same", areaResult, area)
+			log.Println("area not same", areaResult, area, provinceIsp, validIp)
 		}
 		if ispResult != isp {
-			log.Println("isp not same", ispResult, isp)
+			log.Println("isp not same", ispResult, isp, provinceIsp, validIp)
 		}
 	}
 }
