@@ -41,4 +41,8 @@ func main() {
 	if conf.Pcdn {
 		parser.PcdnDbg()
 	}
+
+	if conf.DnsResFile != "" {
+		parser.DnsChk()
+	}
 }

@@ -37,6 +37,7 @@ type Config struct {
 	Prometheus         bool
 	Redis              bool
 	Pcdn               bool
+	DnsResFile         string
 }
 
 type Parser struct {

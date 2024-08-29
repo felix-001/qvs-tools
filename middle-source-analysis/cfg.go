@@ -32,6 +32,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Prometheus, "prometheusEnable", false, "是否需要加载prometheus")
 	flag.BoolVar(&conf.Redis, "redis", false, "是否需要加载redis")
 	flag.BoolVar(&conf.Pcdn, "pcdn", false, "调试pcdn请求")
+	flag.StringVar(&conf.DnsResFile, "dnschk", "", "阿里网络拨测工具结果文件")
 	flag.Parse()
 	return &conf
 }
