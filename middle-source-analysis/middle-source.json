@@ -5,7 +5,7 @@
       "ipv4": {
         "ak": "24wKcAkyFc3Mb4Xssivjn6_3rCFbrqIA030H_nbb",
         "sk": "WWxwcbfWseG1TtyRRfJUjkm0RL8ONbvhDRJVasu_",
-        "local_url": "/Users/liyuanquan/workspace/tmp/miku/sched/neo.ipv4.ipdb",
+        "local_url": "./neo.ipv4.ipdb",
         "remote_url": "http://pv53kxj7u.bkt.clouddn.com/neo.ipv4.ipdb",
         "retry_count": 3,
         "expire": 20000,
@@ -14,7 +14,7 @@
       "ipv6": {
         "ak": "24wKcAkyFc3Mb4Xssivjn6_3rCFbrqIA030H_nbb",
         "sk": "WWxwcbfWseG1TtyRRfJUjkm0RL8ONbvhDRJVasu_",
-        "local_url": "/Users/liyuanquan/workspace/tmp/miku/sched/neo.ipv6.ipdb",
+        "local_url": "./neo.ipv6.ipdb",
         "remote_url": "http://pv53kxj7u.bkt.clouddn.com/neo.ipv6.ipdb",
         "retry_count": 3,
         "expire": 20000,

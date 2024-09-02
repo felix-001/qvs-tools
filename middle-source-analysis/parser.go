@@ -4,9 +4,9 @@ import (
 	"context"
 	"log"
 
-	qlog "github.com/qbox/pili/base/qiniu/log.v1"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
+	//qlog "github.com/qbox/pili/base/qiniu/log.v1"
 )
 
 func newParser(conf *Config) *Parser {
@@ -25,7 +25,7 @@ func newParser(conf *Config) *Parser {
 	}
 	var ipParser *ipdb.City
 	if conf.NeedIpParer {
-		qlog.SetOutputLevel(5)
+		//qlog.SetOutputLevel(5)
 		var err error
 		ipParser, err = ipdb.NewCity(conf.IPDB)
 		if err != nil {

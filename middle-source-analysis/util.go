@@ -11,8 +11,8 @@ import (
 	"time"
 	"unicode"
 
-	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
+	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -25,9 +25,9 @@ func getLocate(ip string, ipParser *ipdb.City) (string, string, string) {
 		return "", "", ""
 	}
 	if locate.Isp == "" {
-		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
+		log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
 	}
-	area := monitorUtil.ProvinceAreaRelation(locate.Region)
+	area, _ := schedUtil.ProvinceAreaRelation(locate.Region)
 	return locate.Isp, area, locate.Region
 }
 
