@@ -45,4 +45,8 @@ func main() {
 	if conf.DnsResFile != "" {
 		parser.DnsChk()
 	}
+
+	if conf.PathqueryLogFile != "" {
+		parser.pathqueryChk()
+	}
 }

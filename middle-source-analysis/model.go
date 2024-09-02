@@ -38,6 +38,7 @@ type Config struct {
 	Redis              bool
 	Pcdn               bool
 	DnsResFile         string
+	PathqueryLogFile   string
 }
 
 type Parser struct {

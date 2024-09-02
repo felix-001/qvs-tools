@@ -33,6 +33,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Redis, "redis", false, "是否需要加载redis")
 	flag.BoolVar(&conf.Pcdn, "pcdn", false, "调试pcdn请求")
 	flag.StringVar(&conf.DnsResFile, "dnschk", "", "阿里网络拨测工具结果文件")
+	flag.StringVar(&conf.PathqueryLogFile, "pathqueryfile", "", "解析elk下载的pathquery日志文件,判断回源路径是否符合预期")
 	flag.Parse()
 	return &conf
 }
