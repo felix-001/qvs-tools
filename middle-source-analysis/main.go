@@ -49,4 +49,8 @@ func main() {
 	if conf.PathqueryLogFile != "" {
 		parser.pathqueryChk()
 	}
+
+	if conf.StopAllStream {
+		parser.stopStream()
+	}
 }

@@ -34,6 +34,9 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Pcdn, "pcdn", false, "调试pcdn请求")
 	flag.StringVar(&conf.DnsResFile, "dnschk", "", "阿里网络拨测工具结果文件")
 	flag.StringVar(&conf.PathqueryLogFile, "pathqueryfile", "", "解析elk下载的pathquery日志文件,判断回源路径是否符合预期")
+	flag.StringVar(&conf.Ak, "ak", "", "ak")
+	flag.StringVar(&conf.Sk, "sk", "", "sk")
+	flag.BoolVar(&conf.StopAllStream, "stopstream", false, "停掉所有流连接")
 	flag.Parse()
 	return &conf
 }

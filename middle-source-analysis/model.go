@@ -39,6 +39,9 @@ type Config struct {
 	Pcdn               bool
 	DnsResFile         string
 	PathqueryLogFile   string
+	StopAllStream      bool
+	Ak                 string
+	Sk                 string
 }
 
 type Parser struct {
