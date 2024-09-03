@@ -7,6 +7,7 @@ import (
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 )
 
 type CkConfig struct {
@@ -70,6 +71,7 @@ type Parser struct {
 	AvailableDynNodeAfterTimeLimitCnt int
 	AvailableIpCnt                    int
 	BanTransProvNodeCnt               int
+	logger                            zerolog.Logger
 }
 
 type DynamicRootNode struct {

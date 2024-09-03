@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/qbox/mikud-live/cmd/agent/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
+	"github.com/rs/zerolog"
 )
 
 func (s *Parser) buildAllNodesMap() {
@@ -53,4 +56,7 @@ func (s *Parser) init() {
 	if s.conf.Prometheus {
 		prometheus.MustRegister(dynIpStatusMetric)
 	}
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+	zerolog.CallerMarshalFunc = util.LogShortPath
+	s.logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02 15:04:05.000", NoColor: true}).With().Timestamp().Caller().Logger()
 }
