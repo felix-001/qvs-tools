@@ -53,4 +53,8 @@ func main() {
 	if conf.StopAllStream {
 		parser.stopStream()
 	}
+
+	if conf.NodeIspChk {
+		parser.nodeIspChk()
+	}
 }

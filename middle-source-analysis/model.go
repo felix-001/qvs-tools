@@ -43,6 +43,7 @@ type Config struct {
 	StopAllStream      bool
 	Ak                 string
 	Sk                 string
+	NodeIspChk         bool
 }
 
 type Parser struct {

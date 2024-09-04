@@ -7,6 +7,8 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
 func (s *Parser) dumpNodeStreams() {
@@ -141,4 +143,26 @@ func (s *Parser) getNodeUnavailableDetail(days int) map[string][]NodeUnavailable
 		s.buildNodeUnavailableDetailMap(nodeInfos, nodeUnavailableDetailMap)
 	}
 	return nodeUnavailableDetailMap
+}
+
+func (s *Parser) nodeIspChk() {
+	for _, node := range s.allNodesMap {
+		if !node.IsDynamic {
+			continue
+		}
+		lastIsp := ""
+		for _, ipInfo := range node.Ips {
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			if ipInfo.Ip == "" {
+				continue
+			}
+			isp, _, _ := getLocate(ipInfo.Ip, s.ipParser)
+			if lastIsp != "" && isp != lastIsp {
+				s.logger.Info().Str("isp", isp).Str("lastIsp", lastIsp).Str("node", node.Id).Str("machine", node.MachineId).
+					Msg("node has multi isp ip")
+			}
+		}
+	}
 }
