@@ -44,7 +44,11 @@ type Config struct {
 	Ak                 string
 	Sk                 string
 	NodeIspChk         bool
+	HlsChk             bool
+	Cmd                string
 }
+
+type CmdHandler func()
 
 type Parser struct {
 	redisCli                 *redis.ClusterClient
@@ -73,6 +77,7 @@ type Parser struct {
 	AvailableIpCnt                    int
 	BanTransProvNodeCnt               int
 	logger                            zerolog.Logger
+	CmdMap                            map[string]CmdHandler
 }
 
 type DynamicRootNode struct {

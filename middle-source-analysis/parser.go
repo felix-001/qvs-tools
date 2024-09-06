@@ -33,10 +33,15 @@ func newParser(conf *Config) *Parser {
 		}
 	}
 	ck := newCk(conf)
-	return &Parser{
+	parser := &Parser{
 		redisCli: redisCli,
 		ipParser: ipParser,
 		ck:       ck,
 		conf:     conf,
 	}
+	cmdMap := map[string]CmdHandler{
+		"hlschk": parser.HlsChk,
+	}
+	parser.CmdMap = cmdMap
+	return parser
 }

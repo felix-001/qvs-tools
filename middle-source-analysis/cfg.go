@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 
 	qconfig "github.com/qiniu/x/config"
@@ -39,16 +38,20 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Sk, "sk", "", "sk")
 	flag.BoolVar(&conf.StopAllStream, "stopstream", false, "停掉所有流连接")
 	flag.BoolVar(&conf.NodeIspChk, "nodeIspChk", false, "检查是否有动态节点，一个节点有多个运营商的ip")
-
-	flag.VisitAll(func(f *flag.Flag) {
-		if f.Name == "nodeIspChk" && conf.NodeIspChk {
-			conf.Redis = true
-			conf.NeedIpParer = true
-			conf.NodeInfo = true
-			fmt.Println("nodeIspChk is true, setting b to true as well")
-		}
-	})
-
+	flag.BoolVar(&conf.HlsChk, "hlschk", false, "检查streamd上报的hls带宽是否有0的情况")
+	flag.StringVar(&conf.Cmd, "cmd", "", "需要执行的子命令(hlschk)")
 	flag.Parse()
+
+	if conf.NodeIspChk {
+		conf.Redis = true
+		conf.NeedIpParer = true
+		conf.NodeInfo = true
+	}
+
+	if conf.Cmd == "hlschk" {
+		conf.Redis = true
+		conf.NodeInfo = true
+		conf.NeedNodeStreamInfo = true
+	}
 	return &conf
 }

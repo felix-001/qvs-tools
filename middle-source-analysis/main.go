@@ -57,4 +57,9 @@ func main() {
 	if conf.NodeIspChk {
 		parser.nodeIspChk()
 	}
+
+	if conf.Cmd != "" {
+		parser.CmdMap[conf.Cmd]()
+	}
+
 }
