@@ -32,9 +32,11 @@ func (s *Parser) buildNodeStreamsMap() {
 		if node == nil {
 			continue
 		}
-		if !node.IsDynamic {
-			continue
-		}
+		/*
+			if !node.IsDynamic {
+				continue
+			}
+		*/
 		report, err := s.getNodeAllStreams(nodeId)
 		if err != nil || report == nil {
 			continue
