@@ -40,7 +40,8 @@ func newParser(conf *Config) *Parser {
 		conf:     conf,
 	}
 	cmdMap := map[string]CmdHandler{
-		"hlschk": parser.HlsChk,
+		"hlschk":    parser.HlsChk,
+		"mockagent": parser.MockAgent,
 	}
 	parser.CmdMap = cmdMap
 	return parser
