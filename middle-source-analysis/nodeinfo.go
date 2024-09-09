@@ -13,52 +13,21 @@ import (
 
 func (s *Parser) dumpNodeStreams() {
 	node := s.conf.Node
-	var totalbw uint64
-	//bktBwMap := make(map[string]uint64)
 	var hlsBw uint64
-	//var max uint64
-	line := ""
+
 	var notHlsBw uint64
 	for _, stream := range s.nodeStremasMap[node].Streams {
-		//fmt.Println("bucket:", stream.AppName, "stream:", stream.Key)
 		for _, player := range stream.Players {
-			//fmt.Printf("\t%s\n", player.Protocol)
 			for _, ipInfo := range player.Ips {
-				/*
-					if player.Protocol == "hls" {
-						fmt.Printf("\t\t ip: %s, onlineNum: %d, bw: %d hlsBw: %d\n", ipInfo.Ip, ipInfo.OnlineNum, ipInfo.Bandwidth, ipInfo.HlsBytes)
-					}
-				*/
 				if player.Protocol == "hls" {
-					/*
-						if max < ipInfo.HlsBytes {
-							max = ipInfo.HlsBytes
-							line = fmt.Sprintf("\t\t ip: %s, onlineNum: %d, bw: %d hlsBw: %d\n", ipInfo.Ip, ipInfo.OnlineNum, ipInfo.Bandwidth, ipInfo.HlsBytes)
-						}
-					*/
-					totalbw += ipInfo.HlsBytes
-					//bktBwMap[stream.Bucket] += ipInfo.HlsBytes
 					hlsBw += ipInfo.HlsBytes
 				} else {
-					totalbw += ipInfo.Bandwidth
-					//bktBwMap[stream.Bucket] += ipInfo.Bandwidth
 					notHlsBw += ipInfo.Bandwidth
 				}
 			}
 		}
-		/*
-			for _, pusher := range stream.Pusher {
-				fmt.Println(pusher.ConnectId)
-			}
-		*/
 	}
-	/*
-		for stream, bw := range bktBwMap {
-			fmt.Println(stream, bw*8/1e6)
-		}
-	*/
-	fmt.Println("total", totalbw*8/1e6, "hlsBw", float64(hlsBw)*8/1e6, "notHlsBw:", float64(notHlsBw)*8/1e6)
-	fmt.Println(line)
+	fmt.Println("hlsBw: ", float64(hlsBw)*8/1e6, "notHlsBw:", float64(notHlsBw)*8/1e6)
 }
 
 func TimeStrSub(s string, subVal int) string {
