@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type BwKey struct {
 	Bucket string
@@ -13,19 +16,30 @@ func (s *Parser) HlsChk() {
 	defer ticker.Stop()
 
 	historyBws := make([]uint64, 0, 20)
+	var max uint64
+	line := ""
 
 	for range ticker.C {
 		var total uint64
 		s.buildAllNodesMap()
 		s.buildNodeStreamsMap()
 		for _, nodeStreams := range s.nodeStremasMap {
+			node := s.allNodesMap[nodeStreams.NodeId]
+			if node.IsDynamic {
+				continue
+			}
 			if time.Now().Unix()-nodeStreams.LastUpdateTime > 300 {
 				continue
 			}
 			for _, streamInfoRT := range nodeStreams.Streams {
 				for _, player := range streamInfoRT.Players {
 					for _, ipInfo := range player.Ips {
-						if player.Protocol == "hls" {
+						if player.Protocol == "hls" && ipInfo.HlsBytes > 0 {
+							if ipInfo.HlsBytes > max {
+								max = ipInfo.HlsBytes
+								line = fmt.Sprintf("hlsBytes: %d ip: %s, stream: %s, bkt: %s, node: %s, domain: %s",
+									ipInfo.HlsBytes, ipInfo.Ip, streamInfoRT.Key, streamInfoRT.Bucket, nodeStreams.NodeId, streamInfoRT.Domain)
+							}
 							s.logger.Info().
 								Uint64("hlsBytes", ipInfo.HlsBytes).
 								Str("ip", ipInfo.Ip).
@@ -59,5 +73,6 @@ func (s *Parser) HlsChk() {
 			Float64("totalAvgBw", totalAvgBw).
 			Int("historyBwsLen", len(historyBws)).
 			Msg("")
+		fmt.Println(line)
 	}
 }

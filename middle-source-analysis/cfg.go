@@ -53,5 +53,10 @@ func loadCfg() *Config {
 		conf.NodeInfo = true
 		conf.NeedNodeStreamInfo = true
 	}
+	if conf.Node != "" {
+		conf.Redis = true
+		conf.NodeInfo = true
+		conf.NeedNodeStreamInfo = true
+	}
 	return &conf
 }
