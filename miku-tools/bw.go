@@ -168,3 +168,40 @@ func (s *Parser) CalcTotalBw() {
 	}
 	fmt.Println(string(output))
 }
+
+func (s *Parser) BwDis() {
+	bwMap := make(map[string]uint64)
+	for _, nodeStreams := range s.nodeStremasMap {
+		if node, ok := s.allNodesMap[nodeStreams.NodeId]; ok && !node.IsDynamic {
+			continue
+		}
+		for _, streamRT := range nodeStreams.Streams {
+			if streamRT.Bucket != s.conf.Bucket {
+				continue
+			}
+			for _, player := range streamRT.Players {
+				for _, ipInfo := range player.Ips {
+					if publicUtil.IsPrivateIP(ipInfo.Ip) {
+						continue
+					}
+					isp, _, province := getLocate(ipInfo.Ip, s.ipParser)
+					if isp == "" || province == "" {
+						continue
+					}
+					key := isp + "_" + province
+					bwMap[key] += ipInfo.Bandwidth
+				}
+			}
+		}
+	}
+	var max uint64
+	province := ""
+	for key, bw := range bwMap {
+		if max < bw {
+			max = bw
+			province = key
+		}
+		fmt.Println(key, bw)
+	}
+	log.Println("province:", province, "max:", max)
+}

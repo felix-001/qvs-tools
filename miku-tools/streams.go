@@ -147,6 +147,9 @@ func (s *Parser) dumpStreams() {
 		if report == nil {
 			continue
 		}
+		if time.Now().Unix()-report.LastUpdateTime > 300 {
+			continue
+		}
 		isp := s.getNodeIsp(node)
 		for _, streamInfoRT := range report.Streams {
 			if s.conf.Bucket != streamInfoRT.Bucket {

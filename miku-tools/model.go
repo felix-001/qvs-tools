@@ -41,6 +41,7 @@ type Config struct {
 	Ak                 string
 	Sk                 string
 	Cmd                string
+	QosFile            string
 }
 
 type CmdHandler func()

@@ -88,3 +88,7 @@ func (s *Parser) LagAnalysis() {
 	pairs = SortIntMap(areaLagCntMap)
 	DumpSlice(pairs)
 }
+
+func (s *Parser) CoverChk() {
+	rows := s.locadCsv(s.conf.QosFile)
+}

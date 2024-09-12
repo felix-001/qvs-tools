@@ -53,6 +53,8 @@ func newParser(conf *Config) *Parser {
 		"bw":         parser.CalcTotalBw,
 		"stopstream": parser.stopStream,
 		"ispchk":     parser.nodeIspChk,
+		"coverchk":   parser.CoverChk,
+		"bwdis":      parser.BwDis, // 按省份、运营商，带宽分布
 	}
 	parser.CmdMap = cmdMap
 	return parser
