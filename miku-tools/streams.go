@@ -121,7 +121,7 @@ const (
 )
 
 func (s *Parser) getNodeType(node *model.RtNode) string {
-	if node.RuntimeStatus != "Serving" {
+	if node.IsDynamic && node.RuntimeStatus != "Serving" {
 		return NodeTypeOffline
 	}
 	if _, ok := s.allRootNodesMapByNodeId[node.Id]; ok {
@@ -172,9 +172,6 @@ func (s *Parser) dumpStreams() {
 				continue
 			}
 			nodeType := s.getNodeType(node)
-			if time.Now().Unix()-report.LastUpdateTime > 300 {
-				nodeType = NodeTypeOffline
-			}
 			switch nodeType {
 			case NodeTypeRoot:
 				streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)

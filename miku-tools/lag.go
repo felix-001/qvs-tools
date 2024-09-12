@@ -90,5 +90,5 @@ func (s *Parser) LagAnalysis() {
 }
 
 func (s *Parser) CoverChk() {
-	rows := s.locadCsv(s.conf.QosFile)
+	//rows := s.locadCsv(s.conf.QosFile)
 }
