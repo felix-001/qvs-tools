@@ -40,8 +40,19 @@ func newParser(conf *Config) *Parser {
 		conf:     conf,
 	}
 	cmdMap := map[string]CmdHandler{
-		"hlschk":    parser.HlsChk,
-		"mockagent": parser.MockAgent,
+		"hlschk":     parser.HlsChk,
+		"mockagent":  parser.MockAgent,
+		"streams":    parser.dumpStreams,
+		"monitor":    parser.nodeMonitor,
+		"lag":        parser.LagAnalysis,
+		"pcdn":       parser.PcdnDbg,
+		"dns":        parser.DnsChk,
+		"pathquery":  parser.pathqueryChk,
+		"node":       parser.dumpNodeStreams,
+		"stream":     parser.dumpStream,
+		"bw":         parser.CalcTotalBw,
+		"stopstream": parser.stopStream,
+		"ispchk":     parser.nodeIspChk,
 	}
 	parser.CmdMap = cmdMap
 	return parser

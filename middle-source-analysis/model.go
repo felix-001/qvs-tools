@@ -26,10 +26,8 @@ type Config struct {
 	Stream             string
 	Node               string
 	CheckNode          bool
-	Monitor            bool
 	NeedIpParer        bool
 	NeedCk             bool
-	Streams            bool
 	PrometheusAddr     string
 	NeedNodeStreamInfo bool
 	Bw                 bool
@@ -37,14 +35,11 @@ type Config struct {
 	NodeInfo           bool
 	Prometheus         bool
 	Redis              bool
-	Pcdn               bool
 	DnsResFile         string
 	PathqueryLogFile   string
 	StopAllStream      bool
 	Ak                 string
 	Sk                 string
-	NodeIspChk         bool
-	HlsChk             bool
 	Cmd                string
 }
 

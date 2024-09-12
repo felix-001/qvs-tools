@@ -21,28 +21,23 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Stream, "stream", "", "stream ID")
 	flag.StringVar(&conf.PrometheusAddr, "prometheus", "101.132.36.201:9091", "prometheus addr")
 	flag.BoolVar(&conf.CheckNode, "chknode", false, "是否需要检查节点的状态")
-	flag.BoolVar(&conf.Monitor, "monitor", false, "node monitor")
 	flag.BoolVar(&conf.NeedIpParer, "ipparser", false, "是否需要ip库")
 	flag.BoolVar(&conf.NeedCk, "ck", false, "是否需要clickhouse")
 	flag.BoolVar(&conf.NeedNodeStreamInfo, "streamNodes", false, "是否需要流所在的节点信息")
 	flag.BoolVar(&conf.Bw, "bw", false, "获取总建设带宽+总可用带宽")
-	flag.BoolVar(&conf.Streams, "streams", false, "dump所有流信息")
 	flag.StringVar(&conf.LagFile, "lagfile", "", "分析streamd上报的卡顿数据的文件")
 	flag.BoolVar(&conf.NodeInfo, "nodeinfo", false, "是否需要查询redis获取节点数据")
 	flag.BoolVar(&conf.Prometheus, "prometheusEnable", false, "是否需要加载prometheus")
 	flag.BoolVar(&conf.Redis, "redis", false, "是否需要加载redis")
-	flag.BoolVar(&conf.Pcdn, "pcdn", false, "调试pcdn请求")
 	flag.StringVar(&conf.DnsResFile, "dnschk", "", "阿里网络拨测工具结果文件")
 	flag.StringVar(&conf.PathqueryLogFile, "pathqueryfile", "", "解析elk下载的pathquery日志文件,判断回源路径是否符合预期")
 	flag.StringVar(&conf.Ak, "ak", "", "ak")
 	flag.StringVar(&conf.Sk, "sk", "", "sk")
 	flag.BoolVar(&conf.StopAllStream, "stopstream", false, "停掉所有流连接")
-	flag.BoolVar(&conf.NodeIspChk, "nodeIspChk", false, "检查是否有动态节点，一个节点有多个运营商的ip")
-	flag.BoolVar(&conf.HlsChk, "hlschk", false, "检查streamd上报的hls带宽是否有0的情况")
 	flag.StringVar(&conf.Cmd, "cmd", "", "需要执行的子命令(hlschk)")
 	flag.Parse()
 
-	if conf.NodeIspChk {
+	if conf.Cmd == "ispchk" {
 		conf.Redis = true
 		conf.NeedIpParer = true
 		conf.NodeInfo = true
@@ -53,12 +48,15 @@ func loadCfg() *Config {
 		conf.NodeInfo = true
 		conf.NeedNodeStreamInfo = true
 	}
-	/*
-		if conf.Node != "" {
-			conf.Redis = true
-			conf.NodeInfo = true
-			conf.NeedNodeStreamInfo = true
-		}
-	*/
+	if conf.Node != "" {
+		conf.Redis = true
+		conf.NodeInfo = true
+		conf.NeedNodeStreamInfo = true
+	}
+	if conf.Cmd == "streams" {
+		conf.Redis = true
+		conf.NodeInfo = true
+		conf.NeedNodeStreamInfo = true
+	}
 	return &conf
 }
