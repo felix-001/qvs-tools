@@ -98,6 +98,7 @@ type StreamInfo struct {
 	EdgeNodes    []string
 	RootNodes    []string
 	OfflineNodes []string
+	StaticNodes  []string
 	RelayBw      float64
 	Bw           float64
 	OnlineNum    uint32

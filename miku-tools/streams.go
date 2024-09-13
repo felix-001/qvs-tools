@@ -36,7 +36,7 @@ func (s *Parser) getStreamSourceNodeMap(bkt string) (map[string][]string, map[st
 	return streamSourceNodesMap, notServingNodesMap
 }
 
-var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 拉流带宽, 回源带宽, 放大比, 回源节点详情\n"
+var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 拉流带宽, 回源带宽, 放大比, 边缘回源节点个数, 边缘回源节点详情, root回源节点个数, root回源节点详情, 静态回源节点个数, 静态回源节点详情, 离线回源节点个数, 离线回源节点详情 \n"
 
 func (s *Parser) dumpStreamsDetail(bkt string) {
 	streamSourceNodesMap, notServingNodesMap := s.getStreamSourceNodeMap(bkt)
@@ -118,9 +118,13 @@ const (
 	NodeTypeRoot    = "root"
 	NodeTypeEdge    = "edge"
 	NodeTypeOffline = "offline"
+	NodeTypeStatic  = "static"
 )
 
 func (s *Parser) getNodeType(node *model.RtNode) string {
+	if !node.IsDynamic {
+		return NodeTypeStatic
+	}
 	if node.IsDynamic && node.RuntimeStatus != "Serving" {
 		return NodeTypeOffline
 	}
@@ -177,6 +181,8 @@ func (s *Parser) dumpStreams() {
 				streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
 			case NodeTypeOffline:
 				streamInfo.OfflineNodes = append(streamInfo.OfflineNodes, node.Id)
+			case NodeTypeStatic:
+				streamInfo.StaticNodes = append(streamInfo.StaticNodes, node.Id)
 			default:
 				streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
 			}
@@ -193,11 +199,16 @@ func (s *Parser) saveStreamsInfoToCSV() {
 		for isp, detail := range ispDetail {
 			ratio := detail.Bw / detail.RelayBw
 			nodeCnt := len(detail.EdgeNodes) + len(detail.RootNodes)
-			nodesDetail := fmt.Sprintf("edgeNodesCnt: %d edgeNodesDetail: %+v rootNodesCnt: %d rootNodesDetail: %+v offlineNodesCnt: %d offlineNodesDetail: %+v",
+			/*
+				nodesDetail := fmt.Sprintf("\"edgeNodesCnt: %d edgeNodesDetail: %+v\n rootNodesCnt: %d rootNodesDetail: %+v\n offlineNodesCnt: %d offlineNodesDetail: %+v\"",
+					len(detail.EdgeNodes), detail.EdgeNodes, len(detail.RootNodes), detail.RootNodes,
+					len(detail.OfflineNodes), detail.OfflineNodes)
+			*/
+			csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f, %d, %s, %d, %s, %d, %s, %d, %s\n",
+				streamId, isp, detail.OnlineNum, nodeCnt,
+				detail.Bw, detail.RelayBw, ratio,
 				len(detail.EdgeNodes), detail.EdgeNodes, len(detail.RootNodes), detail.RootNodes,
-				len(detail.OfflineNodes), detail.OfflineNodes)
-			csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f, %s\n", streamId, isp, detail.OnlineNum, nodeCnt,
-				detail.Bw, detail.RelayBw, ratio, nodesDetail)
+				len(detail.StaticNodes), detail.StaticNodes, len(detail.OfflineNodes), detail.OfflineNodes)
 		}
 	}
 
