@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -90,5 +91,96 @@ func (s *Parser) LagAnalysis() {
 }
 
 func (s *Parser) CoverChk() {
-	//rows := s.locadCsv(s.conf.QosFile)
+	rows := s.locadCsv(s.conf.QosFile)
+	ipParseErrCnt := 0
+	ispNotMatchCnt := 0
+	provinceNotMatchCnt := 0
+	areaNotMatchCnt := 0
+	provinceMap := make(map[string]int)
+	areaMap := make(map[string]int)
+	csv := "localAddr, 省份, 大区, 运营商, remoteAddr, 省份, 大区, 运营商, result\n"
+	for _, row := range rows[1:] {
+		localAddr := row[0]
+		remoteAddr := row[1]
+		parts := strings.Split(localAddr, ":")
+		if len(parts) != 2 {
+			log.Println("parse local addr err", localAddr)
+			continue
+		}
+		localIp := parts[0]
+		parts = strings.Split(remoteAddr, ":")
+		if len(parts) != 2 {
+			log.Println("parse remote addr err", remoteAddr)
+		}
+		remoteIp := parts[0]
+		localIsp, localArea, localProvince := getLocate(localIp, s.ipParser)
+		if localIsp == "" || localArea == "" || localProvince == "" {
+			s.logger.Error().Str("localIsp", localIsp).
+				Str("localArea", localArea).
+				Str("localProvince", localProvince).
+				Str("localIp", localIp).
+				Msg("getLocate")
+			ipParseErrCnt++
+			continue
+		}
+		remoteIsp, remoteArea, remoteProvince := getLocate(remoteIp, s.ipParser)
+		if remoteIsp == "" || remoteArea == "" || remoteProvince == "" {
+			s.logger.Error().Str("remoteIsp", remoteIsp).
+				Str("remoteIsp", remoteIsp).
+				Str("remoteProvince", remoteProvince).
+				Str("remoteIp", remoteIp).
+				Msg("getLocate")
+			ipParseErrCnt++
+			continue
+		}
+
+		match := true
+		result := ""
+		if localIsp != remoteIsp {
+			match = false
+			result += "isp不匹配;"
+			ispNotMatchCnt++
+		}
+
+		if localProvince != remoteProvince {
+			match = false
+			result += " 省份不匹配;"
+			provinceNotMatchCnt++
+
+			key := remoteProvince + "_" + remoteIsp
+			provinceMap[key]++
+		}
+
+		if localArea != remoteArea {
+			match = false
+			result += " 大区不匹配"
+			areaNotMatchCnt++
+
+			key := remoteArea + "_" + remoteIsp
+			areaMap[key]++
+
+		}
+
+		if !match {
+			csv += fmt.Sprintf("%s, %s, %s, %s, %s, %s, %s, %s, %s\n",
+				localAddr, localProvince, localArea, localIsp,
+				remoteAddr, remoteProvince, remoteArea, remoteIsp,
+				result)
+		}
+	}
+
+	err := ioutil.WriteFile("/tmp/coverResult.csv", []byte(csv), 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("ipParseErrCnt:", ipParseErrCnt, "ispNotMatchCnt:", ispNotMatchCnt, "areaNotMatchCnt:", areaNotMatchCnt,
+		"provinceNotMatchCnt:", provinceNotMatchCnt)
+	pairs := SortIntMap(provinceMap)
+	for _, pair := range pairs {
+		log.Println(pair.Key, pair.Value)
+	}
+	pairs = SortIntMap(areaMap)
+	for _, pair := range pairs {
+		log.Println(pair.Key, pair.Value)
+	}
 }

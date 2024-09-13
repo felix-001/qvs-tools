@@ -27,6 +27,9 @@ func getLocate(ip string, ipParser *ipdb.City) (string, string, string) {
 	if locate.Isp == "" {
 		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
 	}
+	if locate.Country != "中国" {
+		log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
+	}
 	area, _ := schedUtil.ProvinceAreaRelation(locate.Region)
 	return locate.Isp, area, locate.Region
 }

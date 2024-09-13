@@ -65,5 +65,8 @@ func loadCfg() *Config {
 		conf.NeedNodeStreamInfo = true
 		conf.NeedIpParer = true
 	}
+	if conf.Cmd == "coverchk" {
+		conf.NeedIpParer = true
+	}
 	return &conf
 }
