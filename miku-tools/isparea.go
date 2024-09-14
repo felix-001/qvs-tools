@@ -14,7 +14,7 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 			continue
 		}
 		lastStream := ""
-		isp, area := getNodeLocate(node, s.ipParser)
+		isp, area, _ := getNodeLocate(node, s.ipParser)
 		if isp == "" || area == "" {
 			//log.Println("node", node.Id, "get ip locate err")
 			continue
@@ -42,7 +42,7 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				s.streamDetailMap[stream.Key][isp] = make(map[string]*StreamInfo)
 			}
 			onlineNum, bw := s.getStreamDetail(stream)
-			isRoot := s.isRoot(node)
+			//isRoot := s.isRoot(node)
 			if streamInfo, ok := s.streamDetailMap[stream.Key][isp][area]; !ok {
 				s.streamDetailMap[stream.Key][isp][area] = &StreamInfo{
 					OnlineNum: uint32(onlineNum),
@@ -50,11 +50,13 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 					//RelayBw:   convertMbps(stream.RelayBandwidth),
 				}
 				streamInfo := s.streamDetailMap[stream.Key][isp][area]
-				if !isRoot {
-					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
-				} else {
-					streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
-				}
+				/*
+					if !isRoot {
+						streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
+					} else {
+						streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
+					}
+				*/
 				if stream.RelayType == 2 {
 					streamInfo.RelayBw = convertMbps(stream.RelayBandwidth)
 				}
@@ -64,11 +66,13 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				if stream.RelayType == 2 {
 					streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
 				}
-				if !isRoot {
-					streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
-				} else {
-					streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
-				}
+				/*
+					if !isRoot {
+						streamInfo.EdgeNodes = append(streamInfo.EdgeNodes, node.Id)
+					} else {
+						streamInfo.RootNodes = append(streamInfo.RootNodes, node.Id)
+					}
+				*/
 			}
 		}
 	}

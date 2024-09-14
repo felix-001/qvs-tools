@@ -95,13 +95,15 @@ type NodeDetail struct {
 }
 
 type StreamInfo struct {
-	EdgeNodes    []string
-	RootNodes    []string
-	OfflineNodes []string
-	StaticNodes  []string
-	RelayBw      float64
-	Bw           float64
-	OnlineNum    uint32
+	//EdgeNodes    []string
+	//EdgeNodes    map[string]*model.StreamInfoRT
+	//RootNodes    []string
+	//OfflineNodes []string
+	//StaticNodes []string
+	RelayBw       float64
+	Bw            float64
+	OnlineNum     uint32
+	NodeStreamMap map[string]map[string]*model.StreamInfoRT // key1: node type(edge/root/offline/static) key2: node Id
 }
 
 type NodeUnavailableDetail struct {

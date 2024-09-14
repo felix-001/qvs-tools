@@ -58,6 +58,7 @@ func loadCfg() *Config {
 		conf.Redis = true
 		conf.NodeInfo = true
 		conf.NeedNodeStreamInfo = true
+		conf.NeedIpParer = true
 	}
 	if conf.Cmd == "bwdis" {
 		conf.Redis = true

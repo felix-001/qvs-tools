@@ -34,7 +34,7 @@ func getLocate(ip string, ipParser *ipdb.City) (string, string, string) {
 	return locate.Isp, area, locate.Region
 }
 
-func getNodeLocate(node *model.RtNode, ipParser *ipdb.City) (string, string) {
+func getNodeLocate(node *model.RtNode, ipParser *ipdb.City) (string, string, string) {
 	for _, ip := range node.Ips {
 		if ip.IsIPv6 {
 			continue
@@ -42,12 +42,12 @@ func getNodeLocate(node *model.RtNode, ipParser *ipdb.City) (string, string) {
 		if publicUtil.IsPrivateIP(ip.Ip) {
 			continue
 		}
-		isp, area, _ := getLocate(ip.Ip, ipParser)
+		isp, area, province := getLocate(ip.Ip, ipParser)
 		if area != "" {
-			return isp, area
+			return isp, area, province
 		}
 	}
-	return "", ""
+	return "", "", ""
 }
 
 func (s *Parser) isRoot(node *model.RtNode) bool {

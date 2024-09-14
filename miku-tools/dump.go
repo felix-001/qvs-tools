@@ -11,6 +11,7 @@ import (
 
 var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
 
+/*
 func (s *Parser) dump() {
 	csv := hdr
 	cnt := 0
@@ -57,8 +58,8 @@ func (s *Parser) dump() {
 		for roomId, onlineNum := range roomOnlineMap {
 			fmt.Println(roomId, onlineNum)
 		}
-	*/
 }
+*/
 
 func str2unix(s string) (int64, error) {
 	loc, _ := time.LoadLocation("Local")
