@@ -130,6 +130,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.DumpRoots,
 			Usage:   "dump root节点详情",
 		},
+		"dyPcdn": {
+			Handler: parser.DyPcdn,
+			Usage:   "选择一个有root的大区,且不存在该流的非root节点",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

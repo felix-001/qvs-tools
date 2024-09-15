@@ -39,3 +39,7 @@ func (s *Parser) DyPlay() {
 	fmt.Println(string(output))
 
 }
+
+func (s *Parser) DyPcdn() {
+	fmt.Println(s.getPcdnFromSchedAPI())
+}
