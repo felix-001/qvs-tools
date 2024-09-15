@@ -126,6 +126,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Staging,
 			Usage:   "staging",
 		},
+		"dumproot": {
+			Handler: parser.DumpRoots,
+			Usage:   "dump root节点详情",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

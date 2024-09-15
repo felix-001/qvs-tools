@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -182,4 +183,24 @@ func (s *Parser) saveStreamSchedInfosToCsv(streamSchedInfos []SchedInfo) {
 		return
 	}
 	fmt.Println(string(output))
+}
+
+func (s *Parser) DumpRoots() {
+	areaNodeCntMap := make(map[string]int)
+	for key, detail := range s.allRootNodesMapByAreaIsp {
+		cnt := 0
+		for _, rootNode := range detail {
+			if rootNode.Forbidden {
+				continue
+			}
+			cnt++
+		}
+		areaNodeCntMap[key] = cnt
+	}
+	jsonbody, err := json.Marshal(areaNodeCntMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(jsonbody))
 }

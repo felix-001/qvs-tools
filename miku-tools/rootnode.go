@@ -19,7 +19,7 @@ func (s *Parser) buildRootNodesMap() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("map len", len(dynamicRootNodesMap))
+	//log.Println("map len", len(dynamicRootNodesMap))
 	s.allRootNodesMapByNodeId = make(map[string]*model.RtNode)
 	s.allRootNodesMapByAreaIsp = dynamicRootNodesMap
 	for _, rootNodes := range dynamicRootNodesMap {

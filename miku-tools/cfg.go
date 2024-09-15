@@ -71,5 +71,9 @@ func loadCfg() *Config {
 	if conf.Cmd == "coverchk" {
 		conf.NeedIpParer = true
 	}
+	if conf.Cmd == "dumproot" {
+		conf.Redis = true
+		conf.NodeInfo = true
+	}
 	return &conf
 }

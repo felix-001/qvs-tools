@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -22,7 +21,7 @@ func (s *Parser) buildAllNodesMap() {
 		allNodesMap[node.Id] = node
 	}
 	s.allNodesMap = allNodesMap
-	fmt.Println("all nodes count:", len(s.allNodesMap))
+	//fmt.Println("all nodes count:", len(s.allNodesMap))
 }
 
 func (s *Parser) buildNodeStreamsMap() {
