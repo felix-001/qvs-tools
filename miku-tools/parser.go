@@ -118,6 +118,14 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Pcdn,
 			Usage:   "请求pcdn接口",
 		},
+		"dyplay": {
+			Handler: parser.DyPlay,
+			Usage:   "播放dy地址",
+		},
+		"stag": {
+			Handler: parser.Staging,
+			Usage:   "staging",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

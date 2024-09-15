@@ -2,12 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/url"
 	"time"
 
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
+	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
+	"github.com/qbox/mikud-live/common/model"
+	"github.com/qbox/mikud-live/common/util"
 )
 
 type PlaycheckReq struct {
@@ -155,6 +159,95 @@ func (s *Parser) PcdnDbg() {
 	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt, "areaErrCnt:", areaErrCnt)
 }
 
-func (s *Parser) Pcdn() {
+func (s *Parser) getPcdn() string {
+	ispProvincesIpMap := s.loadTestIpData()
+	ip := ispProvincesIpMap[s.conf.Isp][s.conf.Province]
+	if ip == "" {
+		s.logger.Info().Str("isp", s.conf.Isp).Str("province", s.conf.Province).Msg("no ip found")
+		return ""
+	}
+	host := s.conf.Bucket
+	if s.conf.Bucket == "dycold" {
+		s.conf.Bucket = "miku-lived-douyu.qiniuapi.com"
+	}
+	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=http&did=dummy&host=%s",
+		s.conf.Bucket, s.conf.Stream, ip, host)
 
+	data, err := get(addr)
+	if err != nil {
+		s.logger.Info().Err(err).Str("addr", addr).Msg("req douyugetpcdn err")
+		return ""
+	}
+	fmt.Println(data)
+	var resp model.DouyuPcdnResp
+	if err := json.Unmarshal([]byte(data), &resp); err != nil {
+		log.Println(err)
+		return ""
+	}
+	return resp.PCDN
+}
+
+func (s *Parser) Pcdn() {
+	pcdn := s.getPcdn()
+	fmt.Println(pcdn)
+}
+
+func (s *Parser) getPcdnFromSchedAPI() string {
+	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
+	resp, err := get(addr)
+	if err != nil {
+		s.logger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
+		return ""
+	}
+	//fmt.Println(resp)
+	areaNodesMap := make(map[string][]*schedModel.NodeIpsPair)
+	if err := json.Unmarshal([]byte(resp), &areaNodesMap); err != nil {
+		s.logger.Error().Err(err).Msg("unmashal err")
+		return ""
+	}
+	key := fmt.Sprintf("area_isp_group_%s_%s", s.conf.Area, s.conf.Isp)
+	nodes, ok := areaNodesMap[key]
+	if !ok {
+		s.logger.Error().
+			Str("area", s.conf.Area).
+			Str("isp", s.conf.Isp).
+			Msg("area isp not found nodes")
+		return ""
+	}
+	if len(nodes) == 0 {
+		s.logger.Error().Msg("nodes len is 0")
+		return ""
+	}
+	nodesMap := s.getNodesByStreamId()
+	streamNodes := nodesMap[key]
+	if streamNodes == nil {
+		s.logger.Error().Str("key", key).Msg("not found stream nodes")
+	}
+	pcdn := ""
+	var selectNode *schedModel.NodeIpsPair
+	for _, node := range nodes {
+		for _, detail := range streamNodes {
+			if node.Node.Id == detail.NodeId {
+				s.logger.Info().Str("node", node.Node.Id).Msg("skip node")
+				continue
+			}
+		}
+		for _, ipInfo := range node.Ips {
+			if ipInfo.IsIPv6 {
+				continue
+			}
+			if util.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			pcdn = fmt.Sprintf("%s:%d", ipInfo.Ip, node.Node.StreamdPorts.Http)
+			selectNode = node
+			break
+		}
+	}
+	if pcdn == "" {
+		s.logger.Error().Msg("pcdn empty")
+		return ""
+	}
+	s.logger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
+	return pcdn
 }

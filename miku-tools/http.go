@@ -45,7 +45,7 @@ func (s *Parser) post(addr, jsonData string, out any) error {
 		return err
 	}
 	if err := json.Unmarshal(body, out); err != nil {
-		log.Println(err)
+		log.Println(err, string(body))
 		return err
 	}
 	return nil
@@ -121,4 +121,8 @@ func mikuHttpReq(method, addr, body, ak, sk string) (string, error) {
 	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token
 	return httpReq(method, addr, body, headers)
+}
+
+func get(addr string) (string, error) {
+	return httpReq("GET", addr, "", nil)
 }

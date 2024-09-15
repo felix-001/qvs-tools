@@ -19,7 +19,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Bucket, "bkt", "douyu", "bucket ID")
 	flag.StringVar(&conf.Node, "node", "", "node ID")
 	flag.StringVar(&conf.Stream, "stream", "288016rlols5_2000p", "stream ID")
-	flag.StringVar(&conf.PrometheusAddr, "prometheus", "101.132.36.201:9091", "prometheus addr")
+	//flag.StringVar(&conf.PrometheusAddr, "prometheus", "101.132.36.201:9091", "prometheus addr")
 	//flag.BoolVar(&conf.NeedIpParer, "ipparser", false, "是否需要ip库")
 	//flag.BoolVar(&conf.NeedCk, "ck", false, "是否需要clickhouse")
 	flag.BoolVar(&conf.NeedNodeStreamInfo, "streamNodes", false, "是否需要流所在的节点信息")
@@ -34,6 +34,10 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Cmd, "cmd", "streams", "需要执行的子命令(hlschk)")
 	flag.StringVar(&conf.QosFile, "qosfile", "", "解析从ck上下载的streamd qos文件，检查locate addr和remote addr是否跨isp、省、大区")
 	flag.BoolVar(&conf.Help, "h", false, "help")
+	flag.StringVar(&conf.Isp, "isp", "电信", "isp")
+	flag.StringVar(&conf.Province, "province", "浙江", "省份")
+	flag.StringVar(&conf.Area, "area", "华东", "大区")
+	flag.StringVar(&conf.Pcdn, "pcdn", "", "指定pcdn的ip:port")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

@@ -22,13 +22,13 @@ type Config struct {
 	RedisAddrs         []string    `json:"redis_addrs"`
 	IPDB               ipdb.Config `json:"ipdb"`
 	CK                 CkConfig    `json:"ck"`
+	Secret             string      `json:"secret"`
+	PrometheusAddr     string      `json:"prometheus"`
 	Bucket             string
 	Stream             string
 	Node               string
-	CheckNode          bool
 	NeedIpParer        bool
 	NeedCk             bool
-	PrometheusAddr     string
 	NeedNodeStreamInfo bool
 	LagFile            string
 	NodeInfo           bool
@@ -41,6 +41,10 @@ type Config struct {
 	Cmd                string
 	QosFile            string
 	Help               bool
+	Isp                string
+	Province           string
+	Area               string
+	Pcdn               string
 }
 
 type CmdHandler func()
