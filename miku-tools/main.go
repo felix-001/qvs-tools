@@ -10,5 +10,5 @@ func main() {
 	conf := loadCfg()
 	parser := newParser(conf)
 	parser.init()
-	parser.CmdMap[conf.Cmd]()
+	parser.CmdMap[conf.Cmd].Handler()
 }

@@ -42,9 +42,15 @@ type Config struct {
 	Sk                 string
 	Cmd                string
 	QosFile            string
+	Help               bool
 }
 
 type CmdHandler func()
+
+type CmdInfo struct {
+	Handler CmdHandler
+	Usage   string
+}
 
 type Parser struct {
 	redisCli                 *redis.ClusterClient
@@ -73,7 +79,7 @@ type Parser struct {
 	AvailableIpCnt                    int
 	BanTransProvNodeCnt               int
 	logger                            zerolog.Logger
-	CmdMap                            map[string]CmdHandler
+	CmdMap                            map[string]CmdInfo
 }
 
 type DynamicRootNode struct {

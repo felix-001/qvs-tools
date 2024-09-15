@@ -36,6 +36,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.StopAllStream, "stopstream", false, "停掉所有流连接")
 	flag.StringVar(&conf.Cmd, "cmd", "", "需要执行的子命令(hlschk)")
 	flag.StringVar(&conf.QosFile, "qosfile", "", "解析从ck上下载的streamd qos文件，检查locate addr和remote addr是否跨isp、省、大区")
+	flag.BoolVar(&conf.Help, "h", false, "help")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {
