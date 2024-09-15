@@ -45,6 +45,7 @@ type Config struct {
 	Province           string
 	Area               string
 	Pcdn               string
+	Ip                 string
 }
 
 type CmdHandler func()

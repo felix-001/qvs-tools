@@ -38,6 +38,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Province, "province", "浙江", "省份")
 	flag.StringVar(&conf.Area, "area", "华东", "大区")
 	flag.StringVar(&conf.Pcdn, "pcdn", "", "指定pcdn的ip:port")
+	flag.StringVar(&conf.Ip, "ip", "", "通过ip获取node id")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {
@@ -72,6 +73,10 @@ func loadCfg() *Config {
 		conf.NeedIpParer = true
 	}
 	if conf.Cmd == "dumproot" {
+		conf.Redis = true
+		conf.NodeInfo = true
+	}
+	if conf.Cmd == "nodebyip" {
 		conf.Redis = true
 		conf.NodeInfo = true
 	}

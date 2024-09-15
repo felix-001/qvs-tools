@@ -134,6 +134,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.DyPcdn,
 			Usage:   "选择一个有root的大区,且不存在该流的非root节点",
 		},
+		"nodebyip": {
+			Handler: parser.GetNodeByIp,
+			Usage:   "通过ip获取节点id",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
