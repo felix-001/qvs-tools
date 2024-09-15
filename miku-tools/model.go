@@ -30,14 +30,12 @@ type Config struct {
 	NeedCk             bool
 	PrometheusAddr     string
 	NeedNodeStreamInfo bool
-	Bw                 bool
 	LagFile            string
 	NodeInfo           bool
 	Prometheus         bool
 	Redis              bool
 	DnsResFile         string
 	PathqueryLogFile   string
-	StopAllStream      bool
 	Ak                 string
 	Sk                 string
 	Cmd                string

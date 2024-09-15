@@ -22,8 +22,9 @@ func dumpCmdMap(cmdMap map[string]CmdInfo) {
 }
 
 func newParser(conf *Config) *Parser {
+
 	redisCli := &redis.ClusterClient{}
-	if conf.Redis {
+	if conf.Redis && !conf.Help {
 		redisCli = redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:      conf.RedisAddrs,
 			MaxRetries: 3,
@@ -36,7 +37,7 @@ func newParser(conf *Config) *Parser {
 		}
 	}
 	var ipParser *ipdb.City
-	if conf.NeedIpParer {
+	if conf.NeedIpParer && !conf.Help {
 		//qlog.SetOutputLevel(5)
 		var err error
 		ipParser, err = ipdb.NewCity(conf.IPDB)
@@ -51,6 +52,7 @@ func newParser(conf *Config) *Parser {
 		ck:       ck,
 		conf:     conf,
 	}
+
 	cmdMap := map[string]CmdInfo{
 		"hlschk": {
 			Handler: parser.HlsChk,
@@ -111,6 +113,10 @@ func newParser(conf *Config) *Parser {
 		"bwdis": {
 			Handler: parser.BwDis, // 按省份、运营商，带宽分布
 			Usage:   "获取某个bucket跑量在各个省份/大区/isp分布情况",
+		},
+		"pcdn": {
+			Handler: parser.Pcdn,
+			Usage:   "请求pcdn接口",
 		},
 	}
 	if conf.Help {

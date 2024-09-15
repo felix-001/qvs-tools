@@ -154,3 +154,7 @@ func (s *Parser) PcdnDbg() {
 	}
 	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt, "areaErrCnt:", areaErrCnt)
 }
+
+func (s *Parser) Pcdn() {
+
+}
