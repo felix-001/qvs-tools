@@ -43,6 +43,7 @@ func (s *Parser) buildNodeStreamsMap() {
 
 func (s *Parser) init() {
 	if s.conf.NodeInfo {
+		// TODO: 使用文件缓存+线上更新并行的方式
 		s.buildAllNodesMap()
 		s.buildRootNodesMap()
 	}
