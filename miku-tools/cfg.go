@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	confFile = "./middle-source.json"
+	confFile = "/tmp/middle-source.json"
 )
 
 func loadCfg() *Config {

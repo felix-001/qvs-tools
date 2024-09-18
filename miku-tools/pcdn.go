@@ -95,7 +95,7 @@ func (s *Parser) fetchProvincesIps() {
 }
 
 func (s *Parser) loadTestIpData() map[string]map[string]string {
-	bytes, err := ioutil.ReadFile("ips.json")
+	bytes, err := ioutil.ReadFile("/tmp/ips.json")
 	if err != nil {
 		log.Println("read fail", "ips.json", err)
 		return nil
