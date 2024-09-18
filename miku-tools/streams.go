@@ -37,7 +37,7 @@ func (s *Parser) getStreamSourceNodeMap(bkt string) (map[string][]string, map[st
 }
 
 // var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 拉流带宽, 回源带宽, 放大比, 边缘回源节点个数, 边缘回源节点详情, root回源节点个数, root回源节点详情, 静态回源节点个数, 静态回源节点详情, 离线回源节点个数, 离线回源节点详情, new \n"
-var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 拉流带宽, 回源带宽, 放大比\n"
+var streamRatioHdr = "流ID, ISP, 在线人数, 回源节点个数, 静态回源节点个数, 拉流带宽, 回源带宽, 放大比\n"
 
 func (s *Parser) dumpStreamsDetail(bkt string) {
 	streamSourceNodesMap, notServingNodesMap := s.getStreamSourceNodeMap(bkt)
@@ -217,58 +217,39 @@ func getStreamBw(streamInfoRT *model.StreamInfoRT) float64 {
 	return bw
 }
 
-func (s *Parser) saveStreamsInfoToCSV() {
-	csv := streamRatioHdr
-	streamDetailCsv := "流ID, ISP, 节点类型, 节点ID, 客户端个数, 带宽, 在线人数, connId, 大区, 省份\n"
-	lastStreamId := ""
-	for streamId, ispDetail := range s.streamInfoMap {
-		lastIsp := ""
-		for isp, detail := range ispDetail {
-			ratio := detail.Bw / detail.RelayBw
-			nodeCnt := len(detail.NodeStreamMap[NodeTypeEdge]) +
-				len(detail.NodeStreamMap[NodeTypeRoot]) +
-				len(detail.NodeStreamMap[NodeTypeStatic])
-			/*
-				csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f, %d, %s, %d, %s, %d, %s, %d, %s, \"%s\"\n",
-					streamId, isp, detail.OnlineNum, nodeCnt,
-					detail.Bw, detail.RelayBw, ratio,
-					len(detail.EdgeNodes), detail.EdgeNodes, len(detail.RootNodes), detail.RootNodes,
-					len(detail.StaticNodes), detail.StaticNodes, len(detail.OfflineNodes), detail.OfflineNodes, string(jsonbody))
-			*/
-			csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f\n",
-				streamId, isp, detail.OnlineNum, nodeCnt,
-				detail.Bw, detail.RelayBw, ratio)
-
-			for nodeType, streamDetail := range detail.NodeStreamMap {
-				lastNodeType := ""
-				for nodeId, streamInfoRT := range streamDetail {
-					sid := ""
-					if lastStreamId != streamId {
-						sid = streamId
-					}
-					tmpIsp := ""
-					if lastIsp != isp {
-						tmpIsp = isp
-					}
-					tmpNodeType := ""
-					if lastNodeType != nodeType {
-						tmpNodeType = nodeType
-					}
-					node := s.allNodesMap[nodeId]
-					_, area, province := getNodeLocate(node, s.ipParser)
-					streamDetailCsv += fmt.Sprintf("%s, %s, %s, %s, %d, %.1f, %d, %s, %s, %s\n",
-						sid, tmpIsp, tmpNodeType, nodeId, getStreamClientCnt(streamInfoRT),
-						getStreamBw(streamInfoRT), getStreamOnlineNum(streamInfoRT),
-						streamInfoRT.Pusher[0].ConnectId, area, province)
-					lastNodeType = nodeType
-					lastStreamId = streamId
-					lastIsp = isp
-				}
+func (s *Parser) dumpStreamDetail(detail *StreamInfo, lastStreamId, streamId, lastIsp, isp string) string {
+	csv := ""
+	for nodeType, streamDetail := range detail.NodeStreamMap {
+		lastNodeType := ""
+		for nodeId, streamInfoRT := range streamDetail {
+			sid := ""
+			if lastStreamId != streamId {
+				sid = streamId
 			}
+			tmpIsp := ""
+			if lastIsp != isp {
+				tmpIsp = isp
+			}
+			tmpNodeType := ""
+			if lastNodeType != nodeType {
+				tmpNodeType = nodeType
+			}
+			lastNodeType = nodeType
+			lastStreamId = streamId
+			lastIsp = isp
+			node := s.allNodesMap[nodeId]
+			_, area, province := getNodeLocate(node, s.ipParser)
+			csv += fmt.Sprintf("%s, %s, %s, %s, %d, %.1f, %d, %s, %s, %s\n",
+				sid, tmpIsp, tmpNodeType, nodeId, getStreamClientCnt(streamInfoRT),
+				getStreamBw(streamInfoRT), getStreamOnlineNum(streamInfoRT),
+				streamInfoRT.Pusher[0].ConnectId, area, province)
 		}
 	}
+	return csv
+}
 
-	file := fmt.Sprintf("streams-%d.csv", time.Now().Unix())
+func (s *Parser) saveFile(filename, csv string) {
+	file := fmt.Sprintf(filename)
 	err := ioutil.WriteFile(file, []byte(csv), 0644)
 	if err != nil {
 		log.Println(err)
@@ -280,17 +261,43 @@ func (s *Parser) saveStreamsInfoToCSV() {
 		return
 	}
 	fmt.Println(string(output))
+}
 
-	file = fmt.Sprintf("streamsDetail-%d.csv", time.Now().Unix())
-	err = ioutil.WriteFile(file, []byte(streamDetailCsv), 0644)
-	if err != nil {
-		log.Println(err)
+var streamDetailHdr = "流ID, ISP, 节点类型, 节点ID, 客户端个数, 带宽, 在线人数, connId, 大区, 省份\n"
+var streamStaticNodeCntHdr = "流ID, 在线人数, 静态节点个数, 拉流带宽, 回源带宽, 放大比\n"
+
+func (s *Parser) saveStreamsInfoToCSV() {
+	csv := streamRatioHdr
+	streamDetailCsv := streamDetailHdr
+	streamStaticNodeCntCsv := streamStaticNodeCntHdr
+	lastStreamId := ""
+	for streamId, ispDetail := range s.streamInfoMap {
+		lastIsp := ""
+		totalOnlineNum := 0
+		totalStaticNodeCnt := 0
+		var totalBw, totalRelayBw float64
+		for isp, detail := range ispDetail {
+			ratio := detail.Bw / detail.RelayBw
+			nodeCnt := len(detail.NodeStreamMap[NodeTypeEdge]) +
+				len(detail.NodeStreamMap[NodeTypeRoot]) +
+				len(detail.NodeStreamMap[NodeTypeStatic])
+			csv += fmt.Sprintf("%s, %s, %d, %d, %.1f, %.1f, %.1f\n",
+				streamId, isp, detail.OnlineNum, nodeCnt,
+				detail.Bw, detail.RelayBw, ratio)
+			streamDetailCsv += s.dumpStreamDetail(detail, lastStreamId,
+				streamId, lastIsp, isp)
+
+			totalOnlineNum += int(detail.OnlineNum)
+			totalStaticNodeCnt += len(detail.NodeStreamMap[NodeTypeStatic])
+			totalBw += detail.Bw
+			totalRelayBw += detail.RelayBw
+		}
+		streamStaticNodeCntCsv += fmt.Sprintf("%s, %d, %d, %.1f, %.1f, %.1f\n",
+			streamId, totalOnlineNum, totalStaticNodeCnt, totalBw,
+			totalRelayBw, totalBw/totalRelayBw)
 	}
-	cmd = exec.Command("./qup", file)
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("命令执行出错: %v\n", err)
-		return
-	}
-	fmt.Println(string(output))
+
+	s.saveFile(fmt.Sprintf("streams-%d.csv", time.Now().Unix()), csv)
+	s.saveFile(fmt.Sprintf("streamsDetail-%d.csv", time.Now().Unix()), streamDetailCsv)
+	s.saveFile(fmt.Sprintf("streams-static-cnt-%d.csv", time.Now().Unix()), streamStaticNodeCntCsv)
 }
