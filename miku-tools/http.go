@@ -126,3 +126,7 @@ func mikuHttpReq(method, addr, body, ak, sk string) (string, error) {
 func get(addr string) (string, error) {
 	return httpReq("GET", addr, "", nil)
 }
+
+func getWithBody(addr, body string) (string, error) {
+	return httpReq("GET", addr, body, nil)
+}

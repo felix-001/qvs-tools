@@ -24,7 +24,7 @@ func (s *Parser) dySecret() (string, string) {
 func (s *Parser) DyPlay() {
 	//pcdn := s.getPcdn()
 	if s.conf.Pcdn == "" {
-		s.conf.Pcdn = s.getPcdnFromSchedAPI()
+		_, s.conf.Pcdn = s.getPcdnFromSchedAPI(true, false)
 	}
 	wsTime, wsSecret := s.dySecret()
 	cmdStr := fmt.Sprintf("./xs -addr %s -path %s/%s.xs -q \"wsSecret=%s&wsTime=%s&domain=qn-ss.douyucdn.cn&sourceID=2594498916\" -f out.xs",
@@ -41,5 +41,5 @@ func (s *Parser) DyPlay() {
 }
 
 func (s *Parser) DyPcdn() {
-	fmt.Println(s.getPcdnFromSchedAPI())
+	fmt.Println(s.getPcdnFromSchedAPI(true, false))
 }

@@ -192,18 +192,18 @@ func (s *Parser) Pcdn() {
 	fmt.Println(pcdn)
 }
 
-func (s *Parser) getPcdnFromSchedAPI() string {
+func (s *Parser) getPcdnFromSchedAPI(skipReport, skipRoot bool) (string, string) {
 	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
 	resp, err := get(addr)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
-		return ""
+		return "", ""
 	}
 	//fmt.Println(resp)
 	areaNodesMap := make(map[string][]*schedModel.NodeIpsPair)
 	if err := json.Unmarshal([]byte(resp), &areaNodesMap); err != nil {
 		s.logger.Error().Err(err).Msg("unmashal err")
-		return ""
+		return "", ""
 	}
 	key := fmt.Sprintf("area_isp_group_%s_%s", s.conf.Area, s.conf.Isp)
 	nodes, ok := areaNodesMap[key]
@@ -212,11 +212,11 @@ func (s *Parser) getPcdnFromSchedAPI() string {
 			Str("area", s.conf.Area).
 			Str("isp", s.conf.Isp).
 			Msg("area isp not found nodes")
-		return ""
+		return "", ""
 	}
 	if len(nodes) == 0 {
 		s.logger.Error().Msg("nodes len is 0")
-		return ""
+		return "", ""
 	}
 	nodesMap := s.getNodesByStreamId()
 	streamNodes := nodesMap[key]
@@ -226,9 +226,17 @@ func (s *Parser) getPcdnFromSchedAPI() string {
 	pcdn := ""
 	var selectNode *schedModel.NodeIpsPair
 	for _, node := range nodes {
-		for _, detail := range streamNodes {
-			if node.Node.Id == detail.NodeId {
-				s.logger.Info().Str("node", node.Node.Id).Msg("skip node")
+		if skipReport {
+			for _, detail := range streamNodes {
+				if node.Node.Id == detail.NodeId {
+					s.logger.Info().Str("node", node.Node.Id).Msg("skip node")
+					continue
+				}
+			}
+		}
+		if skipRoot {
+			if _, ok := s.allRootNodesMapByNodeId[node.Node.Id]; ok {
+				s.logger.Info().Str("node", node.Node.Id).Msg("skip root node")
 				continue
 			}
 		}
@@ -246,8 +254,8 @@ func (s *Parser) getPcdnFromSchedAPI() string {
 	}
 	if pcdn == "" {
 		s.logger.Error().Msg("pcdn empty")
-		return ""
+		return "", ""
 	}
 	s.logger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
-	return pcdn
+	return selectNode.Node.Id, pcdn
 }
