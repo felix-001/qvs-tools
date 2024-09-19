@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
@@ -46,6 +47,7 @@ type Config struct {
 	Area               string
 	Pcdn               string
 	Ip                 string
+	AccountCfg         qconfapi.Config
 }
 
 type CmdHandler func()
