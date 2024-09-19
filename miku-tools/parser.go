@@ -138,6 +138,11 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.GetNodeByIp,
 			Usage:   "通过ip获取节点id",
 		},
+		"pathquery": {},
+		"area": {
+			Handler: parser.Province2Area,
+			Usage:   "省份转换为大区",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

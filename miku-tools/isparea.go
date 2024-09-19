@@ -1,6 +1,11 @@
 package main
 
-import "log"
+import (
+	"log"
+	"strings"
+
+	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
+)
 
 /*
 流id - ISP - 大区
@@ -77,4 +82,15 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 		}
 	}
 	log.Println("total:", len(s.streamDetailMap))
+}
+
+func (s *Parser) Province2Area() {
+	parts := strings.Split(s.conf.Province, ",")
+
+	result := ""
+	for _, province := range parts {
+		area, _ := schedUtil.ProvinceAreaRelation(province)
+		result += area + ","
+	}
+	log.Println(result)
 }
