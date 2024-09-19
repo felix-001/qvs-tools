@@ -68,7 +68,7 @@ func (s *Parser) GetStreamNodeInfo(reqId, nodeId string) int64 {
 	midnight := getMidnight()
 	query := `
 SELECT  CustomerSource, RequestID, StartTime, Status
-FROM miku_data.streamd_qos 
+FROM miku_data.streamd_qos
 WHERE RequestID == '%s' AND Ts > '%s' AND NodeID == '%s'
 LIMIT 1;
 `
@@ -92,9 +92,9 @@ LIMIT 1;
 
 func (s *Parser) GetIpByProvinceIsp(province, isp string) string {
 	query := `
-SELECT  Region, Isp, RemoteAddr  
-from miku_data.streamd_qos 
-WHERE Type = 'player' AND Region  = '%s' AND Isp = '%s' 
+SELECT  Region, Isp, RemoteAddr
+from miku_data.streamd_qos
+WHERE Type = 'player' AND Region  = '%s' AND Isp = '%s'
 LIMIT 1;
 `
 	query = fmt.Sprintf(query, province, isp)
