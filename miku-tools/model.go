@@ -122,3 +122,8 @@ type NodeUnavailableDetail struct {
 	Reason   string
 	Detail   string
 }
+
+type StreamDetail struct {
+	model.StreamInfoRT
+	NodeId string
+}

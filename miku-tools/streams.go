@@ -264,7 +264,7 @@ func (s *Parser) saveFile(filename, csv string) {
 }
 
 var streamDetailHdr = "流ID, ISP, 节点类型, 节点ID, 客户端个数, 带宽, 在线人数, connId, 大区, 省份\n"
-var streamStaticNodeCntHdr = "流ID, 在线人数, 静态节点个数, 拉流带宽, 回源带宽, 放大比\n"
+var streamStaticNodeCntHdr = "流ID, 在线人数, 静态节点个数, 拉流带宽, 回源带宽, 放大比, 节点详情\n"
 
 func (s *Parser) saveStreamsInfoToCSV() {
 	csv := streamRatioHdr
@@ -276,6 +276,7 @@ func (s *Parser) saveStreamsInfoToCSV() {
 		totalOnlineNum := 0
 		totalStaticNodeCnt := 0
 		var totalBw, totalRelayBw float64
+		var staticNodes []string
 		for isp, detail := range ispDetail {
 			ratio := detail.Bw / detail.RelayBw
 			nodeCnt := len(detail.NodeStreamMap[NodeTypeEdge]) +
@@ -291,10 +292,13 @@ func (s *Parser) saveStreamsInfoToCSV() {
 			totalStaticNodeCnt += len(detail.NodeStreamMap[NodeTypeStatic])
 			totalBw += detail.Bw
 			totalRelayBw += detail.RelayBw
+			for nodeId, _ := range detail.NodeStreamMap[NodeTypeStatic] {
+				staticNodes = append(staticNodes, nodeId)
+			}
 		}
-		streamStaticNodeCntCsv += fmt.Sprintf("%s, %d, %d, %.1f, %.1f, %.1f\n",
+		streamStaticNodeCntCsv += fmt.Sprintf("%s, %d, %d, %.1f, %.1f, %.1f, %+v\n",
 			streamId, totalOnlineNum, totalStaticNodeCnt, totalBw,
-			totalRelayBw, totalBw/totalRelayBw)
+			totalRelayBw, totalBw/totalRelayBw, staticNodes)
 	}
 
 	s.saveFile(fmt.Sprintf("streams-%d.csv", time.Now().Unix()), csv)
