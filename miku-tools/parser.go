@@ -150,6 +150,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.GetDyMetrics,
 			Usage:   "获取dy异常指标",
 		},
+		"pcdns": {
+			Handler: parser.Pcdns,
+			Usage:   "遍历province*isp, 请求pcdn",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

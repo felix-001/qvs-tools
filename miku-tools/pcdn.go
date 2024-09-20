@@ -6,9 +6,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
+	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/mikud-live/common/util"
@@ -258,4 +260,41 @@ func (s *Parser) getPcdnFromSchedAPI(skipReport, skipRoot bool) (string, string)
 	}
 	s.logger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
 	return selectNode.Node.Id, pcdn
+}
+
+func (s *Parser) Pcdns() {
+	totalAreaNotMatch := 0
+	totalIspNotMatch := 0
+	totalReqCnt := 0
+	areaNotCoverCntMap := make(map[string]int)
+	for _, province := range Provinces {
+		for _, isp := range Isps {
+			s.conf.Province = province
+			s.conf.Isp = isp
+			pcdn := s.getPcdn()
+			parts := strings.Split(pcdn, ":")
+			if len(parts) != 2 {
+				return
+			}
+			pcdnIsp, pcdnArea, _ := getLocate(parts[0], s.ipParser)
+			reqArea, _ := schedUtil.ProvinceAreaRelation(province)
+			if reqArea != pcdnArea {
+				s.logger.Error().Str("reqArea", reqArea).Str("pcdnArea", pcdnArea).Str("pcdn", pcdn).
+					Str("reqIsp", isp).Str("pcdnIsp", pcdnIsp).Msg("area chk err")
+				totalAreaNotMatch++
+				areaNotCoverCntMap[reqArea+"_"+isp]++
+			}
+			if isp != pcdnIsp {
+				s.logger.Error().Str("reqArea", reqArea).Str("pcdnArea", pcdnArea).Str("pcdn", pcdn).
+					Str("reqIsp", isp).Str("pcdnIsp", pcdnIsp).Msg("isp chk err")
+				totalIspNotMatch++
+			}
+			totalReqCnt++
+		}
+	}
+	s.logger.Info().Int("totalAreaNotMatch", totalAreaNotMatch).Int("totalIspNotMatch", totalIspNotMatch).
+		Int("areaNotMatch", len(areaNotCoverCntMap)).Int("totalReqCnt", totalReqCnt).Msg("Pcdns")
+	for area, cnt := range areaNotCoverCntMap {
+		s.logger.Info().Str("area", area).Int("cnt", cnt).Msg("area not match cnt")
+	}
 }
