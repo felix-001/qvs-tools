@@ -3,8 +3,6 @@
 "ipdb": {
     "ips_source_param": {
       "ipv4": {
-        "ak": "24wKcAkyFc3Mb4Xssivjn6_3rCFbrqIA030H_nbb",
-        "sk": "WWxwcbfWseG1TtyRRfJUjkm0RL8ONbvhDRJVasu_",
         "local_url": "./neo.ipv4.ipdb",
         "remote_url": "http://pv53kxj7u.bkt.clouddn.com/neo.ipv4.ipdb",
         "retry_count": 3,
@@ -12,8 +10,6 @@
         "reload_interval_s": 86400
       },
       "ipv6": {
-        "ak": "24wKcAkyFc3Mb4Xssivjn6_3rCFbrqIA030H_nbb",
-        "sk": "WWxwcbfWseG1TtyRRfJUjkm0RL8ONbvhDRJVasu_",
         "local_url": "./neo.ipv6.ipdb",
         "remote_url": "http://pv53kxj7u.bkt.clouddn.com/neo.ipv6.ipdb",
         "retry_count": 3,
