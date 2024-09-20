@@ -25,6 +25,8 @@ type Config struct {
 	CK                 CkConfig    `json:"ck"`
 	Secret             string      `json:"secret"`
 	PrometheusAddr     string      `json:"prometheus"`
+	DyApiSecret        string      `json:"dy_api_secret"`
+	DyApiDomain        string      `json:"dy_api_domain"`
 	Bucket             string
 	Stream             string
 	Node               string
@@ -48,6 +50,7 @@ type Config struct {
 	Pcdn               string
 	Ip                 string
 	AccountCfg         qconfapi.Config
+	T                  string
 }
 
 type CmdHandler func()

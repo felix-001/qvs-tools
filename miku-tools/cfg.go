@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	qconfig "github.com/qiniu/x/config"
 )
@@ -16,6 +17,9 @@ func loadCfg() *Config {
 	if err := qconfig.LoadFile(&conf, confFile); err != nil {
 		log.Fatalf("load config failed, err: %v", err)
 	}
+
+	t := time.Now().Format("2006-01-02 15:04:05")
+
 	flag.StringVar(&conf.Bucket, "bkt", "douyu", "bucket ID")
 	flag.StringVar(&conf.Node, "node", "", "node ID")
 	flag.StringVar(&conf.Stream, "stream", "288016rlols5_2000p", "stream ID")
@@ -39,6 +43,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Area, "area", "华东", "大区")
 	flag.StringVar(&conf.Pcdn, "pcdn", "", "指定pcdn的ip:port")
 	flag.StringVar(&conf.Ip, "ip", "", "通过ip获取node id")
+	flag.StringVar(&conf.T, "t", t, "时间, 格式: 2006-01-02 15:04:05")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

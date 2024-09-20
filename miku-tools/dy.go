@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 )
 
 func (s *Parser) dySecret() (string, string) {
@@ -42,4 +43,25 @@ func (s *Parser) DyPlay() {
 
 func (s *Parser) DyPcdn() {
 	fmt.Println(s.getPcdnFromSchedAPI(true, false))
+}
+
+func (s *Parser) GetDyMetrics() {
+	t, err := str2unix(s.conf.T)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("str2unix err")
+		return
+	}
+	ts := fmt.Sprintf("%x", t)
+	wsTime := fmt.Sprintf("%x", time.Now().Unix())
+	seed := s.conf.DyApiSecret + "qiniu" + wsTime
+	hash := md5.Sum([]byte(seed))
+	wsSecret := hex.EncodeToString(hash[:])
+	addr := fmt.Sprintf("http://%s/pcdn/v1/metrics/top_nodes/qiniu/?timestamp=%s&topn=20&wsSecret=%s&wsTime=%s",
+		s.conf.DyApiDomain, ts, wsSecret, wsTime)
+	resp, err := get(addr)
+	if err != nil {
+		s.logger.Error().Err(err).Str("addr", addr).Msg("req dy metrics err")
+		return
+	}
+	fmt.Println(resp)
 }

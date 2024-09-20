@@ -146,6 +146,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Province2Area,
 			Usage:   "省份转换为大区",
 		},
+		"dymetrics": {
+			Handler: parser.GetDyMetrics,
+			Usage:   "获取dy异常指标",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
