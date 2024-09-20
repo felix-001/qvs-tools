@@ -154,6 +154,14 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Pcdns,
 			Usage:   "遍历province*isp, 请求pcdn",
 		},
+		"ck": {
+			Handler: parser.Ck,
+			Usage:   "查询clickhouse",
+		},
+		"nali": {
+			Handler: parser.Nali,
+			Usage:   "解析ip的地理位置信息",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

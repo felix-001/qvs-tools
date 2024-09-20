@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -137,4 +138,14 @@ func (s *Parser) QueryCk(query string) []data.MikuQosObject {
 		datas = append(datas, obj)
 	}
 	return datas
+}
+
+func (s *Parser) Ck() {
+	datas := s.QueryCk(s.conf.Query)
+	bytes, err := json.Marshal(datas)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
 }

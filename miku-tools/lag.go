@@ -100,8 +100,8 @@ func (s *Parser) CoverChk() {
 	areaMap := make(map[string]int)
 	csv := "localAddr, 省份, 大区, 运营商, remoteAddr, 省份, 大区, 运营商, result\n"
 	for _, row := range rows[1:] {
-		localAddr := row[0]
-		remoteAddr := row[1]
+		localAddr := row[2]
+		remoteAddr := row[3]
 		parts := strings.Split(localAddr, ":")
 		if len(parts) != 2 {
 			log.Println("parse local addr err", localAddr)

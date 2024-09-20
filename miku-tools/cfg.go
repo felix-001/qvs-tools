@@ -39,6 +39,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Pcdn, "pcdn", "", "指定pcdn的ip:port")
 	flag.StringVar(&conf.Ip, "ip", "", "通过ip获取node id")
 	flag.StringVar(&conf.T, "t", t, "时间, 格式: 2006-01-02 15:04:05")
+	flag.StringVar(&conf.Query, "q", "", "查询ck的语句")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {
@@ -81,6 +82,9 @@ func loadCfg() *Config {
 		conf.NodeInfo = true
 	}
 	if conf.Cmd == "pcdns" {
+		conf.NeedIpParer = true
+	}
+	if conf.Cmd == "nali" {
 		conf.NeedIpParer = true
 	}
 	return &conf

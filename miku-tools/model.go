@@ -51,6 +51,7 @@ type Config struct {
 	Ip                 string
 	AccountCfg         qconfapi.Config
 	T                  string
+	Query              string
 }
 
 type CmdHandler func()

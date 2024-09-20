@@ -94,3 +94,11 @@ func (s *Parser) Province2Area() {
 	}
 	log.Println(result)
 }
+
+func (s *Parser) Nali() {
+	parts := strings.Split(s.conf.Ip, ",")
+	for _, ip := range parts {
+		isp, area, province := getLocate(ip, s.ipParser)
+		s.logger.Info().Str("isp", isp).Str("area", area).Str("province", province).Str("ip", ip).Msg("ip locate")
+	}
+}
