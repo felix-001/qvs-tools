@@ -119,3 +119,22 @@ LIMIT 1;
 	}
 	return ""
 }
+
+func (s *Parser) QueryCk(query string) []data.MikuQosObject {
+	datas := make([]data.MikuQosObject, 0)
+	rows, err := s.ck.Query(context.Background(), query)
+	if err != nil {
+		log.Printf("query rows failed, err: %+v\n", err)
+		return nil
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var obj data.MikuQosObject
+		if err := rows.ScanStruct(&obj); err != nil {
+			log.Printf("rows ScanStruct failed, err: %+v\n", err)
+			continue
+		}
+		datas = append(datas, obj)
+	}
+	return datas
+}
