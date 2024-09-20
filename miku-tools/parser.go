@@ -150,6 +150,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.GetDyMetrics,
 			Usage:   "获取dy异常指标",
 		},
+		"dytimeout": {
+			Handler: parser.GetDyTimeout,
+			Usage:   "获取dy一天内的topn 节点推送超时率数据",
+		},
 		"pcdns": {
 			Handler: parser.Pcdns,
 			Usage:   "遍历province*isp, 请求pcdn",

@@ -87,5 +87,9 @@ func loadCfg() *Config {
 	if conf.Cmd == "nali" {
 		conf.NeedIpParer = true
 	}
+	if conf.Cmd == "dytimeout" {
+		conf.Redis = true
+		conf.NodeInfo = true
+	}
 	return &conf
 }

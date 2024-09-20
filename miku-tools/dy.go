@@ -3,9 +3,11 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -45,12 +47,16 @@ func (s *Parser) DyPcdn() {
 	fmt.Println(s.getPcdnFromSchedAPI(true, false))
 }
 
-func (s *Parser) GetDyMetrics() {
-	t, err := str2unix(s.conf.T)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("str2unix err")
-		return
-	}
+type MetricResp struct {
+	Code int `json:"code"`
+	Data struct {
+		Metrics struct {
+			PushTimeout map[string]int `json:"push_timeout"`
+		} `json:"metrics"`
+	} `json:"data"`
+}
+
+func (s *Parser) getMetrics(t int64) *MetricResp {
 	ts := fmt.Sprintf("%x", t)
 	wsTime := fmt.Sprintf("%x", time.Now().Unix())
 	seed := s.conf.DyApiSecret + "qiniu" + wsTime
@@ -58,10 +64,59 @@ func (s *Parser) GetDyMetrics() {
 	wsSecret := hex.EncodeToString(hash[:])
 	addr := fmt.Sprintf("http://%s/pcdn/v1/metrics/top_nodes/qiniu/?timestamp=%s&topn=20&wsSecret=%s&wsTime=%s",
 		s.conf.DyApiDomain, ts, wsSecret, wsTime)
-	resp, err := get(addr)
+	metrics, err := get(addr)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("req dy metrics err")
+		return nil
+	}
+	var resp MetricResp
+	if err := json.Unmarshal([]byte(metrics), &resp); err != nil {
+		log.Println(err)
+		return nil
+	}
+	return &resp
+}
+
+func (s *Parser) GetDyMetrics() {
+	t, err := str2unix(s.conf.T)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("str2unix err")
 		return
 	}
+	resp := s.getMetrics(t)
 	fmt.Println(resp)
+}
+
+func (s *Parser) GetDyTimeout() {
+	t, err := str2unix(s.conf.T)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("str2unix err")
+		return
+	}
+	nodeCntMap := make(map[string]int)
+	// 5分钟查询一次
+	for i := 0; i < 24*60/5; i++ {
+		log.Println(i)
+		resp := s.getMetrics(t)
+		for pcdnId := range resp.Data.Metrics.PushTimeout {
+			parts := strings.Split(pcdnId, "/")
+			if len(parts) != 3 {
+				s.logger.Error().Str("pcdnId", pcdnId).Msg("parse pcdnId err")
+				continue
+			}
+			nodeCntMap[parts[0]]++
+		}
+		t += 5 * 60
+		time.Sleep(time.Second)
+	}
+	pairs := SortIntMap(nodeCntMap)
+	for _, pair := range pairs {
+		machineId := ""
+		node := s.allNodesMap[pair.Key]
+		if node != nil {
+			machineId = node.MachineId
+		}
+		s.logger.Info().Str("nodeId", pair.Key).Int("cnt", pair.Value).Str("machineId", machineId).Msg("")
+
+	}
 }
