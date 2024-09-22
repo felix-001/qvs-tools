@@ -84,7 +84,13 @@ func (s *Parser) GetDyMetrics() {
 		return
 	}
 	resp := s.getMetrics(t)
-	fmt.Println(resp)
+	//fmt.Println(resp)
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
 }
 
 func (s *Parser) GetDyTimeout() {

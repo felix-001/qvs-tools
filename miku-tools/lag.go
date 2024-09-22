@@ -23,6 +23,14 @@ type StreamdQos struct {
 	RemoteAddr  string
 }
 
+/*
+SELECT Ts,NodeID,StreamName, Region,CustomerSource,LocalAddr,RemoteAddr,StartTime,LagCount,LagDuration
+from miku_data.streamd_qos
+where AppName == 'douyu' and Ts > '2024-09-21 08:19:00' and Ts < '2024-09-21 08:24:00' and LagDuration > 0
+*/
+
+// TODO： 通过csv Heaer 确定相应的字段在第几列
+
 func (s *Parser) loadLagData() []StreamdQos {
 	bytes, err := ioutil.ReadFile(s.conf.LagFile)
 	if err != nil {
@@ -31,18 +39,18 @@ func (s *Parser) loadLagData() []StreamdQos {
 	}
 	datas := make([]StreamdQos, 0)
 	lines := strings.Split(string(bytes), "\n")
-	for _, line := range lines {
+	for _, line := range lines[1:] {
 		fields := strings.Split(line, ",")
 		if len(fields) != 10 {
 			continue
 		}
 
-		lagDuration, err := strconv.ParseInt(fields[6], 10, 32)
+		lagDuration, err := strconv.ParseInt(fields[8], 10, 32)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		lagCount, err := strconv.ParseInt(fields[7], 10, 32)
+		lagCount, err := strconv.ParseInt(fields[9], 10, 32)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -50,10 +58,8 @@ func (s *Parser) loadLagData() []StreamdQos {
 		data := StreamdQos{
 			Ts:          fields[0],
 			NodeId:      fields[1],
-			Region:      fields[2],
-			City:        fields[3],
-			StreamName:  fields[4],
-			Type:        fields[5],
+			StreamName:  fields[2],
+			Region:      fields[3],
 			LagDuration: int(lagDuration),
 			LagCount:    int(lagCount),
 		}
@@ -70,7 +76,8 @@ func (s *Parser) LagAnalysis() {
 
 	datas := s.loadLagData()
 	for _, data := range datas {
-		nodeLagCntMap[data.NodeId] += data.LagCount
+		//nodeLagCntMap[data.NodeId] += data.LagCount
+		nodeLagCntMap[data.NodeId] += data.LagDuration
 		streamLagCntMap[data.StreamName] += data.LagCount
 		regionLagCntMap[data.Region] += data.LagCount
 		area := util.ProvinceAreaRelation(data.Region)
