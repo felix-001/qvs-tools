@@ -52,6 +52,7 @@ type Config struct {
 	AccountCfg         qconfapi.Config
 	T                  string
 	Query              string
+	N                  int
 }
 
 type CmdHandler func()

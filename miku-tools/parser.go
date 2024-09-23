@@ -166,6 +166,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Nali,
 			Usage:   "解析ip的地理位置信息",
 		},
+		"looppcdn": {
+			Handler: parser.LoopPcdn,
+			Usage:   "循环请求pcdn",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

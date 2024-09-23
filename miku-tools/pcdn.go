@@ -161,7 +161,7 @@ func (s *Parser) PcdnDbg() {
 	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt, "areaErrCnt:", areaErrCnt)
 }
 
-func (s *Parser) getPcdn() string {
+func (s *Parser) getPcdn(did string) string {
 	ispProvincesIpMap := s.loadTestIpData()
 	ip := ispProvincesIpMap[s.conf.Isp][s.conf.Province]
 	if ip == "" {
@@ -172,8 +172,8 @@ func (s *Parser) getPcdn() string {
 	if s.conf.Bucket == "dycold" {
 		s.conf.Bucket = "miku-lived-douyu.qiniuapi.com"
 	}
-	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=http&did=dummy&host=%s",
-		s.conf.Bucket, s.conf.Stream, ip, host)
+	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=http&did=%s&host=%s",
+		s.conf.Bucket, s.conf.Stream, ip, did, host)
 
 	data, err := get(addr)
 	if err != nil {
@@ -190,7 +190,7 @@ func (s *Parser) getPcdn() string {
 }
 
 func (s *Parser) Pcdn() {
-	pcdn := s.getPcdn()
+	pcdn := s.getPcdn("dummy")
 	fmt.Println(pcdn)
 }
 
@@ -271,7 +271,7 @@ func (s *Parser) Pcdns() {
 		for _, isp := range Isps {
 			s.conf.Province = province
 			s.conf.Isp = isp
-			pcdn := s.getPcdn()
+			pcdn := s.getPcdn("dummy")
 			parts := strings.Split(pcdn, ":")
 			if len(parts) != 2 {
 				return
@@ -296,5 +296,12 @@ func (s *Parser) Pcdns() {
 		Int("areaNotMatch", len(areaNotCoverCntMap)).Int("totalReqCnt", totalReqCnt).Msg("Pcdns")
 	for area, cnt := range areaNotCoverCntMap {
 		s.logger.Info().Str("area", area).Int("cnt", cnt).Msg("area not match cnt")
+	}
+}
+
+func (s *Parser) LoopPcdn() {
+	for i := 0; i < s.conf.N; i++ {
+		pcdn := s.getPcdn(fmt.Sprintf("%d", i))
+		s.logger.Info().Str("pcdn", pcdn).Msg("")
 	}
 }
