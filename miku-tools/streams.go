@@ -255,7 +255,7 @@ func (s *Parser) dumpStreams() {
 }
 
 func (s StreamKey) MarshalText() (text []byte, err error) {
-	return []byte(fmt.Sprintf("%s:%s:%s", s.StreamId, s.Area, s.Isp)), nil
+	return []byte(fmt.Sprintf("%s_%s_%s", s.StreamId, s.Area, s.Isp)), nil
 }
 
 func (s *Parser) saveStreamDetail(streamDetailMap map[StreamKey]*StreamInfoDetail) {
