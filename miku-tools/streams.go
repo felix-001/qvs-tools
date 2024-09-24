@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -145,7 +146,7 @@ func (s *Parser) getNodeIsp(node *model.RtNode) string {
 	return "unknow"
 }
 
-func (s *Parser) dumpStreams() {
+func (s *Parser) dumpStreams_bak() {
 	streamInfoMap := make(map[string]map[string]*StreamInfo) // key1: streamId key2: isp
 	for _, node := range s.allNodesMap {
 		report := s.nodeStremasMap[node.Id]
@@ -187,6 +188,83 @@ func (s *Parser) dumpStreams() {
 	s.streamInfoMap = streamInfoMap
 	log.Println("streams:", len(streamInfoMap))
 	s.saveStreamsInfoToCSV()
+}
+
+type StreamKey struct {
+	StreamId string
+	Isp      string
+	Area     string
+}
+
+type StreamInfoDetail struct {
+	RelayBw     float64
+	Bw          float64
+	OnlineNum   int
+	OriginNodes map[string][]string // key: root/leaf
+}
+
+func (s *Parser) dumpStreams() {
+	streamDetailMap := make(map[StreamKey]*StreamInfoDetail)
+	for _, node := range s.allNodesMap {
+		report := s.nodeStremasMap[node.Id]
+		if report == nil {
+			continue
+		}
+		if time.Now().Unix()-report.LastUpdateTime > 300 {
+			continue
+		}
+		if node.NatType == "nat1" {
+			continue
+		}
+		isp, area, _ := getNodeLocate(node, s.ipParser)
+		if isp == "" || area == "" {
+			s.logger.Warn().Str("node", node.Id).Msg("get node locate err")
+			continue
+		}
+		for _, streamInfoRT := range report.Streams {
+			if s.conf.Bucket != streamInfoRT.Bucket {
+				continue
+			}
+			key := StreamKey{
+				StreamId: streamInfoRT.Key,
+				Area:     area,
+				Isp:      isp,
+			}
+			streamDetail, ok := streamDetailMap[key]
+			if !ok {
+				streamDetail = &StreamInfoDetail{
+					OriginNodes: make(map[string][]string),
+				}
+				streamDetailMap[key] = streamDetail
+			}
+			onlineNum, bw := s.getStreamDetail(streamInfoRT)
+			streamDetail.OnlineNum += onlineNum
+			streamDetail.Bw += bw
+			if streamInfoRT.RelayType != 2 {
+				continue
+			}
+			streamDetail.RelayBw += Bps2Mbps(streamInfoRT.RelayBandwidth)
+			nodeType := s.getNodeType(node)
+			if _, ok := streamDetail.OriginNodes[nodeType]; !ok {
+				streamDetail.OriginNodes[nodeType] = make([]string, 0)
+			}
+			streamDetail.OriginNodes[nodeType] = append(streamDetail.OriginNodes[nodeType], node.Id)
+		}
+	}
+	s.saveStreamDetail(streamDetailMap)
+}
+
+func (s StreamKey) MarshalText() (text []byte, err error) {
+	return []byte(fmt.Sprintf("%s:%s:%s", s.StreamId, s.Area, s.Isp)), nil
+}
+
+func (s *Parser) saveStreamDetail(streamDetailMap map[StreamKey]*StreamInfoDetail) {
+	bytes, err := json.Marshal(streamDetailMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	s.saveFile(fmt.Sprintf("streams-%d.json", time.Now().Unix()), string(bytes))
 }
 
 func getStreamClientCnt(streamInfoRT *model.StreamInfoRT) int {

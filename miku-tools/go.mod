@@ -6,7 +6,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
-	github.com/qbox/mikud-live v1.5.1-0.20240820114408-3b5d4a258016
+	github.com/qbox/mikud-live v1.5.1-0.20240924090206-8fb9874fc762
 	github.com/qbox/pili v1.0.33
 	github.com/qiniu/x v1.13.10
 	github.com/redis/go-redis/v9 v9.5.3
