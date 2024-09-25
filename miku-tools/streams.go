@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -190,12 +189,6 @@ func (s *Parser) dumpStreams_bak() {
 	s.saveStreamsInfoToCSV()
 }
 
-type StreamKey struct {
-	StreamId string
-	Isp      string
-	Area     string
-}
-
 type StreamInfoDetail struct {
 	RelayBw     float64
 	Bw          float64
@@ -204,7 +197,8 @@ type StreamInfoDetail struct {
 }
 
 func (s *Parser) dumpStreams() {
-	streamDetailMap := make(map[StreamKey]*StreamInfoDetail)
+	// key1: streamId key2: isp key3: area
+	streamDetailMap := make(map[string]map[string]map[string]*StreamInfoDetail)
 	for _, node := range s.allNodesMap {
 		report := s.nodeStremasMap[node.Id]
 		if report == nil {
@@ -225,64 +219,73 @@ func (s *Parser) dumpStreams() {
 			if s.conf.Bucket != streamInfoRT.Bucket {
 				continue
 			}
-			key := StreamKey{
-				StreamId: streamInfoRT.Key,
-				Area:     area,
-				Isp:      isp,
+			streamId := streamInfoRT.Key
+			if _, ok := streamDetailMap[streamId]; !ok {
+				streamDetailMap[streamId] = make(map[string]map[string]*StreamInfoDetail)
 			}
-			streamDetail, ok := streamDetailMap[key]
+			if _, ok := streamDetailMap[streamId][isp]; !ok {
+				streamDetailMap[streamId][isp] = make(map[string]*StreamInfoDetail)
+			}
+			detail, ok := streamDetailMap[streamId][isp][area]
 			if !ok {
-				streamDetail = &StreamInfoDetail{
+				detail = &StreamInfoDetail{
 					OriginNodes: make(map[string][]string),
 				}
-				streamDetailMap[key] = streamDetail
+				streamDetailMap[streamId][isp][area] = detail
 			}
 			onlineNum, bw := s.getStreamDetail(streamInfoRT)
-			streamDetail.OnlineNum += onlineNum
-			streamDetail.Bw += bw
+			detail.OnlineNum += onlineNum
+			detail.Bw += bw
 			if streamInfoRT.RelayType != 2 {
 				continue
 			}
-			streamDetail.RelayBw += Bps2Mbps(streamInfoRT.RelayBandwidth)
+			detail.RelayBw += Bps2Mbps(streamInfoRT.RelayBandwidth)
 			nodeType := s.getNodeType(node)
-			if _, ok := streamDetail.OriginNodes[nodeType]; !ok {
-				streamDetail.OriginNodes[nodeType] = make([]string, 0)
+			if _, ok := detail.OriginNodes[nodeType]; !ok {
+				detail.OriginNodes[nodeType] = make([]string, 0)
 			}
-			streamDetail.OriginNodes[nodeType] = append(streamDetail.OriginNodes[nodeType], node.Id)
+			detail.OriginNodes[nodeType] = append(detail.OriginNodes[nodeType], node.Id)
 		}
 	}
-	s.saveStreamDetail(streamDetailMap)
+	//s.saveStreamDetail(streamDetailMap)
 	s.dumpAreaCsv(streamDetailMap)
-	s.dumpIspCsv(streamDetailMap)
 }
 
-func (s StreamKey) MarshalText() (text []byte, err error) {
-	return []byte(fmt.Sprintf("%s_%s_%s", s.StreamId, s.Area, s.Isp)), nil
-}
-
-func (s *Parser) dumpAreaCsv(streamDetailMap map[StreamKey]*StreamInfoDetail) {
+func (s *Parser) dumpAreaCsv(streamDetailMap map[string]map[string]map[string]*StreamInfoDetail) {
 	areaCsv := "流id, isp, 大区, 在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
-	for key, detail := range streamDetailMap {
-		leafCnt := len(detail.OriginNodes[NodeTypeEdge])
-		rootCnt := len(detail.OriginNodes[NodeTypeRoot])
-		areaCsv += fmt.Sprintf("%s, %s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n", key.StreamId, key.Isp, key.Area,
-			detail.OnlineNum, detail.Bw, detail.RelayBw, leafCnt, rootCnt, detail.Bw/detail.RelayBw)
+	ispCsv := "流id, isp, 在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
+	for streamId, ispMap := range streamDetailMap {
+		for isp, areaMap := range ispMap {
+			ispTotal := StreamInfoDetail{
+				OriginNodes: make(map[string][]string),
+			}
+			for area, detail := range areaMap {
+				leafCnt := len(detail.OriginNodes[NodeTypeEdge])
+				rootCnt := len(detail.OriginNodes[NodeTypeRoot])
+				areaCsv += fmt.Sprintf("%s, %s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n",
+					streamId, isp, area, detail.OnlineNum, detail.Bw, detail.RelayBw,
+					leafCnt, rootCnt, detail.Bw/detail.RelayBw)
+
+				ispTotal.Bw += detail.Bw
+				ispTotal.OnlineNum += detail.OnlineNum
+				ispTotal.RelayBw += detail.RelayBw
+				for nodeType, nodes := range detail.OriginNodes {
+					ispTotal.OriginNodes[nodeType] = append(ispTotal.OriginNodes[nodeType],
+						nodes...)
+				}
+			}
+			leafCnt := len(ispTotal.OriginNodes[NodeTypeEdge])
+			rootCnt := len(ispTotal.OriginNodes[NodeTypeRoot])
+			ispCsv += fmt.Sprintf("%s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n",
+				streamId, isp, ispTotal.OnlineNum, ispTotal.Bw, ispTotal.RelayBw,
+				leafCnt, rootCnt, ispTotal.Bw/ispTotal.RelayBw)
+		}
 	}
 	s.saveFile(fmt.Sprintf("streams-area-%d.csv", time.Now().Unix()), areaCsv)
+	s.saveFile(fmt.Sprintf("streams-isp-%d.csv", time.Now().Unix()), ispCsv)
 }
 
-func (s *Parser) dumpIspCsv(streamDetailMap map[StreamKey]*StreamInfoDetail) {
-	areaCsv := "流id, isp,  在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
-	ispMap := make(map[string])
-	for key, detail := range streamDetailMap {
-		leafCnt := len(detail.OriginNodes[NodeTypeEdge])
-		rootCnt := len(detail.OriginNodes[NodeTypeRoot])
-		areaCsv += fmt.Sprintf("%s, %s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n", key.StreamId, key.Isp, key.Area,
-			detail.OnlineNum, detail.Bw, detail.RelayBw, leafCnt, rootCnt, detail.Bw/detail.RelayBw)
-	}
-	s.saveFile(fmt.Sprintf("streams-area-%d.csv", time.Now().Unix()), areaCsv)
-}
-
+/*
 func (s *Parser) saveStreamDetail(streamDetailMap map[StreamKey]*StreamInfoDetail) {
 	bytes, err := json.Marshal(streamDetailMap)
 	if err != nil {
@@ -291,6 +294,7 @@ func (s *Parser) saveStreamDetail(streamDetailMap map[StreamKey]*StreamInfoDetai
 	}
 	s.saveFile(fmt.Sprintf("streams-%d.json", time.Now().Unix()), string(bytes))
 }
+*/
 
 func getStreamClientCnt(streamInfoRT *model.StreamInfoRT) int {
 	cnt := 0
