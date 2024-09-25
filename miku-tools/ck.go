@@ -74,7 +74,7 @@ WHERE RequestID == '%s' AND Ts > '%s' AND NodeID == '%s'
 LIMIT 1;
 `
 	query = fmt.Sprintf(query, reqId, midnight, nodeId)
-	rows, err := s.ck.Query(context.Background(), query)
+	rows, err := s.CK.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("query rows failed, err: %+v\n", err)
 		return 0
@@ -99,7 +99,7 @@ WHERE Type = 'player' AND Region  = '%s' AND Isp = '%s'
 LIMIT 1;
 `
 	query = fmt.Sprintf(query, province, isp)
-	rows, err := s.ck.Query(context.Background(), query)
+	rows, err := s.CK.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("query rows failed, err: %+v\n", err)
 		return ""
@@ -123,7 +123,7 @@ LIMIT 1;
 
 func (s *Parser) QueryCk(query string) []data.MikuQosObject {
 	datas := make([]data.MikuQosObject, 0)
-	rows, err := s.ck.Query(context.Background(), query)
+	rows, err := s.CK.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("query rows failed, err: %+v\n", err)
 		return nil

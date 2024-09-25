@@ -316,7 +316,7 @@ func (s *Parser) dumpStreamDetail(detail *StreamInfo, lastStreamId, streamId, la
 			lastStreamId = streamId
 			lastIsp = isp
 			node := s.allNodesMap[nodeId]
-			_, area, province := getNodeLocate(node, s.ipParser)
+			_, area, province := getNodeLocate(node, s.IpParser)
 			csv += fmt.Sprintf("%s, %s, %s, %s, %d, %.1f, %d, %s, %s, %s\n",
 				sid, tmpIsp, tmpNodeType, nodeId, getStreamClientCnt(streamInfoRT),
 				getStreamBw(streamInfoRT), getStreamOnlineNum(streamInfoRT),

@@ -19,7 +19,7 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 			continue
 		}
 		lastStream := ""
-		isp, area, _ := getNodeLocate(node, s.ipParser)
+		isp, area, _ := getNodeLocate(node, s.IpParser)
 		if isp == "" || area == "" {
 			//log.Println("node", node.Id, "get ip locate err")
 			continue
@@ -98,7 +98,7 @@ func (s *Parser) Province2Area() {
 func (s *Parser) Nali() {
 	parts := strings.Split(s.conf.Ip, ",")
 	for _, ip := range parts {
-		isp, area, province := getLocate(ip, s.ipParser)
+		isp, area, province := getLocate(ip, s.IpParser)
 		s.logger.Info().Str("isp", isp).Str("area", area).Str("province", province).Str("ip", ip).Msg("ip locate")
 	}
 }

@@ -134,7 +134,7 @@ func (s *Parser) PcdnDbg() {
 			}
 			totalCnt++
 			//log.Println("redirectUr:", resp.Url302)
-			nodeIsp, _, nodeProvince := getLocate(u.Hostname(), s.ipParser)
+			nodeIsp, _, nodeProvince := getLocate(u.Hostname(), s.IpParser)
 			if nodeIsp != isp {
 				log.Println("isp not match, ", "isp:", isp, "nodeIsp:",
 					nodeIsp, "ip:", ip, "nodeIp:", u.Hostname(), "province:", province,
@@ -276,7 +276,7 @@ func (s *Parser) Pcdns() {
 			if len(parts) != 2 {
 				return
 			}
-			pcdnIsp, pcdnArea, _ := getLocate(parts[0], s.ipParser)
+			pcdnIsp, pcdnArea, _ := getLocate(parts[0], s.IpParser)
 			reqArea, _ := schedUtil.ProvinceAreaRelation(province)
 			if reqArea != pcdnArea {
 				s.logger.Error().Str("reqArea", reqArea).Str("pcdnArea", pcdnArea).Str("pcdn", pcdn).

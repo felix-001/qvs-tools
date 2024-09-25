@@ -12,7 +12,7 @@ import (
 )
 
 func (s *Parser) buildAllNodesMap() {
-	allNodes, err := dal.GetAllNode(s.redisCli)
+	allNodes, err := dal.GetAllNode(s.RedisCli)
 	if err != nil {
 		log.Fatalln(err)
 	}

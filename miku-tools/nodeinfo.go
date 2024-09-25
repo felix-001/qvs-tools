@@ -203,7 +203,7 @@ func (s *Parser) nodeIspChk() {
 			if ipInfo.Ip == "" {
 				continue
 			}
-			isp, _, _ := getLocate(ipInfo.Ip, s.ipParser)
+			isp, _, _ := getLocate(ipInfo.Ip, s.IpParser)
 			if lastIsp != "" && isp != lastIsp {
 				s.logger.Info().Str("isp", isp).Str("lastIsp", lastIsp).Str("node", node.Id).Str("machine", node.MachineId).
 					Msg("node has multi isp ip")

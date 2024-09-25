@@ -184,7 +184,7 @@ func (s *Parser) BwDis() {
 					if publicUtil.IsPrivateIP(ipInfo.Ip) {
 						continue
 					}
-					isp, _, province := getLocate(ipInfo.Ip, s.ipParser)
+					isp, _, province := getLocate(ipInfo.Ip, s.IpParser)
 					if isp == "" || province == "" {
 						continue
 					}

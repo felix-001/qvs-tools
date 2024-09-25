@@ -60,11 +60,12 @@ type CmdHandler func()
 type CmdInfo struct {
 	Handler CmdHandler
 	Usage   string
+	Depends []*bool
 }
 
 type Parser struct {
-	redisCli                 *redis.ClusterClient
-	ipParser                 *ipdb.City
+	RedisCli                 *redis.ClusterClient
+	IpParser                 *ipdb.City
 	nodeStremasMap           map[string]*model.NodeStreamInfo
 	allNodesMap              map[string]*model.RtNode
 	allRootNodesMapByAreaIsp map[string][]*DynamicRootNode
@@ -73,7 +74,7 @@ type Parser struct {
 	// key1: streamId key2: isp key3: area
 	streamDetailMap                   map[string]map[string]map[string]*StreamInfo
 	file                              *os.File
-	ck                                driver.Conn
+	CK                                driver.Conn
 	conf                              *Config
 	streamInfoMap                     map[string]map[string]*StreamInfo
 	NodeUnavailableCnt                int

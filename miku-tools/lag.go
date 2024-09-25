@@ -120,7 +120,7 @@ func (s *Parser) CoverChk() {
 			log.Println("parse remote addr err", remoteAddr)
 		}
 		remoteIp := parts[0]
-		localIsp, localArea, localProvince := getLocate(localIp, s.ipParser)
+		localIsp, localArea, localProvince := getLocate(localIp, s.IpParser)
 		if localIsp == "" || localArea == "" || localProvince == "" {
 			s.logger.Error().Str("localIsp", localIsp).
 				Str("localArea", localArea).
@@ -130,7 +130,7 @@ func (s *Parser) CoverChk() {
 			ipParseErrCnt++
 			continue
 		}
-		remoteIsp, remoteArea, remoteProvince := getLocate(remoteIp, s.ipParser)
+		remoteIsp, remoteArea, remoteProvince := getLocate(remoteIp, s.IpParser)
 		if remoteIsp == "" || remoteArea == "" || remoteProvince == "" {
 			s.logger.Error().Str("remoteIsp", remoteIsp).
 				Str("remoteIsp", remoteIsp).

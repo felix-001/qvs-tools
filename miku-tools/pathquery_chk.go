@@ -34,8 +34,8 @@ func (s *Parser) fullPathChk(resp model.PathQueryResponse) {
 			log.Println(err, source.Url)
 			return
 		}
-		isp, area, _ := getLocate(u.Hostname(), s.ipParser)
-		localIsp, localArea, _ := getLocate(source.BindLocalIp, s.ipParser)
+		isp, area, _ := getLocate(u.Hostname(), s.IpParser)
+		localIsp, localArea, _ := getLocate(source.BindLocalIp, s.IpParser)
 		if isp != localIsp {
 			s.logger.Info().
 				Str("localIsp", localIsp).
@@ -53,6 +53,16 @@ func (s *Parser) fullPathChk(resp model.PathQueryResponse) {
 			source.Node != "886fff44-603b-393c-a169-a49d24bcbf0c-vdn-jsyz1-dls-1-8" {
 			log.Println("area not match", area, localArea, u.Hostname(), source.BindLocalIp, source.Node, source, resp.ConnectId)
 		}
+		s.logger.Info().
+			Str("localIsp", localIsp).
+			Str("upstreamIsp", isp).
+			Str("localIp", source.BindLocalIp).
+			Str("upstreamIp", u.Hostname()).
+			Str("node", source.Node).
+			Str("connId", resp.ConnectId).
+			Str("localArea", localArea).
+			Str("upstreamArea", area).
+			Msg("")
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 
 func (s *Parser) getNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error) {
 	ctx := context.Background()
-	val, err := s.redisCli.Get(ctx, util.GetStreamReportRedisKey(nodeId)).Result()
+	val, err := s.RedisCli.Get(ctx, util.GetStreamReportRedisKey(nodeId)).Result()
 	if err != nil {
 		return nil, err
 	}

@@ -206,7 +206,7 @@ func (s *Parser) nodeMonitor() {
 
 	for range ticker.C {
 		ipStatusMap := make(map[string]int)
-		allNodes, err := dal.GetAllNode(s.redisCli)
+		allNodes, err := dal.GetAllNode(s.RedisCli)
 		if err != nil {
 			log.Fatalln(err)
 		}

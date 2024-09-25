@@ -21,38 +21,18 @@ func dumpCmdMap(cmdMap map[string]CmdInfo) {
 	os.Exit(0)
 }
 
+func initConf(cmdMap map[string]CmdInfo) {
+	for _, cmdInfo := range cmdMap {
+		for _, conf := range cmdInfo.Depends {
+			*conf = true
+		}
+	}
+}
+
 func newParser(conf *Config) *Parser {
-
-	redisCli := &redis.ClusterClient{}
-	if conf.Redis && !conf.Help {
-		redisCli = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:      conf.RedisAddrs,
-			MaxRetries: 3,
-			PoolSize:   30,
-		})
-
-		err := redisCli.Ping(context.Background()).Err()
-		if err != nil {
-			log.Fatalf("%+v", err)
-		}
-	}
-	var ipParser *ipdb.City
-	if conf.NeedIpParer && !conf.Help {
-		//qlog.SetOutputLevel(5)
-		var err error
-		ipParser, err = ipdb.NewCity(conf.IPDB)
-		if err != nil {
-			log.Fatalf("[IPDB NewCity] err: %+v\n", err)
-		}
-	}
-	ck := newCk(conf)
 	parser := &Parser{
-		redisCli: redisCli,
-		ipParser: ipParser,
-		ck:       ck,
-		conf:     conf,
+		conf: conf,
 	}
-
 	cmdMap := map[string]CmdInfo{
 		"hlschk": {
 			Handler: parser.HlsChk,
@@ -85,6 +65,7 @@ func newParser(conf *Config) *Parser {
 		"pathquerychk": {
 			Handler: parser.pathqueryChk,
 			Usage:   "分析从elk下载的pathquery日志文件,判断sched返回的回源路径是否符合预期",
+			Depends: []*bool{&conf.NeedIpParer},
 		},
 		"node": {
 			Handler: parser.dumpNodeStreams,
@@ -174,6 +155,35 @@ func newParser(conf *Config) *Parser {
 	if conf.Help {
 		dumpCmdMap(cmdMap)
 	}
+	initConf(cmdMap)
+	redisCli := &redis.ClusterClient{}
+	if conf.Redis && !conf.Help {
+		redisCli = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:      conf.RedisAddrs,
+			MaxRetries: 3,
+			PoolSize:   30,
+		})
+
+		err := redisCli.Ping(context.Background()).Err()
+		if err != nil {
+			log.Fatalf("%+v", err)
+		}
+	}
+	var ipParser *ipdb.City
+	if conf.NeedIpParer && !conf.Help {
+		//qlog.SetOutputLevel(5)
+		var err error
+		ipParser, err = ipdb.NewCity(conf.IPDB)
+		if err != nil {
+			log.Fatalf("[IPDB NewCity] err: %+v\n", err)
+		}
+	}
+	ck := newCk(conf)
+
 	parser.CmdMap = cmdMap
+	parser.RedisCli = redisCli
+	parser.IpParser = ipParser
+	parser.CK = ck
+
 	return parser
 }

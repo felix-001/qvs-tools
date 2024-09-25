@@ -67,7 +67,7 @@ func (s *Parser) DnsChk() {
 			log.Println("no valid ip", result, provinceIsp)
 			continue
 		}
-		areaResult, ispResult, err := getIpAreaIsp(s.ipParser, validIp)
+		areaResult, ispResult, err := getIpAreaIsp(s.IpParser, validIp)
 		if err != nil {
 			log.Println("getIpAreaIsp err", validIp, err)
 			continue

@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Parser) buildRootNodesMap() {
-	dynamicRootNodesMap, err := GetDynamicRootNodes(s.redisCli)
+	dynamicRootNodesMap, err := GetDynamicRootNodes(s.RedisCli)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -108,7 +108,7 @@ func (s *Parser) getNodeDetailMap(streamDetail map[string]map[string]*StreamInfo
 				//log.Println("ip empty")
 				continue
 			}
-			area, isp, err := getIpAreaIsp(s.ipParser, ipInfo.Ip)
+			area, isp, err := getIpAreaIsp(s.IpParser, ipInfo.Ip)
 			if err != nil {
 				log.Println("getIpAreaIsp err", ipInfo.Ip, err)
 				continue
@@ -155,7 +155,7 @@ func (s *Parser) checkNodeStreamIpLocate(stream *model.StreamInfoRT, node *model
 				//log.Println("ip empty")
 				continue
 			}
-			area, isp, err := getIpAreaIsp(s.ipParser, ipInfo.Ip)
+			area, isp, err := getIpAreaIsp(s.IpParser, ipInfo.Ip)
 			if err != nil {
 				log.Println("getIpAreaIsp err", ipInfo.Ip, err)
 				continue
