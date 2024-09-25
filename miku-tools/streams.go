@@ -216,7 +216,7 @@ func (s *Parser) dumpStreams() {
 		if node.NatType == "nat1" {
 			continue
 		}
-		isp, area, _ := getNodeLocate(node, s.ipParser)
+		isp, area, _ := getNodeLocate(node, s.IpParser)
 		if isp == "" || area == "" {
 			s.logger.Warn().Str("node", node.Id).Msg("get node locate err")
 			continue
@@ -252,10 +252,35 @@ func (s *Parser) dumpStreams() {
 		}
 	}
 	s.saveStreamDetail(streamDetailMap)
+	s.dumpAreaCsv(streamDetailMap)
+	s.dumpIspCsv(streamDetailMap)
 }
 
 func (s StreamKey) MarshalText() (text []byte, err error) {
 	return []byte(fmt.Sprintf("%s_%s_%s", s.StreamId, s.Area, s.Isp)), nil
+}
+
+func (s *Parser) dumpAreaCsv(streamDetailMap map[StreamKey]*StreamInfoDetail) {
+	areaCsv := "流id, isp, 大区, 在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
+	for key, detail := range streamDetailMap {
+		leafCnt := len(detail.OriginNodes[NodeTypeEdge])
+		rootCnt := len(detail.OriginNodes[NodeTypeRoot])
+		areaCsv += fmt.Sprintf("%s, %s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n", key.StreamId, key.Isp, key.Area,
+			detail.OnlineNum, detail.Bw, detail.RelayBw, leafCnt, rootCnt, detail.Bw/detail.RelayBw)
+	}
+	s.saveFile(fmt.Sprintf("streams-area-%d.csv", time.Now().Unix()), areaCsv)
+}
+
+func (s *Parser) dumpIspCsv(streamDetailMap map[StreamKey]*StreamInfoDetail) {
+	areaCsv := "流id, isp,  在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
+	ispMap := make(map[string])
+	for key, detail := range streamDetailMap {
+		leafCnt := len(detail.OriginNodes[NodeTypeEdge])
+		rootCnt := len(detail.OriginNodes[NodeTypeRoot])
+		areaCsv += fmt.Sprintf("%s, %s, %s, %d, %.1f, %.1f, %d, %d, %.1f\n", key.StreamId, key.Isp, key.Area,
+			detail.OnlineNum, detail.Bw, detail.RelayBw, leafCnt, rootCnt, detail.Bw/detail.RelayBw)
+	}
+	s.saveFile(fmt.Sprintf("streams-area-%d.csv", time.Now().Unix()), areaCsv)
 }
 
 func (s *Parser) saveStreamDetail(streamDetailMap map[StreamKey]*StreamInfoDetail) {
