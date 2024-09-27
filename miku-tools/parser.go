@@ -21,8 +21,11 @@ func dumpCmdMap(cmdMap map[string]CmdInfo) {
 	os.Exit(0)
 }
 
-func initConf(cmdMap map[string]CmdInfo) {
-	for _, cmdInfo := range cmdMap {
+func initConf(cmdMap map[string]CmdInfo, cfg *Config) {
+	for cmd, cmdInfo := range cmdMap {
+		if cfg.Cmd != cmd {
+			continue
+		}
 		for _, conf := range cmdInfo.Depends {
 			*conf = true
 		}
@@ -160,7 +163,7 @@ func newParser(conf *Config) *Parser {
 	if conf.Help {
 		dumpCmdMap(cmdMap)
 	}
-	initConf(cmdMap)
+	initConf(cmdMap, conf)
 	redisCli := &redis.ClusterClient{}
 	if conf.Redis && !conf.Help {
 		redisCli = redis.NewClusterClient(&redis.ClusterOptions{
