@@ -248,13 +248,16 @@ func (s *Parser) dumpStreams() {
 		}
 	}
 	//s.saveStreamDetail(streamDetailMap)
-	s.dumpAreaCsv(streamDetailMap)
+	s.dumpCsv(streamDetailMap)
 }
 
-func (s *Parser) dumpAreaCsv(streamDetailMap map[string]map[string]map[string]*StreamInfoDetail) {
+func (s *Parser) dumpCsv(streamDetailMap map[string]map[string]map[string]*StreamInfoDetail) {
 	areaCsv := "流id, isp, 大区, 在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
 	ispCsv := "流id, isp, 在线人数, 拉流带宽, 回源带宽, leaf回源节点数, root回源节点数, 放大比\n"
+	staticNodeCsv := "流id, 在线人数, 静态回源节点数\n"
 	for streamId, ispMap := range streamDetailMap {
+		totalOnlineNum := 0
+		totalStaticNodeCnt := 0
 		for isp, areaMap := range ispMap {
 			ispTotal := StreamInfoDetail{
 				OriginNodes: make(map[string][]string),
@@ -273,6 +276,8 @@ func (s *Parser) dumpAreaCsv(streamDetailMap map[string]map[string]map[string]*S
 					ispTotal.OriginNodes[nodeType] = append(ispTotal.OriginNodes[nodeType],
 						nodes...)
 				}
+				totalStaticNodeCnt += len(detail.OriginNodes[NodeTypeStatic])
+				totalOnlineNum += detail.OnlineNum
 			}
 			leafCnt := len(ispTotal.OriginNodes[NodeTypeEdge])
 			rootCnt := len(ispTotal.OriginNodes[NodeTypeRoot])
@@ -280,9 +285,11 @@ func (s *Parser) dumpAreaCsv(streamDetailMap map[string]map[string]map[string]*S
 				streamId, isp, ispTotal.OnlineNum, ispTotal.Bw, ispTotal.RelayBw,
 				leafCnt, rootCnt, ispTotal.Bw/ispTotal.RelayBw)
 		}
+		staticNodeCsv += fmt.Sprintf("%s, %d, %d\n", streamId, totalOnlineNum, totalStaticNodeCnt)
 	}
 	s.saveFile(fmt.Sprintf("streams-area-%d.csv", time.Now().Unix()), areaCsv)
 	s.saveFile(fmt.Sprintf("streams-isp-%d.csv", time.Now().Unix()), ispCsv)
+	s.saveFile(fmt.Sprintf("streams-static-%d.csv", time.Now().Unix()), staticNodeCsv)
 }
 
 /*
