@@ -125,6 +125,7 @@ func newParser(conf *Config) *Parser {
 		"pathquery": {
 			Handler: parser.PathqueryReq,
 			Usage:   "请求pathquery",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
 		},
 		"area": {
 			Handler: parser.Province2Area,
@@ -158,6 +159,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.IsRoot,
 			Usage:   "判断节点是不是root",
 			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+		},
+		"qpm": {
+			Handler: parser.DumpQPM,
+			Usage:   "dump qpm 信息",
 		},
 	}
 	if conf.Help {

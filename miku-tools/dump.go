@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"sort"
 	"time"
+
+	qconfig "github.com/qiniu/x/config"
 )
 
 var hdr = "流ID, 运营商, 大区, 在线人数, 边缘节点个数, ROOT节点个数, 放大比, 边缘节点详情, ROOT节点详情\n"
@@ -203,4 +205,37 @@ func (s *Parser) DumpRoots() {
 		return
 	}
 	fmt.Println(string(jsonbody))
+}
+
+func (s *Parser) DumpQPM() {
+	LastMinuteAreaReqInfo := make(map[string]map[string]time.Time)
+	if err := qconfig.LoadFile(&LastMinuteAreaReqInfo, s.conf.QpmFile); err != nil {
+		log.Fatalf("load config failed, err: %v", err)
+	}
+	for _, isp := range Isps {
+		for _, area := range Areas {
+			simpArea, ok := AreaMap[area]
+			if !ok {
+				log.Fatalf("area not found, %s\n", area)
+			}
+			simpIsp, ok := IspMap[isp]
+			if !ok {
+				log.Fatalf("isp not found, %s", isp)
+			}
+			key := fmt.Sprintf("%s_%s_%s_%s", s.conf.Bucket, s.conf.Stream, simpArea, simpIsp)
+			areaUserInfo, ok := LastMinuteAreaReqInfo[key]
+			if !ok {
+				s.logger.Error().Str("key", key).Msg("not found")
+				continue
+			}
+			cnt := 0
+			for _, lastUpdatedTime := range areaUserInfo {
+				if time.Since(lastUpdatedTime) > time.Minute*time.Duration(5) {
+					continue
+				}
+				cnt++
+			}
+			s.logger.Info().Str("qpm", key).Int("cnt", cnt).Msg("")
+		}
+	}
 }

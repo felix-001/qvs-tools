@@ -53,6 +53,7 @@ type Config struct {
 	T                  string
 	Query              string
 	N                  int
+	QpmFile            string
 }
 
 type CmdHandler func()
