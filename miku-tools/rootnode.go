@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -219,4 +220,9 @@ func (s *Parser) checkNode(node *model.RtNode) bool {
 		return false
 	}
 	return true
+}
+
+func (s *Parser) IsRoot() {
+	_, ok := s.allRootNodesMapByNodeId[s.conf.Node]
+	fmt.Println(ok)
 }

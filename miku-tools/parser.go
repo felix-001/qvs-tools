@@ -151,6 +151,11 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.LoopPcdn,
 			Usage:   "循环请求pcdn",
 		},
+		"isroot": {
+			Handler: parser.IsRoot,
+			Usage:   "判断节点是不是root",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
