@@ -135,60 +135,6 @@ func (s *Parser) getNodeType(node *model.RtNode) string {
 	return NodeTypeEdge
 }
 
-func (s *Parser) getNodeIsp(node *model.RtNode) string {
-	for _, ipInfo := range node.Ips {
-		if !checkIp(ipInfo) {
-			continue
-		}
-		return ipInfo.Isp
-	}
-	return "unknow"
-}
-
-func (s *Parser) dumpStreams_bak() {
-	streamInfoMap := make(map[string]map[string]*StreamInfo) // key1: streamId key2: isp
-	for _, node := range s.allNodesMap {
-		report := s.nodeStremasMap[node.Id]
-		if report == nil {
-			continue
-		}
-		if time.Now().Unix()-report.LastUpdateTime > 300 {
-			continue
-		}
-		isp := s.getNodeIsp(node)
-		for _, streamInfoRT := range report.Streams {
-			if s.conf.Bucket != streamInfoRT.Bucket {
-				continue
-			}
-			_, ok := streamInfoMap[streamInfoRT.Key]
-			if !ok {
-				streamInfoMap[streamInfoRT.Key] = make(map[string]*StreamInfo)
-			}
-			streamInfo, ok := streamInfoMap[streamInfoRT.Key][isp]
-			if !ok {
-				streamInfo = &StreamInfo{}
-				streamInfo.NodeStreamMap = make(map[string]map[string]*model.StreamInfoRT)
-				streamInfoMap[streamInfoRT.Key][isp] = streamInfo
-			}
-			onlineNum, bw := s.getStreamDetail(streamInfoRT)
-			streamInfo.Bw += bw
-			streamInfo.RelayBw += convertMbps(streamInfoRT.RelayBandwidth)
-			streamInfo.OnlineNum += uint32(onlineNum)
-			if /*streamInfoRT.RelayBandwidth == 0 || */ streamInfoRT.RelayType != 2 {
-				continue
-			}
-			nodeType := s.getNodeType(node)
-			if _, ok := streamInfo.NodeStreamMap[nodeType]; !ok {
-				streamInfo.NodeStreamMap[nodeType] = make(map[string]*model.StreamInfoRT)
-			}
-			streamInfo.NodeStreamMap[nodeType][node.Id] = streamInfoRT
-		}
-	}
-	s.streamInfoMap = streamInfoMap
-	log.Println("streams:", len(streamInfoMap))
-	s.saveStreamsInfoToCSV()
-}
-
 type StreamInfoDetail struct {
 	RelayBw     float64
 	Bw          float64
