@@ -42,6 +42,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Query, "q", "", "查询ck的语句")
 	flag.IntVar(&conf.N, "n", 70, "pcdn循环请求次数")
 	flag.StringVar(&conf.QpmFile, "qpmfile", "", "dump出来的内存中的qpm数据")
+	flag.StringVar(&conf.PcdnErr, "pcdnerr", "", "请求pcdn是附带的pcdn err节点id")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

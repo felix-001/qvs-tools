@@ -54,6 +54,7 @@ type Config struct {
 	Query              string
 	N                  int
 	QpmFile            string
+	PcdnErr            string
 }
 
 type CmdHandler func()
