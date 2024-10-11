@@ -21,7 +21,7 @@ func loadCfg() *Config {
 	t := time.Now().Format("2006-01-02 15:04:05")
 
 	flag.StringVar(&conf.Bucket, "bkt", "douyu", "bucket ID")
-	flag.StringVar(&conf.Node, "node", "", "node ID")
+	flag.StringVar(&conf.Node, "node", "2b8f0c5a-85d0-3c4a-bbd8-ac77a82d607b-rtc-gdfsh-dls-1-7", "node ID")
 	flag.StringVar(&conf.Stream, "stream", "288016rlols5_2000p", "stream ID")
 	flag.BoolVar(&conf.NeedNodeStreamInfo, "streamNodes", false, "是否需要流所在的节点信息")
 	flag.StringVar(&conf.LagFile, "lagfile", "", "分析streamd上报的卡顿数据的文件")
@@ -37,12 +37,14 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Province, "province", "浙江", "省份")
 	flag.StringVar(&conf.Area, "area", "华东", "大区")
 	flag.StringVar(&conf.Pcdn, "pcdn", "", "指定pcdn的ip:port")
-	flag.StringVar(&conf.Ip, "ip", "", "通过ip获取node id")
+	flag.StringVar(&conf.Ip, "ip", "221.227.254.220", "通过ip获取node id")
 	flag.StringVar(&conf.T, "t", t, "时间, 格式: 2006-01-02 15:04:05")
 	flag.StringVar(&conf.Query, "q", "", "查询ck的语句")
 	flag.IntVar(&conf.N, "n", 70, "pcdn循环请求次数")
 	flag.StringVar(&conf.QpmFile, "qpmfile", "", "dump出来的内存中的qpm数据")
 	flag.StringVar(&conf.PcdnErr, "pcdnerr", "", "请求pcdn是附带的pcdn err节点id")
+	flag.StringVar(&conf.User, "user", "volcengine", "请求playcheck 302的user")
+	flag.StringVar(&conf.ConnId, "connid", "testConnId", "请求playcheck 302的connId")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

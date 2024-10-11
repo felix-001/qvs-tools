@@ -55,6 +55,8 @@ type Config struct {
 	N                  int
 	QpmFile            string
 	PcdnErr            string
+	User               string
+	ConnId             string
 }
 
 type CmdHandler func()

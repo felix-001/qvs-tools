@@ -45,12 +45,13 @@ type PlayCheckResp struct {
 
 func (s *Parser) playcheck(ip string) *PlayCheckResp {
 	req := PlaycheckReq{
-		Bucket: "douyuflv",
-		Key:    "4549169raUKQVzf4_900",
+		Bucket: s.conf.Bucket,
+		Key:    s.conf.Stream,
 		Url:    "http://qn3.douyucdn.cn/live/1226741r3fmmEOb7.flv?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&ip=120.230.111.210&isp=&logo=0&mcid2=0&mix=0&origin=tct&pt=1&sid=397423057&st=0&token=app-androidxlv-0-1226741-0dc52b22d029568980d4d39a0dd754645d73804f0aa4d875&um=0&ver=2.6.1&wsAuth=dda22a267d16cece907605bb44c23f37",
-		Node:   "2b8f0c5a-85d0-3c4a-bbd8-ac77a82d607b-rtc-gdfsh-dls-1-7",
+		Node:   s.conf.Node,
 		Remote: ip,
-		ConnId: "connetId",
+		ConnId: s.conf.ConnId,
+		User:   s.conf.User,
 	}
 	bytes, err := json.Marshal(&req)
 	if err != nil {
@@ -110,7 +111,7 @@ func (s *Parser) loadTestIpData() map[string]map[string]string {
 	return provinceIpMap
 }
 
-func (s *Parser) PcdnDbg() {
+func (s *Parser) LoopPlaycheck() {
 	provinceIpMap := s.loadTestIpData()
 
 	cnt := 0
@@ -124,6 +125,9 @@ func (s *Parser) PcdnDbg() {
 				continue
 			}
 			resp := s.playcheck(ip + ":8080")
+			if resp == nil {
+				continue
+			}
 			u, err := url.Parse(resp.Url302)
 			if err != nil {
 				log.Println(err, resp.Url302)
@@ -158,7 +162,8 @@ func (s *Parser) PcdnDbg() {
 			time.Sleep(time.Millisecond * 10)
 		}
 	}
-	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt, "areaErrCnt:", areaErrCnt)
+	log.Println("err cnt:", cnt, "ipv6 cnt:", ipV6Cnt, "totalCnt:", totalCnt, "areaErrCnt:", areaErrCnt,
+		"本省覆盖率:", (totalCnt-cnt)*100/totalCnt)
 }
 
 func (s *Parser) getPcdn(did string) string {
@@ -304,4 +309,14 @@ func (s *Parser) LoopPcdn() {
 		pcdn := s.getPcdn(fmt.Sprintf("%d", i))
 		s.logger.Info().Str("pcdn", pcdn).Msg("")
 	}
+}
+
+func (s *Parser) Playcheck() {
+	resp := s.playcheck(s.conf.Ip + ":8080")
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
 }

@@ -56,10 +56,16 @@ func newParser(conf *Config) *Parser {
 		"lag": {
 			Handler: parser.LagAnalysis,
 			Usage:   "分析从ck下载的streamd qos数据, 分析卡顿率高的原因",
+			Depends: []*bool{&conf.NeedIpParer},
 		},
-		"pcdndbg": {
-			Handler: parser.PcdnDbg,
+		"loopplaycheck": {
+			Handler: parser.LoopPlaycheck,
 			Usage:   "302返点本省/本大区覆盖率检查,请求sched的playcheck接口",
+			Depends: []*bool{&conf.NeedIpParer},
+		},
+		"playcheck": {
+			Handler: parser.Playcheck,
+			Usage:   "请求playcheck 302接口",
 		},
 		"dns": {
 			Handler: parser.DnsChk,
@@ -68,7 +74,6 @@ func newParser(conf *Config) *Parser {
 		"pathquerychk": {
 			Handler: parser.pathqueryChk,
 			Usage:   "分析从elk下载的pathquery日志文件,判断sched返回的回源路径是否符合预期",
-			Depends: []*bool{&conf.NeedIpParer},
 		},
 		"node": {
 			Handler: parser.dumpNodeStreams,
