@@ -169,6 +169,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.DumpQPM,
 			Usage:   "dump qpm 信息",
 		},
+		"pcdnerrmonitor": {
+			Handler: parser.pcdnErrMonitor,
+			Usage:   "dump pcdn err信息",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

@@ -109,7 +109,7 @@ func genFileName() string {
 	return timestamp
 }
 
-func deleteOldFiles() error {
+func deleteOldFiles(path string) error {
 	cutoff := time.Now().Add(-8 * 24 * time.Hour) // 3天前的日期
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -130,7 +130,7 @@ func deleteOldFiles() error {
 
 var path = "./node_info"
 
-func (s *Parser) writeToFile(nodeInfo *NodeInfo) {
+func (s *Parser) writeToFile(nodeInfo *NodeInfo, path string) {
 	createDirIfNotExist(path)
 	latestFile, err := findLatestFile(path)
 	if err != nil {
@@ -218,13 +218,13 @@ func (s *Parser) nodeMonitor() {
 			if old, ok := s.allNodeInfoMap[nodeInfo.NodeId]; !ok {
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			} else if s.isNodeInfoChanged(old, nodeInfo) {
-				s.writeToFile(old)
+				s.writeToFile(old, path)
 				s.allNodeInfoMap[nodeInfo.NodeId] = nodeInfo
 			}
 			s.fillIpStatus(ipStatusMap, node)
 		}
 		s.dynIpMonitor(ipStatusMap)
-		deleteOldFiles()
+		deleteOldFiles(path)
 	}
 }
 
@@ -261,5 +261,85 @@ func (s *Parser) fillIpStatus(ipStatusMap map[string]int, node *model.RtNode) {
 			ipStatusMap[IpStatusBwLimit]++
 			continue
 		}
+	}
+}
+
+func (s *Parser) writeDataToFile(data, path string) {
+	createDirIfNotExist(path)
+	latestFile, err := findLatestFile(path)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	fileName := genFileName()
+	if s.file == nil {
+		filePath := filepath.Join(path, fileName)
+		var err error
+		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println("err:", err)
+			return
+		}
+	} else if fileName != latestFile {
+		s.file.Close()
+		filePath := filepath.Join(path, fileName)
+		var err error
+		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println("err:", err)
+			return
+		}
+	}
+
+	_, err = s.file.Write([]byte(data))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = s.file.WriteString("\n")
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+type Data struct {
+	AbnormalNodes       []map[string]int     `json:"abnormal_nodes"`
+	TopForbiddenNodes   map[string]time.Time `json:"top_forbidden_nodes"`
+	PcdnErrNodes        []map[string]int     `json:"pcdn_err_nodes"`
+	PcdnErrFbiddenNodes map[string]time.Time `json:"pcdn_err_forbidden_nodes"`
+}
+
+func (s *Parser) pcdnErrMonitor() {
+	ticker := time.NewTicker(time.Duration(15) * time.Second)
+	defer ticker.Stop()
+
+	addr := "http://10.34.146.62:6060/api/v1/dymetrics"
+
+	for range ticker.C {
+		resp, err := get(addr)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("pcdnErrMonitor get err")
+			continue
+		}
+		var respData Data
+		if err := json.Unmarshal([]byte(resp), &respData); err != nil {
+			log.Println(err)
+			continue
+		}
+		data := struct {
+			Ts   time.Time `json:"ts"`
+			Data Data      `json:"data"`
+		}{
+			Ts:   time.Now(),
+			Data: respData,
+		}
+		bytes, err := json.Marshal(&data)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		s.writeDataToFile(string(bytes), "/tmp/pcdn_err_dump")
+
+		deleteOldFiles("/tmp/pcdn_err_dump")
 	}
 }

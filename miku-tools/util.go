@@ -194,7 +194,7 @@ func findLatestFile(dir string) (string, error) {
 	}
 
 	if latestFile == "" {
-		return "", fmt.Errorf("no files found in directory")
+		return "", nil
 	}
 
 	return latestFile, nil
