@@ -314,7 +314,7 @@ func (s *Parser) saveFile(filename, csv string) {
 	if err != nil {
 		log.Println(err)
 	}
-	cmd := exec.Command("./qup", file)
+	cmd := exec.Command("qup", file)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("命令执行出错: %v\n", err)
