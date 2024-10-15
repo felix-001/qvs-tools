@@ -45,6 +45,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.PcdnErr, "pcdnerr", "", "请求pcdn是附带的pcdn err节点id")
 	flag.StringVar(&conf.User, "user", "volcengine", "请求playcheck 302的user")
 	flag.StringVar(&conf.ConnId, "connid", "testConnId", "请求playcheck 302的connId")
+	flag.BoolVar(&conf.Https, "https", false, "是否启用https")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

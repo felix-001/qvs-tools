@@ -313,33 +313,57 @@ func (s *Parser) pcdnErrMonitor() {
 	ticker := time.NewTicker(time.Duration(300) * time.Second)
 	defer ticker.Stop()
 
-	addr := "http://10.34.146.62:6060/api/v1/dymetrics"
+	scheds := []struct {
+		Ip     string
+		NodeId string
+	}{
+		{
+			Ip:     "10.20.94.40",
+			NodeId: "jjh2294",
+		},
+		{
+			Ip:     "10.20.94.41",
+			NodeId: "jjh2295",
+		},
+		{
+			Ip:     "10.34.101.29",
+			NodeId: "bili-xs9",
+		},
+		{
+			Ip:     "10.34.101.28",
+			NodeId: "bili-xs8",
+		},
+	}
 
 	for range ticker.C {
-		resp, err := get(addr)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("pcdnErrMonitor get err")
-			continue
-		}
-		var respData Data
-		if err := json.Unmarshal([]byte(resp), &respData); err != nil {
-			log.Println(err)
-			continue
-		}
-		data := struct {
-			Ts   time.Time `json:"ts"`
-			Data Data      `json:"data"`
-		}{
-			Ts:   time.Now(),
-			Data: respData,
-		}
-		bytes, err := json.Marshal(&data)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		s.writeDataToFile(string(bytes), "/tmp/pcdn_err_dump")
+		for _, sched := range scheds {
+			addr := fmt.Sprintf("http://%s:6060/api/v1/dymetrics", sched.Ip)
+			resp, err := get(addr)
+			if err != nil {
+				s.logger.Error().Err(err).Msg("pcdnErrMonitor get err")
+				continue
+			}
+			var respData Data
+			if err := json.Unmarshal([]byte(resp), &respData); err != nil {
+				log.Println(err)
+				continue
+			}
+			data := struct {
+				Ts   time.Time `json:"ts"`
+				Data Data      `json:"data"`
+			}{
+				Ts:   time.Now(),
+				Data: respData,
+			}
+			bytes, err := json.Marshal(&data)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			path := "/tmp/pcdn_err_dump/" + sched.NodeId
+			s.writeDataToFile(string(bytes), path)
 
-		deleteOldFiles("/tmp/pcdn_err_dump")
+			deleteOldFiles(path)
+		}
 	}
 }

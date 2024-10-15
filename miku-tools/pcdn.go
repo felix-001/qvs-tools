@@ -44,10 +44,15 @@ type PlayCheckResp struct {
 }
 
 func (s *Parser) playcheck(ip string) *PlayCheckResp {
+	scheme := "http"
+	if s.conf.Https {
+		scheme += "s"
+	}
+	playUrl := scheme + "://qn3.douyucdn.cn/live/1226741r3fmmEOb7.flv?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&ip=120.230.111.210&isp=&logo=0&mcid2=0&mix=0&origin=tct&pt=1&sid=397423057&st=0&token=app-androidxlv-0-1226741-0dc52b22d029568980d4d39a0dd754645d73804f0aa4d875&um=0&ver=2.6.1&wsAuth=dda22a267d16cece907605bb44c23f37"
 	req := PlaycheckReq{
 		Bucket: s.conf.Bucket,
 		Key:    s.conf.Stream,
-		Url:    "http://qn3.douyucdn.cn/live/1226741r3fmmEOb7.flv?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&ip=120.230.111.210&isp=&logo=0&mcid2=0&mix=0&origin=tct&pt=1&sid=397423057&st=0&token=app-androidxlv-0-1226741-0dc52b22d029568980d4d39a0dd754645d73804f0aa4d875&um=0&ver=2.6.1&wsAuth=dda22a267d16cece907605bb44c23f37",
+		Url:    playUrl,
 		Node:   s.conf.Node,
 		Remote: ip,
 		ConnId: s.conf.ConnId,

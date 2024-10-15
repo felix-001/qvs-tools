@@ -57,6 +57,7 @@ type Config struct {
 	PcdnErr            string
 	User               string
 	ConnId             string
+	Https              bool
 }
 
 type CmdHandler func()
