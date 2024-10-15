@@ -310,7 +310,7 @@ type Data struct {
 }
 
 func (s *Parser) pcdnErrMonitor() {
-	ticker := time.NewTicker(time.Duration(15) * time.Second)
+	ticker := time.NewTicker(time.Duration(300) * time.Second)
 	defer ticker.Stop()
 
 	addr := "http://10.34.146.62:6060/api/v1/dymetrics"
