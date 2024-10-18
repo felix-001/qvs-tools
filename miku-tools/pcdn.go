@@ -64,7 +64,7 @@ func (s *Parser) playcheck(ip string) *PlayCheckResp {
 		return nil
 	}
 	var resp PlayCheckResp
-	addr := "http://10.34.146.62:6060/api/v1/playcheck"
+	addr := fmt.Sprintf("http://%s:6060/api/v1/playcheck", s.conf.SchedIp)
 	if err := s.post(addr, string(bytes), &resp); err != nil {
 		log.Println(err)
 		return nil

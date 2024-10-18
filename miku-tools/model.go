@@ -58,6 +58,8 @@ type Config struct {
 	User               string
 	ConnId             string
 	Https              bool
+	Interval           int
+	SchedIp            string
 }
 
 type CmdHandler func()

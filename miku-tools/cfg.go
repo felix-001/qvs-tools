@@ -46,6 +46,8 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.User, "user", "volcengine", "请求playcheck 302的user")
 	flag.StringVar(&conf.ConnId, "connid", "testConnId", "请求playcheck 302的connId")
 	flag.BoolVar(&conf.Https, "https", false, "是否启用https")
+	flag.IntVar(&conf.Interval, "interval", 15, "时间间隔")
+	flag.StringVar(&conf.SchedIp, "schedip", "10.34.146.62", "调度服务ip")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

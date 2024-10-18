@@ -310,7 +310,7 @@ type Data struct {
 }
 
 func (s *Parser) pcdnErrMonitor() {
-	ticker := time.NewTicker(time.Duration(300) * time.Second)
+	ticker := time.NewTicker(time.Duration(s.conf.Interval) * time.Second)
 	defer ticker.Stop()
 
 	scheds := []struct {
