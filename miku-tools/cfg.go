@@ -48,6 +48,8 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Https, "https", false, "是否启用https")
 	flag.IntVar(&conf.Interval, "interval", 15, "时间间隔")
 	flag.StringVar(&conf.SchedIp, "schedip", "10.34.146.62", "调度服务ip")
+	flag.StringVar(&conf.Uid, "uid", "", "uid")
+	flag.StringVar(&conf.Domain, "domain", "www.voltest2.com", "domain")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {
@@ -60,10 +62,6 @@ func loadCfg() *Config {
 		conf.Redis = true
 		conf.NodeInfo = true
 		conf.NeedNodeStreamInfo = true
-	}
-	if conf.Node != "" {
-		conf.Redis = true
-		conf.NodeInfo = true
 	}
 	if conf.Cmd == "streams" {
 		conf.Redis = true

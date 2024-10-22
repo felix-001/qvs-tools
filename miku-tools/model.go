@@ -20,13 +20,14 @@ type CkConfig struct {
 }
 
 type Config struct {
-	RedisAddrs         []string    `json:"redis_addrs"`
-	IPDB               ipdb.Config `json:"ipdb"`
-	CK                 CkConfig    `json:"ck"`
-	Secret             string      `json:"secret"`
-	PrometheusAddr     string      `json:"prometheus"`
-	DyApiSecret        string      `json:"dy_api_secret"`
-	DyApiDomain        string      `json:"dy_api_domain"`
+	RedisAddrs         []string        `json:"redis_addrs"`
+	IPDB               ipdb.Config     `json:"ipdb"`
+	CK                 CkConfig        `json:"ck"`
+	Secret             string          `json:"secret"`
+	PrometheusAddr     string          `json:"prometheus"`
+	DyApiSecret        string          `json:"dy_api_secret"`
+	DyApiDomain        string          `json:"dy_api_domain"`
+	AccountCfg         qconfapi.Config `json:"acc"`
 	Bucket             string
 	Stream             string
 	Node               string
@@ -49,7 +50,6 @@ type Config struct {
 	Area               string
 	Pcdn               string
 	Ip                 string
-	AccountCfg         qconfapi.Config
 	T                  string
 	Query              string
 	N                  int
@@ -60,6 +60,8 @@ type Config struct {
 	Https              bool
 	Interval           int
 	SchedIp            string
+	Uid                string
+	Domain             string
 }
 
 type CmdHandler func()

@@ -27,6 +27,7 @@ func initConf(cmdMap map[string]CmdInfo, cfg *Config) {
 			continue
 		}
 		for _, conf := range cmdInfo.Depends {
+			log.Println(cmd, "initConf")
 			*conf = true
 		}
 	}
@@ -172,6 +173,19 @@ func newParser(conf *Config) *Parser {
 		"pcdnerrmonitor": {
 			Handler: parser.pcdnErrMonitor,
 			Usage:   "dump pcdn err信息",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+		},
+		"aksk": {
+			Handler: parser.GetAkSk,
+			Usage:   "通过uid获取aksk信息",
+		},
+		"getdomain": {
+			Handler: parser.GetDomain,
+			Usage:   "获取domain信息",
+		},
+		"updatedomain": {
+			Handler: parser.UpdateDomain,
+			Usage:   "更新domain信息",
 		},
 	}
 	if conf.Help {

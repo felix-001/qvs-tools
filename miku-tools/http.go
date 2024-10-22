@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/tls"
@@ -13,6 +14,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
+
+	"github.com/qbox/bo-sdk/base/xlog.v1"
+	"github.com/qbox/bo-sdk/sdk/qconf/appg"
+	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
 )
 
 var (
@@ -62,10 +68,8 @@ func hmacSha1(key, data string) string {
 func signToken(ak, sk, method, path, host, body string, headers map[string]string) string {
 	data := method + " " + path + "\n"
 	data += "Host: " + host
-	if headers != nil {
-		for key, value := range headers {
-			data += "\n" + key + ": " + value
-		}
+	for key, value := range headers {
+		data += "\n" + key + ": " + value
 	}
 	data += "\n\n"
 	if body != "" {
@@ -121,6 +125,34 @@ func mikuHttpReq(method, addr, body, ak, sk string) (string, error) {
 	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token
 	return httpReq(method, addr, body, headers)
+}
+
+func (s *Parser) s3get(addr string) (string, error) {
+	qc := qconfapi.New(&s.conf.AccountCfg)
+	ag := appg.Client{Conn: qc}
+	uid, err := strconv.Atoi(s.conf.Uid)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	ak, sk, err := ag.GetAkSk(xlog.FromContextSafe(context.Background()), uint32(uid))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return mikuHttpReq("GET", addr, "", ak, sk)
+}
+
+func (s *Parser) s3patch(addr, body string) (string, error) {
+	qc := qconfapi.New(&s.conf.AccountCfg)
+	ag := appg.Client{Conn: qc}
+	uid, err := strconv.Atoi(s.conf.Uid)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	ak, sk, err := ag.GetAkSk(xlog.FromContextSafe(context.Background()), uint32(uid))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return mikuHttpReq("PATCH", addr, body, ak, sk)
 }
 
 func get(addr string) (string, error) {

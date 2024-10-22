@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"strconv"
 
 	"github.com/qbox/bo-sdk/base/xlog.v1"
@@ -14,7 +13,7 @@ import (
 func (s *Parser) GetAkSk() {
 	qc := qconfapi.New(&s.conf.AccountCfg)
 	ag := appg.Client{Conn: qc}
-	uid, err := strconv.Atoi(os.Args[1])
+	uid, err := strconv.Atoi(s.conf.Uid)
 	if err != nil {
 		log.Fatalln(err)
 	}
