@@ -16,6 +16,7 @@ func getVolcLiveSourceFlag(sk string, t time.Time) (string, string) {
 	return hex.EncodeToString(result), date
 }
 
+// go run . -cmd stag -subcmd volc -domain huyap2p-source.bytefcdn.com -bkt huyalive -stream 78941969-2559461593-10992803837303062528-2693342886-10057-A-0-1-imgplus_540_2_66
 func (s *Parser) fetchVolcOriginUrl() {
 	addr := fmt.Sprintf("http://%s/%s/%s.slice?baseIndex=0&quickTime=10000&cdn=qiniuyun",
 		s.conf.Domain, s.conf.Bucket, s.conf.Stream)
