@@ -50,6 +50,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.SchedIp, "schedip", "10.34.146.62", "调度服务ip")
 	flag.StringVar(&conf.Uid, "uid", "", "uid")
 	flag.StringVar(&conf.Domain, "domain", "www.voltest2.com", "domain")
+	flag.StringVar(&conf.SubCmd, "subcmd", "", "staging subcmd")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {
