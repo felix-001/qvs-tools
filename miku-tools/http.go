@@ -87,6 +87,10 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 	client := &http.Client{Transport: tr}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
+		if key == "Host" {
+			req.Host = value
+			continue
+		}
 		req.Header.Add(key, value)
 	}
 	log.Printf("%+v\n", req)
