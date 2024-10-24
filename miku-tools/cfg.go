@@ -51,6 +51,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Uid, "uid", "", "uid")
 	flag.StringVar(&conf.Domain, "domain", "www.voltest2.com", "domain")
 	flag.StringVar(&conf.SubCmd, "subcmd", "", "staging subcmd")
+	flag.StringVar(&conf.Format, "format", "slice", "playcheck请求原始url的format, 例如: flv m3u8 xs slice")
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

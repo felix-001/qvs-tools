@@ -31,6 +31,7 @@ type Config struct {
 	Bucket             string
 	SubCmd             string
 	Stream             string
+	Format             string
 	Node               string
 	NeedIpParer        bool
 	NeedCk             bool

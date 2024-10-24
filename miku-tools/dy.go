@@ -69,6 +69,7 @@ func (s *Parser) getMetrics(t int64) *MetricResp {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("req dy metrics err")
 		return nil
 	}
+	fmt.Println(metrics)
 	var resp MetricResp
 	if err := json.Unmarshal([]byte(metrics), &resp); err != nil {
 		log.Println(err)
