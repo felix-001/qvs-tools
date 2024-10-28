@@ -302,11 +302,23 @@ func (s *Parser) writeDataToFile(data, path string) {
 	}
 }
 
+type ForbiddenNode struct {
+	Ts       time.Time `json:"ts"`
+	OutBw    float64   `json:"outBw"`
+	MaxOutBw float64   `json:"maxOutBw"`
+	Overflow bool      `json:"overflow"`
+}
+
 type Data struct {
-	AbnormalNodes       []map[string]int     `json:"abnormal_nodes"`
-	TopForbiddenNodes   map[string]time.Time `json:"top_forbidden_nodes"`
-	PcdnErrNodes        []map[string]int     `json:"pcdn_err_nodes"`
-	PcdnErrFbiddenNodes map[string]time.Time `json:"pcdn_err_forbidden_nodes"`
+	//AbnormalNodes           []map[string]int         `json:"abnormal_nodes"`
+	TotalTimeoutNodes int                      `json:"total_timeout_nodes"`
+	TopForbiddenNodes map[string]ForbiddenNode `json:"top_forbidden_nodes"`
+	//PcdnErrNodes            []map[string]int         `json:"pcdn_err_nodes"`
+	TotalErrNodes       int                      `json:"total_err_nodes"`
+	PcdnErrFbiddenNodes map[string]ForbiddenNode `json:"pcdn_err_forbidden_nodes"`
+	//ConnectFailNodes        []map[string]int         `json:"connect_fail_nodes"`
+	TotalConnectFailNodes   int                      `json:"total_connect_fail_nodes"`
+	ConnectFailFbiddenNodes map[string]ForbiddenNode `json:"connect_fail_forbidden_nodes"`
 }
 
 func (s *Parser) pcdnErrMonitor() {
