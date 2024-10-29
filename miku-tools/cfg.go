@@ -98,5 +98,10 @@ func loadCfg() *Config {
 		conf.Redis = true
 		conf.NodeInfo = true
 	}
+	if conf.Cmd == "stag" && conf.SubCmd == "ipv6" {
+		conf.Redis = true
+		conf.NodeInfo = true
+		conf.NeedIpParer = true
+	}
 	return &conf
 }
