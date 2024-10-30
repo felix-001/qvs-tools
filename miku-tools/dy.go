@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -126,4 +127,20 @@ func (s *Parser) GetDyTimeout() {
 		s.logger.Info().Str("nodeId", pair.Key).Int("cnt", pair.Value).Str("machineId", machineId).Msg("")
 
 	}
+}
+
+func (s *Parser) DyOriginal() {
+	app := s.conf.Bucket
+	stream := s.conf.Stream
+	key := s.conf.OriginKey
+	domain := s.conf.Domain
+
+	expireTime := time.Now().Unix() + int64(600)
+	hexTime := strconv.FormatInt(expireTime, 16)
+	raw := fmt.Sprintf("%s%s%s", key, stream, hexTime)
+	hash := md5.Sum([]byte(raw))
+	txSecret := hex.EncodeToString([]byte(hash[:]))
+	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s", domain,
+		app, stream, txSecret, hexTime)
+	fmt.Println("url: ", originUrl)
 }

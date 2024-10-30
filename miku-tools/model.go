@@ -28,6 +28,7 @@ type Config struct {
 	DyApiSecret        string          `json:"dy_api_secret"`
 	DyApiDomain        string          `json:"dy_api_domain"`
 	AccountCfg         qconfapi.Config `json:"acc"`
+	OriginKey          string          `json:"origin_key"`
 	Bucket             string
 	SubCmd             string
 	Stream             string

@@ -187,6 +187,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.UpdateDomain,
 			Usage:   "更新domain信息",
 		},
+		"dyori": {
+			Handler: parser.DyOriginal,
+			Usage:   "斗鱼回源地址",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
