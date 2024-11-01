@@ -191,6 +191,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.DyOriginal,
 			Usage:   "斗鱼回源地址",
 		},
+		"niulink": {
+			Handler: parser.NiuLink,
+			Usage:   "niulink 获取动态节点信息",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
