@@ -195,6 +195,11 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.NiuLink,
 			Usage:   "niulink 获取动态节点信息",
 		},
+		"k8s": {
+			Handler: parser.K8s,
+			Usage:   "k8s获取节点列表",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

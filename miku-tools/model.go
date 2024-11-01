@@ -30,6 +30,7 @@ type Config struct {
 	AccountCfg         qconfapi.Config `json:"acc"`
 	OriginKey          string          `json:"origin_key"`
 	NiulinkPath        string          `json:"niulink_path"`
+	KubeCfg            string          `json:"kube_cfg"`
 	Bucket             string
 	SubCmd             string
 	Stream             string
