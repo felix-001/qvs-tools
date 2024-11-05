@@ -14,7 +14,7 @@ func (s *Parser) GetDomain() {
 
 func (s *Parser) UpdateDomain() {
 	addr := fmt.Sprintf("http://%s.mls.cn-east-1.qiniumiku.com/?domainConfig&name=%s", s.conf.Bucket, s.conf.Domain)
-	body := `{"enable": true}`
+	body := `{"streamConf": {"enableXsStream": true}}`
 	resp, err := s.s3patch(addr, body)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("UpdateDomain")

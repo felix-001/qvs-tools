@@ -67,6 +67,7 @@ type Config struct {
 	SchedIp            string
 	Uid                string
 	Domain             string
+	SourceId           string
 }
 
 type CmdHandler func()

@@ -31,8 +31,8 @@ func (s *Parser) DyPlay() {
 		_, s.conf.Pcdn = s.getPcdnFromSchedAPI(true, false)
 	}
 	wsTime, wsSecret := s.dySecret()
-	cmdStr := fmt.Sprintf("./xs -addr %s -path %s/%s.xs -q \"wsSecret=%s&wsTime=%s&domain=qn-ss.douyucdn.cn&sourceID=2594498916\" -f out.xs",
-		s.conf.Pcdn, s.conf.Bucket, s.conf.Stream, wsSecret, wsTime)
+	cmdStr := fmt.Sprintf("./xs -addr %s -path %s/%s.xs -q \"wsSecret=%s&wsTime=%s&domain=%s&sourceID=%s\" -f out.xs",
+		s.conf.Pcdn, s.conf.Bucket, s.conf.Stream, wsSecret, wsTime, s.conf.Domain, s.conf.SourceId)
 	log.Println("cmd:", cmdStr)
 	cmd := exec.Command("bash", "-c", cmdStr)
 	output, err := cmd.CombinedOutput()
