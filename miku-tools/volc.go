@@ -25,7 +25,7 @@ func (s *Parser) fetchVolcOriginUrl() {
 	headers := map[string]string{
 		"Date":                  date,
 		"volc-live-source-flag": flag,
-		"Host":                  "hs.p2p.huya.com",
+		"Host":                  s.conf.Domain,
 	}
 	resp, err := httpReq("GET", addr, "", headers)
 	if err != nil {
