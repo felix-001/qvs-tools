@@ -22,6 +22,7 @@ func (s *Parser) fetchVolcOriginUrl() {
 		s.conf.Domain, s.conf.Bucket, s.conf.Stream)
 	s.logger.Info().Str("sk", s.conf.Sk).Msg("fetchVolcOriginUrl")
 	flag, date := getVolcLiveSourceFlag(s.conf.Sk, time.Now())
+	s.logger.Info().Str("flag", flag).Str("date", date).Msg("fetchVolcOriginUrl")
 	headers := map[string]string{
 		"Date":                  date,
 		"volc-live-source-flag": flag,
