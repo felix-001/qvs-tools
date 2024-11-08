@@ -24,9 +24,9 @@ func (s *Parser) fetchVolcOriginUrl() {
 	flag, date := getVolcLiveSourceFlag(s.conf.Sk, time.Now())
 	s.logger.Info().Str("flag", flag).Str("date", date).Msg("fetchVolcOriginUrl")
 	headers := map[string]string{
-		"Date":                  date,
+		//"Date":                  date,
 		"volc-live-source-flag": flag,
-		"Host":                  s.conf.Domain,
+		"Host":                  "hs-dm.p2p.huya.com",
 	}
 	resp, err := httpReq("GET", addr, "", headers)
 	if err != nil {
