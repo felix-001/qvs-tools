@@ -160,9 +160,9 @@ func (s *Parser) XsPlay() {
 		_, s.conf.Pcdn = s.getPcdnFromSchedAPI(true, false)
 	}
 	wsTime, wsSecret := s.dySecret()
-	addr := fmt.Sprintf("ws://%s/%s/%s/%s.xs?wsSecret=%s&wsTime=%s&sourceID=%s&origin=%s",
-		s.conf.Pcdn, s.conf.Domain, s.conf.Bucket, s.conf.Stream, wsSecret,
-		wsTime, s.conf.SourceId, s.conf.Origin)
+	addr := fmt.Sprintf("ws://%s/%s/%s/%s.xs?wsSecret=%s&origin=%s&wsTime=%s&sourceID=%s",
+		s.conf.Pcdn, s.conf.Domain, s.conf.Bucket, s.conf.Stream, wsSecret, s.conf.Origin,
+		wsTime, s.conf.SourceId)
 	s.logger.Info().Str("addr", addr).Msg("XsPlay")
 	c, _, err := websocket.DefaultDialer.Dial(addr, nil)
 	if err != nil {
