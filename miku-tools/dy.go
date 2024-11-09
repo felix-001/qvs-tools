@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func (s *Parser) dySecret() (string, string) {
@@ -143,4 +146,64 @@ func (s *Parser) DyOriginal() {
 	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s", domain,
 		app, stream, txSecret, hexTime)
 	fmt.Println("url: ", originUrl)
+}
+
+type XsPlayCmd struct {
+	Cmd       string `json:"cmd"`
+	Basesub   int    `json:"basesub"`
+	Startid   int    `json:"startid"`
+	Substream int    `json:"substream"`
+}
+
+func (s *Parser) XsPlay() {
+	if s.conf.Pcdn == "" {
+		_, s.conf.Pcdn = s.getPcdnFromSchedAPI(true, false)
+	}
+	wsTime, wsSecret := s.dySecret()
+	addr := fmt.Sprintf("ws://%s/%s/%s/%s.xs?wsSecret=%s&wsTime=%s&sourceID=%s&origin=%s",
+		s.conf.Pcdn, s.conf.Domain, s.conf.Bucket, s.conf.Stream, wsSecret,
+		wsTime, s.conf.SourceId, s.conf.Origin)
+	s.logger.Info().Str("addr", addr).Msg("XsPlay")
+	c, _, err := websocket.DefaultDialer.Dial(addr, nil)
+	if err != nil {
+		log.Fatal("Dial error:", err)
+	}
+	defer c.Close()
+
+	cmd := &XsPlayCmd{
+		Cmd:       "play",
+		Basesub:   s.conf.Basesub,
+		Substream: s.conf.SubStream,
+		Startid:   s.conf.Startid,
+	}
+	bytes, err := json.Marshal(cmd)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if err := c.WriteMessage(websocket.TextMessage, bytes); err != nil {
+		fmt.Println("write:", err)
+		return
+	}
+	file, err := os.OpenFile(s.conf.F, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	total := 0
+	defer func() {
+		s.logger.Info().Int("totalRecv", total).Msg("")
+	}()
+	for {
+		_, message, err := c.ReadMessage()
+		if err != nil {
+			s.logger.Error().Err(err).Msg("ws read")
+			return
+		}
+		_, err = file.Write(message)
+		if err != nil {
+			panic(err)
+		}
+		total += len(message)
+	}
 }

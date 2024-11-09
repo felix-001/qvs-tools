@@ -53,6 +53,12 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.SubCmd, "subcmd", "", "staging subcmd")
 	flag.StringVar(&conf.Format, "format", "slice", "playcheck请求原始url的format, 例如: flv m3u8 xs slice")
 	flag.StringVar(&conf.SourceId, "sourceid", "2275133575", "播放dy流的sourceid")
+	flag.StringVar(&conf.Origin, "origin", "tct", "tct/dy/hw")
+	flag.IntVar(&conf.Basesub, "basesub", 1, "子流总数，切片ID按此取模得到切片所属子流号")
+	flag.IntVar(&conf.SubStream, "substream", 0, "子流号(以0开始，比如例子中 0,1,2,3,4,5)")
+	flag.IntVar(&conf.Startid, "startid", 0, "起始发送切片ID")
+	flag.StringVar(&conf.F, "f", "/tmp/out.xs", "输出文件")
+
 	flag.Parse()
 
 	if conf.Cmd == "ispchk" {

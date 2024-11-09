@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
+	github.com/gorilla/websocket v1.4.2
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
 	github.com/qbox/mikud-live v1.5.1-0.20240924090206-8fb9874fc762

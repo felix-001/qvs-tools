@@ -68,6 +68,11 @@ type Config struct {
 	Uid                string
 	Domain             string
 	SourceId           string
+	Origin             string
+	Basesub            int
+	SubStream          int
+	Startid            int
+	F                  string
 }
 
 type CmdHandler func()
