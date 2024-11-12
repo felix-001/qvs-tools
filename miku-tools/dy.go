@@ -181,6 +181,7 @@ func (s *Parser) XsPlay() {
 		log.Println(err)
 		return
 	}
+	fmt.Println("send cmd:", string(bytes))
 	if err := c.WriteMessage(websocket.TextMessage, bytes); err != nil {
 		fmt.Println("write:", err)
 		return
