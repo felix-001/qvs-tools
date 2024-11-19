@@ -12,6 +12,7 @@ require (
 	github.com/qiniu/x v1.13.10
 	github.com/redis/go-redis/v9 v9.5.3
 	github.com/rs/zerolog v1.29.1
+	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	k8s.io/api v0.28.3
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3

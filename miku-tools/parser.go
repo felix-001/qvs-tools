@@ -115,6 +115,7 @@ func newParser(conf *Config) *Parser {
 		"stag": {
 			Handler: parser.Staging,
 			Usage:   "staging",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
 		},
 		"dumproot": {
 			Handler: parser.DumpRoots,
