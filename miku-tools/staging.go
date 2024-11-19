@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -403,8 +404,10 @@ func (s *Parser) HashRingMap() {
 }
 
 type NodeResourceRatio struct {
-	Leaf  map[string]float64            `json:"leaf"`  // 边缘分发节点的资源配比
-	Relay map[string]map[string]float64 `json:"relay"` // relay节点资源配比, key1: 层级 key2: 资源类型
+	Ratio  map[string]float64 `json:"ratio"` // 边缘分发节点的资源配比
+	Backup *NodeResourceRatio `json:"backup"`
+	Relay  *NodeResourceRatio `json:"relay"`
+	//Relay map[string]map[string]float64 `json:"relay"` // relay节点资源配比, key1: 层级 key2: 资源类型
 }
 
 type ResourceConfig struct {
@@ -425,6 +428,34 @@ type ResourceConfig struct {
 func (s *Parser) Refactor() {
 	// 配置节点质量等级为default, 选点算法为"hash", 50%专线, 50%汇聚, 不使用relay
 	//cfg := ResourceConfig{}
+
+	cfg := NodeResourceRatio{
+		Ratio: map[string]float64{
+			"盒子": 30,
+			"汇聚": 70,
+		},
+		Relay: &NodeResourceRatio{
+			Ratio: map[string]float64{
+				"专线root": 100,
+			},
+			Relay: &NodeResourceRatio{
+				Ratio: map[string]float64{
+					"专线root": 100,
+				},
+			},
+		},
+		Backup: &NodeResourceRatio{
+			Ratio: map[string]float64{
+				"专线": 100,
+			},
+		},
+	}
+	jsonbody, err := json.Marshal(&cfg)
+	if err != nil {
+		log.Info().Err(err).Msg("")
+		return
+	}
+	fmt.Println(string(jsonbody))
 }
 
 func (s *Parser) Load() {
