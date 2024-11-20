@@ -6,8 +6,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-
-	"github.com/qbox/mikud-live/cmd/lived/common/util"
 )
 
 type StreamdQos struct {
@@ -80,7 +78,8 @@ func (s *Parser) LagAnalysis() {
 		nodeLagCntMap[data.NodeId] += data.LagDuration
 		streamLagCntMap[data.StreamName] += data.LagCount
 		regionLagCntMap[data.Region] += data.LagCount
-		area := util.ProvinceAreaRelation(data.Region)
+		//area := util.ProvinceAreaRelation(data.Region)
+		area := ""
 		areaLagCntMap[area] += data.LagCount
 	}
 	log.Println("node lag map:")
