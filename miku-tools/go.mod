@@ -7,7 +7,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
-	github.com/qbox/mikud-live v1.5.1-0.20240924090206-8fb9874fc762
+	github.com/qbox/mikud-live v1.5.1-0.20241119034959-4e20b27786ad
 	github.com/qbox/pili v1.0.33
 	github.com/qiniu/x v1.13.10
 	github.com/redis/go-redis/v9 v9.5.3
