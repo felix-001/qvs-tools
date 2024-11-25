@@ -29,6 +29,8 @@ type Config struct {
 	DyApiDomain        string          `json:"dy_api_domain"`
 	AccountCfg         qconfapi.Config `json:"acc"`
 	OriginKey          string          `json:"origin_key"`
+	OriginKeyDy        string          `json:"origin_key_dy"`
+	OriginKeyHw        string          `json:"origin_key_hw"`
 	NiulinkPath        string          `json:"niulink_path"`
 	KubeCfg            string          `json:"kube_cfg"`
 	Bucket             string
