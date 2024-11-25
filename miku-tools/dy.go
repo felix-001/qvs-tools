@@ -143,8 +143,8 @@ func (s *Parser) DyOriginal() {
 	raw := fmt.Sprintf("%s%s%s", key, stream, hexTime)
 	hash := md5.Sum([]byte(raw))
 	txSecret := hex.EncodeToString([]byte(hash[:]))
-	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s", domain,
-		app, stream, txSecret, hexTime)
+	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s&origin=%s", domain,
+		app, stream, txSecret, hexTime, s.conf.Origin)
 	fmt.Println("url: ", originUrl)
 }
 
