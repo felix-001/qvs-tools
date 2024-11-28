@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"sort"
 	"strconv"
 	"sync"
@@ -35,6 +36,8 @@ func (s *Parser) Staging() {
 		s.Refactor()
 	case "load":
 		s.Load()
+	case "exec":
+		s.Exec()
 	}
 }
 
@@ -495,4 +498,14 @@ func (s *Parser) Load() {
 	for nodeid, ip := range nodes {
 		s.logger.Info().Str("node", nodeid).Str("ip", ip).Msg("")
 	}
+}
+
+func (s *Parser) Exec() {
+	cmd := exec.Command("jumpboxCmdNew", "redis-cli -h 10.70.60.31 -p 8200 -c --raw hgetall mik_netprobe_runtime_nodes_map")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return
+	}
+	fmt.Println("the output is:", string(output))
 }
