@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -9,12 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common"
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
+	"github.com/qbox/pili/base/qiniu/xlog.v1"
 	"github.com/rs/zerolog/log"
 	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
@@ -38,6 +41,8 @@ func (s *Parser) Staging() {
 		s.Load()
 	case "exec":
 		s.Exec()
+	case "dns":
+		s.Dnspod()
 	}
 }
 
@@ -508,4 +513,70 @@ func (s *Parser) Exec() {
 		return
 	}
 	fmt.Println("the output is:", string(output))
+}
+
+func (s *Parser) Dnspod() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(cli)
+	xl := xlog.NewDummyWithCtx(context.Background())
+	resp, err := cli.GetRecords(xl, "mikudns.com", "", "", 0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//fmt.Println(resp)
+	fmt.Println(*resp.RecordCountInfo.ListCount)
+	fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+	fmt.Println(*resp.RecordCountInfo.TotalCount)
+	//fmt.Println(resp.RecordList)
+	areaIpsMap := make(map[string][]string)
+	for i, record := range resp.RecordList {
+		fmt.Println()
+		fmt.Println(i)
+		fmt.Println("defaultns", *record.DefaultNS)
+		fmt.Println("value", *record.Value)
+		fmt.Println("name", *record.Name)
+		fmt.Println("line", *record.Line)
+		fmt.Println(*record.Type)
+		//fmt.Println(*record.Weight)
+		fmt.Println("remark", *record.Remark)
+		fmt.Println("ttl", *record.TTL)
+		areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+	}
+
+	fmt.Println(areaIpsMap)
+	bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
+	op := public.Operation{
+		Type:  "A",
+		Line:  "默认",
+		Value: "119.145.128.191",
+	}
+	resp1, err := cli.CreateRaw(xl, &op, "qnrd.volclivedvs.com", "abc123hello")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(resp1)
+
+	op1 := public.Operation{
+		Type:  "A",
+		Line:  "默认",
+		Value: "218.22.23.189",
+	}
+	resp1, err = cli.CreateRaw(xl, &op1, "qnrd.volclivedvs.com", "abc123hello")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(resp1)
+
 }
