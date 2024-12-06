@@ -521,62 +521,91 @@ func (s *Parser) Dnspod() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(cli)
+	//fmt.Println(cli)
 	xl := xlog.NewDummyWithCtx(context.Background())
-	resp, err := cli.GetRecords(xl, "mikudns.com", "", "", 0)
+	//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+	resp, err := cli.GetLines(xl, "qnrd.volclivedvs.com", "")
+	//resp, err := cli.GetLines(xl, "mikudns.com", "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	//fmt.Println(resp)
-	fmt.Println(*resp.RecordCountInfo.ListCount)
-	fmt.Println(*resp.RecordCountInfo.SubdomainCount)
-	fmt.Println(*resp.RecordCountInfo.TotalCount)
-	//fmt.Println(resp.RecordList)
-	areaIpsMap := make(map[string][]string)
-	for i, record := range resp.RecordList {
-		fmt.Println()
-		fmt.Println(i)
-		fmt.Println("defaultns", *record.DefaultNS)
-		fmt.Println("value", *record.Value)
-		fmt.Println("name", *record.Name)
-		fmt.Println("line", *record.Line)
-		fmt.Println(*record.Type)
-		//fmt.Println(*record.Weight)
-		fmt.Println("remark", *record.Remark)
-		fmt.Println("ttl", *record.TTL)
-		areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+	for k, v := range resp {
+		fmt.Println(k)
+		fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
 	}
-
-	fmt.Println(areaIpsMap)
-	bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+	//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
+	resp1, err := cli.GetDomain(xl, "ietheivaicai.com")
 	if err != nil {
 		fmt.Println(err)
+		return
+	}
+
+	bytes, err := json.MarshalIndent(resp1, "", "  ")
+	if err != nil {
 		return
 	}
 	fmt.Println(string(bytes))
-	op := public.Operation{
-		Type:  "A",
-		Line:  "默认",
-		Value: "119.145.128.191",
-	}
-	resp1, err := cli.CreateRaw(xl, &op, "qnrd.volclivedvs.com", "abc123hello")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(resp1)
 
-	op1 := public.Operation{
-		Type:  "A",
-		Line:  "默认",
-		Value: "218.22.23.189",
-	}
-	resp1, err = cli.CreateRaw(xl, &op1, "qnrd.volclivedvs.com", "abc123hello")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(resp1)
+	/*
+		resp, err := cli.GetRecords(xl, "zeicaefiegoh.com", "", "", 0)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		//fmt.Println(resp)
+		fmt.Println(*resp.RecordCountInfo.ListCount)
+		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+		fmt.Println(*resp.RecordCountInfo.TotalCount)
+		//fmt.Println(resp.RecordList)
+		areaIpsMap := make(map[string][]string)
+		for i, record := range resp.RecordList {
+			fmt.Println()
+			fmt.Println(i)
+			fmt.Println("defaultns", *record.DefaultNS)
+			fmt.Println("value", *record.Value)
+			fmt.Println("name", *record.Name)
+			fmt.Println("line", *record.Line)
+			fmt.Println(*record.Type)
+			//fmt.Println(*record.Weight)
+			fmt.Println("remark", *record.Remark)
+			fmt.Println("ttl", *record.TTL)
+			areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+		}
+
+		fmt.Println(areaIpsMap)
+		bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(string(bytes))
+	*/
+	/*
+		op := public.Operation{
+			Type:  "A",
+			Line:  "默认",
+			Value: "119.145.128.191",
+		}
+		resp1, err := cli.CreateRaw(xl, &op, "qnrd.volclivedvs.com", "abc123hello")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(resp1)
+
+		op1 := public.Operation{
+			Type:  "A",
+			Line:  "默认",
+			Value: "218.22.23.189",
+		}
+		resp1, err = cli.CreateRaw(xl, &op1, "qnrd.volclivedvs.com", "abc123hello")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(resp1)
+	*/
 
 }
