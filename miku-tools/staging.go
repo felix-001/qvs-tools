@@ -521,32 +521,68 @@ func (s *Parser) Dnspod() {
 		fmt.Println(err)
 		return
 	}
-	//fmt.Println(cli)
+	op := public.Operation{
+		Type:  "A",
+		Line:  "默认",
+		Value: "119.145.128.120",
+	}
 	xl := xlog.NewDummyWithCtx(context.Background())
-	//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
-	resp, err := cli.GetLines(xl, "qnrd.volclivedvs.com", "")
-	//resp, err := cli.GetLines(xl, "mikudns.com", "")
+	resp1, err := cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "*")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	//fmt.Println(resp)
-	for k, v := range resp {
-		fmt.Println(k)
-		fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
+	fmt.Println(resp1)
+	op = public.Operation{
+		Type:  "A",
+		Line:  "默认",
+		Value: "119.145.128.198",
 	}
-	//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
-	resp1, err := cli.GetDomain(xl, "ietheivaicai.com")
+	resp1, err = cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "bbbbbb")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println(resp1)
+	op = public.Operation{
+		Type:  "A",
+		Line:  "默认",
+		Value: "119.145.128.197",
+	}
+	resp1, err = cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "ccccc")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(resp1)
+	/*
+		//fmt.Println(cli)
+		xl := xlog.NewDummyWithCtx(context.Background())
+		//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+		resp, err := cli.GetLines(xl, "qnrd.volclivedvs.com", "")
+		//resp, err := cli.GetLines(xl, "mikudns.com", "")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		//fmt.Println(resp)
+		for k, v := range resp {
+			fmt.Println(k)
+			fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
+		}
+		//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
+		resp1, err := cli.GetDomain(xl, "ietheivaicai.com")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-	bytes, err := json.MarshalIndent(resp1, "", "  ")
-	if err != nil {
-		return
-	}
-	fmt.Println(string(bytes))
+		bytes, err := json.MarshalIndent(resp1, "", "  ")
+		if err != nil {
+			return
+		}
+		fmt.Println(string(bytes))
+	*/
 
 	/*
 		resp, err := cli.GetRecords(xl, "zeicaefiegoh.com", "", "", 0)
