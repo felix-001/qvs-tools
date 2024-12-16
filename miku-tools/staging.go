@@ -564,66 +564,67 @@ func (s *Parser) Dnspod() {
 			}
 			fmt.Println(resp1)
 	*/
-	/*
-		//fmt.Println(cli)
-		//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
-		resp, err := cli.GetLines(xl, "qnrd.volclivedvs.com", "")
-		//resp, err := cli.GetLines(xl, "mikudns.com", "")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		//fmt.Println(resp)
-		for k, v := range resp {
-			fmt.Println(k)
-			fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
-		}
-		//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
-		resp1, err := cli.GetDomain(xl, "ietheivaicai.com")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
 
-		bytes, err := json.MarshalIndent(resp1, "", "  ")
-		if err != nil {
-			return
-		}
-		fmt.Println(string(bytes))
-	*/
-
-	resp, err := cli.GetRecords(xl, "cloudvdn.com", "2006024383", "", 0)
+	//fmt.Println(cli)
+	//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+	resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+	//resp, err := cli.GetLines(xl, "mikudns.com", "")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	//fmt.Println(resp)
-	fmt.Println(*resp.RecordCountInfo.ListCount)
-	fmt.Println(*resp.RecordCountInfo.SubdomainCount)
-	fmt.Println(*resp.RecordCountInfo.TotalCount)
-	//fmt.Println(resp.RecordList)
-	areaIpsMap := make(map[string][]string)
-	for i, record := range resp.RecordList {
-		fmt.Println()
-		fmt.Println(i)
-		fmt.Println("defaultns", *record.DefaultNS)
-		fmt.Println("value", *record.Value)
-		fmt.Println("name", *record.Name)
-		fmt.Println("line", *record.Line)
-		fmt.Println(*record.Type)
-		//fmt.Println(*record.Weight)
-		fmt.Println("remark", *record.Remark)
-		fmt.Println("ttl", *record.TTL)
-		areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+	for k, v := range resp {
+		fmt.Println(k)
+		fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
 	}
-
-	fmt.Println(areaIpsMap)
-	bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+	//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
+	resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	bytes, err := json.MarshalIndent(resp1, "", "  ")
+	if err != nil {
+		return
+	}
 	fmt.Println(string(bytes))
+
+	/*
+		resp, err := cli.GetRecords(xl, "cloudvdn.com", "2006024383", "", 0)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		//fmt.Println(resp)
+		fmt.Println(*resp.RecordCountInfo.ListCount)
+		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+		fmt.Println(*resp.RecordCountInfo.TotalCount)
+		//fmt.Println(resp.RecordList)
+		areaIpsMap := make(map[string][]string)
+		for i, record := range resp.RecordList {
+			fmt.Println()
+			fmt.Println(i)
+			fmt.Println("defaultns", *record.DefaultNS)
+			fmt.Println("value", *record.Value)
+			fmt.Println("name", *record.Name)
+			fmt.Println("line", *record.Line)
+			fmt.Println(*record.Type)
+			//fmt.Println(*record.Weight)
+			fmt.Println("remark", *record.Remark)
+			fmt.Println("ttl", *record.TTL)
+			areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+		}
+
+		fmt.Println(areaIpsMap)
+		bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(string(bytes))
+	*/
 	/*
 		op := public.Operation{
 			Type:  "A",
