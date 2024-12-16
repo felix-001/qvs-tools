@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,6 +52,10 @@ func (s *Parser) Staging() {
 		m["bbb"] = "world"
 		m["ccc"] = "foo"
 		s.logger.Info().Any("mm", m).Msg("test")
+	case "lowbw":
+		s.LowBw()
+	case "dnsrecords":
+		s.DnsRecords()
 	}
 }
 
@@ -651,4 +658,170 @@ func (s *Parser) Dnspod() {
 		fmt.Println(resp1)
 	*/
 
+}
+
+func (s *Parser) getAllNodes() string {
+	raw := "redis-cli -h 10.70.60.31 -p 8200 -c --raw hgetall mik_netprobe_runtime_nodes_map"
+	cmd := exec.Command("jumpboxCmdNew", raw)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return ""
+	}
+	//fmt.Println("the output is:", string(output))
+	pos := strings.Index(string(output), raw)
+	if pos == -1 {
+		fmt.Println("find mik_netprobe_runtime_nodes_map && exti err")
+		return ""
+	}
+	pos += len(raw) + 2
+	str := string(output)[pos:]
+
+	pos = strings.Index(str, raw)
+	if pos == -1 {
+		fmt.Println("find mik_netprobe_runtime_nodes_map && exti err")
+		return ""
+	}
+	pos += len(raw) + 10
+	return string(str)[pos:]
+}
+
+func (s *Parser) LowBw() {
+	file := "/tmp/nodes.json"
+	_, err := os.Stat(file)
+
+	output := ""
+	if os.IsNotExist(err) {
+		output = s.getAllNodes()
+		err := ioutil.WriteFile(file, []byte(output), 0644)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else if err != nil {
+		fmt.Printf("检查文件 %s 时发生错误: %s\n", file, err)
+		return
+	} else {
+		s.logger.Info().Str("file", file).Msg("read from file")
+		bytes, err := ioutil.ReadFile(file)
+		if err != nil {
+			s.logger.Error().Err(err).Str("file", file).Msg("read file err")
+			return
+		}
+		output = string(bytes)
+	}
+	if output == "" {
+		return
+	}
+
+	//fmt.Println("output:", output)
+	allNodesMap := make(map[string]*public.RtNode)
+	lines := strings.Split(output, "\r\n")
+	fmt.Println("lines:", len(lines))
+	for i, line := range lines {
+		if i%2 == 0 {
+			continue
+		}
+		node := &public.RtNode{}
+		if err := json.Unmarshal([]byte(line), node); err != nil {
+			s.logger.Error().Err(err).Int("i", i).Msg("unmarshal")
+			continue
+		}
+		allNodesMap[node.Id] = node
+	}
+	fmt.Println("nodes count:", len(allNodesMap))
+	ipCnt := 0
+	dedicatedCnt := 0
+	aggregationCnt := 0
+	dedicatedIpCnt := 0
+	aggregationIpCnt := 0
+	more32IpCnt := 0
+	nat1Cnt := 0
+	nat1IpCnt := 0
+	more20IpCnt := 0
+	notServingCnt := 0
+	notNormalCnt := 0
+	for _, node := range allNodesMap {
+		if !node.IsDynamic {
+			continue
+		}
+		if node.IsNat1() {
+			nat1Cnt++
+			continue
+		}
+		if node.Status != "Normal" {
+			notNormalCnt++
+		}
+		if node.RuntimeStatus != "Serving" {
+			notServingCnt++
+			continue
+		}
+		if node.ResourceType == "dedicated" {
+			dedicatedCnt++
+		} else if node.ResourceType == "aggregation" {
+			aggregationCnt++
+		}
+		for _, ipInfo := range node.Ips {
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			if node.ResourceType == "dedicated" {
+				dedicatedIpCnt++
+			} else if node.ResourceType == "aggregation" {
+				aggregationIpCnt++
+			}
+			if ipInfo.MaxOutMBps > 32 {
+				more32IpCnt++
+			}
+			if node.IsNat1() {
+				nat1IpCnt++
+			}
+			if ipInfo.MaxOutMBps > 20 {
+				more20IpCnt++
+			}
+			ipCnt++
+		}
+	}
+	s.logger.Info().
+		Int("ipCnt", ipCnt).
+		Int("dedicatedCnt", dedicatedCnt).
+		Int("aggregationCnt", aggregationCnt).
+		Int("dedicatedIpCnt", dedicatedIpCnt).
+		Int("aggregationIpCnt", aggregationIpCnt).
+		Int("more32IpCnt", more32IpCnt).
+		Int("nat1Cnt", nat1Cnt).
+		Int("nat1IpCnt", nat1IpCnt).
+		Int("more20IpCnt", more20IpCnt).
+		Int("notServingCnt", notServingCnt).
+		Int("notNormalCnt", notNormalCnt).
+		Msg("LowBw")
+}
+
+func (s *Parser) DnsRecords() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	resp, err := cli.GetRecords(xl, s.conf.Domain, "", "", 0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
+	//s.logger.Info().Any("resp", resp).Msg("record")
+	/*
+		fmt.Println(*resp.RecordCountInfo.ListCount)
+		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+		fmt.Println(*resp.RecordCountInfo.TotalCount)
+		for _, record := range resp.RecordList {
+			s.logger.Info().Any("record", record).Msg("record")
+		}
+	*/
 }
