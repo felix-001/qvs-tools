@@ -16,6 +16,7 @@ import (
 	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
+	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common"
 	public "github.com/qbox/mikud-live/common/model"
@@ -53,9 +54,14 @@ func (s *Parser) Staging() {
 		m["ccc"] = "foo"
 		s.logger.Info().Any("mm", m).Msg("test")
 	case "lowbw":
-		s.LowBw()
+		//s.LowBw()
+		s.buildAllNodesMap()
+		s.DumpNodes()
 	case "dnsrecords":
 		s.DnsRecords()
+	case "lowbw2":
+		s.buildAllNodesMap()
+		s.LowBw2()
 	}
 }
 
@@ -691,7 +697,7 @@ func (s *Parser) LowBw() {
 	_, err := os.Stat(file)
 
 	output := ""
-	if os.IsNotExist(err) {
+	if os.IsNotExist(err) || s.conf.Force {
 		output = s.getAllNodes()
 		err := ioutil.WriteFile(file, []byte(output), 0644)
 		if err != nil {
@@ -741,13 +747,14 @@ func (s *Parser) LowBw() {
 	more20IpCnt := 0
 	notServingCnt := 0
 	notNormalCnt := 0
+	servingCnt := 0
 	for _, node := range allNodesMap {
 		if !node.IsDynamic {
 			continue
 		}
 		if node.IsNat1() {
 			nat1Cnt++
-			continue
+			//continue
 		}
 		if node.Status != "Normal" {
 			notNormalCnt++
@@ -756,12 +763,28 @@ func (s *Parser) LowBw() {
 			notServingCnt++
 			continue
 		}
+		if len(node.Ips) == 0 {
+			continue
+		}
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			s.logger.Warn().Msgf("[CheckNodeUsable] not pass, nodeId:%s, machineId:%s, isDynamic:%t, abilities:%+v",
+				node.Id, node.MachineId, node.IsDynamic, node.Abilities)
+			continue
+		}
+
+		if _, ok = node.Services["live"]; !ok {
+			s.logger.Warn().Msgf("[CheckNodeUsable] not pass, nodeId:%s, machineId:%s, isDynamic:%t, services:%+v",
+				node.Id, node.MachineId, node.IsDynamic, node.Services)
+			continue
+		}
 		if node.ResourceType == "dedicated" {
 			dedicatedCnt++
 		} else if node.ResourceType == "aggregation" {
 			aggregationCnt++
 		}
 		for _, ipInfo := range node.Ips {
+			servingCnt++
 			if publicUtil.IsPrivateIP(ipInfo.Ip) {
 				continue
 			}
@@ -794,6 +817,7 @@ func (s *Parser) LowBw() {
 		Int("more20IpCnt", more20IpCnt).
 		Int("notServingCnt", notServingCnt).
 		Int("notNormalCnt", notNormalCnt).
+		Int("servingCnt", servingCnt).
 		Msg("LowBw")
 }
 
@@ -824,4 +848,156 @@ func (s *Parser) DnsRecords() {
 			s.logger.Info().Any("record", record).Msg("record")
 		}
 	*/
+}
+
+func (s *Parser) DumpNodes() {
+	nodeMap := make(map[string]int)
+	for _, node := range s.allNodesMap {
+		if !node.IsDynamic {
+			nodeMap["staicNode"]++
+			continue
+		}
+		nodeMap["afterSetp1"]++
+		if node.RuntimeStatus != "Serving" {
+			nodeMap["notServing"]++
+			continue
+		}
+		nodeMap["afterSetp2"]++
+		if len(node.Ips) == 0 {
+			nodeMap["noIps"]++
+			continue
+		}
+		nodeMap["afterSetp3"]++
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			nodeMap["abilityChk"]++
+			continue
+		}
+		nodeMap["afterSetp4"]++
+
+		if _, ok = node.Services["live"]; !ok {
+			nodeMap["servicesChk"]++
+			continue
+		}
+		nodeMap["afterSetp5"]++
+		if !node.IsNat1() {
+			if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
+				nodeMap["portsChk"]++
+				continue
+			}
+		}
+		nodeMap["afterSetp6"]++
+		if len(node.Schedules) != 0 {
+			nodeMap["SchedulesChk"]++
+			continue
+		}
+		nodeMap["afterSetp7"]++
+		for _, ipInfo := range node.Ips {
+			nodeMap["ipCnt"]++
+			if ipInfo.Forbidden {
+				nodeMap["ipForbidden"]++
+				continue
+			}
+			if ipInfo.IsIPv6 {
+				nodeMap["ipv6"]++
+			}
+			nodeMap["afterSetp8"]++
+			if ipInfo.OutMBps >= ipInfo.MaxOutMBps*0.93 {
+				nodeMap["ipBwOverflow"]++
+				continue
+			}
+			nodeMap["afterSetp9"]++
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				nodeMap["IsPrivateIP"]++
+				continue
+			}
+			nodeMap["afterSetp10"]++
+			if node.IsNat1() {
+				nodeMap["nat1"]++
+				continue
+			}
+			nodeMap["afterSetp11"]++
+		}
+	}
+	s.logger.Info().Any("nodeMap", nodeMap).Msg("dump nodes")
+}
+
+func (s *Parser) LowBw2() {
+	ignoreV6 := false
+	ServingNodesIpCntStep1 := 0
+
+	allNodes, err := dal.GetAllNode(s.RedisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	rawDynamicNodes := make([]*public.RtNode, 0, len(allNodes))
+	for _, node := range allNodes {
+		if node.IsDynamic {
+			rawDynamicNodes = append(rawDynamicNodes, node)
+		}
+	}
+
+	dynamicNodes := rawDynamicNodes
+	timeLimitCnt := 0
+	nodeMap := make(map[string]int)
+	for _, node := range dynamicNodes {
+		if node == nil || !node.IsDynamic {
+			continue
+		}
+
+		if !util.CheckNodeUsable(log.Logger, node, consts.TypeLive) {
+			nodeMap["CheckNodeUsable"]++
+			continue
+		}
+		nodeMap["step1"]++
+
+		if !checkDynamicNodesPort(node) {
+			nodeMap["checkDynamicNodesPort"]++
+			continue
+		}
+		nodeMap["step2"]++
+
+		if !checkCanScheduleOfTimeLimit(node, 3600) {
+			nodeMap["checkCanScheduleOfTimeLimit"]++
+			timeLimitCnt++
+			continue
+		}
+		nodeMap["step3"]++
+
+		for _, info := range node.Ips {
+			if ignoreV6 && info.IsIPv6 {
+				nodeMap["IsIPv6"]++
+				continue
+			}
+			nodeMap["step4"]++
+
+			if info.Forbidden {
+				nodeMap["Forbidden"]++
+				continue
+			}
+			/*
+				if publicUtil.IsPrivateIP(info.Ip) {
+					nodeMap["private"]++
+					continue
+				}
+			*/
+
+			if !publicUtil.IsPrivateIP(info.Ip) {
+				if info.MaxOutMBps > 0 {
+					if info.OutMBps > info.MaxOutMBps*0.93 {
+						nodeMap["bwOverflow"]++
+						continue
+					}
+				} else {
+					nodeMap["bwOverflow"]++
+					continue
+				}
+			}
+			nodeMap["step5"]++
+
+			ServingNodesIpCntStep1++
+		}
+	}
+	s.logger.Info().Int("ServingNodesIpCntStep1", ServingNodesIpCntStep1).Any("nodeMap", nodeMap).Msg("lowbw2")
 }

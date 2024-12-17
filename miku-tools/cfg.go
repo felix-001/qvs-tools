@@ -58,6 +58,7 @@ func loadCfg() *Config {
 	flag.IntVar(&conf.SubStream, "substream", 0, "子流号(以0开始，比如例子中 0,1,2,3,4,5)")
 	flag.IntVar(&conf.Startid, "startid", 0, "起始发送切片ID")
 	flag.StringVar(&conf.F, "f", "/tmp/out.xs", "输出文件")
+	flag.BoolVar(&conf.Force, "force", false, "是否强制刷新")
 
 	flag.Parse()
 

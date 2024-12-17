@@ -77,6 +77,7 @@ type Config struct {
 	SubStream          int
 	Startid            int
 	F                  string
+	Force              bool
 }
 
 type CmdHandler func()
