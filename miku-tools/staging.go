@@ -62,6 +62,10 @@ func (s *Parser) Staging() {
 	case "lowbw2":
 		s.buildAllNodesMap()
 		s.LowBw2()
+	case "deldns":
+		s.DelDns()
+	case "lines":
+		s.DnsLines()
 	}
 }
 
@@ -1000,4 +1004,62 @@ func (s *Parser) LowBw2() {
 		}
 	}
 	s.logger.Info().Int("ServingNodesIpCntStep1", ServingNodesIpCntStep1).Any("nodeMap", nodeMap).Msg("lowbw2")
+}
+
+func (s *Parser) DelDns() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if s.conf.RecordId == "" {
+		fmt.Println("need record id")
+		return
+	}
+	if s.conf.Domain == "" {
+		fmt.Println("need domain")
+		return
+	}
+	recordIds := strings.Split(s.conf.RecordId, ",")
+	intRecordIds := []uint64{}
+	for _, recordId := range recordIds {
+		u, err := strconv.ParseUint(recordId, 10, 64)
+		if err != nil {
+			fmt.Printf("转换错误: %v\n", err)
+			return
+		}
+		intRecordIds = append(intRecordIds, u)
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+
+	for _, recordId := range intRecordIds {
+		op := public.Operation{
+			RecordId: recordId,
+		}
+		resp, err := cli.DeleteRaw(xl, &op, s.conf.Domain)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		s.logger.Info().Any("resp", resp).Msg("del dns")
+	}
+}
+
+func (s *Parser) DnsLines() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	resp, err := cli.GetLines(xl, s.conf.Domain, "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		return
+	}
+	fmt.Println(string(bytes))
 }

@@ -59,6 +59,7 @@ func loadCfg() *Config {
 	flag.IntVar(&conf.Startid, "startid", 0, "起始发送切片ID")
 	flag.StringVar(&conf.F, "f", "/tmp/out.xs", "输出文件")
 	flag.BoolVar(&conf.Force, "force", false, "是否强制刷新")
+	flag.StringVar(&conf.RecordId, "recordid", "", "dns record id, 支持,分割多条记录")
 
 	flag.Parse()
 
