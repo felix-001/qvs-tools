@@ -403,6 +403,14 @@ func (s *Parser) HashRingMap() {
 	fmt.Println("cost", time.Since(start))
 }
 
+/*
+不出省
+省内
+大区
+isp
+跨isp
+*/
+
 type NodeResourceRatio struct {
 	Ratio  map[string]float64 `json:"ratio"` // 边缘分发节点的资源配比
 	Backup *NodeResourceRatio `json:"backup"`
