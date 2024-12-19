@@ -183,8 +183,12 @@ func (s *Parser) getPcdn(did string) string {
 	if s.conf.Bucket == "dycold" {
 		s.conf.Bucket = "miku-lived-douyu.qiniuapi.com"
 	}
-	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=http&did=%s&host=%s&pcdn_error=%s",
-		s.conf.Bucket, s.conf.Stream, ip, did, host, s.conf.PcdnErr)
+	scheme := "http"
+	if s.conf.Https {
+		scheme += "s"
+	}
+	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=%s&did=%s&host=%s&pcdn_error=%s",
+		s.conf.Bucket, s.conf.Stream, ip, scheme, did, host, s.conf.PcdnErr)
 
 	data, err := get(addr)
 	if err != nil {

@@ -227,7 +227,7 @@ func generateDateRange(date string, days int) []string {
 }
 
 func checkDynamicNodesPort(node *model.RtNode) bool {
-	if node.IsDynamic {
+	if node.IsDynamic && !node.IsNat1() {
 		// 检查节点端口：http、wt
 		if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
 			return false

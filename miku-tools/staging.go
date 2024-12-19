@@ -1,19 +1,27 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
+	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common"
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
+	"github.com/qbox/pili/base/qiniu/xlog.v1"
 	"github.com/rs/zerolog/log"
 	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
@@ -35,6 +43,29 @@ func (s *Parser) Staging() {
 		s.Refactor()
 	case "load":
 		s.Load()
+	case "exec":
+		s.Exec()
+	case "dns":
+		s.Dnspod()
+	case "log":
+		m := make(map[string]string)
+		m["aaa"] = "hello"
+		m["bbb"] = "world"
+		m["ccc"] = "foo"
+		s.logger.Info().Any("mm", m).Msg("test")
+	case "lowbw":
+		//s.LowBw()
+		s.buildAllNodesMap()
+		s.DumpNodes()
+	case "dnsrecords":
+		s.DnsRecords()
+	case "lowbw2":
+		s.buildAllNodesMap()
+		s.LowBw2()
+	case "deldns":
+		s.DelDns()
+	case "lines":
+		s.DnsLines()
 	}
 }
 
@@ -503,4 +534,540 @@ func (s *Parser) Load() {
 	for nodeid, ip := range nodes {
 		s.logger.Info().Str("node", nodeid).Str("ip", ip).Msg("")
 	}
+}
+
+func (s *Parser) Exec() {
+	cmd := exec.Command("jumpboxCmdNew", "redis-cli -h 10.70.60.31 -p 8200 -c --raw hgetall mik_netprobe_runtime_nodes_map")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return
+	}
+	fmt.Println("the output is:", string(output))
+}
+
+func (s *Parser) Dnspod() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	/*
+		op := public.Operation{
+			Type:  "A",
+			Line:  "默认",
+			Value: "119.145.128.120",
+		}
+		xl := xlog.NewDummyWithCtx(context.Background())
+			resp1, err := cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "*")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println(resp1)
+			op = public.Operation{
+				Type:  "A",
+				Line:  "默认",
+				Value: "119.145.128.198",
+			}
+			resp1, err = cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "bbbbbb")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println(resp1)
+			op = public.Operation{
+				Type:  "A",
+				Line:  "默认",
+				Value: "119.145.128.197",
+			}
+			resp1, err = cli.CreateRaw(xl, &op, "zeicaefiegoh.com", "ccccc")
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println(resp1)
+	*/
+
+	//fmt.Println(cli)
+	//resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+	resp, err := cli.GetLines(xl, "zeicaefiegoh.com", "")
+	//resp, err := cli.GetLines(xl, "mikudns.com", "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//fmt.Println(resp)
+	for k, v := range resp {
+		fmt.Println(k)
+		fmt.Println("\tname:", *v.Name, "id:", *v.LineId)
+	}
+	//resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
+	resp1, err := cli.GetDomain(xl, "zeicaefiegoh.com")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	bytes, err := json.MarshalIndent(resp1, "", "  ")
+	if err != nil {
+		return
+	}
+	fmt.Println(string(bytes))
+
+	/*
+		resp, err := cli.GetRecords(xl, "cloudvdn.com", "2006024383", "", 0)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		//fmt.Println(resp)
+		fmt.Println(*resp.RecordCountInfo.ListCount)
+		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+		fmt.Println(*resp.RecordCountInfo.TotalCount)
+		//fmt.Println(resp.RecordList)
+		areaIpsMap := make(map[string][]string)
+		for i, record := range resp.RecordList {
+			fmt.Println()
+			fmt.Println(i)
+			fmt.Println("defaultns", *record.DefaultNS)
+			fmt.Println("value", *record.Value)
+			fmt.Println("name", *record.Name)
+			fmt.Println("line", *record.Line)
+			fmt.Println(*record.Type)
+			//fmt.Println(*record.Weight)
+			fmt.Println("remark", *record.Remark)
+			fmt.Println("ttl", *record.TTL)
+			areaIpsMap[*record.Line] = append(areaIpsMap[*record.Line], *record.Value)
+		}
+
+		fmt.Println(areaIpsMap)
+		bytes, err := json.MarshalIndent(areaIpsMap, "", "  ")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(string(bytes))
+	*/
+	/*
+		op := public.Operation{
+			Type:  "A",
+			Line:  "默认",
+			Value: "119.145.128.191",
+		}
+		resp1, err := cli.CreateRaw(xl, &op, "qnrd.volclivedvs.com", "abc123hello")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(resp1)
+
+		op1 := public.Operation{
+			Type:  "A",
+			Line:  "默认",
+			Value: "218.22.23.189",
+		}
+		resp1, err = cli.CreateRaw(xl, &op1, "qnrd.volclivedvs.com", "abc123hello")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(resp1)
+	*/
+
+}
+
+func (s *Parser) getAllNodes() string {
+	raw := "redis-cli -h 10.70.60.31 -p 8200 -c --raw hgetall mik_netprobe_runtime_nodes_map"
+	cmd := exec.Command("jumpboxCmdNew", raw)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return ""
+	}
+	//fmt.Println("the output is:", string(output))
+	pos := strings.Index(string(output), raw)
+	if pos == -1 {
+		fmt.Println("find mik_netprobe_runtime_nodes_map && exti err")
+		return ""
+	}
+	pos += len(raw) + 2
+	str := string(output)[pos:]
+
+	pos = strings.Index(str, raw)
+	if pos == -1 {
+		fmt.Println("find mik_netprobe_runtime_nodes_map && exti err")
+		return ""
+	}
+	pos += len(raw) + 10
+	return string(str)[pos:]
+}
+
+func (s *Parser) LowBw() {
+	file := "/tmp/nodes.json"
+	_, err := os.Stat(file)
+
+	output := ""
+	if os.IsNotExist(err) || s.conf.Force {
+		output = s.getAllNodes()
+		err := ioutil.WriteFile(file, []byte(output), 0644)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else if err != nil {
+		fmt.Printf("检查文件 %s 时发生错误: %s\n", file, err)
+		return
+	} else {
+		s.logger.Info().Str("file", file).Msg("read from file")
+		bytes, err := ioutil.ReadFile(file)
+		if err != nil {
+			s.logger.Error().Err(err).Str("file", file).Msg("read file err")
+			return
+		}
+		output = string(bytes)
+	}
+	if output == "" {
+		return
+	}
+
+	//fmt.Println("output:", output)
+	allNodesMap := make(map[string]*public.RtNode)
+	lines := strings.Split(output, "\r\n")
+	fmt.Println("lines:", len(lines))
+	for i, line := range lines {
+		if i%2 == 0 {
+			continue
+		}
+		node := &public.RtNode{}
+		if err := json.Unmarshal([]byte(line), node); err != nil {
+			s.logger.Error().Err(err).Int("i", i).Msg("unmarshal")
+			continue
+		}
+		allNodesMap[node.Id] = node
+	}
+	fmt.Println("nodes count:", len(allNodesMap))
+	ipCnt := 0
+	dedicatedCnt := 0
+	aggregationCnt := 0
+	dedicatedIpCnt := 0
+	aggregationIpCnt := 0
+	more32IpCnt := 0
+	nat1Cnt := 0
+	nat1IpCnt := 0
+	more20IpCnt := 0
+	notServingCnt := 0
+	notNormalCnt := 0
+	servingCnt := 0
+	for _, node := range allNodesMap {
+		if !node.IsDynamic {
+			continue
+		}
+		if node.IsNat1() {
+			nat1Cnt++
+			//continue
+		}
+		if node.Status != "Normal" {
+			notNormalCnt++
+		}
+		if node.RuntimeStatus != "Serving" {
+			notServingCnt++
+			continue
+		}
+		if len(node.Ips) == 0 {
+			continue
+		}
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			s.logger.Warn().Msgf("[CheckNodeUsable] not pass, nodeId:%s, machineId:%s, isDynamic:%t, abilities:%+v",
+				node.Id, node.MachineId, node.IsDynamic, node.Abilities)
+			continue
+		}
+
+		if _, ok = node.Services["live"]; !ok {
+			s.logger.Warn().Msgf("[CheckNodeUsable] not pass, nodeId:%s, machineId:%s, isDynamic:%t, services:%+v",
+				node.Id, node.MachineId, node.IsDynamic, node.Services)
+			continue
+		}
+		if node.ResourceType == "dedicated" {
+			dedicatedCnt++
+		} else if node.ResourceType == "aggregation" {
+			aggregationCnt++
+		}
+		for _, ipInfo := range node.Ips {
+			servingCnt++
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			if node.ResourceType == "dedicated" {
+				dedicatedIpCnt++
+			} else if node.ResourceType == "aggregation" {
+				aggregationIpCnt++
+			}
+			if ipInfo.MaxOutMBps > 32 {
+				more32IpCnt++
+			}
+			if node.IsNat1() {
+				nat1IpCnt++
+			}
+			if ipInfo.MaxOutMBps > 20 {
+				more20IpCnt++
+			}
+			ipCnt++
+		}
+	}
+	s.logger.Info().
+		Int("ipCnt", ipCnt).
+		Int("dedicatedCnt", dedicatedCnt).
+		Int("aggregationCnt", aggregationCnt).
+		Int("dedicatedIpCnt", dedicatedIpCnt).
+		Int("aggregationIpCnt", aggregationIpCnt).
+		Int("more32IpCnt", more32IpCnt).
+		Int("nat1Cnt", nat1Cnt).
+		Int("nat1IpCnt", nat1IpCnt).
+		Int("more20IpCnt", more20IpCnt).
+		Int("notServingCnt", notServingCnt).
+		Int("notNormalCnt", notNormalCnt).
+		Int("servingCnt", servingCnt).
+		Msg("LowBw")
+}
+
+func (s *Parser) DnsRecords() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	resp, err := cli.GetRecords(xl, s.conf.Domain, "", "", 0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
+	//s.logger.Info().Any("resp", resp).Msg("record")
+	/*
+		fmt.Println(*resp.RecordCountInfo.ListCount)
+		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
+		fmt.Println(*resp.RecordCountInfo.TotalCount)
+		for _, record := range resp.RecordList {
+			s.logger.Info().Any("record", record).Msg("record")
+		}
+	*/
+}
+
+func (s *Parser) DumpNodes() {
+	nodeMap := make(map[string]int)
+	for _, node := range s.allNodesMap {
+		if !node.IsDynamic {
+			nodeMap["staicNode"]++
+			continue
+		}
+		nodeMap["afterSetp1"]++
+		if node.RuntimeStatus != "Serving" {
+			nodeMap["notServing"]++
+			continue
+		}
+		nodeMap["afterSetp2"]++
+		if len(node.Ips) == 0 {
+			nodeMap["noIps"]++
+			continue
+		}
+		nodeMap["afterSetp3"]++
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			nodeMap["abilityChk"]++
+			continue
+		}
+		nodeMap["afterSetp4"]++
+
+		if _, ok = node.Services["live"]; !ok {
+			nodeMap["servicesChk"]++
+			continue
+		}
+		nodeMap["afterSetp5"]++
+		if !node.IsNat1() {
+			if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
+				nodeMap["portsChk"]++
+				continue
+			}
+		}
+		nodeMap["afterSetp6"]++
+		if len(node.Schedules) != 0 {
+			nodeMap["SchedulesChk"]++
+			continue
+		}
+		nodeMap["afterSetp7"]++
+		for _, ipInfo := range node.Ips {
+			nodeMap["ipCnt"]++
+			if ipInfo.Forbidden {
+				nodeMap["ipForbidden"]++
+				continue
+			}
+			if ipInfo.IsIPv6 {
+				nodeMap["ipv6"]++
+			}
+			nodeMap["afterSetp8"]++
+			if ipInfo.OutMBps >= ipInfo.MaxOutMBps*0.93 {
+				nodeMap["ipBwOverflow"]++
+				continue
+			}
+			nodeMap["afterSetp9"]++
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				nodeMap["IsPrivateIP"]++
+				continue
+			}
+			nodeMap["afterSetp10"]++
+			if node.IsNat1() {
+				nodeMap["nat1"]++
+				continue
+			}
+			nodeMap["afterSetp11"]++
+		}
+	}
+	s.logger.Info().Any("nodeMap", nodeMap).Msg("dump nodes")
+}
+
+func (s *Parser) LowBw2() {
+	ignoreV6 := false
+	ServingNodesIpCntStep1 := 0
+
+	allNodes, err := dal.GetAllNode(s.RedisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	rawDynamicNodes := make([]*public.RtNode, 0, len(allNodes))
+	for _, node := range allNodes {
+		if node.IsDynamic {
+			rawDynamicNodes = append(rawDynamicNodes, node)
+		}
+	}
+
+	dynamicNodes := rawDynamicNodes
+	timeLimitCnt := 0
+	nodeMap := make(map[string]int)
+	for _, node := range dynamicNodes {
+		if node == nil || !node.IsDynamic {
+			continue
+		}
+
+		if !util.CheckNodeUsable(log.Logger, node, consts.TypeLive) {
+			nodeMap["CheckNodeUsable"]++
+			continue
+		}
+		nodeMap["step1"]++
+
+		if !checkDynamicNodesPort(node) {
+			nodeMap["checkDynamicNodesPort"]++
+			continue
+		}
+		nodeMap["step2"]++
+
+		if !checkCanScheduleOfTimeLimit(node, 3600) {
+			nodeMap["checkCanScheduleOfTimeLimit"]++
+			timeLimitCnt++
+			continue
+		}
+		nodeMap["step3"]++
+
+		for _, info := range node.Ips {
+			if ignoreV6 && info.IsIPv6 {
+				nodeMap["IsIPv6"]++
+				continue
+			}
+			nodeMap["step4"]++
+
+			if info.Forbidden {
+				nodeMap["Forbidden"]++
+				continue
+			}
+			/*
+				if publicUtil.IsPrivateIP(info.Ip) {
+					nodeMap["private"]++
+					continue
+				}
+			*/
+
+			if !publicUtil.IsPrivateIP(info.Ip) {
+				if info.MaxOutMBps > 0 {
+					if info.OutMBps > info.MaxOutMBps*0.93 {
+						nodeMap["bwOverflow"]++
+						continue
+					}
+				} else {
+					nodeMap["bwOverflow"]++
+					continue
+				}
+			}
+			nodeMap["step5"]++
+
+			ServingNodesIpCntStep1++
+		}
+	}
+	s.logger.Info().Int("ServingNodesIpCntStep1", ServingNodesIpCntStep1).Any("nodeMap", nodeMap).Msg("lowbw2")
+}
+
+func (s *Parser) DelDns() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if s.conf.RecordId == "" {
+		fmt.Println("need record id")
+		return
+	}
+	if s.conf.Domain == "" {
+		fmt.Println("need domain")
+		return
+	}
+	recordIds := strings.Split(s.conf.RecordId, ",")
+	intRecordIds := []uint64{}
+	for _, recordId := range recordIds {
+		u, err := strconv.ParseUint(recordId, 10, 64)
+		if err != nil {
+			fmt.Printf("转换错误: %v\n", err)
+			return
+		}
+		intRecordIds = append(intRecordIds, u)
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+
+	for _, recordId := range intRecordIds {
+		op := public.Operation{
+			RecordId: recordId,
+		}
+		resp, err := cli.DeleteRaw(xl, &op, s.conf.Domain)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		s.logger.Info().Any("resp", resp).Msg("del dns")
+	}
+}
+
+func (s *Parser) DnsLines() {
+	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	resp, err := cli.GetLines(xl, s.conf.Domain, "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		return
+	}
+	fmt.Println(string(bytes))
 }

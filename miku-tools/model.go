@@ -5,6 +5,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
+	"github.com/qbox/mikud-live/cmd/dnspod/config"
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
@@ -20,17 +21,20 @@ type CkConfig struct {
 }
 
 type Config struct {
-	RedisAddrs         []string        `json:"redis_addrs"`
-	IPDB               ipdb.Config     `json:"ipdb"`
-	CK                 CkConfig        `json:"ck"`
-	Secret             string          `json:"secret"`
-	PrometheusAddr     string          `json:"prometheus"`
-	DyApiSecret        string          `json:"dy_api_secret"`
-	DyApiDomain        string          `json:"dy_api_domain"`
-	AccountCfg         qconfapi.Config `json:"acc"`
-	OriginKey          string          `json:"origin_key"`
-	NiulinkPath        string          `json:"niulink_path"`
-	KubeCfg            string          `json:"kube_cfg"`
+	RedisAddrs         []string            `json:"redis_addrs"`
+	IPDB               ipdb.Config         `json:"ipdb"`
+	CK                 CkConfig            `json:"ck"`
+	Secret             string              `json:"secret"`
+	PrometheusAddr     string              `json:"prometheus"`
+	DyApiSecret        string              `json:"dy_api_secret"`
+	DyApiDomain        string              `json:"dy_api_domain"`
+	AccountCfg         qconfapi.Config     `json:"acc"`
+	OriginKey          string              `json:"origin_key"`
+	OriginKeyDy        string              `json:"origin_key_dy"`
+	OriginKeyHw        string              `json:"origin_key_hw"`
+	NiulinkPath        string              `json:"niulink_path"`
+	KubeCfg            string              `json:"kube_cfg"`
+	DnsPod             config.DnspodConfig `json:"dnspod"`
 	Bucket             string
 	SubCmd             string
 	Stream             string
@@ -73,6 +77,8 @@ type Config struct {
 	SubStream          int
 	Startid            int
 	F                  string
+	Force              bool
+	RecordId           string
 }
 
 type CmdHandler func()

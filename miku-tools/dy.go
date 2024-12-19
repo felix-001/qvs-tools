@@ -138,13 +138,19 @@ func (s *Parser) DyOriginal() {
 	key := s.conf.OriginKey
 	domain := s.conf.Domain
 
+	if s.conf.Origin == "dy" {
+		key = s.conf.OriginKeyDy
+	} else if s.conf.Origin == "hw" {
+		key = s.conf.OriginKeyHw
+	}
+
 	expireTime := time.Now().Unix() + int64(600)
 	hexTime := strconv.FormatInt(expireTime, 16)
 	raw := fmt.Sprintf("%s%s%s", key, stream, hexTime)
 	hash := md5.Sum([]byte(raw))
 	txSecret := hex.EncodeToString([]byte(hash[:]))
-	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s", domain,
-		app, stream, txSecret, hexTime)
+	originUrl := fmt.Sprintf("http://%s/%s/%s.flv?txSecret=%s&txTime=%s&origin=%s", domain,
+		app, stream, txSecret, hexTime, s.conf.Origin)
 	fmt.Println("url: ", originUrl)
 }
 
