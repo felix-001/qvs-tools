@@ -70,6 +70,8 @@ func (s *Parser) Staging() {
 		s.DnsLines()
 	case "nodes":
 		s.GenNodes()
+	case "dump":
+		s.dumpNodes2()
 	}
 }
 
@@ -1171,4 +1173,67 @@ func (s *Parser) GenNodes() {
 		fmt.Println(err)
 		return
 	}
+}
+
+func (s *Parser) dumpNodes2() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	nodesMap := make(map[string]int)
+	notServingIds := make([]string, 0)
+	for _, node := range allNodes {
+		if !node.IsDynamic {
+			continue
+		}
+		nodesMap["动态节点个数"]++
+		if node.IsBanTransProv {
+			continue
+		}
+		hasv6 := false
+		for _, ipInfo := range node.Ips {
+			if ipInfo.IsIPv6 {
+				hasv6 = true
+				break
+			}
+		}
+		if !hasv6 {
+			continue
+		}
+		nodesMap["可出省动态节点个数"]++
+		if node.RuntimeStatus != "Serving" {
+			notServingIds = append(notServingIds, node.Id)
+			continue
+		}
+		nodesMap["Serving可出省动态节点个数"]++
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			continue
+		}
+		nodesMap["Abilities ok && Serving可出省动态节点个数"]++
+		if _, ok = node.Services["live"]; !ok {
+			continue
+		}
+		nodesMap["Services ok && Serving可出省动态节点个数"]++
+	}
+	bytes, err := json.MarshalIndent(nodesMap, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
+	fmt.Println(notServingIds)
+
 }
