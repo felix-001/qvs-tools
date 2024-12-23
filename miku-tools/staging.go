@@ -22,6 +22,7 @@ import (
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
@@ -55,7 +56,7 @@ func (s *Parser) Staging() {
 		s.logger.Info().Any("mm", m).Msg("test")
 	case "lowbw":
 		//s.LowBw()
-		s.buildAllNodesMap()
+		//s.buildAllNodesMap()
 		s.DumpNodes()
 	case "dnsrecords":
 		s.DnsRecords()
@@ -863,8 +864,22 @@ func (s *Parser) DnsRecords() {
 }
 
 func (s *Parser) DumpNodes() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("")
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
 	nodeMap := make(map[string]int)
-	for _, node := range s.allNodesMap {
+	for _, node := range allNodes {
 		if !node.IsDynamic {
 			nodeMap["staicNode"]++
 			continue
@@ -910,9 +925,6 @@ func (s *Parser) DumpNodes() {
 				nodeMap["ipForbidden"]++
 				continue
 			}
-			if ipInfo.IsIPv6 {
-				nodeMap["ipv6"]++
-			}
 			nodeMap["afterSetp8"]++
 			if ipInfo.OutMBps >= ipInfo.MaxOutMBps*0.93 {
 				nodeMap["ipBwOverflow"]++
@@ -929,9 +941,24 @@ func (s *Parser) DumpNodes() {
 				continue
 			}
 			nodeMap["afterSetp11"]++
+			if node.IsBanTransProv {
+				nodeMap["IsBanTransProv"]++
+				continue
+			}
+			nodeMap["afterSetp12"]++
+			if ipInfo.IsIPv6 {
+				nodeMap["IsIPv6"]++
+				continue
+			}
+			nodeMap["afterSetp13"]++
 		}
 	}
-	s.logger.Info().Any("nodeMap", nodeMap).Msg("dump nodes")
+	bytes, err := json.MarshalIndent(nodeMap, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
 }
 
 func (s *Parser) LowBw2() {
