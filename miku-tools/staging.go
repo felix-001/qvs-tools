@@ -22,6 +22,7 @@ import (
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
+	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	zlog "github.com/rs/zerolog/log"
@@ -67,6 +68,10 @@ func (s *Parser) Staging() {
 		s.DelDns()
 	case "lines":
 		s.DnsLines()
+	case "nodes":
+		s.GenNodes()
+	case "dump":
+		s.dumpNodes2()
 	}
 }
 
@@ -1097,4 +1102,172 @@ func (s *Parser) DnsLines() {
 		return
 	}
 	fmt.Println(string(bytes))
+}
+
+func (s *Parser) GenNodes() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	ipParser, err := ipdb.NewCity(s.conf.IPDB)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	provIspNodesMap := make(map[string][]*public.RtNode)
+	for _, node := range allNodes {
+		if !node.IsDynamic {
+			continue
+		}
+		if node.RuntimeStatus != "Serving" {
+			continue
+		}
+		if node.Status != "normal" {
+			continue
+		}
+		if node.IsNat1() {
+			continue
+		}
+		if len(node.Schedules) != 0 {
+			continue
+		}
+		if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
+			continue
+		}
+		isp, _, province := getNodeLocate(node, ipParser)
+		if isp == "" || province == "" {
+			continue
+		}
+		key := isp + "_" + province
+		if _, ok := provIspNodesMap[key]; !ok {
+			provIspNodesMap[key] = make([]*public.RtNode, 0)
+		}
+		if len(provIspNodesMap[key]) >= 2 {
+			continue
+		}
+		provIspNodesMap[key] = append(provIspNodesMap[key], node)
+	}
+
+	delete(provIspNodesMap, "电信_北京")
+
+	newMap := make(map[string][]*public.RtNode)
+	idx := 0
+	for key, nodes := range provIspNodesMap {
+		if idx%3 == 0 {
+			newMap[key] = nodes
+		}
+		idx++
+	}
+
+	idx = 0
+	keys := []string{}
+	for key := range newMap {
+		if idx < 8 {
+			keys = append(keys, key)
+		}
+		idx++
+	}
+	for _, key := range keys {
+		delete(newMap, key)
+	}
+
+	total := 0
+	for key, nodes := range newMap {
+		fmt.Println(key)
+		for _, node := range nodes {
+			fmt.Println(node.Id)
+			total++
+		}
+	}
+	fmt.Println("total:", total)
+	resultNodes := make([]*public.RtNode, 0, total)
+	for _, nodes := range newMap {
+		resultNodes = append(resultNodes, nodes...)
+	}
+	bytes, err := json.MarshalIndent(resultNodes, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	f := fmt.Sprintf("nodes_%d.json", time.Now().Unix())
+	err = os.WriteFile(f, bytes, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func (s *Parser) dumpNodes2() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	nodesMap := make(map[string]int)
+	notServingIds := make([]string, 0)
+	for _, node := range allNodes {
+		if !node.IsDynamic {
+			continue
+		}
+		nodesMap["动态节点个数"]++
+		if node.IsBanTransProv {
+			continue
+		}
+		hasv6 := false
+		for _, ipInfo := range node.Ips {
+			if ipInfo.IsIPv6 {
+				hasv6 = true
+				break
+			}
+		}
+		if !hasv6 {
+			continue
+		}
+		nodesMap["可出省动态节点个数"]++
+		if node.RuntimeStatus != "Serving" {
+			notServingIds = append(notServingIds, node.Id)
+			continue
+		}
+		nodesMap["Serving可出省动态节点个数"]++
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			continue
+		}
+		nodesMap["Abilities ok && Serving可出省动态节点个数"]++
+		if _, ok = node.Services["live"]; !ok {
+			continue
+		}
+		nodesMap["Services ok && Serving可出省动态节点个数"]++
+	}
+	bytes, err := json.MarshalIndent(nodesMap, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
+	fmt.Println(notServingIds)
+
 }
