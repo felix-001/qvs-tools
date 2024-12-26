@@ -72,6 +72,8 @@ func (s *Parser) Staging() {
 		s.GenNodes()
 	case "dump":
 		s.dumpNodes2()
+	case "dumpNodeFromFile":
+		s.dumpNodeFromFile()
 	}
 }
 
@@ -856,16 +858,43 @@ func (s *Parser) DnsRecords() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(bytes))
-	//s.logger.Info().Any("resp", resp).Msg("record")
-	/*
-		fmt.Println(*resp.RecordCountInfo.ListCount)
-		fmt.Println(*resp.RecordCountInfo.SubdomainCount)
-		fmt.Println(*resp.RecordCountInfo.TotalCount)
-		for _, record := range resp.RecordList {
-			s.logger.Info().Any("record", record).Msg("record")
+	err = os.WriteFile("/tmp/out.log", bytes, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	lineMap := make(map[string]map[string][]string)
+	total := 0
+	for _, record := range resp.RecordList {
+		if record.Name == nil {
+			continue
 		}
-	*/
+		if *record.Name != s.conf.Name {
+			continue
+		}
+		if record.Line == nil {
+			continue
+		}
+		if record.Value == nil {
+			continue
+		}
+		if record.Type == nil {
+			continue
+		}
+		if _, ok := lineMap[*record.Line]; !ok {
+			lineMap[*record.Line] = make(map[string][]string)
+		}
+		lineMap[*record.Line][*record.Type] = append(lineMap[*record.Line][*record.Type], *record.Value)
+		total++
+	}
+	for line, typeMap := range lineMap {
+		fmt.Printf("%s:\n", line)
+		for t, ips := range typeMap {
+			fmt.Printf("\t%s:\n", t)
+			fmt.Printf("\t\t%d %+v\n", len(ips), ips)
+		}
+	}
+	fmt.Println("total:", total)
 }
 
 func (s *Parser) DumpNodes() {
@@ -1270,4 +1299,52 @@ func (s *Parser) dumpNodes2() {
 	fmt.Println(string(bytes))
 	fmt.Println(notServingIds)
 
+}
+
+func (s *Parser) dumpNodeFromFile() {
+	bytes, err := os.ReadFile("/Users/liyuanquan/workspace/tmp/nodes333.json")
+	if err != nil {
+		fmt.Println("read fail", "", err)
+		return
+	}
+	nodes := []*public.RtNode{}
+	if err := json.Unmarshal(bytes, &nodes); err != nil {
+		s.logger.Err(err).Msg("dumpNodeFromFile")
+		return
+	}
+	ipParser, err := ipdb.NewCity(s.conf.IPDB)
+	if err != nil {
+		s.logger.Err(err).Msg("dumpNodeFromFile")
+		return
+	}
+	ipMap := make(map[string]map[string][]string)
+	for _, node := range nodes {
+		for _, ipInfo := range node.Ips {
+			if publicUtil.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			if node.IsBanTransProv {
+				continue
+			}
+			isp, _, _ := getLocate(ipInfo.Ip, ipParser)
+			if _, ok := ipMap[isp]; !ok {
+				ipMap[isp] = make(map[string][]string)
+			}
+			ipVer := "v4"
+			if ipInfo.IsIPv6 {
+				ipVer = "v6"
+			}
+			if _, ok := ipMap[isp][ipVer]; !ok {
+				ipMap[isp][ipVer] = make([]string, 0)
+			}
+			ipMap[isp][ipVer] = append(ipMap[isp][ipVer], ipInfo.Ip)
+		}
+	}
+	for isp, m := range ipMap {
+		fmt.Println(isp + ":")
+		for ipVer, m1 := range m {
+			fmt.Printf("\t%v:\n", ipVer)
+			fmt.Printf("\t\t%d %+v\n", len(m1), m1)
+		}
+	}
 }

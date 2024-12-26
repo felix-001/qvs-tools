@@ -60,6 +60,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.F, "f", "/tmp/out.xs", "输出文件")
 	flag.BoolVar(&conf.Force, "force", false, "是否强制刷新")
 	flag.StringVar(&conf.RecordId, "recordid", "", "dns record id, 支持,分割多条记录")
+	flag.StringVar(&conf.Name, "name", "extension", "dns name")
 
 	flag.Parse()
 
