@@ -2,7 +2,6 @@ module middle-source-analysis
 
 go 1.22
 
-toolchain go1.23.3
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
