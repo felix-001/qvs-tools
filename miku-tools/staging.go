@@ -867,6 +867,8 @@ func (s *Parser) DnsRecords() {
 	lineMap := make(map[string]map[string][]string)
 	total := 0
 
+	totalV4Cnt := 0
+
 	areaMap := make(map[string]map[string][]string)
 	for _, record := range resp.RecordList {
 		if record.Name == nil {
@@ -889,6 +891,10 @@ func (s *Parser) DnsRecords() {
 		}
 		lineMap[*record.Line][*record.Type] = append(lineMap[*record.Line][*record.Type], *record.Value)
 		total++
+
+		if *record.Type == "A" && *record.Line != "移动" && *record.Line != "电信" && *record.Line != "联通" {
+			totalV4Cnt++
+		}
 
 		isps := []string{"移动", "电信", "联通"}
 		isp := ""
@@ -918,6 +924,7 @@ func (s *Parser) DnsRecords() {
 		}
 	}
 	fmt.Println("total:", total)
+	fmt.Println("totalV4Cnt:", totalV4Cnt)
 
 	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:      s.conf.RedisAddrs,
