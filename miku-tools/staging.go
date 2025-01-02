@@ -16,6 +16,7 @@ import (
 	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
+	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common"
@@ -865,6 +866,8 @@ func (s *Parser) DnsRecords() {
 	}
 	lineMap := make(map[string]map[string][]string)
 	total := 0
+
+	areaMap := make(map[string]map[string][]string)
 	for _, record := range resp.RecordList {
 		if record.Name == nil {
 			continue
@@ -886,6 +889,26 @@ func (s *Parser) DnsRecords() {
 		}
 		lineMap[*record.Line][*record.Type] = append(lineMap[*record.Line][*record.Type], *record.Value)
 		total++
+
+		isps := []string{"移动", "电信", "联通"}
+		isp := ""
+		prov := ""
+		for _, isp = range isps {
+			if strings.Contains(*record.Line, isp) {
+				prov = strings.ReplaceAll(*record.Line, isp, "")
+				break
+			}
+		}
+		if isp == "" || prov == "" {
+			s.logger.Error().Str("line", *record.Line).Msg("DnsRecords")
+			continue
+		}
+		area, _ := schedUtil.ProvinceAreaRelation(prov)
+		key := area + isp
+		if _, ok := areaMap[key]; !ok {
+			areaMap[key] = make(map[string][]string)
+		}
+		areaMap[key][*record.Type] = append(areaMap[key][*record.Type], *record.Value)
 	}
 	for line, typeMap := range lineMap {
 		fmt.Printf("%s:\n", line)
@@ -895,6 +918,46 @@ func (s *Parser) DnsRecords() {
 		}
 	}
 	fmt.Println("total:", total)
+
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err = redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
+	}
+	for areaIsp, typeMap := range areaMap {
+		fmt.Printf("%s:\n", areaIsp)
+		for t, ips := range typeMap {
+			fmt.Printf("\t%s:\n", t)
+			fmt.Printf("\t\t%d %+v\n", len(ips), ips)
+			bw := s.calcBw(allNodes, ips)
+			fmt.Printf("\t\t%.1f Gbps\n", bw*8/1000)
+		}
+	}
+	fmt.Printf("len: %d 大区覆盖率: %.0f%%\n", len(areaMap), float64(len(areaMap))*100.0/float64(21))
+}
+
+func (s *Parser) calcBw(allNodes []*public.RtNode, ips []string) (totalBw float64) {
+	for _, node := range allNodes {
+		for _, ipInfo := range node.Ips {
+			for _, ip := range ips {
+				if ip != ipInfo.Ip {
+					continue
+				}
+				totalBw += ipInfo.MaxOutMBps
+			}
+		}
+	}
+	return
 }
 
 func (s *Parser) DumpNodes() {
