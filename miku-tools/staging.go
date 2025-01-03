@@ -950,7 +950,19 @@ func (s *Parser) DnsRecords() {
 			fmt.Printf("\t\t%.1f Gbps\n", bw*8/1000)
 		}
 	}
+
 	fmt.Printf("len: %d 大区覆盖率: %.0f%%\n", len(areaMap), float64(len(areaMap))*100.0/float64(21))
+
+	needAreas := []string{}
+	for _, area := range Areas {
+		for _, isp := range Isps {
+			areaIsp := area + isp
+			if _, ok := areaMap[areaIsp]; !ok {
+				needAreas = append(needAreas, areaIsp)
+			}
+		}
+	}
+	fmt.Println(needAreas)
 }
 
 func (s *Parser) calcBw(allNodes []*public.RtNode, ips []string) (totalBw float64) {
