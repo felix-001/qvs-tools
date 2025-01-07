@@ -75,6 +75,8 @@ func (s *Parser) Staging() {
 		s.dumpNodes2()
 	case "dumpNodeFromFile":
 		s.dumpNodeFromFile()
+	case "retrans":
+		s.Retrans()
 	}
 }
 
@@ -910,6 +912,9 @@ func (s *Parser) DnsRecords() {
 			continue
 		}
 		area, _ := schedUtil.ProvinceAreaRelation(prov)
+		if util.ContainInStringSlice(prov, Areas) {
+			area = prov
+		}
 		key := area + isp
 		if _, ok := areaMap[key]; !ok {
 			areaMap[key] = make(map[string][]string)
@@ -1429,4 +1434,53 @@ func (s *Parser) dumpNodeFromFile() {
 			fmt.Printf("\t\t%d %+v\n", len(m1), m1)
 		}
 	}
+}
+
+func (s *Parser) Retrans() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := dal.GetAllNode(redisCli)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	machineMap := make(map[string]int)
+	for _, node := range allNodes {
+		if !node.IsDynamic {
+			continue
+		}
+		if node.RuntimeStatus != "Serving" {
+			continue
+		}
+		key := "tcpretran_result_" + node.Id
+		samples, err := redisCli.ZRange(context.Background(), key, 0, -1).Result()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, sample := range samples {
+			rate, err := strconv.ParseFloat(sample, 64)
+			if err != nil {
+				s.logger.Error().Err(err).Msgf("GetNodeTcpRetranInfo parse rate failed, rate: %s", sample)
+				continue
+			}
+			if node.StreamdPorts.Http != 22222 {
+				continue
+			}
+			if rate < 0.1 {
+				continue
+			}
+			machineMap[node.MachineId]++
+		}
+	}
+	fmt.Println(machineMap)
 }
