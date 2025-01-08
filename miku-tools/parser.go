@@ -204,6 +204,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.XsPlay,
 			Usage:   "播放dy xs流(go run . -cmd xs -pcdn 123.159.206.211:80 -domain www.dytest.cn -stream 5684726rb3S89L1X_2000p -bkt live -sourceid 1826426132)",
 		},
+		"gb": {
+			Handler: parser.Gb,
+			Usage:   "gb",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
