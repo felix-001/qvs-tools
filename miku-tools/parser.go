@@ -208,6 +208,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Gb,
 			Usage:   "gb",
 		},
+		"tcpdump": {
+			Handler: parser.Tcpdump,
+			Usage:   "tcpdump",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

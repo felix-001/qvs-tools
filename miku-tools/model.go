@@ -35,6 +35,7 @@ type Config struct {
 	NiulinkPath        string              `json:"niulink_path"`
 	KubeCfg            string              `json:"kube_cfg"`
 	DnsPod             config.DnspodConfig `json:"dnspod"`
+	SendKey            string              `json:"send_key"`
 	Bucket             string
 	SubCmd             string
 	Stream             string
