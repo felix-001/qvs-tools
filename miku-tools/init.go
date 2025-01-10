@@ -6,15 +6,16 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/qbox/mikud-live/cmd/agent/common/util"
-	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
+	public "github.com/qbox/mikud-live/common/model"
 	"github.com/rs/zerolog"
 )
 
 func (s *Parser) buildAllNodesMap() {
-	allNodes, err := dal.GetAllNode(s.RedisCli)
+	allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
 	if err != nil {
-		log.Fatalln(err)
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
 	}
 	allNodesMap := make(map[string]*model.RtNode)
 	for _, node := range allNodes {

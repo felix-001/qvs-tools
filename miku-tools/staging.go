@@ -17,7 +17,6 @@ import (
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
-	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/cmd/sched/model"
 	"github.com/qbox/mikud-live/common"
 	public "github.com/qbox/mikud-live/common/model"
@@ -77,6 +76,8 @@ func (s *Parser) Staging() {
 		s.dumpNodeFromFile()
 	case "retrans":
 		s.Retrans()
+	case "80port":
+		s.Port80()
 	}
 }
 
@@ -942,9 +943,11 @@ func (s *Parser) DnsRecords() {
 		fmt.Println(err)
 		return
 	}
-	allNodes, err := dal.GetAllNode(redisCli)
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
 	}
 	for areaIsp, typeMap := range areaMap {
 		fmt.Printf("%s:\n", areaIsp)
@@ -995,9 +998,11 @@ func (s *Parser) DumpNodes() {
 	if err != nil {
 		zlog.Fatal().Err(err).Msg("")
 	}
-	allNodes, err := dal.GetAllNode(redisCli)
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
 	}
 	nodeMap := make(map[string]int)
 	for _, node := range allNodes {
@@ -1086,9 +1091,9 @@ func (s *Parser) LowBw2() {
 	ignoreV6 := false
 	ServingNodesIpCntStep1 := 0
 
-	allNodes, err := dal.GetAllNode(s.RedisCli)
+	allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
 		return
 	}
 	rawDynamicNodes := make([]*public.RtNode, 0, len(allNodes))
@@ -1237,9 +1242,10 @@ func (s *Parser) GenNodes() {
 		fmt.Println(err)
 		return
 	}
-	allNodes, err := dal.GetAllNode(redisCli)
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
 		return
 	}
 	provIspNodesMap := make(map[string][]*public.RtNode)
@@ -1337,9 +1343,10 @@ func (s *Parser) dumpNodes2() {
 		fmt.Println(err)
 		return
 	}
-	allNodes, err := dal.GetAllNode(redisCli)
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
 		return
 	}
 	nodesMap := make(map[string]int)
@@ -1448,9 +1455,10 @@ func (s *Parser) Retrans() {
 		fmt.Println(err)
 		return
 	}
-	allNodes, err := dal.GetAllNode(redisCli)
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
 	if err != nil {
-		fmt.Println(err)
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
 		return
 	}
 	machineMap := make(map[string]int)
@@ -1483,4 +1491,31 @@ func (s *Parser) Retrans() {
 		}
 	}
 	fmt.Println(machineMap)
+}
+
+func (s *Parser) Port80() {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
+	if err != nil {
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
+	}
+	nodes := []string{}
+	for _, node := range allNodes {
+		if node.NodeType != "80port" {
+			continue
+		}
+		nodes = append(nodes, node.Id)
+	}
+	s.logger.Info().Int("len", len(nodes)).Any("nodes", nodes).Msg("80 port nodes")
 }

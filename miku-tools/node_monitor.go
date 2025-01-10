@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/qbox/mikud-live/cmd/sched/dal"
 	"github.com/qbox/mikud-live/common/model"
+	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
@@ -206,9 +206,10 @@ func (s *Parser) nodeMonitor() {
 
 	for range ticker.C {
 		ipStatusMap := make(map[string]int)
-		allNodes, err := dal.GetAllNode(s.RedisCli)
+		allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
 		if err != nil {
-			log.Fatalln(err)
+			s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+			return
 		}
 		for _, node := range allNodes {
 			if !node.IsDynamic {
