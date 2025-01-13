@@ -212,6 +212,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Tcpdump,
 			Usage:   "tcpdump",
 		},
+		"mocksrv": {
+			Handler: parser.mockSrv,
+			Usage:   "qvs-server mock",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
