@@ -857,16 +857,18 @@ func (s *Parser) DnsRecords() {
 		fmt.Println(err)
 		return
 	}
-	bytes, err := json.MarshalIndent(resp, "", "  ")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	err = os.WriteFile("/tmp/out.log", bytes, 0644)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	/*
+		bytes, err := json.MarshalIndent(resp, "", "  ")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+			err = os.WriteFile("/tmp/out.log", bytes, 0644)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+	*/
 	lineMap := make(map[string]map[string][]string)
 	total := 0
 
