@@ -845,6 +845,15 @@ func (s *Parser) LowBw() {
 		Msg("LowBw")
 }
 
+func (s *Parser) isProvinceLine(line string) bool {
+	for _, province := range Provinces {
+		if strings.Contains(line, province) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Parser) DnsRecords() {
 	cli, err := tencent_dnspod.NewTencentClient(s.conf.DnsPod)
 	if err != nil {
@@ -870,9 +879,9 @@ func (s *Parser) DnsRecords() {
 			}
 	*/
 	lineMap := make(map[string]map[string][]string)
-	total := 0
 
 	totalV4Cnt := 0
+	totalV6Cnt := 0
 
 	areaMap := make(map[string]map[string][]string)
 	for _, record := range resp.RecordList {
@@ -895,16 +904,19 @@ func (s *Parser) DnsRecords() {
 			lineMap[*record.Line] = make(map[string][]string)
 		}
 		lineMap[*record.Line][*record.Type] = append(lineMap[*record.Line][*record.Type], *record.Value)
-		total++
 
-		if *record.Type == "A" && *record.Line != "移动" && *record.Line != "电信" && *record.Line != "联通" {
-			totalV4Cnt++
+		if s.isProvinceLine(*record.Line) {
+			if *record.Type == "A" {
+				totalV4Cnt++
+			}
+			if *record.Type == "AAAA" {
+				totalV6Cnt++
+			}
 		}
 
-		isps := []string{"移动", "电信", "联通"}
 		isp := ""
 		prov := ""
-		for _, isp = range isps {
+		for _, isp = range Isps {
 			if strings.Contains(*record.Line, isp) {
 				prov = strings.ReplaceAll(*record.Line, isp, "")
 				break
@@ -931,8 +943,8 @@ func (s *Parser) DnsRecords() {
 			fmt.Printf("\t\t%d %+v\n", len(ips), ips)
 		}
 	}
-	fmt.Println("total:", total)
 	fmt.Println("totalV4Cnt:", totalV4Cnt)
+	fmt.Println("totalV6Cnt:", totalV6Cnt)
 
 	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:      s.conf.RedisAddrs,
@@ -972,7 +984,7 @@ func (s *Parser) DnsRecords() {
 			}
 		}
 	}
-	fmt.Println(needAreas)
+	fmt.Println("没有覆盖的大区:", needAreas)
 }
 
 func (s *Parser) calcBw(allNodes []*public.RtNode, ips []string) (totalBw float64) {
