@@ -216,6 +216,11 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.mockSrv,
 			Usage:   "qvs-server mock",
 		},
+		"nodedis": {
+			Handler: parser.NodeDis,
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo, &conf.NeedIpParer},
+			Usage:   "节点分布",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
