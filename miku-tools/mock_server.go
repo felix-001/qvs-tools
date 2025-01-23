@@ -71,7 +71,7 @@ func GetNamespaces_Streams_Template(w http.ResponseWriter, req *http.Request) {
 		RecordFileFormat:            7,
 		RecordBucket:                "liyqtest",
 		RecordFileType:              0,
-		RecordDeleteAfterDays:       1,
+		RecordDeleteAfterDays:       2,
 		Recording:                   recording,
 		RecordInterval:              30, //录制文件时长 单位为秒，600~3600
 		TsInterval:                  5,
@@ -133,6 +133,7 @@ func srvRoute() http.HandlerFunc {
 }
 
 func (s *Parser) mockSrv() {
+	recording = true
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
 		log.Fatal(err)
