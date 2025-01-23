@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,6 +29,9 @@ import (
 	"github.com/rs/zerolog/log"
 	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/exp/rand"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 // 临时的代码放到这里
@@ -78,6 +83,8 @@ func (s *Parser) Staging() {
 		s.Retrans()
 	case "80port":
 		s.Port80()
+	case "xml":
+		s.Xml()
 	}
 }
 
@@ -1532,4 +1539,83 @@ func (s *Parser) Port80() {
 		nodes = append(nodes, node.Id)
 	}
 	s.logger.Info().Int("len", len(nodes)).Any("nodes", nodes).Msg("80 port nodes")
+}
+
+type AlarmInfo struct {
+	AlarmType int `xml:"AlarmType"`
+}
+
+type Alarm struct {
+	GbId             string    `xml:"-" bson:"gbId" json:"gbId"`
+	ChGbid           string    `xml:"-" bson:"chId" json:"chId"`
+	AlarmPriority    int       `xml:"AlarmPriority" bson:"alarmPriority" json:"alarmPriority"`
+	AlarmTimeStr     string    `xml:"AlarmTime" bson:"-" json:"-"` // only for xml parse
+	AlarmTime        int       `xml:"-" bson:"alarmTime" json:"alarmTime"`
+	AlarmMethod      int       `xml:"AlarmMethod" bson:"alarmMethod" json:"alarmMethod"`
+	Info             AlarmInfo `xml:"Info,omitempty" bson:"-" json:"-"`
+	DeviceState      string    `xml:"-" bson:"-" json:"deviceState"`
+	AlarmType        int       `xml:"AlarmType" bson:"alarmType" json:"alarmType,omitempty"`
+	ChName           string    `xml:"-" bson:"-" json:"chName"`
+	ExpireAt         time.Time `xml:"-" bson:"expireAt"  json:"-" `
+	AlarmDescription string    `xml:"AlarmDescription" bson:"-" json:"-"`
+	Url              string    `xml:"Url,omitempty" bson:"-" json:"url,omitempty"`
+}
+
+type MobilePosition struct {
+	MpGbId        string  `xml:"-" bson:"cbId" json:"gbid"`
+	MpChGbId      string  `xml:"-" bson:"chId" json:"chid,omitempty"`
+	Longitude     float64 `xml:"Longitude" bson:"longitude" json:"longitude"` // 经度
+	Latitude      float64 `xml:"Latitude" bson:"latitude" json:"latitude"`    // 纬度
+	Speed         float64 `xml:"Speed" bson:"speed" json:"speed,omitempty"`
+	Direction     float64 `xml:"Direction" bson:"direction" json:"direction,omitempty"`
+	Altitude      int     `xml:"Altitude" bson:"altitude" json:"altitude,omitempty"`
+	CreateTime    int64   `xml:"-" bson:"createTime" json:"createTime"`
+	CreateTimeStr string  `xml:"Time" bson:"-" json:"-"` // only for xml parse
+}
+
+type Item struct {
+	ChId  string `xml:"DeviceID"`
+	Start string `xml:"StartTime"`
+	End   string `xml:"EndTime"`
+	Type  string `xml:"Type"`
+}
+
+type RecordList struct {
+	Num   string `xml:"Num,attr"`
+	Items []Item `xml:"Item"`
+}
+
+type srsMessageXml struct {
+	CmdType  string `xml:"CmdType"`
+	SN       string `xml:"SN"`
+	DeviceId string `xml:"DeviceID"`
+	SumNum   int    `xml:"SumNum"`
+	Alarm
+	MobilePosition
+	RecordList RecordList `xml:"RecordList,omitempty"`
+	//PresetList PresetList `xml:"PresetList,omitempty"`
+}
+
+func (s *Parser) Xml() {
+	str := `<?xml version=\"1.0\"?>\r\n <Notify>\r\n <CmdType>Alarm</CmdType>\r\n <SN>1</SN>\r\n <DeviceID>34010000001310000001</DeviceID>\r\n <AlarmPriority>4</AlarmPriority>\r\n <AlarmTime>2025-01-23T15:58:16</AlarmTime>\r\n <AlarmMethod>5</AlarmMethod>\r\n <Info>\r\n <AlarmType>2</AlarmType>\r\n </Info>\r\n </Notify>`
+	r := srsMessageXml{}
+	decoder := xml.NewDecoder(bytes.NewReader([]byte(str)))
+	decoder.CharsetReader = charset.NewReaderLabel
+	if err := decoder.Decode(&r); err != nil {
+		if strings.Index(err.Error(), "UTF-8") >= 0 {
+			reader2 := transform.NewReader(bytes.NewReader([]byte(str)), simplifiedchinese.GBK.NewDecoder())
+			d2, err := ioutil.ReadAll(reader2)
+			if err != nil {
+				fmt.Println("PostSrsClientsMessage err:", err)
+				return
+			}
+			decoder := xml.NewDecoder(bytes.NewReader(d2))
+			decoder.CharsetReader = charset.NewReaderLabel
+			if err := decoder.Decode(&r); err != nil {
+				fmt.Println("PostSrsClientsMessage err:", err)
+				return
+			}
+		}
+	}
+	fmt.Printf("%+v\n", r)
 }
