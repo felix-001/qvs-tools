@@ -31,6 +31,7 @@ type HubInfo struct {
 	HlsMinFileCount       int     `json:"hlsMinFileCount"`
 	StopStreamAfterExpire bool    `json:"stopStreamAfterExpire"`
 	Callback              string  `json:"callback"`
+	RecordTemplateId      string  `json:"recordTemplateId"`
 }
 
 type publishCheckResp struct {
@@ -58,8 +59,8 @@ func streamPublishCheck(w http.ResponseWriter, req *http.Request) {
 	}
 	streamId := fmt.Sprintf("%s:%s", ss[0], args.ID)
 	resp := publishCheckResp{
-		StreamId: streamId,
-		HubInfo:  HubInfo{Name: ss[0]},
+		StreamId:         streamId,
+		HubInfo:          HubInfo{Name: ss[0], RecordTemplateId    string `json:"recordTemplateId"`},
 	}
 	jbody, err := json.Marshal(resp)
 	if err != nil {
