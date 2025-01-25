@@ -221,6 +221,10 @@ func newParser(conf *Config) *Parser {
 			Depends: []*bool{&conf.Redis, &conf.NodeInfo, &conf.NeedIpParer},
 			Usage:   "节点分布",
 		},
+		"mockthemisd": {
+			Handler: parser.mockThemisd,
+			Usage:   "pili-themisd mock",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
