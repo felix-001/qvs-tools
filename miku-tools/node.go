@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
+	public "github.com/qbox/mikud-live/common/model"
+	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
 )
 
@@ -58,4 +62,49 @@ func (s *Parser) NodeDis() {
 	}
 	fmt.Println(string(bytes))
 	fmt.Println("needAreas:", needAreas)
+}
+
+type NodeCallback interface {
+	OnNode(node *public.RtNode)
+	OnIp(node *public.RtNode, ip *public.RtIpStatus)
+}
+
+type NodeTraverse struct {
+	RedisAddrs []string
+	logger     zerolog.Logger
+	cb         NodeCallback
+}
+
+func NewNodeTraverse(logger zerolog.Logger, cb NodeCallback, RedisAddrs []string) *NodeTraverse {
+	return &NodeTraverse{
+		logger:     logger,
+		cb:         cb,
+		RedisAddrs: RedisAddrs,
+	}
+}
+
+func (n *NodeTraverse) Traverse() {
+	fmt.Println("NodeTraverse")
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      n.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("")
+	}
+
+	allNodes, err := public.GetAllRTNodes(n.logger, redisCli)
+	if err != nil {
+		n.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
+	}
+	for _, node := range allNodes {
+		n.cb.OnNode(node)
+		for _, ip := range node.Ips {
+			n.cb.OnIp(node, &ip)
+		}
+	}
 }

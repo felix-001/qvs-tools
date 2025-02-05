@@ -85,6 +85,8 @@ func (s *Parser) Staging() {
 		s.Port80()
 	case "xml":
 		s.Xml()
+	case "nat1":
+		s.Nat1()
 	}
 }
 
@@ -1618,4 +1620,26 @@ func (s *Parser) Xml() {
 		}
 	}
 	fmt.Printf("%+v\n", r)
+}
+
+func (s *Parser) OnNode(node *public.RtNode) {
+}
+
+func (s *Parser) OnIp(node *public.RtNode, ip *public.RtIpStatus) {
+	if !node.IsNat1() {
+		return
+	}
+	if node.StreamdPorts.Http == 33333 {
+		s.logger.Info().Str("nodeId", node.Id).Str("ip", ip.Ip).Int("oriPort", node.StreamdPorts.Http).Msg("OnIp")
+	}
+	//s.logger.Info().Str("nodeId", node.Id).Str("ip", ip.Ip).Int("oriPort", node.StreamdPorts.Http).Msg("OnIp")
+	if ip.NatStreamdPorts.Http != 33333 {
+		return
+	}
+	s.logger.Info().Str("nodeId", node.Id).Str("ip", ip.Ip).Int("oriPort", node.StreamdPorts.Http).Msg("OnIp")
+}
+
+func (s *Parser) Nat1() {
+	n := NewNodeTraverse(s.logger, s, s.conf.RedisAddrs)
+	n.Traverse()
 }
