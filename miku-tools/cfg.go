@@ -61,6 +61,7 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Force, "force", false, "是否强制刷新")
 	flag.StringVar(&conf.RecordId, "recordid", "", "dns record id, 支持,分割多条记录")
 	flag.StringVar(&conf.Name, "name", "extension", "dns name")
+	flag.IntVar(&conf.Cnt, "cnt", 1, "count")
 
 	flag.Parse()
 

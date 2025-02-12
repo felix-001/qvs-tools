@@ -81,6 +81,7 @@ type Config struct {
 	Force              bool
 	RecordId           string
 	Name               string
+	Cnt                int
 }
 
 type CmdHandler func()

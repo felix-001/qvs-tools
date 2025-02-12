@@ -87,6 +87,10 @@ func (s *Parser) Staging() {
 		s.Xml()
 	case "nat1":
 		s.Nat1()
+	case "watermark":
+		s.Watermark()
+	case "font":
+		s.Font()
 	}
 }
 
@@ -1642,4 +1646,18 @@ func (s *Parser) OnIp(node *public.RtNode, ip *public.RtIpStatus) {
 func (s *Parser) Nat1() {
 	n := NewNodeTraverse(s.logger, s, s.conf.RedisAddrs)
 	n.Traverse()
+}
+
+func (s *Parser) Watermark() {
+	txt := ""
+	cnt := 1
+	for i := 0; i < s.conf.Cnt; i++ {
+		for j := 0; j < s.conf.Cnt+2; j++ {
+			x := 60 + 450*i
+			y := 50 + 450*j
+			txt += fmt.Sprintf("[o%d]drawtext=text='文字水印测试%d':x=%d:y=%d:fontsize=20[o%d];\n", cnt, cnt, x, y, cnt+1)
+			cnt++
+		}
+	}
+	fmt.Println(txt)
 }
