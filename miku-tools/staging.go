@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"sort"
@@ -91,6 +92,8 @@ func (s *Parser) Staging() {
 		s.Watermark()
 	case "font":
 		s.Font()
+	case "angle":
+		s.TestAngle()
 	}
 }
 
@@ -1648,16 +1651,239 @@ func (s *Parser) Nat1() {
 	n.Traverse()
 }
 
+func degreesToRadians(degrees float64) float64 {
+	return degrees * math.Pi / 180
+}
+
+func reverseRotationWithCenter(x1, y1, degrees, W, H float64) (x, y int) {
+	theta := degreesToRadians(degrees)
+	cosTheta := math.Cos(theta)
+	sinTheta := math.Sin(theta)
+	Cx := W / 2
+	Cy := H / 2
+
+	// 转换为相对中心点的坐标
+	dx := x1 - Cx
+	dy := y1 - Cy
+
+	// 应用逆时针旋转（即原始顺时针旋转的逆操作）
+	x_rotated := dx*cosTheta - dy*sinTheta
+	y_rotated := dx*sinTheta + dy*cosTheta
+
+	// 转换回原始坐标系
+	x = int(x_rotated + Cx)
+	y = int(y_rotated + Cy)
+	return
+}
+
+var (
+	cos30 = math.Sqrt(3) / 2 // cos(30°)
+	sin30 = 0.5              // sin(30°)
+)
+
+// 计算旋转前的原始坐标
+func GetOriginalCoord(x1, y1, w, h float64) (x, y float64) {
+	// 计算中心点
+	cx := w / 2
+	cy := h / 2
+
+	// 转换为相对中心点的坐标
+	xRel := x1 - cx
+	yRel := y1 - cy
+
+	// 应用逆旋转矩阵 (逆时针30度)
+	x = xRel*cos30 - yRel*sin30
+	y = xRel*sin30 + yRel*cos30
+
+	// 转换回原始坐标系
+	x += cx
+	y += cy
+
+	return
+}
+
+func rotateBack(x1, y1, cx, cy float64, angleDeg float64) (float64, float64) {
+	// 转换角度到弧度
+	angleRad := angleDeg * math.Pi / 180
+
+	// 步骤 1: 平移至以中心为原点
+	xPrime := x1 - cx
+	yPrime := y1 - cy
+
+	// 步骤 2: 应用逆旋转变换（顺时针，所以使用负角度）
+	xDoublePrime := xPrime*math.Cos(-angleRad) + yPrime*math.Sin(-angleRad)
+	yDoublePrime := -xPrime*math.Sin(-angleRad) + yPrime*math.Cos(-angleRad)
+
+	// 步骤 3: 平移回去
+	x := xDoublePrime + cx
+	y := yDoublePrime + cy
+
+	return x, y
+}
+
+func rotateCoordinates(x1, y1, angle float64) (float64, float64) {
+	// 将角度转换为弧度
+	theta := angle * (math.Pi / 180)
+
+	// 计算 cos 和 sin
+	cosTheta := math.Cos(theta)
+	sinTheta := math.Sin(theta)
+
+	// 逆向旋转计算
+	x := x1*cosTheta - y1*sinTheta
+	y := x1*sinTheta + y1*cosTheta
+
+	return x, y
+}
+
+// RotatePoint calculates the original coordinates (x, y) before rotation.
+// x1, y1: Coordinates after rotation.
+// angleDegrees: Rotation angle in degrees (clockwise).
+// width, height: Width and height of the canvas.
+func RotatePoint(x1, y1, angleDegrees, width, height float64) (x, y float64) {
+	// Convert angle to radians.
+	angleRadians := angleDegrees * math.Pi / 180.0
+
+	// Calculate the center of the canvas.
+	centerX := width / 2.0
+	centerY := height / 2.0
+
+	// Translate the point to the origin (center of the canvas).
+	x1Centered := x1 - centerX
+	y1Centered := y1 - centerY
+
+	// Perform reverse rotation.
+	xCentered := x1Centered*math.Cos(angleRadians) + y1Centered*math.Sin(angleRadians)
+	yCentered := -x1Centered*math.Sin(angleRadians) + y1Centered*math.Cos(angleRadians)
+
+	// Translate back to the original coordinate system.
+	x = xCentered + centerX
+	y = yCentered + centerY
+
+	return x, y
+}
+
 func (s *Parser) Watermark() {
-	txt := ""
+	rows := 5
+	cols := 3
+	xCoordinate := 104
+	yCoordinate := 424
+	xGap := 200
+	yGap := 200
+	textWidth := 240
+	textHeight := 59
+	canvasEdgeLength := 1468
+
+	filters := fmt.Sprintf("color=c=%s:s=%dx%d[o1];", "black",
+		canvasEdgeLength, canvasEdgeLength)
 	cnt := 1
-	for i := 0; i < s.conf.Cnt; i++ {
-		for j := 0; j < s.conf.Cnt+2; j++ {
-			x := 60 + 450*i
-			y := 50 + 450*j
-			txt += fmt.Sprintf("[o%d]drawtext=text='文字水印测试%d':x=%d:y=%d:fontsize=20[o%d];\n", cnt, cnt, x, y, cnt+1)
+	//theta := 30 * math.Pi / 180
+	//cosTheta := math.Cos(theta)
+	//sinTheta := math.Sin(theta)
+
+	for row := 0; row < rows; row++ {
+		for col := 0; col < cols; col++ {
+			xRot := xCoordinate + col*(xGap+textWidth)
+			yRot := yCoordinate + row*(yGap+textHeight)
+
+			//angle := s.Angle(float64(xRot), float64(yRot))
+
+			//theta := angle * math.Pi / 180
+			//cosTheta := math.Cos(theta)
+			//sinTheta := math.Sin(theta)
+
+			fmt.Println("addWatermarkArgs, row:", row, " col:", col, " xRot:", xRot, " yRot:", yRot)
+
+			// 计算旋转前的坐标
+			//xOrig := int(float64(xRot)*cosTheta + float64(yRot)*sinTheta)
+			//yOrig := int(-float64(xRot)*sinTheta + float64(yRot)*cosTheta)
+			//xOrig := xRot
+			//yOrig := yRot
+			//xOrig1, yOrig1 := rotateCoordinates(float64(xRot), float64(yRot), 30.0)
+
+			//xOrig := int(xOrig1)
+			//yOrig := int(yOrig1)
+
+			x, y := RotatePoint(float64(xRot), float64(yRot), 30, 1468, 1468)
+			xOrig := int(x)
+			yOrig := int(y)
+
+			// 坐标边界检查
+			if xOrig < 0 {
+				xOrig = 0
+			} else if xOrig >= canvasEdgeLength {
+				xOrig = canvasEdgeLength - 1
+			}
+			if yOrig < 0 {
+				yOrig = 0
+			} else if yOrig >= canvasEdgeLength {
+				yOrig = canvasEdgeLength - 1
+			}
+
+			filters += fmt.Sprintf("[o%d]drawtext=text='%s%d':fontsize=%d:fontcolor=%s:x=%d:y=%d[o%d];",
+				cnt, "文字水印测试", cnt, 30, "white", xOrig, yOrig, cnt+1)
 			cnt++
 		}
 	}
-	fmt.Println(txt)
+	filters += fmt.Sprintf("[o%d]rotate=a=PI*30/180:fillcolor=%s@0[o%d];", cnt, "green", cnt+1)
+	//cnt++
+	//filters += fmt.Sprintf("[o%d]crop=%d:%d[o%d];", cnt, streamW, streamH, cnt+1)
+	//filters += fmt.Sprintf("[o%d]crop=1280:720[o%d];", cnt, cnt+1)
+	//cnt++
+	//filters += fmt.Sprintf("[o%d]colorkey=%s:0.01:1[o%d];", cnt, watermark.CanvasBgColor, cnt+1)
+	//cnt++
+	//filters += fmt.Sprintf("[0:v][o%d]overlay=x=0:y=0[o%d]", cnt, cnt+1)
+	cmd := exec.Command("ffmpeg", "-filter_complex", filters, "-map", "[o"+fmt.Sprintf("%d", cnt+1)+"]",
+		"-frames:v", "1", "-update", "1", "/tmp/out.jpg")
+
+	fmt.Println(cmd.String())
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	// 执行命令
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("执行命令出错:", err)
+		fmt.Println(stderr.String()) // 打印错误输出
+		return
+	}
+
+	// 打印命令的输出
+	fmt.Println("标准输出:\n", stdout.String())
+	/*
+		txt := ""
+		cnt := 1
+		for i := 0; i < s.conf.Cnt; i++ {
+			for j := 0; j < s.conf.Cnt+2; j++ {
+				x := 60 + 450*i
+				y := 50 + 450*j
+				txt += fmt.Sprintf("[o%d]drawtext=text='文字水印测试%d':x=%d:y=%d:fontsize=20[o%d];\n", cnt, cnt, x, y, cnt+1)
+				cnt++
+			}
+		}
+		fmt.Println(txt)
+	*/
+}
+
+func (s *Parser) Angle(x, y float64) float64 {
+	angleWithHorizontal := math.Atan2(y, x) * (180 / math.Pi)
+
+	// 计算 d，即 m 与 n 连线与 f 之间的夹角
+	d := angleWithHorizontal - 210
+
+	// 确保角度在 0-360 度之间
+	if d < 0 {
+		d += 360
+	}
+
+	// 打印结果
+	fmt.Printf("角度 d: %.2f 度\n", d)
+	return d
+}
+
+func (s *Parser) TestAngle() {
+	s.Angle(100, 100)
+	s.Angle(100, 200)
 }

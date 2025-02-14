@@ -60,7 +60,7 @@ func streamPublishCheck(w http.ResponseWriter, req *http.Request) {
 	streamId := fmt.Sprintf("%s:%s", ss[0], args.ID)
 	resp := publishCheckResp{
 		StreamId: streamId,
-		HubInfo:  HubInfo{Name: ss[0], RecordTemplateId: "default"},
+		HubInfo:  HubInfo{Name: ss[0] /*, RecordTemplateId: "default"*/},
 	}
 	jbody, err := json.Marshal(resp)
 	if err != nil {
@@ -121,6 +121,7 @@ func streamPlayCheck(w http.ResponseWriter, req *http.Request) {
 	streamId := fmt.Sprintf("%s:%s/%s", ss[1], ss[1], ss[2])
 	streamId = strings.ReplaceAll(streamId, ".m3u8", "")
 	streamId = strings.ReplaceAll(streamId, ".flv", "")
+	streamId = strings.ReplaceAll(streamId, ".wsflv", "")
 	b64StreamId := base64.StdEncoding.EncodeToString([]byte(streamId))
 	resp := playCheckResp{
 		StreamId: streamId,

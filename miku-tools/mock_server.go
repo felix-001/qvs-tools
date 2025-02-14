@@ -67,7 +67,7 @@ func GetNamespaces_Streams_Template(w http.ResponseWriter, req *http.Request) {
 	tmpl := &TemplateInfo{
 		Uid:                         uid,
 		TsFileNameTemplate:          "record/ts/${namespaceId}/${streamId}/${startMs}-${endMs}.ts",
-		RecordType:                  1,
+		RecordType:                  0,
 		RecordFileFormat:            7,
 		RecordBucket:                "liyqtest",
 		RecordFileType:              0,
@@ -88,6 +88,7 @@ func GetNamespaces_Streams_Template(w http.ResponseWriter, req *http.Request) {
 	if overwriteSnap {
 		tmpl.JpgOverwriteFileNameTemplate = "snapshot/jpg/${namespaceId}/${streamId}.jpg"
 	}
+	tmpl = &TemplateInfo{}
 	data, err := json.Marshal(tmpl)
 	if err != nil {
 		fmt.Fprintln(w, "{\"500\":\"internal err\"}")
@@ -133,7 +134,7 @@ func srvRoute() http.HandlerFunc {
 }
 
 func (s *Parser) mockSrv() {
-	recording = true
+	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
 		log.Fatal(err)
