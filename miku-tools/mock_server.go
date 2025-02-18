@@ -67,11 +67,11 @@ func GetNamespaces_Streams_Template(w http.ResponseWriter, req *http.Request) {
 	tmpl := &TemplateInfo{
 		Uid:                         uid,
 		TsFileNameTemplate:          "record/ts/${namespaceId}/${streamId}/${startMs}-${endMs}.ts",
-		RecordType:                  0,
+		RecordType:                  1, // 录制模式，0（不录制），1（实时录制），2(按需录制)
 		RecordFileFormat:            7,
 		RecordBucket:                "liyqtest",
 		RecordFileType:              0,
-		RecordDeleteAfterDays:       2,
+		RecordDeleteAfterDays:       0,
 		Recording:                   recording,
 		RecordInterval:              30, //录制文件时长 单位为秒，600~3600
 		TsInterval:                  5,
@@ -88,7 +88,6 @@ func GetNamespaces_Streams_Template(w http.ResponseWriter, req *http.Request) {
 	if overwriteSnap {
 		tmpl.JpgOverwriteFileNameTemplate = "snapshot/jpg/${namespaceId}/${streamId}.jpg"
 	}
-	tmpl = &TemplateInfo{}
 	data, err := json.Marshal(tmpl)
 	if err != nil {
 		fmt.Fprintln(w, "{\"500\":\"internal err\"}")

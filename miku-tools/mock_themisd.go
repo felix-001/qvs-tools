@@ -60,7 +60,7 @@ func streamPublishCheck(w http.ResponseWriter, req *http.Request) {
 	streamId := fmt.Sprintf("%s:%s", ss[0], args.ID)
 	resp := publishCheckResp{
 		StreamId: streamId,
-		HubInfo:  HubInfo{Name: ss[0] /*, RecordTemplateId: "default"*/},
+		HubInfo:  HubInfo{Name: ss[0], RecordTemplateId: "default"},
 	}
 	jbody, err := json.Marshal(resp)
 	if err != nil {
