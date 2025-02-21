@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -12,6 +14,21 @@ import (
 )
 
 func (s *Parser) buildAllNodesMap() {
+	fmt.Println("buildAllNodesMap")
+	if _, err := os.Stat("/tmp/allNodes.json"); err == nil {
+		// 文件存在，从文件加载节点信息
+		file, err := os.ReadFile("/tmp/allNodes.json")
+		if err != nil {
+			s.logger.Error().Msgf("读取/tmp/allNodes.json文件失败: %+v", err)
+			return
+		}
+		if err := json.Unmarshal(file, &s.allNodesMap); err != nil {
+			s.logger.Error().Msgf("解析/tmp/allNodes.json文件失败: %+v", err)
+			return
+		}
+		fmt.Println("从/tmp/allNodes.json文件加载节点信息成功")
+		return
+	}
 	allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
 	if err != nil {
 		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
@@ -46,6 +63,8 @@ func (s *Parser) init() {
 	if s.conf.NodeInfo {
 		// TODO: 使用文件缓存+线上更新并行的方式
 		s.buildAllNodesMap()
+	}
+	if s.conf.RootNodeInfo {
 		s.buildRootNodesMap()
 	}
 	if s.conf.NeedNodeStreamInfo {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"sort"
 	"time"
@@ -238,4 +239,13 @@ func (s *Parser) DumpQPM() {
 			s.logger.Info().Str("qpm", key).Int("cnt", cnt).Msg("")
 		}
 	}
+}
+
+func (s *Parser) DumpAllNodes() {
+	jsonbody, err := json.Marshal(s.allNodesMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	os.WriteFile("./allNodes.json", jsonbody, 0644)
 }

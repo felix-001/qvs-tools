@@ -225,6 +225,16 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.mockThemisd,
 			Usage:   "pili-themisd mock",
 		},
+		"res": {
+			Handler: parser.Res,
+			Depends: []*bool{&conf.NodeInfo},
+			Usage:   "评估带宽资源缺失情况",
+		},
+		"dumpnodes": {
+			Handler: parser.DumpAllNodes,
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+			Usage:   "dump所有节点信息, 保存json, qup上传",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

@@ -20,22 +20,28 @@ type CkConfig struct {
 	Table  string   `json:"table"`
 }
 
+type RatioConfig struct {
+	OverAll float64
+	Isps    map[string]float64
+}
+
 type Config struct {
-	RedisAddrs         []string            `json:"redis_addrs"`
-	IPDB               ipdb.Config         `json:"ipdb"`
-	CK                 CkConfig            `json:"ck"`
-	Secret             string              `json:"secret"`
-	PrometheusAddr     string              `json:"prometheus"`
-	DyApiSecret        string              `json:"dy_api_secret"`
-	DyApiDomain        string              `json:"dy_api_domain"`
-	AccountCfg         qconfapi.Config     `json:"acc"`
-	OriginKey          string              `json:"origin_key"`
-	OriginKeyDy        string              `json:"origin_key_dy"`
-	OriginKeyHw        string              `json:"origin_key_hw"`
-	NiulinkPath        string              `json:"niulink_path"`
-	KubeCfg            string              `json:"kube_cfg"`
-	DnsPod             config.DnspodConfig `json:"dnspod"`
-	SendKey            string              `json:"send_key"`
+	RedisAddrs         []string               `json:"redis_addrs"`
+	IPDB               ipdb.Config            `json:"ipdb"`
+	CK                 CkConfig               `json:"ck"`
+	Secret             string                 `json:"secret"`
+	PrometheusAddr     string                 `json:"prometheus"`
+	DyApiSecret        string                 `json:"dy_api_secret"`
+	DyApiDomain        string                 `json:"dy_api_domain"`
+	AccountCfg         qconfapi.Config        `json:"acc"`
+	OriginKey          string                 `json:"origin_key"`
+	OriginKeyDy        string                 `json:"origin_key_dy"`
+	OriginKeyHw        string                 `json:"origin_key_hw"`
+	NiulinkPath        string                 `json:"niulink_path"`
+	KubeCfg            string                 `json:"kube_cfg"`
+	DnsPod             config.DnspodConfig    `json:"dnspod"`
+	SendKey            string                 `json:"send_key"`
+	BwRatioConfig      map[string]RatioConfig `json:"bw_ratio_config"`
 	Bucket             string
 	SubCmd             string
 	Stream             string
@@ -46,6 +52,7 @@ type Config struct {
 	NeedNodeStreamInfo bool
 	LagFile            string
 	NodeInfo           bool
+	RootNodeInfo       bool
 	Prometheus         bool
 	Redis              bool
 	DnsResFile         string
@@ -82,6 +89,7 @@ type Config struct {
 	RecordId           string
 	Name               string
 	Cnt                int
+	TotoalNeedBw       int
 }
 
 type CmdHandler func()

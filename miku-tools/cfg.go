@@ -62,6 +62,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.RecordId, "recordid", "", "dns record id, 支持,分割多条记录")
 	flag.StringVar(&conf.Name, "name", "extension", "dns name")
 	flag.IntVar(&conf.Cnt, "cnt", 1, "count")
+	flag.IntVar(&conf.TotoalNeedBw, "needbw", 100, "需要的建设带宽，单位为G")
 
 	flag.Parse()
 
