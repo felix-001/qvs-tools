@@ -140,16 +140,16 @@ func (s *Parser) dumpAreaIspMapBw(areaMap map[string][]string) {
 	fmt.Printf("总建设带宽: %dG\n", total)
 }
 
-func (s *Parser) dumpAreaMapToCsv(areaIspMap map[string][]string) {
+func (s *Parser) dumpAreaMapToCsv(areaMap map[string][]string) {
 	defaultRatio := float64(1) / float64(len(Areas))
 	fmt.Printf("平均每个大区的占比: %.2f\n", defaultRatio)
 	total := 0
 	nodeCnt := 0
 	csv := "大区运营商, 节点个数, 建设带宽\n"
-	for areaIsp, ips := range areaIspMap {
+	for area, ips := range areaMap {
 		//ratio := s.conf.BwRatioConfig[areaIsp]
-		csv += fmt.Sprintf("%s, %d, %dG\n", areaIsp, len(ips), len(ips)*3)
-		total += len(ips) * 3
+		csv += fmt.Sprintf("%s, %d, %dG\n", area, len(ips), len(ips)*10)
+		total += len(ips) * 10
 		nodeCnt += len(ips)
 	}
 	fmt.Printf("总建设带宽: %dG, 总节点个数: %d\n", total, nodeCnt)

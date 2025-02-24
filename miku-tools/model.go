@@ -42,6 +42,7 @@ type Config struct {
 	DnsPod             config.DnspodConfig    `json:"dnspod"`
 	SendKey            string                 `json:"send_key"`
 	BwRatioConfig      map[string]RatioConfig `json:"bw_ratio_config"`
+	IdcConfig          map[string]int64       `json:"idc_config"`
 	Bucket             string
 	SubCmd             string
 	Stream             string
