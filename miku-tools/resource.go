@@ -34,8 +34,10 @@ func (s *Parser) Res() {
 	//s.dumpAreaIspMapBw(areaIspMap)
 	s.dumpAreaIspMapDetail(areaIspMap)
 
-	areaMap := s.buildAreaMap(areaIspMap)
-	s.dumpAreaMapToCsv(areaMap)
+	//areaMap := s.buildAreaMap(areaIspMap)
+	//s.dumpAreaMapToCsv(areaMap)
+
+	s.evaluateBw(areaIspMap)
 }
 
 func (s *Parser) buildLineMap(recordList []*dnspod.RecordListItem) map[string][]string {
@@ -140,15 +142,74 @@ func (s *Parser) dumpAreaIspMapBw(areaMap map[string][]string) {
 	fmt.Printf("总建设带宽: %dG\n", total)
 }
 
+func (s *Parser) getAreaIdcsMap(areaMap map[string][]string) map[string]map[string]bool {
+	ipNodeMap := s.buildIpNodeMap()
+	areaIdcsMap := make(map[string]map[string]bool) // key1: area key2: idc
+	for area, ips := range areaMap {
+		for _, ip := range ips {
+			node := ipNodeMap[ip]
+			if node == nil {
+				fmt.Println("ip:", ip, "node not found")
+				continue
+			}
+			if _, ok := areaIdcsMap[area]; !ok {
+				areaIdcsMap[area] = make(map[string]bool)
+			}
+			areaIdcsMap[area][node.Idc] = true
+		}
+	}
+	return areaIdcsMap
+}
+
+func (s *Parser) getAreaNodesMap(areaMap map[string][]string) map[string]map[string]bool {
+	ipNodeMap := s.buildIpNodeMap()
+	areaNodessMap := make(map[string]map[string]bool) // key1: area key2: nodeId
+	for area, ips := range areaMap {
+		for _, ip := range ips {
+			node := ipNodeMap[ip]
+			if node == nil {
+				fmt.Println("ip:", ip, "node not found")
+				continue
+			}
+			if _, ok := areaNodessMap[area]; !ok {
+				areaNodessMap[area] = make(map[string]bool)
+			}
+			areaNodessMap[area][node.Id] = true
+		}
+	}
+	return areaNodessMap
+}
+
 func (s *Parser) dumpAreaMapToCsv(areaMap map[string][]string) {
-	defaultRatio := float64(1) / float64(len(Areas))
-	fmt.Printf("平均每个大区的占比: %.2f\n", defaultRatio)
+	areaIdcsMap := s.getAreaIdcsMap(areaMap)
+	areaNodesMap := s.getAreaNodesMap(areaMap)
+	csv := fmt.Sprintf("大区运营商, 节点个数, 节点列表, idcs, 建设带宽, 需要带宽, 比例(总共:%dG), 缺失带宽\n", s.conf.TotoalNeedBw)
 	total := 0
 	nodeCnt := 0
-	csv := "大区运营商, 节点个数, 建设带宽\n"
+	defaultRatio := float64(1) / float64(len(Areas))
+	fmt.Printf("平均每个大区的占比: %.2f\n", defaultRatio)
 	for area, ips := range areaMap {
-		//ratio := s.conf.BwRatioConfig[areaIsp]
-		csv += fmt.Sprintf("%s, %d, %dG\n", area, len(ips), len(ips)*10)
+		idcsStr := ""
+		for idc := range areaIdcsMap[area] {
+			idcsStr += idc + "   "
+		}
+		nodesStr := ""
+		for nodeId := range areaNodesMap[area] {
+			nodesStr += nodeId + "   "
+		}
+		ratio, ok := s.conf.BwRatioConfig[area]["total"]
+		if !ok {
+			ratio = defaultRatio
+		}
+
+		maxBw := len(areaNodesMap[area]) * 10
+		needBw := int(float64(s.conf.TotoalNeedBw) * ratio)
+		missBw := needBw - maxBw
+		if missBw < 0 {
+			missBw = 0
+		}
+		csv += fmt.Sprintf("%s, %d, %s, %s, %dG, %dG, %.2f, %dG\n", area, len(areaNodesMap[area]), nodesStr, idcsStr,
+			maxBw, needBw, ratio, missBw)
 		total += len(ips) * 10
 		nodeCnt += len(ips)
 	}
@@ -160,6 +221,7 @@ func (s *Parser) dumpAreaMapToCsv(areaMap map[string][]string) {
 	}
 }
 
+// key: area value: ips
 func (s *Parser) buildAreaMap(areaIspMap map[string][]string) map[string][]string {
 	areaMap := make(map[string][]string)
 	for areaIsp, ips := range areaIspMap {
@@ -178,4 +240,53 @@ func (s *Parser) buildIpNodeMap() map[string]*model.RtNode {
 	}
 	fmt.Println("ipNodeMap len:", len(ipNodeMap))
 	return ipNodeMap
+}
+
+func (s *Parser) evaluateBw(areaIspMap map[string][]string) {
+	areaIspIdcsMap := s.getAreaIdcsMap(areaIspMap)
+	csv := fmt.Sprintf("大区运营商, 节点个数, idcs, 比例(总共: %dG), 需要带宽, 节点建设带宽, idc建设带宽, 缺失带宽, 备注\n", s.conf.TotoalNeedBw)
+	defaultAreaRatio := float64(1) / float64(len(Areas))
+	defaultIspRatio := float64(1) / float64(len(Isps))
+	fmt.Printf("平均每个大区的占比: %.2f, 平均每个isp占比: %.2f\n", defaultAreaRatio, defaultIspRatio)
+	for areaIsp, ips := range areaIspMap {
+		idcs, ok := areaIspIdcsMap[areaIsp]
+		if !ok {
+			s.logger.Error().Str("areaIsp", areaIsp).Msg("evaluateBw, get idcs err")
+			continue
+		}
+		area := s.lineRemoveIsp(areaIsp)
+		areaRatio, ok := s.conf.BwRatioConfig[area]["total"]
+		if !ok {
+			s.logger.Error().Str("areaIsp", areaIsp).Msg("area ratio not configed")
+			areaRatio = defaultAreaRatio
+		}
+		isp := areaIsp[len(area):]
+		ispRatio, ok := s.conf.BwRatioConfig[area][isp]
+		if !ok {
+			s.logger.Error().Str("area", area).Str("isp", isp).Msg("isp ratio not configed")
+			ispRatio = defaultIspRatio
+		}
+		ratio := areaRatio * ispRatio
+		needBw := int(float64(s.conf.TotoalNeedBw) * ratio)
+
+		idcMaxBw := 0
+		idcsStr := ""
+		for idc := range idcs {
+			idcMaxBw += s.conf.IdcBwConfig[idc][isp]
+			idcsStr += idc + "   "
+		}
+		nodeMaxBw := len(ips) * 3
+		missBw := needBw - nodeMaxBw
+		if missBw < 0 {
+			missBw = 0
+		}
+
+		csv += fmt.Sprintf("%s, %d, %s, %.2f, %d, %d, %d, %d\n",
+			areaIsp, len(ips), idcsStr, ratio, needBw, nodeMaxBw, idcMaxBw, missBw)
+	}
+	err := os.WriteFile("/tmp/static_idc_bw.csv", []byte(csv), 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

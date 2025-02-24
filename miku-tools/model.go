@@ -20,29 +20,24 @@ type CkConfig struct {
 	Table  string   `json:"table"`
 }
 
-type RatioConfig struct {
-	OverAll float64
-	Isps    map[string]float64
-}
-
 type Config struct {
-	RedisAddrs         []string               `json:"redis_addrs"`
-	IPDB               ipdb.Config            `json:"ipdb"`
-	CK                 CkConfig               `json:"ck"`
-	Secret             string                 `json:"secret"`
-	PrometheusAddr     string                 `json:"prometheus"`
-	DyApiSecret        string                 `json:"dy_api_secret"`
-	DyApiDomain        string                 `json:"dy_api_domain"`
-	AccountCfg         qconfapi.Config        `json:"acc"`
-	OriginKey          string                 `json:"origin_key"`
-	OriginKeyDy        string                 `json:"origin_key_dy"`
-	OriginKeyHw        string                 `json:"origin_key_hw"`
-	NiulinkPath        string                 `json:"niulink_path"`
-	KubeCfg            string                 `json:"kube_cfg"`
-	DnsPod             config.DnspodConfig    `json:"dnspod"`
-	SendKey            string                 `json:"send_key"`
-	BwRatioConfig      map[string]RatioConfig `json:"bw_ratio_config"`
-	IdcConfig          map[string]int64       `json:"idc_config"`
+	RedisAddrs         []string                      `json:"redis_addrs"`
+	IPDB               ipdb.Config                   `json:"ipdb"`
+	CK                 CkConfig                      `json:"ck"`
+	Secret             string                        `json:"secret"`
+	PrometheusAddr     string                        `json:"prometheus"`
+	DyApiSecret        string                        `json:"dy_api_secret"`
+	DyApiDomain        string                        `json:"dy_api_domain"`
+	AccountCfg         qconfapi.Config               `json:"acc"`
+	OriginKey          string                        `json:"origin_key"`
+	OriginKeyDy        string                        `json:"origin_key_dy"`
+	OriginKeyHw        string                        `json:"origin_key_hw"`
+	NiulinkPath        string                        `json:"niulink_path"`
+	KubeCfg            string                        `json:"kube_cfg"`
+	DnsPod             config.DnspodConfig           `json:"dnspod"`
+	SendKey            string                        `json:"send_key"`
+	BwRatioConfig      map[string]map[string]float64 `json:"bw_ratio_config"` // key1: 大区 key2: isp(取值 移动/电信/联通/total)
+	IdcBwConfig        map[string]map[string]int     `json:"idc_bw_config"`   // key1: idc key2: isp
 	Bucket             string
 	SubCmd             string
 	Stream             string
