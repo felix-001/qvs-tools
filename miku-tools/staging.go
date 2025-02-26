@@ -919,6 +919,8 @@ func (s *Parser) DnsRecords() {
 		if _, ok := lineMap[*record.Line]; !ok {
 			lineMap[*record.Line] = make(map[string][]string)
 		}
+		s.logger.Info().Str("line", *record.Line).Str("name", *record.Name).Str("status", *record.Status).
+			Str("value", *record.Value).Msg("")
 		lineMap[*record.Line][*record.Type] = append(lineMap[*record.Line][*record.Type], *record.Value)
 
 		if s.isProvinceLine(*record.Line) {

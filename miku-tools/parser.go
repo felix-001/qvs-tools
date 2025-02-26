@@ -235,6 +235,10 @@ func newParser(conf *Config) *Parser {
 			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
 			Usage:   "dump所有节点信息, 保存json, qup上传",
 		},
+		"http": {
+			Handler: parser.Http,
+			Usage:   "http 请求",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

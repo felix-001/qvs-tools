@@ -167,3 +167,32 @@ func get(addr string) (string, error) {
 func getWithBody(addr, body string) (string, error) {
 	return httpReq("GET", addr, body, nil)
 }
+
+func (s *Parser) Http() {
+	method := "GET"
+	if s.conf.Body != "" {
+		if s.conf.Method != "" {
+			method = s.conf.Method
+		} else {
+			method = "POST"
+		}
+	}
+	if s.conf.Addr == "" {
+		log.Println("need -addr <url>")
+		return
+	}
+	if s.conf.Ak == "" {
+		log.Println("need -ak <ak>")
+		return
+	}
+	if s.conf.Sk == "" {
+		log.Println("need -sk <sk>")
+		return
+	}
+	resp, err := mikuHttpReq(method, s.conf.Addr, s.conf.Body, s.conf.Ak, s.conf.Sk)
+	if err != nil {
+		s.logger.Error().Err(err).Str("addr", s.conf.Addr).Str("method", method).Msg("mikuHttpReq err")
+		return
+	}
+	fmt.Println(resp)
+}

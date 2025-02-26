@@ -53,8 +53,8 @@ type Config struct {
 	Redis              bool
 	DnsResFile         string
 	PathqueryLogFile   string
-	Ak                 string
-	Sk                 string
+	Ak                 string `json:"ak"`
+	Sk                 string `json:"sk"`
 	Cmd                string
 	QosFile            string
 	Help               bool
@@ -86,6 +86,9 @@ type Config struct {
 	Name               string
 	Cnt                int
 	TotoalNeedBw       int
+	Method             string
+	Body               string
+	Addr               string
 }
 
 type CmdHandler func()

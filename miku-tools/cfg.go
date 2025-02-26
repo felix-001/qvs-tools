@@ -28,8 +28,8 @@ func loadCfg() *Config {
 	flag.BoolVar(&conf.Prometheus, "prometheusEnable", false, "是否需要加载prometheus")
 	flag.StringVar(&conf.DnsResFile, "dnschk", "", "阿里网络拨测工具结果文件")
 	flag.StringVar(&conf.PathqueryLogFile, "pathqueryfile", "", "解析elk下载的pathquery日志文件,判断回源路径是否符合预期")
-	flag.StringVar(&conf.Ak, "ak", "", "ak")
-	flag.StringVar(&conf.Sk, "sk", "", "sk")
+	flag.StringVar(&conf.Ak, "ak", conf.Ak, "ak")
+	flag.StringVar(&conf.Sk, "sk", conf.Sk, "sk")
 	flag.StringVar(&conf.Cmd, "cmd", "streams", "需要执行的子命令(hlschk)")
 	flag.StringVar(&conf.QosFile, "qosfile", "", "解析从ck上下载的streamd qos文件，检查locate addr和remote addr是否跨isp、省、大区")
 	flag.BoolVar(&conf.Help, "h", false, "help")
@@ -63,6 +63,9 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Name, "name", "extension", "dns name")
 	flag.IntVar(&conf.Cnt, "cnt", 1, "count")
 	flag.IntVar(&conf.TotoalNeedBw, "needbw", 100, "需要的建设带宽，单位为G")
+	flag.StringVar(&conf.Method, "method", "", "http请求的方法")
+	flag.StringVar(&conf.Body, "body", "", "http请求的body")
+	flag.StringVar(&conf.Addr, "addr", "", "http请求的url")
 
 	flag.Parse()
 
