@@ -983,8 +983,8 @@ func (s *Parser) DnsRecords() {
 			fmt.Printf("\t\t%d %+v\n", len(ips), ips)
 		}
 	}
-	fmt.Println("totalV4Cnt:", totalProvV4Cnt)
-	fmt.Println("totalV6Cnt:", totalProvV6Cnt)
+	fmt.Println("totalProvV4Cnt:", totalProvV4Cnt)
+	fmt.Println("totalProvV6Cnt:", totalProvV6Cnt)
 	fmt.Println("totalAreaV4Cnt:", totalAreaV4Cnt)
 	fmt.Println("totalAreaV6Cnt:", totalAreaV6Cnt)
 
