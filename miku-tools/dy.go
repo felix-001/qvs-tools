@@ -214,3 +214,64 @@ func (s *Parser) XsPlay() {
 		total += len(message)
 	}
 }
+
+type mongoTime struct {
+	Date time.Time `json:"$date"`
+}
+
+type ForbiddenNode2 struct {
+	Ts       mongoTime `json:"ts"`
+	OutBw    float64   `json:"outBw"`
+	MaxOutBw float64   `json:"maxOutBw"`
+	Overflow bool      `json:"overflow"`
+}
+
+type DyAbnormalNodesInfo struct {
+	Metrics struct {
+		PushTimeout map[string]int `json:"push_timeout" bson:"push_timeout"`
+		ConnectFail map[string]int `json:"connect_fail" bson:"connect_fail"`
+	} `json:"metrics" bson:"metrics"`
+	TotalTimeoutNodes       int                       `json:"total_timeout_nodes" bson:"total_timeout_nodes"`
+	TimeoutForbiddenNodes   map[string]ForbiddenNode2 `json:"timeout_forbidden_nodes" bson:"timeout_forbidden_nodes"`
+	TotalErrNodes           int                       `json:"total_err_nodes" bson:"total_err_nodes"`
+	PcdnErrFbiddenNodes     map[string]ForbiddenNode2 `json:"pcdn_err_forbidden_nodes" bson:"pcdn_err_forbidden_nodes"`
+	TotalConnectFailNodes   int                       `json:"total_connect_fail_nodes" bson:"total_connect_fail_nodes"`
+	ConnectFailFbiddenNodes map[string]ForbiddenNode2 `json:"connect_fail_forbidden_nodes" bson:"connect_fail_forbidden_nodes"`
+	CreatedAt               mongoTime                 `json:"created_at" bson:"created_at"`
+	NodeId                  string                    `json:"node_id" bson:"node_id"`
+}
+
+func (s *Parser) PushTimeout() {
+	bytes, err := os.ReadFile("/Users/liyuanquan/workspace/tmp/export_test.json")
+	if err != nil {
+		log.Println("read fail", "/Users/liyuanquan/workspace/tmp/export_test.json", err)
+		return
+	}
+
+	metrics := make([]DyAbnormalNodesInfo, 0)
+	lines := strings.Split(string(bytes), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		var metric DyAbnormalNodesInfo
+		if err := json.Unmarshal([]byte(line), &metric); err != nil {
+			log.Println("unmarshal err 1", err, line)
+			continue
+		}
+		metrics = append(metrics, metric)
+	}
+	log.Println(len(metrics))
+	s.dumpNodeMap(metrics)
+}
+
+func (s *Parser) dumpNodeMap(metrics []DyAbnormalNodesInfo) {
+	nodeMap := make(map[string]int)
+	for _, metric := range metrics {
+		for nodeId := range metric.Metrics.PushTimeout {
+			nodeMap[nodeId]++
+		}
+	}
+	pairs := SortIntMap(nodeMap)
+	DumpSlice(pairs)
+}

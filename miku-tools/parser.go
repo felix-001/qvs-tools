@@ -239,6 +239,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Http,
 			Usage:   "http 请求",
 		},
+		"pushtimeout": {
+			Handler: parser.PushTimeout,
+			Usage:   "推流超时",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
