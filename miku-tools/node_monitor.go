@@ -173,6 +173,49 @@ func (s *Parser) writeToFile(nodeInfo *NodeInfo, path string) {
 	}
 }
 
+func (s *Parser) writeToFile2(datas any, path string) {
+	createDirIfNotExist(path)
+	latestFile, err := findLatestFile(path)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
+	fileName := genFileName()
+	if s.file == nil {
+		filePath := filepath.Join(path, fileName)
+		var err error
+		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println("err:", err)
+			return
+		}
+	} else if fileName != latestFile {
+		s.file.Close()
+		filePath := filepath.Join(path, fileName)
+		var err error
+		s.file, err = os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println("err:", err)
+			return
+		}
+	}
+
+	bytes, err := json.Marshal(datas)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = s.file.Write(bytes)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = s.file.WriteString("\n")
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func createDirIfNotExist(dir string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.MkdirAll(dir, 0755)
@@ -225,6 +268,35 @@ func (s *Parser) nodeMonitor() {
 			s.fillIpStatus(ipStatusMap, node)
 		}
 		s.dynIpMonitor(ipStatusMap)
+		deleteOldFiles(path)
+	}
+}
+
+func (s *Parser) rawNodesMonitor() {
+	s.allNodeInfoMap = make(map[string]*NodeInfo)
+	ticker := time.NewTicker(time.Duration(30) * time.Second)
+	defer ticker.Stop()
+
+	path := "/tmp/nodes"
+
+	for range ticker.C {
+		allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
+		if err != nil {
+			s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+			return
+		}
+		var monitorNode *model.RtNode
+		for _, node := range allNodes {
+			if node.Id == s.conf.Node {
+				monitorNode = node
+				break
+			}
+		}
+		if monitorNode == nil {
+			s.logger.Error().Msg("monitor node not found")
+			return
+		}
+		s.writeToFile2(monitorNode, path)
 		deleteOldFiles(path)
 	}
 }

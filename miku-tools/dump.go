@@ -248,4 +248,11 @@ func (s *Parser) DumpAllNodes() {
 		return
 	}
 	os.WriteFile("./allNodes.json", jsonbody, 0644)
+	for _, node := range s.allNodesMap {
+		for _, ip := range node.Ips {
+			if ip.Forbidden {
+				log.Println(node.Id, ip.Ip)
+			}
+		}
+	}
 }

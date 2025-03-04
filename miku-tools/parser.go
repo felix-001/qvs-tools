@@ -54,6 +54,11 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.nodeMonitor,
 			Usage:   "每隔一段时间,记录一下节点的变化信息(离线/没有ip可用/拉流探测失败),监控节点状态",
 		},
+		"nodesMonitor": {
+			Handler: parser.rawNodesMonitor,
+			Usage:   "每隔一段时间,记录dump一些所有节点信息",
+			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
+		},
 		"lag": {
 			Handler: parser.LagAnalysis,
 			Usage:   "分析从ck下载的streamd qos数据, 分析卡顿率高的原因",

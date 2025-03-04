@@ -242,7 +242,7 @@ type DyAbnormalNodesInfo struct {
 }
 
 func (s *Parser) PushTimeout() {
-	bytes, err := os.ReadFile("/Users/liyuanquan/workspace/tmp/export_test.json")
+	bytes, err := os.ReadFile("/Users/liyuanquan/workspace/tmp/douyu-blacklist-2025-0303-1600.json")
 	if err != nil {
 		log.Println("read fail", "/Users/liyuanquan/workspace/tmp/export_test.json", err)
 		return
@@ -262,7 +262,8 @@ func (s *Parser) PushTimeout() {
 		metrics = append(metrics, metric)
 	}
 	log.Println(len(metrics))
-	s.dumpNodeMap(metrics)
+	s.traceNode(metrics)
+	//s.dumpNodeMap(metrics)
 }
 
 func (s *Parser) dumpNodeMap(metrics []DyAbnormalNodesInfo) {
@@ -274,4 +275,27 @@ func (s *Parser) dumpNodeMap(metrics []DyAbnormalNodesInfo) {
 	}
 	pairs := SortIntMap(nodeMap)
 	DumpSlice(pairs)
+}
+
+func (s *Parser) traceNode(metrics []DyAbnormalNodesInfo) {
+	/*
+		loc, err := time.LoadLocation("Asia/Shanghai") // 加载东八区时区[1](@ref)
+		if err != nil {
+			panic(err)
+		}
+	*/
+	for _, metric := range metrics {
+		//fmt.Println("createdAt:", metric.CreatedAt.Date.In(loc))
+		for pcdnId, detail := range metric.TimeoutForbiddenNodes {
+			if strings.Contains(pcdnId, "593d5a07-698b-3fe5-9e12-e2decf427400-niulink64-site") {
+				fmt.Println(pcdnId, detail)
+			}
+		}
+		for pcdnId, detail := range metric.PcdnErrFbiddenNodes {
+			if strings.Contains(pcdnId, "593d5a07-698b-3fe5-9e12-e2decf427400-niulink64-site") {
+				fmt.Println(pcdnId, detail)
+			}
+		}
+
+	}
 }
