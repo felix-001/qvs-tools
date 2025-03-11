@@ -248,6 +248,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.PushTimeout,
 			Usage:   "推流超时",
 		},
+		"gbcli": {
+			Handler: parser.GbCli,
+			Usage:   "gb camera 模拟器",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
