@@ -252,6 +252,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.GbCli,
 			Usage:   "gb camera 模拟器",
 		},
+		"sipsess": {
+			Handler: parser.SipSess,
+			Usage:   "sip session 模拟器",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

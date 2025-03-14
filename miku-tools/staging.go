@@ -93,6 +93,8 @@ func (s *Parser) Staging() {
 		s.Font()
 	case "angle":
 		s.TestAngle()
+	case "sips":
+		s.AllSipService()
 	}
 }
 

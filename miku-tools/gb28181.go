@@ -3,8 +3,11 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -240,4 +243,71 @@ func createCatalogResponse(deviceID, serverIP, callID string) string {
 		deviceID, serverIP, generateCallID(),
 		callID,
 		len(body), body)
+}
+
+type SipSession struct {
+	ID           string   `json:"id"`
+	DeviceSumnum int      `json:"device_sumnum"`
+	Devices      []Device `json:"devices"`
+}
+
+type Device struct {
+	DeviceID     string `json:"device_id"`
+	DeviceStatus string `json:"device_status"`
+	InviteStatus string `json:"invite_status"`
+	InviteTime   int64  `json:"invite_time"`
+}
+
+var totalChCnt int
+
+func (s *Parser) SipSess() {
+	// 构建请求URL
+	url := fmt.Sprintf("http://%s:%d/api/v1/gb28181?action=sip_query_session", s.conf.Ip, s.conf.Port)
+
+	// 发送GET请求
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "请求失败: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "读取响应失败: %v\n", err)
+		return
+	}
+	// 解析响应JSON
+	result := struct {
+		Data struct {
+			Sessions []SipSession `json:"sessions"`
+		} `json:"data"`
+	}{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		fmt.Fprintf(os.Stderr, "解析JSON失败: %v\n", err)
+		return
+	}
+
+	fmt.Printf("设备总数: %d, %s:%d\n", len(result.Data.Sessions), s.conf.Ip, s.conf.Port)
+	for _, session := range result.Data.Sessions {
+		totalChCnt += len(session.Devices)
+		if len(session.Devices) < 50 {
+			continue
+		}
+		fmt.Printf("Session ID: %s, 通道总数: %d, %s:%d\n", session.ID, session.DeviceSumnum, s.conf.Ip, s.conf.Port)
+	}
+}
+
+func (s *Parser) AllSipService() {
+	ips := []string{"10.70.60.32", "10.70.67.38", "10.70.60.22"} // 77/75/76
+	ports := []int{7279, 7272, 7273}                             // sip1/sip2/sip3
+	for _, ip := range ips {
+		for _, port := range ports {
+			s.conf.Ip = ip
+			s.conf.Port = port
+			s.SipSess()
+		}
+	}
+	fmt.Println("totalChCnt:", totalChCnt)
 }
