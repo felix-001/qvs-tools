@@ -95,6 +95,8 @@ func (s *Parser) Staging() {
 		s.TestAngle()
 	case "sips":
 		s.AllSipService()
+	case "qps":
+		s.Qps()
 	}
 }
 
