@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
+	deflog "log"
 	"math"
+	"net/http"
 	"os"
 	"os/exec"
 	"sort"
@@ -97,6 +100,8 @@ func (s *Parser) Staging() {
 		s.AllSipService()
 	case "qps":
 		s.Qps()
+	case "sipraw":
+		s.SipRaw()
 	}
 }
 
@@ -1918,4 +1923,83 @@ func (s *Parser) Angle(x, y float64) float64 {
 func (s *Parser) TestAngle() {
 	s.Angle(100, 100)
 	s.Angle(100, 200)
+}
+
+// 原代码中XML部分的双引号没有正确转义，导致字符串解析错误。
+// 这里将XML部分的双引号转义，以确保字符串可以正确解析。
+var msg = "MESSAGE sip:31011500991180004957 SIP/2.0\r\nVia: SIP/2.0/TCP 127.0.0.1:5061;rport\r\nFrom: <sip:31011500991180004957>\r\nTo: <sip:31011500991180004957>\r\nCall-ID: 31011500991180004957-1cptzpe-agk5dty5k53edhdaxkrr7olk4e\r\nCSeq: 1618 MESSAGE\r\nContent-Type: Application/MANSCDP+xml\r\nContent-Length: 272\r\n\r\n\r\n<?xml version=\"1.0\"?><Query><Token>363xsrn33ajh1</Token><GbServer>2</GbServer><CmdType>GetConfig</CmdType><Namespace>test_ikelink_com</Namespace><DeviceID>31011500991180004957</DeviceID><MessageId>31011500991180004957-1cptzpe-agk5dty5k53edhdaxkrr7olk4e</MessageId></Query>"
+
+func (s *Parser) SipRawReq() (int, string) {
+	deflog.SetFlags(deflog.LstdFlags | deflog.Lshortfile)
+	url := "http://qvs.qiniuapi.com/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
+	headers := map[string]string{
+		"authorization": "QiniuStub uid=1382871676",
+		"Content-Type":  "application/json",
+	}
+	data := map[string]string{
+		"msg": msg,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return 0, ""
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return 0, ""
+	}
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return 0, ""
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return 0, ""
+	}
+
+	deflog.Println("Response status:", resp.Status)
+	deflog.Println("Response body:", string(body))
+
+	msg := fmt.Sprintf("Response status: %s, Response body: %s, headers: %+v", resp.Status, string(body), resp.Header)
+	return resp.StatusCode, msg
+}
+
+func (s *Parser) SipRaw() {
+	url := "http://qvs.qiniuapi.com/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
+	// 每隔500ms请求一次SipRawReq， 如果返回值不是599的话，向企业微信发送告警
+	tick := time.Tick(500 * time.Millisecond)
+	data := map[string]string{
+		"msg": msg,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return
+	}
+	for range tick {
+		statusCode, msg, hdrs := mikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
+		if statusCode != 200 && statusCode != 612 {
+			content := fmt.Sprintf("Response status: %d, Response body: %s, headers: %+v", statusCode, msg, hdrs)
+			err := sendWeChatAlert(content)
+			if err != nil {
+				deflog.Println("Error sending WeChat alert:", err)
+				return
+			}
+		}
+
+	}
 }

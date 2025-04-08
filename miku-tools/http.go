@@ -75,10 +75,10 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
-	log.Println("data:")
-	fmt.Println(data)
+	//log.Println("data:")
+	//fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
-	log.Println("token:", token)
+	//log.Println("token:", token)
 	return token
 }
 
@@ -195,4 +195,50 @@ func (s *Parser) Http() {
 		return
 	}
 	fmt.Println(resp)
+}
+
+func httpReqReturnHdr(method, addr, body string, headers map[string]string) (int, string, http.Header) {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	client := &http.Client{Transport: tr}
+	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
+	for key, value := range headers {
+		if key == "Host" {
+			req.Host = value
+			continue
+		}
+		req.Header.Add(key, value)
+	}
+	//log.Printf("%+v\n", req)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+		return 0, err.Error(), nil
+	}
+	defer resp.Body.Close()
+	resp_body, err := ioutil.ReadAll(resp.Body)
+	//log.Print("resp body", string(resp_body))
+	if err != nil {
+		log.Println(err)
+		return 0, err.Error(), nil
+	}
+	return resp.StatusCode, string(resp_body), resp.Header
+}
+
+func mikuHttpReqReturnHdr(method, addr, body, ak, sk string) (int, string, http.Header) {
+	u, err := url.Parse(addr)
+	if err != nil {
+		log.Println(err)
+		return 0, err.Error(), nil
+	}
+	host := u.Host
+	u.Host = ""
+	u.Scheme = ""
+	headers := map[string]string{}
+	if body != "" {
+		headers["Content-Type"] = "application/json"
+	}
+	//token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
+	token := signToken(ak, sk, method, u.String(), host, body, headers)
+	headers["Authorization"] = token
+	return httpReqReturnHdr(method, addr, body, headers)
 }

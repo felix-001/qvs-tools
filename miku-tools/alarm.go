@@ -9,7 +9,7 @@ import (
 
 // sendWeChatAlert 向企业微信发送告警
 func sendWeChatAlert(message string) error {
-	webhookURL := "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=your-webhook-key" // 替换为你的企业微信Webhook URL
+	webhookURL := "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=59b3d537-8160-4870-ba92-31245c4b4729" // 替换为你的企业微信Webhook URL
 
 	// 构建消息内容
 	msg := map[string]interface{}{
