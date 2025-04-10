@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -310,4 +312,169 @@ func (s *Parser) AllSipService() {
 		}
 	}
 	fmt.Println("totalChCnt:", totalChCnt)
+}
+
+func (s *Parser) Talk() {
+	s.deleteAudioChannel()
+	ssrc := s.createAudioChannel()
+	if ssrc == -1 {
+		return
+	}
+	code := s.sipInvite(int(ssrc))
+	if code != 0 {
+		return
+	}
+	time.Sleep(1 * time.Second)
+	// 每隔3秒发送一次音频PCM数据
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := s.sendAppendAudioPCMRequest(); err != nil {
+				fmt.Fprintf(os.Stderr, "发送音频PCM数据失败: %v\n", err)
+			}
+		}
+	}
+}
+
+type SRSMediaCreateChannelResponse struct {
+	Code int `json:"code"`
+	Data struct {
+		Query struct {
+			ID       string `json:"id"`
+			IP       string `json:"ip"`
+			RtmpPort int    `json:"rtmp_port"`
+			App      string `json:"app"`
+			Stream   string `json:"stream"`
+			RtpPort  int    `json:"rtp_port"`
+			TcpPort  int    `json:"tcp_port"`
+			Ssrc     uint32 `json:"ssrc"`
+			NodeId   string `json:"nodeId"`
+		} `json:"query"`
+	} `json:"data"`
+}
+
+func (s *Parser) createAudioChannel() int {
+	// 构建请求URL
+	url := fmt.Sprintf("http://127.0.0.1:2985/api/v1/gb28181?action=create_audio_channel&id=%s&app=live&protocol=tcp&enable_jitter_buf=true", s.conf.ID)
+
+	// 发送GET请求
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println("请求失败:", err)
+		return -1
+	}
+	defer resp.Body.Close()
+
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("读取响应失败:", err)
+		return -1
+	}
+
+	// 打印响应内容
+	log.Println("createAudioChannel, resp:", string(body))
+	r := SRSMediaCreateChannelResponse{}
+	if err := json.Unmarshal(body, &r); err != nil {
+		log.Println("解析JSON失败:", err)
+		return -1
+	}
+	if r.Code != 0 && r.Code != 6001 {
+		return -1
+	}
+	log.Println("ssrc:", r.Data.Query.Ssrc)
+	return int(r.Data.Query.Ssrc)
+}
+
+type InviteResp struct {
+	Code   int    `json:"code"`
+	CallID string `json:"call_id"`
+}
+
+// 以下代码实现了使用 Go 语言发送 HTTP GET 请求到指定地址
+func (s *Parser) sipInvite(ssrc int) int {
+	// 构建请求 URL
+	url := fmt.Sprintf("http://localhost:7279/api/v1/gb28181?action=sip_invite&chid=%s&id=%s&ip=127.0.0.1&rtp_port=9015&rtp_proto=tcp&is_talk=true", s.conf.ID, s.conf.ID)
+	url += fmt.Sprintf("&ssrc=%d", ssrc)
+
+	// 发送 GET 请求
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println("sipInvite, 请求失败:", err)
+		return -1
+	}
+	defer resp.Body.Close()
+
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("sipInvite, 读取响应失败:", err)
+		return -1
+	}
+
+	// 打印响应内容
+	log.Println("sipInvite, ersp:", string(body))
+	r := InviteResp{}
+	if err := json.Unmarshal(body, &r); err != nil {
+		log.Println("sipInvite, 解析JSON失败:", err)
+		return -1
+	}
+
+	return r.Code
+}
+
+// 定义一个函数用于发送指定的HTTP请求
+func (s *Parser) sendAppendAudioPCMRequest() error {
+	// 定义请求的URL
+	url := fmt.Sprintf("http://127.0.0.1:2985/api/v1/gb28181?action=append_audio_pcm&id=%s", s.conf.ID)
+	// 定义请求的数据
+	data := []byte(`{
+        "base64_pcm":"MTIzNDU2Cg=="
+    }`)
+	// 创建一个新的HTTP POST请求
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json")
+	// 创建一个HTTP客户端
+	client := &http.Client{}
+	// 发送请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	// 确保响应体在函数结束时关闭
+	defer resp.Body.Close()
+	// 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	// 打印响应内容
+	fmt.Println(string(body))
+	return nil
+}
+
+func (s *Parser) deleteAudioChannel() {
+	url := fmt.Sprintf("http://127.0.0.1:2985/api/v1/gb28181?action=delete_audio_channel&id=%s", s.conf.ID)
+	// 发送GET请求
+	resp, err := http.Get(url) // 发送GET请求
+	if err != nil {
+		log.Println("请求失败:", err)
+		return
+	}
+	defer resp.Body.Close()
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("读取响应失败:", err)
+		return
+	}
+	// 打印响应内容
+	log.Println("deleteAudioChannel, resp:", string(body))
 }

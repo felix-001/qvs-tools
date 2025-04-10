@@ -1931,7 +1931,7 @@ var msg = "MESSAGE sip:31011500991180004957 SIP/2.0\r\nVia: SIP/2.0/TCP 127.0.0.
 
 func (s *Parser) SipRawReq() (int, string) {
 	deflog.SetFlags(deflog.LstdFlags | deflog.Lshortfile)
-	url := "http://qvs.qiniuapi.com/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
+	url := "http://10.70.67.39:7275/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
 	headers := map[string]string{
 		"authorization": "QiniuStub uid=1382871676",
 		"Content-Type":  "application/json",
@@ -1978,6 +1978,48 @@ func (s *Parser) SipRawReq() (int, string) {
 }
 
 func (s *Parser) SipRaw() {
+	// 每隔500ms调用一次SipRawReq，如果返回的code不是200的话，向企业微信发送告警
+	tick := time.Tick(500 * time.Millisecond)
+	for range tick {
+		statusCode, msg := s.SipRawReq()
+		if statusCode != 200 && statusCode != 612 {
+			err := sendWeChatAlert(msg)
+			if err != nil {
+				deflog.Println("Error sending WeChat alert:", err)
+				return
+			}
+		}
+	}
+}
+
+func (s *Parser) SipRawPost() {
+	url := "http://qvs.qiniuapi.com/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
+	// 每隔500ms请求一次SipRawReq， 如果返回值不是599的话，向企业微信发送告警
+	tick := time.Tick(500 * time.Millisecond)
+	data := map[string]string{
+		"msg": msg,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshaling JSON:", err)
+		return
+	}
+	for range tick {
+		statusCode, msg, hdrs := mikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
+		if statusCode != 200 && statusCode != 612 {
+			content := fmt.Sprintf("Response status: %d, Response body: %s, headers: %+v", statusCode, msg, hdrs)
+			err := sendWeChatAlert(content)
+			if err != nil {
+				deflog.Println("Error sending WeChat alert:", err)
+				return
+			}
+		}
+
+	}
+}
+
+func (s *Parser) SipRawGet() {
 	url := "http://qvs.qiniuapi.com/v1/namespaces/test_ikelink_com/devices/31011500991180004957/sipraw"
 	// 每隔500ms请求一次SipRawReq， 如果返回值不是599的话，向企业微信发送告警
 	tick := time.Tick(500 * time.Millisecond)

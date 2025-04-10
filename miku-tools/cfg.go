@@ -67,6 +67,7 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.Body, "body", "", "http请求的body")
 	flag.StringVar(&conf.Addr, "addr", "", "http请求的url")
 	flag.IntVar(&conf.Port, "port", 7279, "http请求的端口")
+	flag.StringVar(&conf.ID, "id", "31011500991180000130", "gbid")
 
 	flag.Parse()
 

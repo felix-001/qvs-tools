@@ -90,6 +90,7 @@ type Config struct {
 	Body               string
 	Addr               string
 	Port               int
+	ID                 string
 }
 
 type CmdHandler func()

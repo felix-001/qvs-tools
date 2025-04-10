@@ -256,6 +256,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.SipSess,
 			Usage:   "sip session 模拟器",
 		},
+		"talk": {
+			Handler: parser.Talk,
+			Usage:   "先请求create_audio_channel，然后发送invite talk",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
