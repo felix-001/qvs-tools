@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	confFile = "/tmp/middle-source.json"
+	confFile = "/usr/local/etc/middle-source.json"
 )
 
 func loadCfg() *Config {
