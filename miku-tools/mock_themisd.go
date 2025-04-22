@@ -172,5 +172,5 @@ func (s *Parser) mockThemisd() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	http.HandleFunc("/stream/publish/check", streamPublishCheck)
 	http.HandleFunc("/stream/play/check", streamPlayCheck)
-	http.ListenAndServe("0.0.0.0:6278", nil)
+	http.ListenAndServe("0.0.0.0:6288", nil)
 }
