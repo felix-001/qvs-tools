@@ -260,6 +260,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Talk,
 			Usage:   "先请求create_audio_channel，然后发送invite talk",
 		},
+		"invite": {
+			Handler: parser.Invite,
+			Usage:   "请求gb拉流",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)

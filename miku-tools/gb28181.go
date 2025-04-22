@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -320,7 +321,7 @@ func (s *Parser) Talk() {
 	if ssrc == -1 {
 		return
 	}
-	code := s.sipInvite(int(ssrc))
+	code := s.sipInvite(int(ssrc), true, "127.0.0.1", 9015)
 	if code != 0 {
 		return
 	}
@@ -395,9 +396,10 @@ type InviteResp struct {
 }
 
 // 以下代码实现了使用 Go 语言发送 HTTP GET 请求到指定地址
-func (s *Parser) sipInvite(ssrc int) int {
+func (s *Parser) sipInvite(ssrc int, is_talk bool, ip string, port int) int {
 	// 构建请求 URL
-	url := fmt.Sprintf("http://localhost:7279/api/v1/gb28181?action=sip_invite&chid=%s&id=%s&ip=127.0.0.1&rtp_port=9015&rtp_proto=tcp&is_talk=true", s.conf.ID, s.conf.ID)
+	url := fmt.Sprintf("http://localhost:7279/api/v1/gb28181?action=sip_invite&chid=%s&id=%s&ip=%s&rtp_port=%d&rtp_proto=tcp&is_talk=%v",
+		s.conf.ID, s.conf.ID, ip, port, is_talk)
 	url += fmt.Sprintf("&ssrc=%d", ssrc)
 
 	// 发送 GET 请求
@@ -416,7 +418,7 @@ func (s *Parser) sipInvite(ssrc int) int {
 	}
 
 	// 打印响应内容
-	log.Println("sipInvite, ersp:", string(body))
+	log.Println("sipInvite, resp:", string(body))
 	r := InviteResp{}
 	if err := json.Unmarshal(body, &r); err != nil {
 		log.Println("sipInvite, 解析JSON失败:", err)
@@ -477,4 +479,82 @@ func (s *Parser) deleteAudioChannel() {
 	}
 	// 打印响应内容
 	log.Println("deleteAudioChannel, resp:", string(body))
+}
+
+func (s *Parser) deleteVedioChannel(ip string, port int) {
+	url := fmt.Sprintf("http://%s:%d/api/v1/gb28181?action=delete_channel&id=%s", ip, port, s.conf.ID)
+	// 发送GET请求
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		log.Println("构建请求失败:", err)
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("请求失败:", err)
+		return
+	}
+	defer resp.Body.Close()
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("读取响应失败:", err)
+		return
+	}
+	// 打印响应内容
+	log.Println("deleteVedioChannel, resp:", string(body))
+}
+
+func (s *Parser) createVideoChannel(ip string, port int) int {
+	// 构建请求URL
+	url := fmt.Sprintf("http://%s:%d/api/v1/gb28181?action=create_channel&id=%s&app=live&protocol=tcp&enable_jitter_buf=true", ip, port, s.conf.ID)
+
+	// 发送GET请求
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		log.Println("构建请求失败:", err)
+		return -1
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("请求失败:", err)
+		return -1
+	}
+	defer resp.Body.Close()
+
+	// 读取响应内容
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("读取响应失败:", err)
+		return -1
+	}
+
+	// 打印响应内容
+	log.Println("createAudioChannel, resp:", string(body))
+	r := SRSMediaCreateChannelResponse{}
+	if err := json.Unmarshal(body, &r); err != nil {
+		log.Println("解析JSON失败:", err)
+		return -1
+	}
+	if r.Code != 0 && r.Code != 6001 {
+		return -1
+	}
+	log.Println("ssrc:", r.Data.Query.Ssrc)
+	return int(r.Data.Query.Ssrc)
+}
+
+func (s *Parser) Invite() {
+	s.deleteVedioChannel("101.133.131.188", 2985)
+	ssrc := s.createVideoChannel("101.133.131.188", 2985)
+	if ssrc == -1 {
+		return
+	}
+	code := s.sipInvite(ssrc, false, "101.133.131.188", 9001)
+	if code != 0 {
+		return
+	}
 }
