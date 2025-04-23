@@ -102,6 +102,8 @@ func (s *Parser) Staging() {
 		s.Qps()
 	case "sipraw":
 		s.SipRaw()
+	case "talk":
+		s.TalkTest()
 	}
 }
 

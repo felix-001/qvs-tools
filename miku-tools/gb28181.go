@@ -317,7 +317,7 @@ func (s *Parser) AllSipService() {
 
 func (s *Parser) Talk() {
 	s.deleteAudioChannel()
-	ssrc := s.createAudioChannel()
+	ssrc := s.createAudioChannel("127.0.0.1")
 	if ssrc == -1 {
 		return
 	}
@@ -357,9 +357,9 @@ type SRSMediaCreateChannelResponse struct {
 	} `json:"data"`
 }
 
-func (s *Parser) createAudioChannel() int {
+func (s *Parser) createAudioChannel(peer_ip string) int {
 	// 构建请求URL
-	url := fmt.Sprintf("http://127.0.0.1:2985/api/v1/gb28181?action=create_audio_channel&id=%s&app=live&protocol=tcp&enable_jitter_buf=true", s.conf.ID)
+	url := fmt.Sprintf("http://127.0.0.1:2985/api/v1/gb28181?action=create_audio_channel&id=%s&app=live&protocol=tcp&enable_jitter_buf=true&peer_ip=%s", s.conf.ID, peer_ip)
 
 	// 发送GET请求
 	resp, err := http.Get(url)
@@ -534,7 +534,7 @@ func (s *Parser) createVideoChannel(ip string, port int) int {
 	}
 
 	// 打印响应内容
-	log.Println("createAudioChannel, resp:", string(body))
+	log.Println("creatVideoChannel, resp:", string(body))
 	r := SRSMediaCreateChannelResponse{}
 	if err := json.Unmarshal(body, &r); err != nil {
 		log.Println("解析JSON失败:", err)
@@ -556,5 +556,38 @@ func (s *Parser) Invite() {
 	code := s.sipInvite(ssrc, false, "101.133.131.188", 9001)
 	if code != 0 {
 		return
+	}
+}
+
+func (s *Parser) sendTalkRtp(ssrc int) {
+	conn, err := net.Dial("tcp", "127.0.0.1:9015")
+	if err != nil {
+		log.Println("连接失败:", err)
+		return
+	}
+	//defer conn.Close()
+
+	rtpPacket := RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
+	_, err = conn.Write(rtpPacket)
+	if err != nil {
+		log.Println("发送rtp包失败:", err)
+		return
+	}
+	log.Println("send talk rtp success")
+
+}
+
+func (s *Parser) TalkTest() {
+	log.Println("talk test")
+	s.deleteAudioChannel()
+	ssrc := s.createAudioChannel("127.0.0.2")
+	if ssrc == -1 {
+		return
+	}
+	s.sipInvite(ssrc, true, "127.0.0.1", 9015)
+	time.Sleep(1 * time.Second)
+	s.sendTalkRtp(ssrc)
+	if err := s.sendAppendAudioPCMRequest(); err != nil {
+		fmt.Fprintf(os.Stderr, "发送音频PCM数据失败: %v\n", err)
 	}
 }
