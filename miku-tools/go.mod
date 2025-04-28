@@ -4,7 +4,9 @@ go 1.22
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
+	github.com/emiago/sipgo v0.31.0
 	github.com/gorilla/websocket v1.4.2
+	github.com/icholy/digest v1.1.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
 	github.com/qbox/mikud-live v1.5.1-0.20250109081336-d292aae8c6cb
@@ -12,6 +14,7 @@ require (
 	github.com/qiniu/x v1.13.10
 	github.com/redis/go-redis/v9 v9.5.3
 	github.com/rs/zerolog v1.29.1
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.721
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 	golang.org/x/image v0.0.0-20190802002840-cff245a6509b
 	golang.org/x/net v0.24.0
@@ -53,6 +56,9 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.11.2 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.3.2 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -97,11 +103,11 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/qiniu/qmgo v1.1.8 // indirect
+	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.721 // indirect
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.721 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

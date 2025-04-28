@@ -104,6 +104,10 @@ func (s *Parser) Staging() {
 		s.SipRaw()
 	case "talk":
 		s.TalkTest()
+	case "uac":
+		s.uac("udp")
+		s.uac("tcp")
+		time.Sleep(10 * time.Second)
 	}
 }
 

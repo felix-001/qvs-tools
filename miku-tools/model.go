@@ -91,6 +91,8 @@ type Config struct {
 	Addr               string
 	Port               int
 	ID                 string
+	Transport          string
+	Passwd             string
 }
 
 type CmdHandler func()
