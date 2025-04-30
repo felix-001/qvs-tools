@@ -8,7 +8,8 @@ class LogParser(object):
 
 	if srv == 'server':
 		self.type = 'APP_QVS-SERVER'
-	elif srv == ''
+	elif srv == 'flowd':
+		self.type = 'APP_PILI-FLOWD'
 
 
 
