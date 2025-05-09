@@ -70,6 +70,8 @@ func loadCfg() *Config {
 	flag.StringVar(&conf.ID, "id", "31011500991180000130", "gbid")
 	flag.StringVar(&conf.Transport, "s", "udp", "Transport")
 	flag.StringVar(&conf.Passwd, "p", "123456", "Password")
+	flag.StringVar(&conf.Key, "key", "", "kodo key")
+	flag.StringVar(&conf.Ns, "ns", "FengTaiWiFi", "namespace id")
 
 	flag.Parse()
 

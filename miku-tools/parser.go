@@ -264,6 +264,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.Invite,
 			Usage:   "请求gb拉流",
 		},
+		"kodo": {
+			Handler: parser.signResource,
+			Usage:   "kodo上的资源签算下载url",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
