@@ -59,6 +59,8 @@ type Config struct {
 	PathqueryLogFile   string
 	Ak                 string `json:"ak"`
 	Sk                 string `json:"sk"`
+	AdminAk            string `json:"admin_ak"`
+	AdminSk            string `json:"admin_sk"`
 	Cmd                string
 	QosFile            string
 	Help               bool

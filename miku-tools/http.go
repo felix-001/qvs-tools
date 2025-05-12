@@ -93,7 +93,7 @@ func httpReq(method, addr, body string, headers map[string]string) (string, erro
 		}
 		req.Header.Add(key, value)
 	}
-	log.Printf("%+v\n", req)
+	//log.Printf("%+v\n", req)
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)

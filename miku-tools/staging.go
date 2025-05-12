@@ -108,6 +108,8 @@ func (s *Parser) Staging() {
 		s.uac("udp")
 		s.uac("tcp")
 		time.Sleep(10 * time.Second)
+	case "dev":
+		s.getDevices()
 	}
 }
 
