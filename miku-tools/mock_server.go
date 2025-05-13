@@ -133,6 +133,7 @@ func srvRoute() http.HandlerFunc {
 }
 
 func (s *Parser) mockSrv() {
+	go s.mockThemisd()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
