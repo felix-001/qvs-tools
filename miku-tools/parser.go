@@ -268,6 +268,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.signResource,
 			Usage:   "kodo上的资源签算下载url",
 		},
+		"nodes": {
+			Handler: parser.getQvsStaticNodes,
+			Usage:   "获取QVS所有节点信息",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
