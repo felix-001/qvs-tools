@@ -25,7 +25,14 @@ const (
 )
 
 func (s *Parser) rtcMemLeakTest() {
-	sessionId := s.startRtcPlay()
+	for i := 0; i < 1; i++ {
+		go s.singleRtcMemLeakTest(i)
+	}
+	time.Sleep(30 * time.Second)
+}
+
+func (s *Parser) singleRtcMemLeakTest(i int) {
+	sessionId := s.startRtcPlay(i)
 	// 1. 创建UDP连接
 	conn, err := net.Dial("udp", serverAddr)
 	if err != nil {
@@ -96,7 +103,8 @@ func (s *Parser) rtcMemLeakTest() {
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					// 超时错误，继续下一次循环
-					continue
+					log.Println("读取超时，退出")
+					break
 				}
 				// 其他错误，退出协程
 				fmt.Printf("读取数据出错: %v\n", err)
@@ -252,7 +260,7 @@ type RtcPlayResp struct {
 	SessionID string `json:"sessionid"`
 }
 
-func (s *Parser) startRtcPlay() string {
+func (s *Parser) startRtcPlay(i int) string {
 	clientIp := ClientInfo{
 		OSName:         "Mac OS",
 		OSVersion:      "10.15.7",
@@ -261,7 +269,7 @@ func (s *Parser) startRtcPlay() string {
 		SDKVersion:     "1.1.1-alpha.2",
 	}
 
-	addr := fmt.Sprintf("webrtc://127.0.0.1:2985/live/teststream")
+	addr := fmt.Sprintf("webrtc://127.0.0.1:2985/live/teststream%d", i)
 	editPrompt := EditPrompt{
 		StreamURL: addr,
 		ClientIP:  clientIp,
