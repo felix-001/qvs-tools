@@ -7,6 +7,8 @@ require (
 	github.com/emiago/sipgo v0.31.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/icholy/digest v1.1.0
+	github.com/pion/dtls/v2 v2.2.12
+	github.com/pion/stun v0.6.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
 	github.com/qbox/mikud-live v1.5.1-0.20250109081336-d292aae8c6cb
@@ -98,6 +100,8 @@ require (
 	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
+	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/transport/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
 	github.com/prometheus/common v0.44.0 // indirect

@@ -111,7 +111,7 @@ func (s *Parser) Staging() {
 	case "dev":
 		s.getDevices()
 	case "rtc":
-		s.testRtc()
+		s.rtcMemLeakTest()
 	}
 }
 
