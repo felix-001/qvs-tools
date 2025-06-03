@@ -55,6 +55,35 @@ func (s *Parser) rtcMemLeakTest() {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
+	state := dtlsConn.ConnectionState()
+	context := []byte{}
+	srtpMaterial, err := state.ExportKeyingMaterial("EXTRACTOR-dtls_srtp", context, 60)
+	if err != nil {
+		log.Println("Error exporting SRTP keying material:", err)
+	}
+	clientMasterKey := srtpMaterial[:16]
+	clientMasterSalt := srtpMaterial[16:30]
+	serverMasterKey := srtpMaterial[30:46]
+	serverMasterSalt := srtpMaterial[46:60]
+	fmt.Printf("Client Master Key: %x\n", clientMasterKey)
+	fmt.Printf("Client Master Salt: %x\n", clientMasterSalt)
+	fmt.Printf("Server Master Key: %x\n", serverMasterKey)
+	fmt.Printf("Server Master Salt: %x\n", serverMasterSalt)
+
+	/*
+		srtpCtx, err := srtp.CreateContext(clientMasterKey, clientMasterSalt, srtp.ProtectionProfileAeadAes128Gcm)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// 打开文件等待写入，若文件不存在则创建，若存在则截断内容
+		file, err := os.OpenFile("output.bin", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("打开文件失败: %v", err)
+		}
+		// 确保函数结束时关闭文件
+		defer file.Close()
+	*/
 	for {
 		select {
 		case <-ticker.C:
@@ -73,6 +102,21 @@ func (s *Parser) rtcMemLeakTest() {
 				fmt.Printf("读取数据出错: %v\n", err)
 				return
 			}
+			/*
+				rtpPacket := &rtp.Packet{}
+				if err := rtpPacket.Unmarshal(buf); err != nil {
+					log.Fatal("解析RTP失败: ", err)
+				}
+				decryptedBuf, err := srtpCtx.DecryptRTP(nil, rtpPacket.Payload, &rtpPacket.Header)
+				if err != nil {
+					log.Fatal("解密RTP失败: ", err)
+				}
+				// 将解密后的数据写入文件
+				_, err = file.Write(decryptedBuf)
+				if err != nil {
+					log.Fatalf("写入文件失败: %v", err)
+				}
+			*/
 			// 简单假设每个读取到的数据都是RTP包
 			rtpPacketCount++
 		}

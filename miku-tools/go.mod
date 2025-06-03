@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/icholy/digest v1.1.0
 	github.com/pion/dtls/v2 v2.2.12
+	github.com/pion/srtp/v2 v2.0.20
 	github.com/pion/stun v0.6.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/qbox/bo-sdk v1.0.0
@@ -101,6 +102,9 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pion/logging v0.2.2 // indirect
+	github.com/pion/randutil v0.1.0 // indirect
+	github.com/pion/rtcp v1.2.12 // indirect
+	github.com/pion/rtp v1.8.3 // indirect
 	github.com/pion/transport/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.4.1-0.20230718164431-9a2bf3000d16 // indirect
