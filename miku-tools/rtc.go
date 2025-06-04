@@ -25,7 +25,7 @@ const (
 )
 
 func (s *Parser) rtcMemLeakTest() {
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 100; i++ {
 		go s.singleRtcMemLeakTest(i)
 	}
 	time.Sleep(30 * time.Second)
