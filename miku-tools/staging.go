@@ -112,6 +112,8 @@ func (s *Parser) Staging() {
 		s.getDevices()
 	case "rtc":
 		s.rtcMemLeakTest()
+	case "rtptest":
+		s.rtpTest()
 	}
 }
 
@@ -2126,4 +2128,22 @@ func (s *Parser) testRtc() {
 		fmt.Printf("响应状态码: %d\n", resp.StatusCode)
 		fmt.Printf("响应体: %s\n", string(body))
 	}
+}
+
+func (s *Parser) rtpTest() {
+	ssrc := s.createVideoChannel("127.0.0.1", 2985)
+	if ssrc == 0 {
+		fmt.Println("createVideoChannel failed")
+		return
+	}
+	fmt.Println("createVideoChannel success", ssrc)
+	s.sendVideoRtp(ssrc)
+	time.Sleep(1 * time.Second)
+	ssrc = s.createVideoChannel("127.0.0.1", 2985)
+	if ssrc == 0 {
+		fmt.Println("createVideoChannel failed")
+		return
+	}
+	fmt.Println("createVideoChannel 2 success", ssrc)
+	s.sendVideoRtp(ssrc)
 }

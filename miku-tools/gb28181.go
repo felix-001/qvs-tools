@@ -583,6 +583,24 @@ func (s *Parser) sendTalkRtp(ssrc int) {
 
 }
 
+func (s *Parser) sendVideoRtp(ssrc int) {
+	conn, err := net.Dial("tcp", "127.0.0.1:9001")
+	if err != nil {
+		log.Println("连接失败:", err)
+		return
+	}
+	//defer conn.Close()
+
+	rtpPacket := RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
+	_, err = conn.Write(rtpPacket)
+	if err != nil {
+		log.Println("发送rtp包失败:", err)
+		return
+	}
+	log.Println("send video rtp success")
+
+}
+
 func (s *Parser) TalkTest() {
 	log.Println("talk test")
 	s.deleteAudioChannel()
