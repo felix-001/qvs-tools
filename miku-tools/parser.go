@@ -272,6 +272,10 @@ func newParser(conf *Config) *Parser {
 			Handler: parser.getQvsStaticNodes,
 			Usage:   "获取QVS所有节点信息",
 		},
+		"redis": {
+			Handler: parser.Redis,
+			Usage:   "dump mik_netprobe_runtime_nodes_map数据，写入到redis",
+		},
 	}
 	if conf.Help {
 		dumpCmdMap(cmdMap)
