@@ -134,6 +134,7 @@ func srvRoute() http.HandlerFunc {
 
 func (s *Parser) mockSrv() {
 	go s.mockThemisd()
+	go s.mockTracker()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
@@ -142,4 +143,49 @@ func (s *Parser) mockSrv() {
 	if err := http.Serve(conn, srvRoute()); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// 定义处理 /api/v1/getnodes POST 请求的函数
+func getNodesHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if req.URL.Path != "/api/v1/getnodes" {
+		http.NotFound(w, req)
+		return
+	}
+
+	// 定义要返回的数据
+	responseData := map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"addrs":   []string{"105.85.174.230:1234", "105.85.174.230:5678"},
+	}
+
+	// 将数据编码为 JSON
+	jsonData, err := json.Marshal(responseData)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// 设置响应头
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	// 写入响应数据
+	if _, err := w.Write(jsonData); err != nil {
+		log.Println("Failed to write response:", err)
+	}
+}
+
+// 在 mockTracker 方法中启动一个新的 HTTP 服务器
+func (s *Parser) mockTracker() {
+	http.HandleFunc("/api/v1/getnodes", getNodesHandler)
+	go func() {
+		if err := http.ListenAndServe("127.0.0.1:6008", nil); err != nil {
+			log.Println("HTTP server error:", err)
+		}
+	}()
 }
