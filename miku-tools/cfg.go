@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -17,7 +16,6 @@ const (
 func loadCfg() *Config {
 	var conf Config
 	if _, err := os.Stat(confFile); os.IsNotExist(err) {
-		fmt.Printf("配置文件 %s 不存在, err: %v\n", confFile, err)
 		if _, err := os.Stat("/tmp/mikutool.json"); os.IsNotExist(err) {
 			log.Fatalf("load config failed, err: %v", err)
 		} else {
