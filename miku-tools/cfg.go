@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	qconfig "github.com/qiniu/x/config"
@@ -14,8 +16,19 @@ const (
 
 func loadCfg() *Config {
 	var conf Config
-	if err := qconfig.LoadFile(&conf, confFile); err != nil {
-		log.Fatalf("load config failed, err: %v", err)
+	if _, err := os.Stat(confFile); os.IsNotExist(err) {
+		fmt.Printf("配置文件 %s 不存在, err: %v\n", confFile, err)
+		if _, err := os.Stat("/tmp/mikutool.json"); os.IsNotExist(err) {
+			log.Fatalf("load config failed, err: %v", err)
+		} else {
+			if err = qconfig.LoadFile(&conf, "/tmp/mikutool.json"); err != nil {
+				log.Fatalf("load config failed, err: %v", err)
+			}
+		}
+	} else {
+		if err := qconfig.LoadFile(&conf, confFile); err != nil {
+			log.Fatalf("load config failed, err: %v", err)
+		}
 	}
 
 	t := time.Now().Format("2006-01-02 15:04:05")
