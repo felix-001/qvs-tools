@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -155,6 +156,17 @@ func getNodesHandler(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
+
+	// 读取请求体
+	bodyBytes, err := io.ReadAll(req.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+	// 关闭请求体
+	defer req.Body.Close()
+	// 打印请求体内容
+	fmt.Println(string(bodyBytes))
 
 	// 定义要返回的数据
 	responseData := map[string]interface{}{
