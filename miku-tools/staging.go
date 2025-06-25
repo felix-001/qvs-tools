@@ -117,7 +117,9 @@ func (s *Parser) Staging() {
 		s.rtpTest()
 	case "res":
 		nodetraverse.RegisterMultiIPChk()
-		nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB)
+		nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
+	case "report":
+		s.ReportChk()
 	}
 }
 
@@ -2170,4 +2172,20 @@ func (s *Parser) rtpTest() {
 	}
 	fmt.Println("createVideoChannel 2 success", ssrc)
 	s.sendVideoRtp(ssrc)
+}
+
+func (s *Parser) ReportChk() {
+	s.RedisCli = redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := s.RedisCli.Ping(context.Background()).Err()
+	if err != nil {
+		fmt.Println("Ping redis failed", err)
+		return
+	}
+	nodetraverse.RegisterReportChk()
+	nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
 }

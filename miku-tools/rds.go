@@ -22,3 +22,7 @@ func (s *Parser) getNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error)
 	}
 	return &nodeStreamInfo, nil
 }
+
+func (s *Parser) GetNodeAllStreams(nodeId string) (*model.NodeStreamInfo, error) {
+	return s.getNodeAllStreams(nodeId)
+}

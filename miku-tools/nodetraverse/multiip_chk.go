@@ -1,6 +1,8 @@
 package nodetraverse
 
 import (
+	"middle-source-analysis/callback"
+
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -18,7 +20,7 @@ type MultiIPChk struct {
 func (m *MultiIPChk) OnIp(node *public.RtNode, ip *public.RtIpStatus) {
 }
 
-func (m *MultiIPChk) OnNode(node *public.RtNode, ipParser *ipdb.City) {
+func (m *MultiIPChk) OnNode(node *public.RtNode, ipParser *ipdb.City, callback callback.Callback) {
 	if !node.IsDynamic {
 		return
 	}

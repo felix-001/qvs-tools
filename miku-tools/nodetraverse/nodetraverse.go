@@ -3,6 +3,7 @@ package nodetraverse
 import (
 	"context"
 	"fmt"
+	"middle-source-analysis/callback"
 
 	public "github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -12,7 +13,7 @@ import (
 
 type NodeCallback interface {
 	OnIp(node *public.RtNode, ip *public.RtIpStatus)
-	OnNode(node *public.RtNode, ipParser *ipdb.City)
+	OnNode(node *public.RtNode, ipParser *ipdb.City, callback callback.Callback)
 }
 
 var modules = []NodeCallback{}
@@ -25,7 +26,7 @@ func GetMoudleCnt() int {
 	return len(modules)
 }
 
-func Traverse(addrs []string, conf ipdb.Config) {
+func Traverse(addrs []string, conf ipdb.Config, callback callback.Callback) {
 	fmt.Println("NodeTraverse")
 	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
 		Addrs:      addrs,
@@ -51,7 +52,7 @@ func Traverse(addrs []string, conf ipdb.Config) {
 	}
 	for _, node := range allNodes {
 		for _, module := range modules {
-			module.OnNode(node, ipParser)
+			module.OnNode(node, ipParser, callback)
 		}
 		for _, ip := range node.Ips {
 			for _, module := range modules {

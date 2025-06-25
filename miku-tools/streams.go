@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -364,4 +365,13 @@ func (s *Parser) saveStreamsInfoToCSV() {
 	s.saveFile(fmt.Sprintf("streams-%d.csv", time.Now().Unix()), csv)
 	s.saveFile(fmt.Sprintf("streamsDetail-%d.csv", time.Now().Unix()), streamDetailCsv)
 	s.saveFile(fmt.Sprintf("streams-static-cnt-%d.csv", time.Now().Unix()), streamStaticNodeCntCsv)
+}
+
+func (s *Parser) Report() {
+	data, err := json.Marshal(s.nodeStremasMap)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	s.saveFile(fmt.Sprintf("report-%d.json", time.Now().Unix()), string(data))
 }
