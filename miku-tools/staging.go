@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	deflog "log"
 	"math"
+	"middle-source-analysis/nodetraverse"
 	"net/http"
 	"os"
 	"os/exec"
@@ -114,6 +115,9 @@ func (s *Parser) Staging() {
 		s.rtcMemLeakTest()
 	case "rtptest":
 		s.rtpTest()
+	case "res":
+		nodetraverse.RegisterMultiIPChk()
+		nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB)
 	}
 }
 
@@ -1064,6 +1068,26 @@ func (s *Parser) calcBw(allNodes []*public.RtNode, ips []string) (totalBw float6
 		}
 	}
 	return
+}
+
+func (s *Parser) redisGetAllNodes() []*public.RtNode {
+	redisCli := redis.NewClusterClient(&redis.ClusterOptions{
+		Addrs:      s.conf.RedisAddrs,
+		MaxRetries: 3,
+		PoolSize:   30,
+	})
+
+	err := redisCli.Ping(context.Background()).Err()
+	if err != nil {
+		zlog.Fatal().Err(err).Msg("")
+	}
+
+	allNodes, err := public.GetAllRTNodes(s.logger, redisCli)
+	if err != nil {
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return nil
+	}
+	return allNodes
 }
 
 func (s *Parser) DumpNodes() {
