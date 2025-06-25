@@ -12,9 +12,11 @@ import (
 	"strconv"
 	"time"
 
+	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	public "github.com/qbox/mikud-live/common/model"
+	publicUtil "github.com/qbox/mikud-live/common/util"
 	schedutil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
@@ -361,4 +363,31 @@ func FormatTalkAddr(gbId, rtpIp string, ssrc uint32) (string, string) {
 		host, gbId, ssrc)
 
 	return httpUrl, httpsUrl
+}
+
+func GetIpAreaIsp(ip string, ipParser *ipdb.City) (string, string) {
+	locate, err := ipParser.Find(ip)
+	if err != nil {
+		log.Printf("查找IP %s 的位置信息失败: %v", ip, err)
+		return "", ""
+	}
+	if locate.Isp == "" {
+		log.Println(locate.Country, locate.Region, locate.City, ip)
+	}
+	area := monitorUtil.ProvinceAreaRelation(locate.Region)
+	return area, locate.Isp
+}
+
+func GetNodeAreaIsp(node *public.RtNode, ipParser *ipdb.City) (string, string) {
+	for _, ip := range node.Ips {
+		if publicUtil.IsPrivateIP(ip.Ip) {
+			continue
+		}
+		area, isp := GetIpAreaIsp(ip.Ip, ipParser)
+		if area == "" || isp == "" {
+			continue
+		}
+		return area, isp
+	}
+	return "", ""
 }

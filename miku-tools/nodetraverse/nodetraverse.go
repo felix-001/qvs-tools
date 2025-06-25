@@ -14,6 +14,7 @@ import (
 type NodeCallback interface {
 	OnIp(node *public.RtNode, ip *public.RtIpStatus)
 	OnNode(node *public.RtNode, ipParser *ipdb.City, callback callback.Callback)
+	Done(ipParser *ipdb.City)
 }
 
 var modules = []NodeCallback{}
@@ -59,5 +60,9 @@ func Traverse(addrs []string, conf ipdb.Config, callback callback.Callback) {
 				module.OnIp(node, &ip)
 			}
 		}
+	}
+
+	for _, module := range modules {
+		module.Done(ipParser)
 	}
 }

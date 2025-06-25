@@ -4,15 +4,18 @@ import (
 	"log"
 	"middle-source-analysis/callback"
 
+	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	public "github.com/qbox/mikud-live/common/model"
+	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
 )
 
 func RegisterReportChk() {
-	Register(&ReportChk{})
+	Register(&ReportChk{nodeMap: make(map[string]*public.RtNode)})
 }
 
 type ReportChk struct {
+	nodeMap map[string]*public.RtNode
 }
 
 func (m *ReportChk) OnIp(node *public.RtNode, ip *public.RtIpStatus) {
@@ -27,23 +30,43 @@ func (m *ReportChk) OnNode(node *public.RtNode, ipParser *ipdb.City, callback ca
 		log.Printf("[ReportChk][OnNode], nodeId:%s, err:%v\n", node.Id, err)
 		return
 	}
-	streamMap := make(map[string][]*public.StreamInfoRT)
 	for _, stream := range report.Streams {
-		streamMap[stream.Key] = append(streamMap[stream.Key], stream)
-	}
-	for key, streams := range streamMap {
-		if len(streams) > 3 {
-			log.Println("contain repeat stream", "key:", key, "node:", node.Id, "bucket:", streams[0].Bucket,
-				"streams:", len(streams))
-			for i, stream := range streams {
-				for _, player := range stream.Players {
-					for _, ipInfo := range player.Ips {
-						log.Println("i:", i, "bucket:", stream.Bucket, "domain:", stream.Domain, "relayType:", stream.RelayType,
-							"relayBandwidth:", stream.RelayBandwidth, "key:", key, "node:", node.Id, "ip:", ipInfo.Ip,
-							"protocol:", player.Protocol, "bandwidth:", ipInfo.Bandwidth)
-					}
-				}
-			}
+		if stream.Key == "687423rCNRItVfMm_1024h_dy" {
+			m.nodeMap[node.Id] = node
 		}
 	}
+}
+
+func (m *ReportChk) Done(ipParser *ipdb.City) {
+	for nodeId, node := range m.nodeMap {
+		area, isp := GetNodeAreaIsp(node, ipParser)
+		log.Printf("[ReportChk][Done], nodeId:%s, %s, %s\n", nodeId, area, isp)
+	}
+}
+
+func GetIpAreaIsp(ip string, ipParser *ipdb.City) (string, string) {
+	locate, err := ipParser.Find(ip)
+	if err != nil {
+		log.Printf("查找IP %s 的位置信息失败: %v", ip, err)
+		return "", ""
+	}
+	if locate.Isp == "" {
+		log.Println(locate.Country, locate.Region, locate.City, ip)
+	}
+	area := monitorUtil.ProvinceAreaRelation(locate.Region)
+	return area, locate.Isp
+}
+
+func GetNodeAreaIsp(node *public.RtNode, ipParser *ipdb.City) (string, string) {
+	for _, ip := range node.Ips {
+		if publicUtil.IsPrivateIP(ip.Ip) {
+			continue
+		}
+		area, isp := GetIpAreaIsp(ip.Ip, ipParser)
+		if area == "" || isp == "" {
+			continue
+		}
+		return area, isp
+	}
+	return "", ""
 }

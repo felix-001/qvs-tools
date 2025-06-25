@@ -53,3 +53,7 @@ func (m *MultiIPChk) OnNode(node *public.RtNode, ipParser *ipdb.City, callback c
 		}
 	}
 }
+
+func (m *MultiIPChk) Done(ipParser *ipdb.City) {
+	log.Info().Msgf("multi ip chk cnt: %d", m.cnt)
+}
