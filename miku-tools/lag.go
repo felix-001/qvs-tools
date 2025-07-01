@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/util"
+	localUtil "middle-source-analysis/util"
 	"strconv"
 	"strings"
 )
@@ -83,21 +85,21 @@ func (s *Parser) LagAnalysis() {
 		areaLagCntMap[area] += data.LagCount
 	}
 	log.Println("node lag map:")
-	pairs := SortIntMap(nodeLagCntMap)
-	DumpSlice(pairs)
+	pairs := localUtil.SortIntMap(nodeLagCntMap)
+	localUtil.DumpSlice(pairs)
 	log.Println("stream lag map:")
-	pairs = SortIntMap(streamLagCntMap)
-	DumpSlice(pairs)
+	pairs = localUtil.SortIntMap(streamLagCntMap)
+	localUtil.DumpSlice(pairs)
 	log.Println("region lag map:")
-	pairs = SortIntMap(regionLagCntMap)
-	DumpSlice(pairs)
+	pairs = localUtil.SortIntMap(regionLagCntMap)
+	localUtil.DumpSlice(pairs)
 	log.Println("area lag map:")
-	pairs = SortIntMap(areaLagCntMap)
-	DumpSlice(pairs)
+	pairs = localUtil.SortIntMap(areaLagCntMap)
+	localUtil.DumpSlice(pairs)
 }
 
 func (s *Parser) CoverChk() {
-	rows := s.locadCsv(s.conf.QosFile)
+	rows := util.LocadCsv(s.conf.QosFile)
 	ipParseErrCnt := 0
 	ispNotMatchCnt := 0
 	provinceNotMatchCnt := 0
@@ -119,7 +121,7 @@ func (s *Parser) CoverChk() {
 			log.Println("parse remote addr err", remoteAddr)
 		}
 		remoteIp := parts[0]
-		localIsp, localArea, localProvince := getLocate(localIp, s.IpParser)
+		localIsp, localArea, localProvince := util.GetLocate(localIp, s.IpParser)
 		if localIsp == "" || localArea == "" || localProvince == "" {
 			s.logger.Error().Str("localIsp", localIsp).
 				Str("localArea", localArea).
@@ -129,7 +131,7 @@ func (s *Parser) CoverChk() {
 			ipParseErrCnt++
 			continue
 		}
-		remoteIsp, remoteArea, remoteProvince := getLocate(remoteIp, s.IpParser)
+		remoteIsp, remoteArea, remoteProvince := localUtil.GetLocate(remoteIp, s.IpParser)
 		if remoteIsp == "" || remoteArea == "" || remoteProvince == "" {
 			s.logger.Error().Str("remoteIsp", remoteIsp).
 				Str("remoteIsp", remoteIsp).
@@ -181,11 +183,11 @@ func (s *Parser) CoverChk() {
 	}
 	log.Println("ipParseErrCnt:", ipParseErrCnt, "ispNotMatchCnt:", ispNotMatchCnt, "areaNotMatchCnt:", areaNotMatchCnt,
 		"provinceNotMatchCnt:", provinceNotMatchCnt)
-	pairs := SortIntMap(provinceMap)
+	pairs := localUtil.SortIntMap(provinceMap)
 	for _, pair := range pairs {
 		log.Println(pair.Key, pair.Value)
 	}
-	pairs = SortIntMap(areaMap)
+	pairs = localUtil.SortIntMap(areaMap)
 	for _, pair := range pairs {
 		log.Println(pair.Key, pair.Value)
 	}

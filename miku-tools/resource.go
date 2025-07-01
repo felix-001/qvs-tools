@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"middle-source-analysis/public"
+	localUtil "middle-source-analysis/util"
 	"os"
 	"strings"
 
@@ -72,7 +74,7 @@ func (s *Parser) buildLineMap(recordList []*dnspod.RecordListItem) map[string][]
 }
 
 func (s *Parser) lineRemoveIsp(line string) string {
-	for _, isp := range Isps {
+	for _, isp := range public.Isps {
 		if !strings.Contains(line, isp) {
 			continue
 		}
@@ -87,7 +89,7 @@ func (s *Parser) areaIspFilter(lineMap map[string][]string) map[string][]string 
 	out := make(map[string][]string)
 	for line, ips := range lineMap {
 		area := s.lineRemoveIsp(line)
-		if !ContainInStringSlice(area, Areas) {
+		if !localUtil.ContainInStringSlice(area, public.Areas) {
 			continue
 		}
 		out[line] = ips
@@ -97,8 +99,8 @@ func (s *Parser) areaIspFilter(lineMap map[string][]string) map[string][]string 
 
 func (s *Parser) checkAreaIspCoverage(areaIspMap map[string][]string) []string {
 	needAreas := make([]string, 0)
-	for _, area := range Areas {
-		for _, isp := range Isps {
+	for _, area := range public.Areas {
+		for _, isp := range public.Isps {
 			areaIsp := area + isp
 			if _, ok := areaIspMap[areaIsp]; ok {
 				continue
@@ -186,7 +188,7 @@ func (s *Parser) dumpAreaMapToCsv(areaMap map[string][]string) {
 	csv := fmt.Sprintf("大区运营商, 节点个数, 节点列表, idcs, 建设带宽, 需要带宽, 比例(总共:%dG), 缺失带宽\n", s.conf.TotoalNeedBw)
 	total := 0
 	nodeCnt := 0
-	defaultRatio := float64(1) / float64(len(Areas))
+	defaultRatio := float64(1) / float64(len(public.Areas))
 	fmt.Printf("平均每个大区的占比: %.2f\n", defaultRatio)
 	for area, ips := range areaMap {
 		idcsStr := ""
@@ -245,8 +247,8 @@ func (s *Parser) buildIpNodeMap() map[string]*model.RtNode {
 func (s *Parser) evaluateBw(areaIspMap map[string][]string) {
 	areaIspIdcsMap := s.getAreaIdcsMap(areaIspMap)
 	csv := fmt.Sprintf("大区运营商, 节点个数, idcs, 比例(总共: %dG), 需要带宽, 节点建设带宽, idc建设带宽, 缺失带宽, 备注\n", s.conf.TotoalNeedBw)
-	defaultAreaRatio := float64(1) / float64(len(Areas))
-	defaultIspRatio := float64(1) / float64(len(Isps))
+	defaultAreaRatio := float64(1) / float64(len(public.Areas))
+	defaultIspRatio := float64(1) / float64(len(public.Isps))
 	fmt.Printf("平均每个大区的占比: %.2f, 平均每个isp占比: %.2f\n", defaultAreaRatio, defaultIspRatio)
 	for areaIsp, ips := range areaIspMap {
 		idcs, ok := areaIspIdcsMap[areaIsp]

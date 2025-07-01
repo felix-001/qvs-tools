@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"middle-source-analysis/util"
 	"net/url"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func (s *Parser) pathqueryChk() {
-	lines := s.loadElkLog(s.conf.PathqueryLogFile)
+	lines := util.LoadElkLog(s.conf.PathqueryLogFile)
 	log.Println("total line count:", len(lines))
 	for _, line := range lines[1:] {
 		//fmt.Println(line)
@@ -34,8 +35,8 @@ func (s *Parser) fullPathChk(resp model.PathQueryResponse) {
 			log.Println(err, source.Url)
 			return
 		}
-		isp, area, _ := getLocate(u.Hostname(), s.IpParser)
-		localIsp, localArea, _ := getLocate(source.BindLocalIp, s.IpParser)
+		isp, area, _ := util.GetLocate(u.Hostname(), s.IpParser)
+		localIsp, localArea, _ := util.GetLocate(source.BindLocalIp, s.IpParser)
 		if isp != localIsp {
 			s.logger.Info().
 				Str("localIsp", localIsp).

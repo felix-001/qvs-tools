@@ -2,7 +2,11 @@ package main
 
 import (
 	"log"
+	"middle-source-analysis/public"
+	"middle-source-analysis/util"
 	"strings"
+
+	localUtil "middle-source-analysis/util"
 
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 )
@@ -12,14 +16,14 @@ import (
 map[string]map[string]map[string]StreamInfo
 */
 func (s *Parser) buildBucketStreamsInfo(bkt string) {
-	s.streamDetailMap = make(map[string]map[string]map[string]*StreamInfo)
+	s.streamDetailMap = make(map[string]map[string]map[string]*public.StreamInfo)
 	for _, node := range s.allNodesMap {
 		streamInfo := s.nodeStremasMap[node.Id]
 		if !s.check(node, streamInfo) {
 			continue
 		}
 		lastStream := ""
-		isp, area, _ := getNodeLocate(node, s.IpParser)
+		isp, area, _ := localUtil.GetNodeLocate(node, s.IpParser)
 		if isp == "" || area == "" {
 			//log.Println("node", node.Id, "get ip locate err")
 			continue
@@ -41,15 +45,15 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 				}
 			*/
 			if _, ok := s.streamDetailMap[stream.Key]; !ok {
-				s.streamDetailMap[stream.Key] = make(map[string]map[string]*StreamInfo)
+				s.streamDetailMap[stream.Key] = make(map[string]map[string]*public.StreamInfo)
 			}
 			if _, ok := s.streamDetailMap[stream.Key][isp]; !ok {
-				s.streamDetailMap[stream.Key][isp] = make(map[string]*StreamInfo)
+				s.streamDetailMap[stream.Key][isp] = make(map[string]*public.StreamInfo)
 			}
-			onlineNum, bw := s.getStreamDetail(stream)
+			onlineNum, bw := localUtil.GetStreamDetail(stream)
 			//isRoot := s.isRoot(node)
 			if streamInfo, ok := s.streamDetailMap[stream.Key][isp][area]; !ok {
-				s.streamDetailMap[stream.Key][isp][area] = &StreamInfo{
+				s.streamDetailMap[stream.Key][isp][area] = &public.StreamInfo{
 					OnlineNum: uint32(onlineNum),
 					Bw:        bw,
 					//RelayBw:   convertMbps(stream.RelayBandwidth),
@@ -63,13 +67,13 @@ func (s *Parser) buildBucketStreamsInfo(bkt string) {
 					}
 				*/
 				if stream.RelayType == 2 {
-					streamInfo.RelayBw = convertMbps(stream.RelayBandwidth)
+					streamInfo.RelayBw = localUtil.ConvertMbps(stream.RelayBandwidth)
 				}
 			} else {
 				streamInfo.OnlineNum += uint32(onlineNum)
 				streamInfo.Bw += bw
 				if stream.RelayType == 2 {
-					streamInfo.RelayBw += convertMbps(stream.RelayBandwidth)
+					streamInfo.RelayBw += localUtil.ConvertMbps(stream.RelayBandwidth)
 				}
 				/*
 					if !isRoot {
@@ -98,7 +102,7 @@ func (s *Parser) Province2Area() {
 func (s *Parser) Nali() {
 	parts := strings.Split(s.conf.Ip, ",")
 	for _, ip := range parts {
-		isp, area, province := getLocate(ip, s.IpParser)
+		isp, area, province := util.GetLocate(ip, s.IpParser)
 		s.logger.Info().Str("isp", isp).Str("area", area).Str("province", province).Str("ip", ip).Msg("ip locate")
 	}
 }

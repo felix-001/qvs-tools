@@ -5,6 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"middle-source-analysis/config"
+	"middle-source-analysis/mock"
+	"middle-source-analysis/public"
+	"middle-source-analysis/util"
 	"os"
 
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -12,7 +16,7 @@ import (
 	//qlog "github.com/qbox/pili/base/qiniu/log.v1"
 )
 
-func dumpCmdMap(cmdMap map[string]CmdInfo) {
+func dumpCmdMap(cmdMap map[string]public.CmdInfo) {
 	for cmd, info := range cmdMap {
 		fmt.Printf("%s\n\t%s\n", cmd, info.Usage)
 	}
@@ -21,29 +25,17 @@ func dumpCmdMap(cmdMap map[string]CmdInfo) {
 	os.Exit(0)
 }
 
-func initConf(cmdMap map[string]CmdInfo, cfg *Config) {
-	for cmd, cmdInfo := range cmdMap {
-		if cfg.Cmd != cmd {
-			continue
-		}
-		for _, conf := range cmdInfo.Depends {
-			log.Println(cmd, "initConf")
-			*conf = true
-		}
-	}
-}
-
-func newParser(conf *Config) *Parser {
+func newParser(conf *config.Config) *Parser {
 	parser := &Parser{
 		conf: conf,
 	}
-	cmdMap := map[string]CmdInfo{
+	cmdMap := map[string]public.CmdInfo{
 		"hlschk": {
 			Handler: parser.HlsChk,
 			Usage:   "hls带宽统计",
 		},
 		"mockagent": {
-			Handler: parser.MockAgent,
+			Handler: mock.MockAgent,
 			Usage:   "mock agent, 主要为streamd能跑起来",
 		},
 		"streams": {
@@ -181,8 +173,10 @@ func newParser(conf *Config) *Parser {
 			Depends: []*bool{&conf.Redis, &conf.NodeInfo},
 		},
 		"aksk": {
-			Handler: parser.GetAkSk,
-			Usage:   "通过uid获取aksk信息",
+			Handler: func() {
+				util.GetAkSk(conf)
+			},
+			Usage: "通过uid获取aksk信息",
 		},
 		"getdomain": {
 			Handler: parser.GetDomain,
@@ -197,8 +191,10 @@ func newParser(conf *Config) *Parser {
 			Usage:   "斗鱼回源地址",
 		},
 		"niulink": {
-			Handler: parser.NiuLink,
-			Usage:   "niulink 获取动态节点信息",
+			Handler: func() {
+				util.NiuLink(conf)
+			},
+			Usage: "niulink 获取动态节点信息",
 		},
 		"k8s": {
 			Handler: parser.K8s,
@@ -218,7 +214,7 @@ func newParser(conf *Config) *Parser {
 			Usage:   "tcpdump",
 		},
 		"mocksrv": {
-			Handler: parser.mockSrv,
+			Handler: mock.MockSrv,
 			Usage:   "qvs-server mock",
 		},
 		"nodedis": {
@@ -227,7 +223,7 @@ func newParser(conf *Config) *Parser {
 			Usage:   "节点分布",
 		},
 		"mockthemisd": {
-			Handler: parser.mockThemisd,
+			Handler: mock.MockThemisd,
 			Usage:   "pili-themisd mock",
 		},
 		"res": {
@@ -241,8 +237,10 @@ func newParser(conf *Config) *Parser {
 			Usage:   "dump所有节点信息, 保存json, qup上传",
 		},
 		"http": {
-			Handler: parser.Http,
-			Usage:   "http 请求",
+			Handler: func() {
+				util.Http(conf)
+			},
+			Usage: "http 请求",
 		},
 		"pushtimeout": {
 			Handler: parser.PushTimeout,
@@ -273,7 +271,7 @@ func newParser(conf *Config) *Parser {
 			Usage:   "获取QVS所有节点信息",
 		},
 		"redis": {
-			Handler: parser.Redis,
+			Handler: util.Redis,
 			Usage:   "dump mik_netprobe_runtime_nodes_map数据，写入到redis",
 		},
 		"report": {
@@ -285,7 +283,7 @@ func newParser(conf *Config) *Parser {
 	if conf.Help {
 		dumpCmdMap(cmdMap)
 	}
-	initConf(cmdMap, conf)
+	config.InitConf(cmdMap, conf)
 	redisCli := &redis.ClusterClient{}
 	if conf.Redis && !conf.Help {
 		redisCli = redis.NewClusterClient(&redis.ClusterOptions{

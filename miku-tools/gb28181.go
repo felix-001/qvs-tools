@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"middle-source-analysis/util"
 	"net"
 	"net/http"
 	"os"
@@ -573,7 +574,7 @@ func (s *Parser) sendTalkRtp(ssrc int) {
 	}
 	//defer conn.Close()
 
-	rtpPacket := RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
+	rtpPacket := util.RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
 	_, err = conn.Write(rtpPacket)
 	if err != nil {
 		log.Println("发送rtp包失败:", err)
@@ -591,7 +592,7 @@ func (s *Parser) sendVideoRtp(ssrc int) {
 	}
 	//defer conn.Close()
 
-	rtpPacket := RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
+	rtpPacket := util.RtpEnc([]byte("1234567890"), 1, 0, true, ssrc, 0)
 	_, err = conn.Write(rtpPacket)
 	if err != nil {
 		log.Println("发送rtp包失败:", err)

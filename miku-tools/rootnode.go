@@ -7,6 +7,9 @@ import (
 	"log"
 	"time"
 
+	"middle-source-analysis/public"
+	localUtil "middle-source-analysis/util"
+
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
 	"github.com/qbox/mikud-live/common/model"
@@ -36,9 +39,9 @@ func (s *Parser) buildRootNodesMap() {
 }
 
 func GetDynamicRootNodes(redisCli *redis.ClusterClient) (
-	map[string][]*DynamicRootNode, error) {
+	map[string][]*public.DynamicRootNode, error) {
 
-	dynamicRootNodesMap := make(map[string][]*DynamicRootNode)
+	dynamicRootNodesMap := make(map[string][]*public.DynamicRootNode)
 	ctx := context.Background()
 	res, err := redisCli.HGetAll(ctx, "miku_dynamic_root_nodes_map").Result()
 	if err != nil {
@@ -47,7 +50,7 @@ func GetDynamicRootNodes(redisCli *redis.ClusterClient) (
 	}
 
 	for areaIsp, value := range res {
-		var nodes []*DynamicRootNode
+		var nodes []*public.DynamicRootNode
 		if err = json.Unmarshal([]byte(value), &nodes); err != nil {
 			log.Println(err)
 			continue
@@ -70,7 +73,7 @@ func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 			}
 			for _, stream := range report.Streams {
 				if stream.Bucket == bkt && stream.Key == sid {
-					onlineNum := s.getNodeOnlineNum(stream)
+					onlineNum := localUtil.GetNodeOnlineNum(stream)
 					log.Println("node:", rootNode.NodeId, "onlineNum:", onlineNum,
 						"bandwidth:", stream.Bandwidth, "relayBandWidth", stream.RelayBandwidth,
 						"relayType:", stream.RelayType)
@@ -90,7 +93,7 @@ func (s *Parser) getStreamNodes(sid, bkt string) map[string][]*model.RtNode {
 
 // TODO: 节点的每个网卡的带宽利用率, 这里的出口带宽不能使用streamreport上报的，其他业务线，
 // 或者别的bucket下的流也会使用这个出口带宽
-func (s *Parser) getNodeDetailMap(streamDetail map[string]map[string]*StreamInfo,
+func (s *Parser) getNodeDetailMap(streamDetail map[string]map[string]*public.StreamInfo,
 	stream *model.StreamInfoRT, node *model.RtNode) {
 
 	for _, player := range stream.Players {
@@ -109,7 +112,7 @@ func (s *Parser) getNodeDetailMap(streamDetail map[string]map[string]*StreamInfo
 				//log.Println("ip empty")
 				continue
 			}
-			area, isp, err := getIpAreaIsp(s.IpParser, ipInfo.Ip)
+			area, isp, err := localUtil.GetIpAreaIsp(s.IpParser, ipInfo.Ip)
 			if err != nil {
 				log.Println("getIpAreaIsp err", ipInfo.Ip, err)
 				continue
@@ -127,15 +130,15 @@ func (s *Parser) getNodeDetailMap(streamDetail map[string]map[string]*StreamInfo
 				lastArea = area
 			}
 			if _, ok := streamDetail[isp]; !ok {
-				streamDetail[isp] = make(map[string]*StreamInfo)
+				streamDetail[isp] = make(map[string]*public.StreamInfo)
 			}
 			if _, ok := streamDetail[isp][area]; !ok {
-				streamDetail[isp][area] = &StreamInfo{
+				streamDetail[isp][area] = &public.StreamInfo{
 					//RelayType: stream.RelayType,
 					//Protocol:  player.Protocol,
 					//RelayBw:   convertMbps(stream.RelayBandwidth),
 					OnlineNum: ipInfo.OnlineNum,
-					Bw:        convertMbps(ipInfo.Bandwidth),
+					Bw:        localUtil.ConvertMbps(ipInfo.Bandwidth),
 				}
 			}
 			streamDetail[isp][area].OnlineNum += ipInfo.OnlineNum
@@ -156,7 +159,7 @@ func (s *Parser) checkNodeStreamIpLocate(stream *model.StreamInfoRT, node *model
 				//log.Println("ip empty")
 				continue
 			}
-			area, isp, err := getIpAreaIsp(s.IpParser, ipInfo.Ip)
+			area, isp, err := localUtil.GetIpAreaIsp(s.IpParser, ipInfo.Ip)
 			if err != nil {
 				log.Println("getIpAreaIsp err", ipInfo.Ip, err)
 				continue

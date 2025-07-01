@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	localUtil "middle-source-analysis/util"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/qbox/mikud-live/cmd/agent/common/util"
 	"github.com/qbox/mikud-live/common/model"
@@ -49,7 +51,7 @@ func (s *Parser) buildNodeStreamsMap() {
 		if node == nil {
 			continue
 		}
-		report, err := s.getNodeAllStreams(nodeId)
+		report, err := localUtil.GetNodeAllStreams(nodeId, s.RedisCli)
 		if err != nil || report == nil {
 			continue
 		}
@@ -71,7 +73,7 @@ func (s *Parser) init() {
 		s.buildNodeStreamsMap()
 	}
 	if s.conf.Prometheus {
-		prometheus.MustRegister(dynIpStatusMetric)
+		prometheus.MustRegister(localUtil.DynIpStatusMetric)
 	}
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 	zerolog.CallerMarshalFunc = util.LogShortPath

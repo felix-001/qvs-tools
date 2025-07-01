@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"middle-source-analysis/util"
 	"strings"
 
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -62,7 +63,7 @@ func (s *Parser) getDevices() {
 	offset := 0
 	for {
 		s.conf.Addr = fmt.Sprintf("https://qvs-admin.qiniuapi.com/v1/devices?line=1000&offset=%d&uid=%s&state=online", offset, s.conf.Uid)
-		resp, err := mikuHttpReq("GET", s.conf.Addr, "", s.conf.AdminAk, s.conf.AdminSk)
+		resp, err := util.MikuHttpReq("GET", s.conf.Addr, "", s.conf.AdminAk, s.conf.AdminSk)
 		if err != nil {
 			log.Println("mikuHttpReq err", err)
 			return

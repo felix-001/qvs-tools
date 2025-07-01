@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"middle-source-analysis/config"
 	"strings"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/qbox/mikud-live/common/data"
 )
 
-func newCk(config *Config) driver.Conn {
+func newCk(config *config.Config) driver.Conn {
 	ckConf := config.CK
 	ckOpts := &clickhouse.Options{
 		Addr: ckConf.Host,

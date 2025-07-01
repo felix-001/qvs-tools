@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/public"
+	localUtil "middle-source-analysis/util"
 	"os/exec"
 	"time"
 
@@ -157,7 +159,7 @@ func (s *Parser) dumpStreams() {
 		if node.NatType == "nat1" {
 			continue
 		}
-		isp, area, _ := getNodeLocate(node, s.IpParser)
+		isp, area, _ := localUtil.GetNodeLocate(node, s.IpParser)
 		if isp == "" || area == "" {
 			s.logger.Warn().Str("node", node.Id).Msg("get node locate err")
 			continue
@@ -180,13 +182,13 @@ func (s *Parser) dumpStreams() {
 				}
 				streamDetailMap[streamId][isp][area] = detail
 			}
-			onlineNum, bw := s.getStreamDetail(streamInfoRT)
+			onlineNum, bw := localUtil.GetStreamDetail(streamInfoRT)
 			detail.OnlineNum += onlineNum
 			detail.Bw += bw
 			if streamInfoRT.RelayType != 2 {
 				continue
 			}
-			detail.RelayBw += Bps2Mbps(streamInfoRT.RelayBandwidth)
+			detail.RelayBw += localUtil.Bps2Mbps(streamInfoRT.RelayBandwidth)
 			nodeType := s.getNodeType(node)
 			if _, ok := detail.OriginNodes[nodeType]; !ok {
 				detail.OriginNodes[nodeType] = make([]string, 0)
@@ -278,7 +280,7 @@ func getStreamBw(streamInfoRT *model.StreamInfoRT) float64 {
 	return bw
 }
 
-func (s *Parser) dumpStreamDetail(detail *StreamInfo, lastStreamId, streamId, lastIsp, isp string) string {
+func (s *Parser) dumpStreamDetail(detail *public.StreamInfo, lastStreamId, streamId, lastIsp, isp string) string {
 	csv := ""
 	for nodeType, streamDetail := range detail.NodeStreamMap {
 		lastNodeType := ""
@@ -299,7 +301,7 @@ func (s *Parser) dumpStreamDetail(detail *StreamInfo, lastStreamId, streamId, la
 			lastStreamId = streamId
 			lastIsp = isp
 			node := s.allNodesMap[nodeId]
-			_, area, province := getNodeLocate(node, s.IpParser)
+			_, area, province := localUtil.GetNodeLocate(node, s.IpParser)
 			csv += fmt.Sprintf("%s, %s, %s, %s, %d, %.1f, %d, %s, %s, %s\n",
 				sid, tmpIsp, tmpNodeType, nodeId, getStreamClientCnt(streamInfoRT),
 				getStreamBw(streamInfoRT), getStreamOnlineNum(streamInfoRT),

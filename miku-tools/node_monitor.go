@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/util"
 	"os"
 	"path/filepath"
 	"time"
@@ -132,7 +133,7 @@ var path = "./node_info"
 
 func (s *Parser) writeToFile(nodeInfo *NodeInfo, path string) {
 	createDirIfNotExist(path)
-	latestFile, err := findLatestFile(path)
+	latestFile, err := util.FindLatestFile(path)
 	if err != nil {
 		log.Fatalln(err)
 		return
@@ -175,7 +176,7 @@ func (s *Parser) writeToFile(nodeInfo *NodeInfo, path string) {
 
 func (s *Parser) writeToFile2(datas any, path string) {
 	createDirIfNotExist(path)
-	latestFile, err := findLatestFile(path)
+	latestFile, err := util.FindLatestFile(path)
 	if err != nil {
 		log.Fatalln(err)
 		return
@@ -267,7 +268,7 @@ func (s *Parser) nodeMonitor() {
 			}
 			s.fillIpStatus(ipStatusMap, node)
 		}
-		s.dynIpMonitor(ipStatusMap)
+		util.DynIpMonitor(ipStatusMap, s.conf)
 		deleteOldFiles(path)
 	}
 }
@@ -339,7 +340,7 @@ func (s *Parser) fillIpStatus(ipStatusMap map[string]int, node *model.RtNode) {
 
 func (s *Parser) writeDataToFile(data, path string) {
 	createDirIfNotExist(path)
-	latestFile, err := findLatestFile(path)
+	latestFile, err := util.FindLatestFile(path)
 	if err != nil {
 		log.Fatalln(err)
 		return
@@ -423,7 +424,7 @@ func (s *Parser) pcdnErrMonitor() {
 	for range ticker.C {
 		for _, sched := range scheds {
 			addr := fmt.Sprintf("http://%s:6060/api/v1/dymetrics", sched.Ip)
-			resp, err := get(addr)
+			resp, err := util.Get(addr)
 			if err != nil {
 				s.logger.Error().Err(err).Msg("pcdnErrMonitor get err")
 				continue

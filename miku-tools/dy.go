@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"middle-source-analysis/util"
 	"os"
 	"os/exec"
 	"strconv"
@@ -68,7 +69,7 @@ func (s *Parser) getMetrics(t int64) *MetricResp {
 	wsSecret := hex.EncodeToString(hash[:])
 	addr := fmt.Sprintf("http://%s/pcdn/v1/metrics/top_nodes/qiniu/?timestamp=%s&topn=20&wsSecret=%s&wsTime=%s",
 		s.conf.DyApiDomain, ts, wsSecret, wsTime)
-	metrics, err := get(addr)
+	metrics, err := util.Get(addr)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("req dy metrics err")
 		return nil
@@ -120,7 +121,7 @@ func (s *Parser) GetDyTimeout() {
 		t += 5 * 60
 		time.Sleep(time.Second)
 	}
-	pairs := SortIntMap(nodeCntMap)
+	pairs := util.SortIntMap(nodeCntMap)
 	for _, pair := range pairs {
 		machineId := ""
 		node := s.allNodesMap[pair.Key]
@@ -273,8 +274,8 @@ func (s *Parser) dumpNodeMap(metrics []DyAbnormalNodesInfo) {
 			nodeMap[nodeId]++
 		}
 	}
-	pairs := SortIntMap(nodeMap)
-	DumpSlice(pairs)
+	pairs := util.SortIntMap(nodeMap)
+	util.DumpSlice(pairs)
 }
 
 func (s *Parser) traceNode(metrics []DyAbnormalNodesInfo) {

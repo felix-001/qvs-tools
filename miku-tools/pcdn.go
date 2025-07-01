@@ -9,6 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"middle-source-analysis/public"
+	localUtil "middle-source-analysis/util"
+
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
@@ -66,7 +69,7 @@ func (s *Parser) playcheck(ip string) *PlayCheckResp {
 	}
 	var resp PlayCheckResp
 	addr := fmt.Sprintf("http://%s:6060/api/v1/playcheck", s.conf.SchedIp)
-	if err := s.post(addr, string(bytes), &resp); err != nil {
+	if err := localUtil.Post(addr, string(bytes), &resp); err != nil {
 		log.Println(err)
 		return nil
 	}
@@ -139,12 +142,12 @@ func (s *Parser) LoopPlaycheck() {
 				log.Println(err, resp.Url302)
 				continue
 			}
-			if IsIpv6(u.Hostname()) {
+			if localUtil.IsIpv6(u.Hostname()) {
 				ipV6Cnt++
 			}
 			totalCnt++
 			//log.Println("redirectUr:", resp.Url302)
-			nodeIsp, _, nodeProvince := getLocate(u.Hostname(), s.IpParser)
+			nodeIsp, _, nodeProvince := localUtil.GetLocate(u.Hostname(), s.IpParser)
 			if nodeIsp != isp {
 				log.Println("isp not match, ", "isp:", isp, "nodeIsp:",
 					nodeIsp, "ip:", ip, "nodeIp:", u.Hostname(), "province:", province,
@@ -190,7 +193,7 @@ func (s *Parser) getPcdn(did string) string {
 	addr := fmt.Sprintf("http://10.34.146.62:6060/%s/%s/douyugetpcdn?clientIp=%s&scheme=%s&did=%s&host=%s&pcdn_error=%s",
 		s.conf.Bucket, s.conf.Stream, ip, scheme, did, host, s.conf.PcdnErr)
 
-	data, err := get(addr)
+	data, err := localUtil.Get(addr)
 	if err != nil {
 		s.logger.Info().Err(err).Str("addr", addr).Msg("req douyugetpcdn err")
 		return ""
@@ -211,7 +214,7 @@ func (s *Parser) Pcdn() {
 
 func (s *Parser) getPcdnFromSchedAPI(skipReport, skipRoot bool) (string, string) {
 	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
-	resp, err := get(addr)
+	resp, err := localUtil.Get(addr)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
 		return "", ""
@@ -282,8 +285,8 @@ func (s *Parser) Pcdns() {
 	totalIspNotMatch := 0
 	totalReqCnt := 0
 	areaNotCoverCntMap := make(map[string]int)
-	for _, province := range Provinces {
-		for _, isp := range Isps {
+	for _, province := range public.Provinces {
+		for _, isp := range public.Isps {
 			s.conf.Province = province
 			s.conf.Isp = isp
 			pcdn := s.getPcdn("dummy")
@@ -291,7 +294,7 @@ func (s *Parser) Pcdns() {
 			if len(parts) != 2 {
 				return
 			}
-			pcdnIsp, pcdnArea, _ := getLocate(parts[0], s.IpParser)
+			pcdnIsp, pcdnArea, _ := localUtil.GetLocate(parts[0], s.IpParser)
 			reqArea, _ := schedUtil.ProvinceAreaRelation(province)
 			if reqArea != pcdnArea {
 				s.logger.Error().Str("reqArea", reqArea).Str("pcdnArea", pcdnArea).Str("pcdn", pcdn).

@@ -3,8 +3,11 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/public"
 	"net"
 	"strings"
+
+	localUtil "middle-source-analysis/util"
 
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 )
@@ -25,7 +28,7 @@ func (s *Parser) DnsChk() {
 		provinceIsp := parts[0]
 		result := strings.Trim(parts[3], "\"")
 		prov := ""
-		for _, province := range Provinces {
+		for _, province := range public.Provinces {
 			if strings.Contains(provinceIsp, province) {
 				prov = province
 				break
@@ -41,7 +44,7 @@ func (s *Parser) DnsChk() {
 			continue
 		}
 		isp := ""
-		for _, _isp := range Isps {
+		for _, _isp := range public.Isps {
 			if strings.Contains(provinceIsp, _isp) {
 				isp = _isp
 				break
@@ -67,7 +70,7 @@ func (s *Parser) DnsChk() {
 			log.Println("no valid ip", result, provinceIsp)
 			continue
 		}
-		areaResult, ispResult, err := getIpAreaIsp(s.IpParser, validIp)
+		areaResult, ispResult, err := localUtil.GetIpAreaIsp(s.IpParser, validIp)
 		if err != nil {
 			log.Println("getIpAreaIsp err", validIp, err)
 			continue

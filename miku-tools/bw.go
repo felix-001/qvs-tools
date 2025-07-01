@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/public"
 	"os/exec"
 	"time"
+
+	localUtil "middle-source-analysis/util"
 
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
@@ -84,12 +87,12 @@ func (s *Parser) CalcTotalBw() {
 			counterMap[NodeUnavailableCnt]++
 			continue
 		}
-		if !checkDynamicNodesPort(node) {
+		if !localUtil.CheckDynamicNodesPort(node) {
 			counterMap[NodeNoPortsCnt]++
 			continue
 		}
 		counterMap[AvailableDynNodeCnt]++
-		if !checkCanScheduleOfTimeLimit(node, 3600) {
+		if !localUtil.CheckCanScheduleOfTimeLimit(node, 3600) {
 			counterMap[TimeLimitNodeCnt]++
 			continue
 		}
@@ -127,7 +130,7 @@ func (s *Parser) CalcTotalBw() {
 				continue
 			}
 			bwMap[RawTotalMaxBwGbpsAferProbeSpeed] += ipInfo.MaxOutMBps * 8 / 1000
-			if ContainInStringSlice(node.MachineId, SepcialNodeList) {
+			if localUtil.ContainInStringSlice(node.MachineId, public.SepcialNodeList) {
 				bwMap[SpecialNodesMaxBwGbps] += ipInfo.MaxInMBps * 8 / 1000
 			}
 			counterMap[AvailableIpCnt]++
@@ -184,7 +187,7 @@ func (s *Parser) BwDis() {
 					if publicUtil.IsPrivateIP(ipInfo.Ip) {
 						continue
 					}
-					isp, _, province := getLocate(ipInfo.Ip, s.IpParser)
+					isp, _, province := localUtil.GetLocate(ipInfo.Ip, s.IpParser)
 					if isp == "" || province == "" {
 						continue
 					}

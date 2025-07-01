@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"middle-source-analysis/util"
 
 	"github.com/qbox/mikud-live/common/model"
 )
@@ -32,7 +33,7 @@ func (s *Parser) PathqueryReq() {
 	fmt.Println("req:", string(bytes))
 	var resp model.PathQueryResponse
 	addr := "http://10.34.146.62:6060/api/v1/pathquery"
-	respData, err := getWithBody(addr, string(bytes))
+	respData, err := util.GetWithBody(addr, string(bytes))
 	if err != nil {
 		s.logger.Error().Err(err).Msg("req pathquery err")
 		return

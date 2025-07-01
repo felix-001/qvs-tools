@@ -12,6 +12,9 @@ import (
 	"strconv"
 	"time"
 
+	localPublic "middle-source-analysis/public"
+	localUtil "middle-source-analysis/util"
+
 	monitorUtil "github.com/qbox/mikud-live/cmd/monitor/common/util"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
@@ -52,14 +55,14 @@ func (s *Parser) NodeDis() {
 		if !util.CheckNodeUsable(zlog.Logger, node, consts.TypeLive) {
 			continue
 		}
-		isp, area, _ := getNodeLocate(node, s.IpParser)
+		isp, area, _ := localUtil.GetNodeLocate(node, s.IpParser)
 		areaMap[area+isp] = true
 
 	}
 
 	needAreas := make([]string, 0)
-	for _, area := range Areas {
-		for _, isp := range Isps {
+	for _, area := range localPublic.Areas {
+		for _, isp := range localPublic.Isps {
 			areaIsp := area + isp
 			if _, ok := areaMap[areaIsp]; !ok {
 				needAreas = append(needAreas, areaIsp)
@@ -288,7 +291,7 @@ func (s *Parser) probeStaticNodeTalk(nodes []*StaticNode) {
 				log.Println(loc.Country, loc.Region, loc.City, loc.Isp, ip.IP)
 				continue
 			}
-			if IsIpv6(ip.IP) {
+			if localUtil.IsIpv6(ip.IP) {
 				continue
 			}
 			log.Println(loc.Country, loc.Region, loc.City, loc.Isp, ip.IP)

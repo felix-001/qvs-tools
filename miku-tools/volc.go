@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"middle-source-analysis/util"
 	"time"
 )
 
@@ -28,7 +29,7 @@ func (s *Parser) fetchVolcOriginUrl() {
 		"volc-live-source-flag": flag,
 		"Host":                  "hs-dm.p2p.huya.com",
 	}
-	resp, err := httpReq("GET", addr, "", headers)
+	resp, err := util.HttpReq("GET", addr, "", headers)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("fetchVolcOriginUrl")
 		return

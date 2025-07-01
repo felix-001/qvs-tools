@@ -1,10 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"middle-source-analysis/util"
+)
 
 func (s *Parser) GetDomain() {
 	addr := fmt.Sprintf("http://%s.mls.cn-east-1.qiniumiku.com/?domainConfig&name=%s", s.conf.Bucket, s.conf.Domain)
-	resp, err := s.s3get(addr)
+	resp, err := util.S3get(addr, s.conf)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("UpdateDomain")
 		return
@@ -15,7 +18,7 @@ func (s *Parser) GetDomain() {
 func (s *Parser) UpdateDomain() {
 	addr := fmt.Sprintf("http://%s.mls.cn-east-1.qiniumiku.com/?domainConfig&name=%s", s.conf.Bucket, s.conf.Domain)
 	body := `{"streamConf": {"enableXsStream": true}}`
-	resp, err := s.s3patch(addr, body)
+	resp, err := util.S3patch(addr, body, s.conf)
 	if err != nil {
 		s.logger.Error().Err(err).Str("addr", addr).Msg("UpdateDomain")
 		return

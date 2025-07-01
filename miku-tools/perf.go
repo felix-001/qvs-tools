@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"middle-source-analysis/util"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -50,7 +51,7 @@ func (s *Parser) Perf() {
 				}
 
 				// 发送告警到企业微信
-				sendWeChatAlert("srs process CPU usage exceeded 70%")
+				util.SendWeChatAlert("srs process CPU usage exceeded 70%")
 
 				// 退出程序
 				return

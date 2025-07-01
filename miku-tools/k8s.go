@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	localUtil "middle-source-analysis/util"
 	"net"
 	"sync"
 	"time"
@@ -65,7 +66,7 @@ func (s *Parser) K8s() {
 			if publicUtil.IsPrivateIP(ipInfo.Ip) {
 				continue
 			}
-			if !IsPublicIPAddress(ipInfo.Ip) {
+			if !localUtil.IsPublicIPAddress(ipInfo.Ip) {
 				continue
 			}
 			wg.Add(1)

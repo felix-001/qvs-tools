@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/public"
+	"middle-source-analysis/util"
 	"strings"
 	"time"
 
@@ -129,7 +131,7 @@ func (s *Parser) getUnavailableReasion(nodeInfo *NodeInfo) string {
 	return "ok"
 }
 
-func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavailableDetailMap map[string][]NodeUnavailableDetail) {
+func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavailableDetailMap map[string][]public.NodeUnavailableDetail) {
 	//midnight := getMidnight2()
 	lastNodeInfoMap := make(map[string]*NodeInfo)
 	for _, nodeInfo := range nodeInfos {
@@ -141,7 +143,7 @@ func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavail
 		}
 
 		if _, ok := nodeUnavailableDetailMap[nodeInfo.NodeId]; !ok {
-			nodeUnavailableDetailMap[nodeInfo.NodeId] = make([]NodeUnavailableDetail, 0)
+			nodeUnavailableDetailMap[nodeInfo.NodeId] = make([]public.NodeUnavailableDetail, 0)
 		}
 		reason := s.getUnavailableReasion(last)
 		bytes, err := json.Marshal(last.ErrIps)
@@ -151,7 +153,7 @@ func (s *Parser) buildNodeUnavailableDetailMap(nodeInfos []NodeInfo, nodeUnavail
 		}
 		detail := strings.ReplaceAll(string(bytes), ",", " ")
 		nodeUnavailableDetailMap[nodeInfo.NodeId] = append(nodeUnavailableDetailMap[nodeInfo.NodeId],
-			NodeUnavailableDetail{
+			public.NodeUnavailableDetail{
 				//Start:    nodeInfo.StartTime,
 				//End:      nodeInfo.EndTime,
 				Reason: reason,
@@ -178,10 +180,10 @@ func (s *Parser) getDuration(start, end string) time.Duration {
 	return duration
 }
 
-func (s *Parser) getNodeUnavailableDetail(days int) map[string][]NodeUnavailableDetail {
+func (s *Parser) getNodeUnavailableDetail(days int) map[string][]public.NodeUnavailableDetail {
 	cur := time.Now().Format("2006_01_02")
-	dates := generateDateRange(cur, days)
-	nodeUnavailableDetailMap := make(map[string][]NodeUnavailableDetail)
+	dates := util.GenerateDateRange(cur, days)
+	nodeUnavailableDetailMap := make(map[string][]public.NodeUnavailableDetail)
 	for _, filename := range dates {
 		filename = path + "/" + filename
 		nodeInfos := s.loadNodePoint(filename)
@@ -203,7 +205,7 @@ func (s *Parser) nodeIspChk() {
 			if ipInfo.Ip == "" {
 				continue
 			}
-			isp, _, _ := getLocate(ipInfo.Ip, s.IpParser)
+			isp, _, _ := util.GetLocate(ipInfo.Ip, s.IpParser)
 			if lastIsp != "" && isp != lastIsp {
 				s.logger.Info().Str("isp", isp).Str("lastIsp", lastIsp).Str("node", node.Id).Str("machine", node.MachineId).
 					Msg("node has multi isp ip")

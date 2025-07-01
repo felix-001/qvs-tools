@@ -20,6 +20,10 @@ import (
 	"sync"
 	"time"
 
+	localUtil "middle-source-analysis/util"
+
+	localPublic "middle-source-analysis/public"
+
 	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/cmd/sched/common/consts"
 	"github.com/qbox/mikud-live/cmd/sched/common/util"
@@ -116,8 +120,8 @@ func (s *Parser) Staging() {
 	case "rtptest":
 		s.rtpTest()
 	case "res":
-		nodetraverse.RegisterMultiIPChk()
-		nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
+		//nodetraverse.RegisterMultiIPChk()
+		//nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
 	case "report":
 		s.ReportChk()
 	}
@@ -135,10 +139,10 @@ func (s *Parser) dumpNodeIpv4v6Dis() {
 			if publicUtil.IsPrivateIP(ip.Ip) {
 				continue
 			}
-			if !IsPublicIPAddress(ip.Ip) {
+			if !localUtil.IsPublicIPAddress(ip.Ip) {
 				continue
 			}
-			isp, area, _ := getLocate(ip.Ip, s.IpParser)
+			isp, area, _ := localUtil.GetLocate(ip.Ip, s.IpParser)
 			if area == "" {
 				continue
 			}
@@ -160,8 +164,8 @@ func (s *Parser) dumpNodeIpv4v6Dis() {
 	for areaIsp, nodeDis := range areaIpv4v6CntMap {
 		areaIpv6PercentMap[areaIsp] = nodeDis.Ipv6Cnt * 100 / (nodeDis.Ipv4Cnt + nodeDis.Ipv6Cnt)
 	}
-	pairs := SortIntMap(areaIpv6PercentMap)
-	DumpSlice(pairs)
+	pairs := localUtil.SortIntMap(areaIpv6PercentMap)
+	localUtil.DumpSlice(pairs)
 
 }
 
@@ -888,7 +892,7 @@ func (s *Parser) LowBw() {
 }
 
 func (s *Parser) isProvinceLine(line string) bool {
-	for _, province := range Provinces {
+	for _, province := range localPublic.Provinces {
 		if strings.Contains(line, province) {
 			return true
 		}
@@ -897,7 +901,7 @@ func (s *Parser) isProvinceLine(line string) bool {
 }
 
 func (s *Parser) isAreaLine(line string) bool {
-	for _, area := range Areas {
+	for _, area := range localPublic.Areas {
 		if strings.Contains(line, area) {
 			return true
 		}
@@ -1222,13 +1226,13 @@ func (s *Parser) LowBw2() {
 		}
 		nodeMap["step1"]++
 
-		if !checkDynamicNodesPort(node) {
+		if !localUtil.CheckDynamicNodesPort(node) {
 			nodeMap["checkDynamicNodesPort"]++
 			continue
 		}
 		nodeMap["step2"]++
 
-		if !checkCanScheduleOfTimeLimit(node, 3600) {
+		if !localUtil.CheckCanScheduleOfTimeLimit(node, 3600) {
 			nodeMap["checkCanScheduleOfTimeLimit"]++
 			timeLimitCnt++
 			continue
@@ -1373,7 +1377,7 @@ func (s *Parser) GenNodes() {
 		if node.StreamdPorts.Http <= 0 || node.StreamdPorts.Wt <= 0 || node.StreamdPorts.Https <= 0 {
 			continue
 		}
-		isp, _, province := getNodeLocate(node, ipParser)
+		isp, _, province := localUtil.GetNodeLocate(node, ipParser)
 		if isp == "" || province == "" {
 			continue
 		}
@@ -1525,7 +1529,7 @@ func (s *Parser) dumpNodeFromFile() {
 			if node.IsBanTransProv {
 				continue
 			}
-			isp, _, _ := getLocate(ipInfo.Ip, ipParser)
+			isp, _, _ := localUtil.GetLocate(ipInfo.Ip, ipParser)
 			if _, ok := ipMap[isp]; !ok {
 				ipMap[isp] = make(map[string][]string)
 			}
@@ -2021,7 +2025,7 @@ func (s *Parser) SipRaw() {
 	for range tick {
 		statusCode, msg := s.SipRawReq()
 		if statusCode != 200 && statusCode != 612 {
-			err := sendWeChatAlert(msg)
+			err := localUtil.SendWeChatAlert(msg)
 			if err != nil {
 				deflog.Println("Error sending WeChat alert:", err)
 				return
@@ -2044,10 +2048,10 @@ func (s *Parser) SipRawPost() {
 		return
 	}
 	for range tick {
-		statusCode, msg, hdrs := mikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
+		statusCode, msg, hdrs := localUtil.MikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
 		if statusCode != 200 && statusCode != 612 {
 			content := fmt.Sprintf("Response status: %d, Response body: %s, headers: %+v", statusCode, msg, hdrs)
-			err := sendWeChatAlert(content)
+			err := localUtil.SendWeChatAlert(content)
 			if err != nil {
 				deflog.Println("Error sending WeChat alert:", err)
 				return
@@ -2071,10 +2075,10 @@ func (s *Parser) SipRawGet() {
 		return
 	}
 	for range tick {
-		statusCode, msg, hdrs := mikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
+		statusCode, msg, hdrs := localUtil.MikuHttpReqReturnHdr("POST", url, string(jsonData), s.conf.Ak, s.conf.Sk)
 		if statusCode != 200 && statusCode != 612 {
 			content := fmt.Sprintf("Response status: %d, Response body: %s, headers: %+v", statusCode, msg, hdrs)
-			err := sendWeChatAlert(content)
+			err := localUtil.SendWeChatAlert(content)
 			if err != nil {
 				deflog.Println("Error sending WeChat alert:", err)
 				return
@@ -2187,5 +2191,5 @@ func (s *Parser) ReportChk() {
 		return
 	}
 	nodetraverse.RegisterReportChk()
-	nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
+	//nodetraverse.Traverse(s.conf.RedisAddrs, s.conf.IPDB, s)
 }

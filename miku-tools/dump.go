@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"middle-source-analysis/public"
 	"os"
 	"os/exec"
 	"sort"
 	"time"
+
+	localUtil "middle-source-analysis/util"
 
 	qconfig "github.com/qiniu/x/config"
 )
@@ -80,7 +83,7 @@ func str2time(s string) (time.Time, error) {
 	return time.ParseInLocation("2006-01-02 15:04:05", s, loc)
 }
 
-func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]NodeUnavailableDetail, schedInfos []SchedInfo) {
+func (s *Parser) saveNodesStatusDetailToCsv(nodeUnavailableDetail map[string][]public.NodeUnavailableDetail, schedInfos []SchedInfo) {
 	csv := "开始时间, 结束时间, 时长, 原因, 详细\n"
 	for _, schedInfo := range schedInfos {
 		csv += schedInfo.NodeId + "\n"
@@ -145,7 +148,7 @@ func (s *Parser) dumpStream() {
 
 }
 
-func (s *Parser) saveNodeDetailToCsv(nodeDetailMap map[string][]NodeUnavailableDetail) {
+func (s *Parser) saveNodeDetailToCsv(nodeDetailMap map[string][]public.NodeUnavailableDetail) {
 	csv := "节点, 开始时间, 结束时间, reason, detail\n"
 	for nodeId, details := range nodeDetailMap {
 		for _, detail := range details {
@@ -170,7 +173,7 @@ func (s *Parser) saveNodeDetailToCsv(nodeDetailMap map[string][]NodeUnavailableD
 func (s *Parser) saveStreamSchedInfosToCsv(streamSchedInfos []SchedInfo) {
 	csv := "时间, ConnId, NodeId, MachineId\n"
 	for _, schedInfo := range streamSchedInfos {
-		timeStr := unixToTimeStr(schedInfo.StartTime / 1000)
+		timeStr := localUtil.UnixToTimeStr(schedInfo.StartTime / 1000)
 		csv += fmt.Sprintf("%s, %s, %s, %s\n", timeStr, schedInfo.ConnId,
 			schedInfo.NodeId, schedInfo.MachindId)
 	}
@@ -213,13 +216,13 @@ func (s *Parser) DumpQPM() {
 	if err := qconfig.LoadFile(&LastMinuteAreaReqInfo, s.conf.QpmFile); err != nil {
 		log.Fatalf("load config failed, err: %v", err)
 	}
-	for _, isp := range Isps {
-		for _, area := range Areas {
-			simpArea, ok := AreaMap[area]
+	for _, isp := range public.Isps {
+		for _, area := range public.Areas {
+			simpArea, ok := public.AreaMap[area]
 			if !ok {
 				log.Fatalf("area not found, %s\n", area)
 			}
-			simpIsp, ok := IspMap[isp]
+			simpIsp, ok := public.IspMap[isp]
 			if !ok {
 				log.Fatalf("isp not found, %s", isp)
 			}
