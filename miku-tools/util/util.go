@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"log"
+	"middle-source-analysis/config"
 	"middle-source-analysis/public"
 	"net"
 	"os"
@@ -17,6 +18,11 @@ import (
 	"github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
+)
+
+var (
+	Conf     *config.Config
+	IpParser *ipdb.City
 )
 
 func GetLocate(ip string, ipParser *ipdb.City) (string, string, string) {

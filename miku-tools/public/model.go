@@ -1,14 +1,11 @@
 package public
 
-import "github.com/qbox/mikud-live/common/model"
+import (
+	"middle-source-analysis/config"
 
-type CmdHandler func()
-
-type CmdInfo struct {
-	Handler CmdHandler
-	Usage   string
-	Depends []*bool
-}
+	"github.com/qbox/mikud-live/common/model"
+	"github.com/qbox/pili/staging/github.com/ipipdotnet/ipdb-go"
+)
 
 type DynamicRootNode struct {
 	NodeId        string
@@ -52,3 +49,15 @@ type StreamDetail struct {
 	model.StreamInfoRT
 	NodeId string
 }
+
+type SchedInfo struct {
+	ConnId    string
+	StartTime int64
+	NodeId    string
+	MachindId string
+}
+
+var (
+	Conf     *config.Config
+	IpParser *ipdb.City
+)

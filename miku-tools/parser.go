@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -9,14 +10,46 @@ import (
 	"middle-source-analysis/mock"
 	"middle-source-analysis/public"
 	"middle-source-analysis/util"
+	localUtil "middle-source-analysis/util"
 	"os"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/qbox/bo-sdk/sdk/qconf/appg"
+	"github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 	//qlog "github.com/qbox/pili/base/qiniu/log.v1"
 )
 
-func dumpCmdMap(cmdMap map[string]public.CmdInfo) {
+type Parser struct {
+	RedisCli *redis.ClusterClient
+	IpParser *ipdb.City
+	// key1: streamId key2: isp key3: area
+	streamDetailMap                   map[string]map[string]map[string]*public.StreamInfo
+	file                              *os.File
+	CK                                driver.Conn
+	conf                              *config.Config
+	streamInfoMap                     map[string]map[string]*public.StreamInfo
+	NodeUnavailableCnt                int
+	NodeNoPortsCnt                    int
+	PrivateIpCnt                      int
+	NetProbeStateErrIpCnt             int
+	NetProbeSpeedErrIpCnt             int
+	IpV6Cnt                           int
+	TimeLimitCnt                      int
+	TotalDynNoeCnt                    int
+	AvailableDynNodeCnt               int
+	AvailableDynNodeAfterTimeLimitCnt int
+	AvailableIpCnt                    int
+	BanTransProvNodeCnt               int
+	logger                            zerolog.Logger
+	CmdMap                            map[string]config.CmdInfo
+	appg                              appg.Client
+}
+
+func dumpCmdMap(cmdMap map[string]config.CmdInfo) {
 	for cmd, info := range cmdMap {
 		fmt.Printf("%s\n\t%s\n", cmd, info.Usage)
 	}
@@ -29,7 +62,7 @@ func newParser(conf *config.Config) *Parser {
 	parser := &Parser{
 		conf: conf,
 	}
-	cmdMap := map[string]public.CmdInfo{
+	cmdMap := map[string]config.CmdInfo{
 		"hlschk": {
 			Handler: parser.HlsChk,
 			Usage:   "hls带宽统计",
@@ -314,4 +347,69 @@ func newParser(conf *config.Config) *Parser {
 	parser.CK = ck
 
 	return parser
+}
+
+func (s *Parser) buildAllNodesMap() {
+	fmt.Println("buildAllNodesMap")
+	if _, err := os.Stat("/tmp/allNodes.json"); err == nil {
+		// 文件存在，从文件加载节点信息
+		file, err := os.ReadFile("/tmp/allNodes.json")
+		if err != nil {
+			s.logger.Error().Msgf("读取/tmp/allNodes.json文件失败: %+v", err)
+			return
+		}
+		if err := json.Unmarshal(file, &s.allNodesMap); err != nil {
+			s.logger.Error().Msgf("解析/tmp/allNodes.json文件失败: %+v", err)
+			return
+		}
+		fmt.Println("从/tmp/allNodes.json文件加载节点信息成功")
+		return
+	}
+	allNodes, err := public.GetAllRTNodes(s.logger, s.RedisCli)
+	if err != nil {
+		s.logger.Error().Msgf("[GetAllNode] get all nodes failed, err: %+v, use snapshot", err)
+		return
+	}
+	allNodesMap := make(map[string]*model.RtNode)
+	for _, node := range allNodes {
+		allNodesMap[node.Id] = node
+	}
+	s.allNodesMap = allNodesMap
+	//fmt.Println("all nodes count:", len(s.allNodesMap))
+}
+
+func (s *Parser) buildNodeStreamsMap() {
+	nodeStreamsMap := make(map[string]*model.NodeStreamInfo)
+	for nodeId := range s.allNodesMap {
+		node := s.allNodesMap[nodeId]
+		if node == nil {
+			continue
+		}
+		report, err := localUtil.GetNodeAllStreams(nodeId, s.RedisCli)
+		if err != nil || report == nil {
+			continue
+		}
+		nodeStreamsMap[nodeId] = report
+	}
+	s.nodeStremasMap = nodeStreamsMap
+	log.Println("nodeStremasMap len", len(s.nodeStremasMap))
+}
+
+func (s *Parser) init() {
+	if s.conf.NodeInfo {
+		// TODO: 使用文件缓存+线上更新并行的方式
+		s.buildAllNodesMap()
+	}
+	if s.conf.RootNodeInfo {
+		s.buildRootNodesMap()
+	}
+	if s.conf.NeedNodeStreamInfo {
+		s.buildNodeStreamsMap()
+	}
+	if s.conf.Prometheus {
+		prometheus.MustRegister(localUtil.DynIpStatusMetric)
+	}
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
+	zerolog.CallerMarshalFunc = util.LogShortPath
+	s.logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "2006-01-02 15:04:05.000", NoColor: true}).With().Timestamp().Caller().Logger()
 }

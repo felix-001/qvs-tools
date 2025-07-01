@@ -75,7 +75,7 @@ func BitsInit(isize int, buffer []byte) *bitsBuffer {
 	return bits
 }
 
-func bitsAlign(bits *bitsBuffer) {
+func BitsAlign(bits *bitsBuffer) {
 
 	if bits.iMask != 0x80 && bits.iData < bits.iSize {
 		bits.iMask = 0x80

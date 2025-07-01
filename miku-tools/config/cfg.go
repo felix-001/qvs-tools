@@ -3,7 +3,6 @@ package config
 import (
 	"flag"
 	"log"
-	"middle-source-analysis/public"
 	"os"
 	"time"
 
@@ -12,6 +11,14 @@ import (
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 )
+
+type CmdHandler func()
+
+type CmdInfo struct {
+	Handler CmdHandler
+	Usage   string
+	Depends []*bool
+}
 
 const (
 	confFile = "/usr/local/etc/middle-source.json"
@@ -230,7 +237,7 @@ func LoadCfg() *Config {
 	return &conf
 }
 
-func InitConf(cmdMap map[string]public.CmdInfo, cfg *Config) {
+func InitConf(cmdMap map[string]CmdInfo, cfg *Config) {
 	for cmd, cmdInfo := range cmdMap {
 		if cfg.Cmd != cmd {
 			continue
