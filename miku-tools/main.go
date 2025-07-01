@@ -2,13 +2,13 @@ package main
 
 import (
 	"log"
+	"mikutool/manager"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
-	conf := loadCfg()
-	parser := newParser(conf)
-	parser.init()
-	parser.CmdMap[conf.Cmd].Handler()
+	cmdMgr := manager.NewCommandManager()
+	cmdMgr.Init()
+	cmdMgr.Register()
+	cmdMgr.Exec()
 }
