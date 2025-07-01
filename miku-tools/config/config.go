@@ -5,11 +5,14 @@ import (
 	"log"
 	"os"
 
+	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 )
 
 type Config struct {
-	Cmd string
+	Cmd        string
+	IPDB       ipdb.Config `json:"ipdb"`
+	RedisAddrs []string    `json:"redis_addrs"`
 }
 
 func Load() *Config {
