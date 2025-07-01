@@ -2,7 +2,10 @@ package manager
 
 import "log"
 
-func (m *CommandManager) CmdList() {
+func (m *CommandManager) CmdList(cmd string) {
+	if cmd == "cfg" {
+		return
+	}
 	log.Println("list")
 	m.loadResources([]string{ResourceIpParser, ResourceRedis})
 }
