@@ -45,7 +45,13 @@ func Load() *Config {
 }
 
 func (c *Config) ParseConsole() {
-	flag.StringVar(&c.Cmd, "cmd", "streams", "需要执行的命令")
 	flag.BoolVar(&c.Help, "h", false, "help")
+	flag.StringVar(&c.Cmd, "cmd", "streams", "需要执行的命令")
+	flag.StringVar(&c.Uid, "uid", "", "uid")
+	flag.StringVar(&c.Method, "method", "", "method")
+	flag.StringVar(&c.Body, "body", "", "body")
+	flag.StringVar(&c.Addr, "addr", "", "addr")
+	flag.StringVar(&c.Ak, "ak", "", "ak")
+	flag.StringVar(&c.Sk, "sk", "", "sk")
 	flag.Parse()
 }

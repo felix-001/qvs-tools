@@ -1,16 +1,14 @@
 package manager
 
-import "log"
+import "mikutool/public/util"
 
-func (m *CommandManager) CmdStreams() *Command {
+func (m *CommandManager) CmdHttp() *Command {
 	handler := func() {
-		log.Println("streams")
+		util.Http(m.config)
 	}
 	cmd := &Command{
-		Desc:         "dump流粒度放大比",
-		Handler:      handler,
-		NeedIpParser: true,
-		NeedRedis:    true,
+		Desc:    "qn http客户端",
+		Handler: handler,
 	}
 	return cmd
 }
