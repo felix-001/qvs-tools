@@ -11,17 +11,36 @@ import (
 )
 
 type Config struct {
-	Cmd        string
-	Uid        string
-	Method     string
-	Body       string
-	Addr       string
-	Help       bool
-	Ak         string          `json:"ak"`
-	Sk         string          `json:"sk"`
-	IPDB       ipdb.Config     `json:"ipdb"`
-	RedisAddrs []string        `json:"redis_addrs"`
-	AccountCfg qnconfig.Config `json:"acc"`
+	Cmd         string
+	Uid         string
+	Method      string
+	Body        string
+	Addr        string
+	Help        bool
+	Pcdn        string
+	Bucket      string
+	Stream      string
+	Domain      string
+	SourceId    string
+	OriginKey   string
+	Origin      string
+	Area        string
+	Isp         string
+	OriginKeyDy string
+	OriginKeyHw string
+	Basesub     int
+	SubStream   int
+	Startid     int
+	F           string
+	T           string
+	Ak          string          `json:"ak"`
+	Sk          string          `json:"sk"`
+	Secret      string          `json:"secret"`
+	IPDB        ipdb.Config     `json:"ipdb"`
+	RedisAddrs  []string        `json:"redis_addrs"`
+	AccountCfg  qnconfig.Config `json:"acc"`
+	DyApiSecret string          `json:"dy_api_secret"`
+	DyApiDomain string          `json:"dy_api_domain"`
 }
 
 func Load() *Config {

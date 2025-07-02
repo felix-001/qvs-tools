@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"mikutool/miku/users"
 	"mikutool/public/util"
 	"mikutool/qvs/mock"
 )
@@ -22,6 +23,17 @@ func (m *CommandManager) CmdMock() *Command {
 	}
 	cmd := &Command{
 		Desc:    "mock tracker&themisd&server",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdDyPlay() *Command {
+	handler := func() {
+		users.DyPlay(m.config, m.nodeMgr)
+	}
+	cmd := &Command{
+		Desc:    "动态播放",
 		Handler: handler,
 	}
 	return cmd
