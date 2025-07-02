@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"mikutool/miku"
 	"mikutool/miku/users"
 	"mikutool/public/util"
 	"mikutool/qvs/mock"
@@ -34,6 +35,28 @@ func (m *CommandManager) CmdDyPlay() *Command {
 	}
 	cmd := &Command{
 		Desc:    "播放dy xs流",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdAkSk() *Command {
+	handler := func() {
+		util.GetAkSk(m.config)
+	}
+	cmd := &Command{
+		Desc:    "ak sk",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdPlayCheck() *Command {
+	handler := func() {
+		miku.Playcheck(m.config)
+	}
+	cmd := &Command{
+		Desc:    "请求playcheck 302接口",
 		Handler: handler,
 	}
 	return cmd

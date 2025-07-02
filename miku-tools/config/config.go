@@ -17,7 +17,10 @@ type Config struct {
 	Body        string
 	Addr        string
 	Help        bool
+	Https       bool
 	Pcdn        string
+	User        string
+	SchedIp     string
 	Bucket      string
 	Stream      string
 	Domain      string
@@ -28,6 +31,9 @@ type Config struct {
 	Isp         string
 	OriginKeyDy string
 	OriginKeyHw string
+	Format      string
+	Node        string
+	ConnId      string
 	Basesub     int
 	SubStream   int
 	Startid     int
