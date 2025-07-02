@@ -86,6 +86,6 @@ func (m *CommandManager) usage() {
 	for key, cmd := range m.commands {
 		fmt.Printf("%s\n\t%s\n", key, cmd.Desc)
 		fmt.Println()
-		flag.PrintDefaults()
 	}
+	flag.PrintDefaults()
 }
