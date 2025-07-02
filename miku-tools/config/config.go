@@ -20,6 +20,7 @@ type Config struct {
 	Https       bool
 	Pcdn        string
 	User        string
+	Passwd      string
 	SchedIp     string
 	Bucket      string
 	Stream      string
@@ -30,13 +31,16 @@ type Config struct {
 	Area        string
 	Isp         string
 	OriginKeyDy string
+	ID          string
 	OriginKeyHw string
 	Format      string
 	Node        string
 	ConnId      string
+	Ip          string
 	Basesub     int
 	SubStream   int
 	Startid     int
+	Port        int
 	F           string
 	T           string
 	Ak          string          `json:"ak"`

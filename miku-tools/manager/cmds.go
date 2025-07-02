@@ -4,6 +4,7 @@ import (
 	"mikutool/miku"
 	"mikutool/miku/users"
 	"mikutool/public/util"
+	"mikutool/qvs"
 	"mikutool/qvs/mock"
 )
 
@@ -57,6 +58,17 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 	}
 	cmd := &Command{
 		Desc:    "请求playcheck 302接口",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdInvite() *Command {
+	handler := func() {
+		qvs.Invite(m.config)
+	}
+	cmd := &Command{
+		Desc:    "请求invite",
 		Handler: handler,
 	}
 	return cmd

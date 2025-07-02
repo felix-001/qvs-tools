@@ -3,7 +3,9 @@ module mikutool
 go 1.22.0
 
 require (
+	github.com/emiago/sipgo v0.33.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/icholy/digest v1.1.0
 	github.com/qbox/bo-sdk/base v0.0.0-20250521054513-92c7331f4f8d
 	github.com/qbox/bo-sdk/sdk v0.0.0-20250521054513-92c7331f4f8d
 	github.com/qbox/mikud-live v1.5.1-0.20250702060638-1215de47f118
@@ -30,6 +32,9 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.3.2 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/uuid v1.6.0 // indirect
