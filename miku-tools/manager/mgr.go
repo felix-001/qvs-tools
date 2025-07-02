@@ -2,6 +2,8 @@ package manager
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"mikutool/config"
 	"mikutool/resources"
@@ -25,6 +27,10 @@ func NewCommandManager() *CommandManager {
 }
 
 func (m *CommandManager) Exec() {
+	if m.config.Help {
+		m.usage()
+		return
+	}
 	cmd, ok := m.commands[m.config.Cmd]
 	if !ok {
 		log.Println("command:", m.config.Cmd, "not found")
@@ -73,5 +79,13 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		if err != nil {
 			log.Println(err)
 		}
+	}
+}
+
+func (m *CommandManager) usage() {
+	for key, cmd := range m.commands {
+		fmt.Printf("%s\n\t%s\n", key, cmd.Desc)
+		fmt.Println()
+		flag.PrintDefaults()
 	}
 }

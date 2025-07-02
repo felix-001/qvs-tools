@@ -16,6 +16,7 @@ type Config struct {
 	Method     string
 	Body       string
 	Addr       string
+	Help       bool
 	Ak         string          `json:"ak"`
 	Sk         string          `json:"sk"`
 	IPDB       ipdb.Config     `json:"ipdb"`
@@ -45,5 +46,6 @@ func Load() *Config {
 
 func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Cmd, "cmd", "streams", "需要执行的命令")
+	flag.BoolVar(&c.Help, "h", false, "help")
 	flag.Parse()
 }
