@@ -26,6 +26,7 @@ type Config struct {
 	Stream      string
 	Domain      string
 	Key         string
+	Province    string
 	SourceId    string
 	OriginKey   string
 	Origin      string

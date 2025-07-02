@@ -8,11 +8,13 @@ import (
 	"net"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/qbox/bo-sdk/base/xlog.v1"
 	"github.com/qbox/bo-sdk/sdk/qconf/appg"
 	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
+	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 )
 
 func Str2unix(s string) (int64, error) {
@@ -121,4 +123,15 @@ func GetAkSk(conf *config.Config) {
 		log.Fatalln(err)
 	}
 	log.Println("ak:", ak, "sk:", sk)
+}
+
+func Province2Area(conf *config.Config) {
+	parts := strings.Split(conf.Province, ",")
+
+	result := ""
+	for _, province := range parts {
+		area, _ := schedUtil.ProvinceAreaRelation(province)
+		result += area + ","
+	}
+	log.Println(result)
 }

@@ -50,6 +50,7 @@ func (m *CommandManager) Init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	m.config = config.Load()
 	m.config.ParseConsole()
+	m.nodeMgr.SetConf(m.config)
 }
 
 func (m *CommandManager) Register() {

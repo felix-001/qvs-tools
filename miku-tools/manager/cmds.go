@@ -84,3 +84,25 @@ func (m *CommandManager) CmdKodo() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdNodeByIp() *Command {
+	handler := func() {
+		m.nodeMgr.GetNodeByIp()
+	}
+	cmd := &Command{
+		Desc:    "根据ip查询node",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdArea() *Command {
+	handler := func() {
+		util.Province2Area(m.config)
+	}
+	cmd := &Command{
+		Desc:    "省份转区域",
+		Handler: handler,
+	}
+	return cmd
+}
