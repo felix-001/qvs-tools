@@ -25,6 +25,7 @@ type Config struct {
 	Bucket      string
 	Stream      string
 	Domain      string
+	Key         string
 	SourceId    string
 	OriginKey   string
 	Origin      string

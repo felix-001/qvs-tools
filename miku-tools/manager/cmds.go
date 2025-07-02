@@ -73,3 +73,14 @@ func (m *CommandManager) CmdInvite() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdKodo() *Command {
+	handler := func() {
+		util.SignResource(m.config)
+	}
+	cmd := &Command{
+		Desc:    "kodo",
+		Handler: handler,
+	}
+	return cmd
+}
