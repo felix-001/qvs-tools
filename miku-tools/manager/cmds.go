@@ -33,7 +33,7 @@ func (m *CommandManager) CmdDyPlay() *Command {
 		users.DyPlay(m.config, m.nodeMgr)
 	}
 	cmd := &Command{
-		Desc:    "动态播放",
+		Desc:    "播放dy xs流",
 		Handler: handler,
 	}
 	return cmd
