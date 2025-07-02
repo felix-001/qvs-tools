@@ -5,14 +5,22 @@ import (
 	"log"
 	"os"
 
+	qnconfig "github.com/qbox/bo-sdk/sdk/qconf/qconfapi/config"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 )
 
 type Config struct {
 	Cmd        string
-	IPDB       ipdb.Config `json:"ipdb"`
-	RedisAddrs []string    `json:"redis_addrs"`
+	Uid        string
+	Method     string
+	Body       string
+	Addr       string
+	Ak         string          `json:"ak"`
+	Sk         string          `json:"sk"`
+	IPDB       ipdb.Config     `json:"ipdb"`
+	RedisAddrs []string        `json:"redis_addrs"`
+	AccountCfg qnconfig.Config `json:"acc"`
 }
 
 func Load() *Config {

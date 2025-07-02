@@ -30,6 +30,7 @@ func (m *CommandManager) Exec() {
 		log.Println("command:", m.config.Cmd, "not found")
 		return
 	}
+	m.loadResources(cmd)
 	cmd.Handler()
 }
 
@@ -46,35 +47,31 @@ func (m *CommandManager) Register() {
 		if strings.HasPrefix(method.Name, "Cmd") {
 			key := strings.ToLower(strings.TrimPrefix(method.Name, "Cmd"))
 			//log.Println("register command:", key)
-			m.commands[key] = &Command{
-				Handler: func() {
-					method := typ.Method(i)
-					method.Func.Call([]reflect.Value{reflect.ValueOf(m)})
-				},
+			results := method.Func.Call([]reflect.Value{reflect.ValueOf(m)})
+			if len(results) > 0 && results[0].Type().String() == "*manager.Command" {
+				m.commands[key] = results[0].Interface().(*Command)
 			}
 		}
 	}
 }
 
-func (m *CommandManager) loadResources(resources []string) {
-	for _, resource := range resources {
-		var err error
-		switch resource {
-		case ResourceIpParser:
-			m.resources.IpParser, err = ipdb.NewCity(m.config.IPDB)
-			if err != nil {
-				log.Println("load ipdb err", err)
-			}
-		case ResourceRedis:
-			m.resources.Redis = redis.NewClusterClient(&redis.ClusterOptions{
-				Addrs:      m.config.RedisAddrs,
-				MaxRetries: 3,
-				PoolSize:   30,
-			})
-			err = m.resources.Redis.Ping(context.Background()).Err()
-			if err != nil {
-				log.Println(err)
-			}
+func (m *CommandManager) loadResources(cmd *Command) {
+	var err error
+	if cmd.NeedIpParser {
+		m.resources.IpParser, err = ipdb.NewCity(m.config.IPDB)
+		if err != nil {
+			log.Println("load ipdb err", err)
+		}
+	}
+	if cmd.NeedRedis {
+		m.resources.Redis = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:      m.config.RedisAddrs,
+			MaxRetries: 3,
+			PoolSize:   30,
+		})
+		err = m.resources.Redis.Ping(context.Background()).Err()
+		if err != nil {
+			log.Println(err)
 		}
 	}
 }

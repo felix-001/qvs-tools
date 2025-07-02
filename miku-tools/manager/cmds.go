@@ -2,15 +2,15 @@ package manager
 
 import "log"
 
-func (m *CommandManager) CmdList(cmd string) {
-	if cmd == "cfg" {
-		return
+func (m *CommandManager) CmdStreams() *Command {
+	handler := func() {
+		log.Println("streams")
 	}
-	log.Println("list")
-	m.loadResources([]string{ResourceIpParser, ResourceRedis})
-}
-
-func (m *CommandManager) CmdStreams() {
-	log.Println("streams")
-	m.loadResources([]string{ResourceIpParser, ResourceRedis})
+	cmd := &Command{
+		Desc:         "dump流粒度放大比",
+		Handler:      handler,
+		NeedIpParser: true,
+		NeedRedis:    true,
+	}
+	return cmd
 }
