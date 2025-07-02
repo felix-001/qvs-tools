@@ -10,6 +10,14 @@ import (
 	qconfig "github.com/qiniu/x/config"
 )
 
+type CkConfig struct {
+	Host   []string `json:"host"`
+	DB     string   `json:"db"`
+	User   string   `json:"user"`
+	Passwd string   `json:"passwd"`
+	Table  string   `json:"table"`
+}
+
 type Config struct {
 	Cmd         string
 	Uid         string
@@ -39,12 +47,14 @@ type Config struct {
 	Node        string
 	ConnId      string
 	Ip          string
+	Query       string
 	Basesub     int
 	SubStream   int
 	Startid     int
 	Port        int
 	F           string
 	T           string
+	CK          CkConfig        `json:"ck"`
 	Ak          string          `json:"ak"`
 	Sk          string          `json:"sk"`
 	Secret      string          `json:"secret"`

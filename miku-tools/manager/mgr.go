@@ -8,6 +8,7 @@ import (
 	"mikutool/config"
 	"mikutool/miku/nodemgr"
 	"mikutool/miku/streammgr"
+	"mikutool/public/util"
 	"mikutool/resources"
 	"reflect"
 	"strings"
@@ -86,6 +87,9 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		if err != nil {
 			log.Println(err)
 		}
+	}
+	if cmd.NeedCK {
+		m.resources.Ck = util.NewCk(m.config)
 	}
 }
 

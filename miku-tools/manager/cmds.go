@@ -106,3 +106,14 @@ func (m *CommandManager) CmdArea() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdCk() *Command {
+	handler := func() {
+		m.resources.Ck.RunCk()
+	}
+	cmd := &Command{
+		Desc:    "查询clickhouse",
+		Handler: handler,
+	}
+	return cmd
+}
