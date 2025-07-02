@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"mikutool/config"
+	"mikutool/miku/nodemgr"
+	"mikutool/miku/streammgr"
 	"mikutool/resources"
 	"reflect"
 	"strings"
@@ -18,11 +20,15 @@ type CommandManager struct {
 	commands  map[string]*Command
 	config    *config.Config
 	resources resources.Resources
+	nodeMgr   *nodemgr.NodeMgr
+	streamMgr *streammgr.StreamMgr
 }
 
 func NewCommandManager() *CommandManager {
 	return &CommandManager{
-		commands: make(map[string]*Command),
+		commands:  make(map[string]*Command),
+		nodeMgr:   nodemgr.NewNodeMgr(),
+		streamMgr: streammgr.NewStreamMgr(),
 	}
 }
 
