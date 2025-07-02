@@ -113,6 +113,7 @@ func (m *CommandManager) CmdCk() *Command {
 	}
 	cmd := &Command{
 		Desc:    "查询clickhouse",
+		NeedCK:  true,
 		Handler: handler,
 	}
 	return cmd
