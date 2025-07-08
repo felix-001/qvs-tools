@@ -178,6 +178,9 @@ func Http(conf *config.Config) {
 			method = "POST"
 		}
 	}
+	if conf.Uid != "" {
+		conf.Ak, conf.Sk = GetAkSk(conf)
+	}
 	if conf.Addr == "" {
 		log.Println("need -addr <url>")
 		return

@@ -111,7 +111,7 @@ func IsPublicIPAddress(ip string) bool {
 	return isPublicIPAddress(net.ParseIP(ip))
 }
 
-func GetAkSk(conf *config.Config) {
+func GetAkSk(conf *config.Config) (string, string) {
 	qc := qconfapi.New(&conf.AccountCfg)
 	ag := appg.Client{Conn: qc}
 	uid, err := strconv.Atoi(conf.Uid)
@@ -123,6 +123,7 @@ func GetAkSk(conf *config.Config) {
 		log.Fatalln(err)
 	}
 	log.Println("ak:", ak, "sk:", sk)
+	return ak, sk
 }
 
 func Province2Area(conf *config.Config) {

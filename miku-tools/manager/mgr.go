@@ -34,8 +34,13 @@ func NewCommandManager() *CommandManager {
 }
 
 func (m *CommandManager) Exec() {
+	if m.config.H {
+		m.usage()
+		return
+	}
 	if m.config.Help {
 		m.usage()
+		flag.PrintDefaults()
 		return
 	}
 	cmd, ok := m.commands[m.config.Cmd]
@@ -98,5 +103,4 @@ func (m *CommandManager) usage() {
 		fmt.Printf("%s\n\t%s\n", key, cmd.Desc)
 		fmt.Println()
 	}
-	flag.PrintDefaults()
 }

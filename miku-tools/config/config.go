@@ -26,6 +26,7 @@ type Config struct {
 	Addr        string
 	Help        bool
 	Https       bool
+	H           bool
 	Pcdn        string
 	User        string
 	Passwd      string
@@ -86,7 +87,7 @@ func Load() *Config {
 }
 
 func (c *Config) ParseConsole() {
-	flag.BoolVar(&c.Help, "h", false, "help")
+	flag.BoolVar(&c.Help, "help", false, "help")
 	flag.StringVar(&c.Cmd, "cmd", "streams", "需要执行的命令")
 	flag.StringVar(&c.Uid, "uid", "", "uid")
 	flag.StringVar(&c.Method, "method", "", "method")
@@ -111,6 +112,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
+	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
 
 	flag.Parse()
 }
