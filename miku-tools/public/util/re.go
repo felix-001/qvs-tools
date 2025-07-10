@@ -12,6 +12,15 @@ func Re(pattern, replace, raw string) {
 		log.Println("compile rule err, pattern:", pattern, "err:", err)
 		return
 	}
+	matches := reg.FindAllStringSubmatch(raw, -1)
+	if len(matches) > 0 {
+		for i, match := range matches {
+			log.Printf("Match %d:\n", i+1)
+			for j, group := range match {
+				log.Printf("  Group %d: %s\n", j, group)
+			}
+		}
+	}
 
 	if reg.MatchString(raw) {
 		res := reg.ReplaceAllString(raw, replace)
