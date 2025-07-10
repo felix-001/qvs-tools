@@ -55,6 +55,9 @@ type Config struct {
 	Port        int
 	F           string
 	T           string
+	Pattern     string
+	Replace     string
+	Raw         string
 	CK          CkConfig        `json:"ck"`
 	Ak          string          `json:"ak"`
 	Sk          string          `json:"sk"`
@@ -109,6 +112,9 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Isp, "isp", "", "isp")
 	flag.StringVar(&c.F, "f", "", "f")
 	flag.StringVar(&c.T, "t", "", "t")
+	flag.StringVar(&c.Pattern, "pattern", "", "pattern")
+	flag.StringVar(&c.Replace, "replace", "", "replace")
+	flag.StringVar(&c.Raw, "raw", "", "raw")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")

@@ -118,3 +118,14 @@ func (m *CommandManager) CmdCk() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdRe() *Command {
+	handler := func() {
+		util.Re(m.config.Pattern, m.config.Replace, m.config.Raw)
+	}
+	cmd := &Command{
+		Desc:    "测试的go的正则表达式, -pattern <pattern> -replace <replace> -raw <raw>",
+		Handler: handler,
+	}
+	return cmd
+}
