@@ -129,3 +129,14 @@ func (m *CommandManager) CmdRe() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdHy() *Command {
+	handler := func() {
+		users.HyAuth(m.config)
+	}
+	cmd := &Command{
+		Desc:    "虎牙时间戳防盗链, -stream <stream>",
+		Handler: handler,
+	}
+	return cmd
+}
