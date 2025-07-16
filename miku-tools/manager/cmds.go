@@ -140,3 +140,17 @@ func (m *CommandManager) CmdHy() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdBw() *Command {
+	handler := func() {
+		m.nodeMgr.BwStatistics()
+	}
+	cmd := &Command{
+		Desc:         "统计剩余带宽情况",
+		Handler:      handler,
+		NeedIpParser: true,
+		NeedRedis:    true,
+		NeedNodeInfo: true,
+	}
+	return cmd
+}

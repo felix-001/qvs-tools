@@ -1,16 +1,25 @@
 package nodemgr
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"mikutool/config"
+	"mikutool/public/util"
+	"mikutool/resources"
+	"os"
 
 	commonModel "github.com/qbox/mikud-live/common/model"
+	"github.com/qbox/pili/common/ipdb.v1"
+	"github.com/rs/zerolog"
 )
 
 type NodeMgr struct {
 	allRootNodesMapByNodeId map[string]*commonModel.RtNode
 	allNodesMap             map[string]*commonModel.RtNode
 	conf                    *config.Config
+	resources               resources.Resources
+	modules                 []NodeCallback
 }
 
 func NewNodeMgr() *NodeMgr {
@@ -22,6 +31,10 @@ func NewNodeMgr() *NodeMgr {
 
 func (m *NodeMgr) SetConf(conf *config.Config) {
 	m.conf = conf
+}
+
+func (m *NodeMgr) SetResources(resources resources.Resources) {
+	m.resources = resources
 }
 
 func (m *NodeMgr) GetRootNodeByNodeId(nodeId string) *commonModel.RtNode {
@@ -42,4 +55,70 @@ func (m *NodeMgr) GetNodeByIp() {
 			}
 		}
 	}
+}
+
+type BwStatistics struct {
+	avialiableNodeCnt  int
+	ispAvialiableBwMap map[string]float64
+	ipParser           *ipdb.City
+}
+
+func (b *BwStatistics) OnNode(node *commonModel.RtNode) {
+	log.Println("node:", node.Id)
+	b.avialiableNodeCnt++
+}
+
+func (b *BwStatistics) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
+	isp, _, _ := util.GetLocate(ip.Ip, b.ipParser)
+	b.ispAvialiableBwMap[isp] += ip.MaxOutMBps - ip.OutMBps
+}
+
+func (b *BwStatistics) Done(result map[string]int) {
+	fmt.Printf("BwStatistics Done, %+v\n", result)
+}
+
+func (b *BwStatistics) GetNodeFilters() []NodeFilter {
+	return DefaultNodeFilters
+}
+
+func (b *BwStatistics) GetIpFilters() []IpFilter {
+	return DefaultIpFilters
+}
+
+func (m *NodeMgr) BwStatistics() {
+	b := &BwStatistics{
+		ispAvialiableBwMap: make(map[string]float64),
+		ipParser:           m.resources.IpParser,
+	}
+	m.Register(b)
+	m.Traverse()
+	log.Println("avialiableNodeCnt:", b.avialiableNodeCnt, "ispAvialiableBwMap:", b.ispAvialiableBwMap)
+}
+
+func (m *NodeMgr) LoadNodes() {
+	fmt.Println("LoadNodes")
+	if _, err := os.Stat("/tmp/allnodes.json"); err == nil {
+		// 文件存在，从文件加载节点信息
+		file, err := os.ReadFile("/tmp/allnodes.json")
+		if err != nil {
+			fmt.Println("LoadNodes ReadFile err:", err)
+			return
+		}
+		if err := json.Unmarshal(file, &m.allNodesMap); err != nil {
+			fmt.Println("LoadNodes Unmarshal err:", err)
+			return
+		}
+		fmt.Println("从/tmp/allNodes.json文件加载节点信息成功")
+		return
+	}
+	allNodes, err := commonModel.GetAllRTNodes(zerolog.Logger{}, m.resources.Redis)
+	if err != nil {
+		fmt.Println("LoadNodes GetAllRTNodes err:", err)
+		return
+	}
+	allNodesMap := make(map[string]*commonModel.RtNode)
+	for _, node := range allNodes {
+		allNodesMap[node.Id] = node
+	}
+	m.allNodesMap = allNodesMap
 }

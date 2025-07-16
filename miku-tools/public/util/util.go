@@ -15,6 +15,7 @@ import (
 	"github.com/qbox/bo-sdk/sdk/qconf/appg"
 	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
+	"github.com/qbox/pili/common/ipdb.v1"
 )
 
 func Str2unix(s string) (int64, error) {
@@ -135,4 +136,20 @@ func Province2Area(conf *config.Config) {
 		result += area + ","
 	}
 	log.Println(result)
+}
+
+func GetLocate(ip string, ipParser *ipdb.City) (string, string, string) {
+	locate, err := ipParser.Find(ip)
+	if err != nil {
+		log.Println(err, ip)
+		return "", "", ""
+	}
+	if locate.Isp == "" {
+		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
+	}
+	if locate.Country != "中国" {
+		log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
+	}
+	area, _ := schedUtil.ProvinceAreaRelation(locate.Region)
+	return locate.Isp, area, locate.Region
 }

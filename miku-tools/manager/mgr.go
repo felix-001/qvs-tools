@@ -96,6 +96,10 @@ func (m *CommandManager) loadResources(cmd *Command) {
 	if cmd.NeedCK {
 		m.resources.Ck = util.NewCk(m.config)
 	}
+	if cmd.NeedNodeInfo {
+		m.nodeMgr.SetResources(m.resources)
+		m.nodeMgr.LoadNodes()
+	}
 }
 
 func (m *CommandManager) usage() {
