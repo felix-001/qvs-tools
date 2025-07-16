@@ -6,6 +6,7 @@ import (
 	"os"
 
 	qnconfig "github.com/qbox/bo-sdk/sdk/qconf/qconfapi/config"
+	"github.com/qbox/mikud-live/common/dal"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
 )
@@ -67,6 +68,7 @@ type Config struct {
 	AccountCfg  qnconfig.Config `json:"acc"`
 	DyApiSecret string          `json:"dy_api_secret"`
 	DyApiDomain string          `json:"dy_api_domain"`
+	MongoConf   *dal.MongoCfg   `json:"mongo_config"`
 }
 
 func Load() *Config {

@@ -146,11 +146,13 @@ func (m *CommandManager) CmdBw() *Command {
 		m.nodeMgr.BwStatistics()
 	}
 	cmd := &Command{
-		Desc:         "统计剩余带宽情况",
-		Handler:      handler,
-		NeedIpParser: true,
-		NeedRedis:    true,
-		NeedNodeInfo: true,
+		Desc:               "统计剩余带宽情况",
+		Handler:            handler,
+		NeedIpParser:       true,
+		NeedRedis:          true,
+		NeedNodeInfo:       true,
+		NeedMongo:          true,
+		NeedNodeFilterInfo: true,
 	}
 	return cmd
 }

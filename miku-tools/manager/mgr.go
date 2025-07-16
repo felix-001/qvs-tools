@@ -13,8 +13,12 @@ import (
 	"reflect"
 	"strings"
 
+	publicCommon "github.com/qbox/mikud-live/common"
+	"github.com/qbox/mikud-live/common/dal/mongo"
+	"github.com/qbox/mikud-live/common/repository/filter"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
 )
 
 type CommandManager struct {
@@ -95,6 +99,16 @@ func (m *CommandManager) loadResources(cmd *Command) {
 	}
 	if cmd.NeedCK {
 		m.resources.Ck = util.NewCk(m.config)
+	}
+	if cmd.NeedMongo {
+		mongoClient, err := mongo.NewMongoClient(m.config.MongoConf)
+		if err != nil {
+			log.Printf("[NewMongoClient] err: %+v\n", err)
+			return
+		}
+		m.resources.Mongo = mongoClient
+		availableResourceCol := mongoClient.Collection(publicCommon.AvailableResourceCollection)
+		m.resources.NodeFilterCol = filter.NewAvailableResourceRepo(availableResourceCol, zerolog.Logger{})
 	}
 	if cmd.NeedNodeInfo {
 		m.nodeMgr.SetResources(m.resources)

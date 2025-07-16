@@ -11,4 +11,6 @@ type Command struct {
 	NeedPrometheus     bool
 	NeedNodeStreamInfo bool
 	NeedNodeInfo       bool
+	NeedMongo          bool
+	NeedNodeFilterInfo bool
 }
