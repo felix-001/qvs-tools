@@ -21,7 +21,9 @@ type NodeCallback interface {
 var DefaultNodeFilters = []NodeFilter{
 	NodeFilterDynamic,
 	NodeFilterServing,
+	NodeFilterNoStreamdPorts,
 	NodeFilterNotBanProv,
+	NodeFilterTimeLimit,
 }
 
 func NodeFilterDynamic(node *public.RtNode) (string, bool) {
@@ -36,12 +38,44 @@ func NodeFilterServing(node *public.RtNode) (string, bool) {
 	return "NotServing", node.RuntimeStatus == "Serving"
 }
 
+func NodeFilterNoStreamdPorts(node *public.RtNode) (string, bool) {
+	if node.StreamdPorts.Http == 0 {
+		return "NoStreamdPorts", false
+	}
+	if node.StreamdPorts.Wt == 0 {
+		return "NoStreamdPorts", false
+	}
+	if node.StreamdPorts.Https == 0 {
+		return "NoStreamdPorts", false
+	}
+	return "NoStreamdPorts", true
+}
+
+func NodeFilterTimeLimit(node *public.RtNode) (string, bool) {
+	return "TimeLimit", len(node.Schedules) == 0
+}
+
 var DefaultIpFilters = []IpFilter{
 	IpFilterPrivate,
+	IpFilterForbidden,
+	IpFilterProbeSpeed,
 }
 
 func IpFilterPrivate(ip *public.RtIpStatus) (string, bool) {
 	return "PrivateIp", !commonUtil.IsPrivateIP(ip.Ip)
+}
+
+func IpFilterForbidden(ip *public.RtIpStatus) (string, bool) {
+	return "IpFrobidden", !ip.Forbidden
+}
+
+func IpFilterProbeSpeed(ip *public.RtIpStatus) (string, bool) {
+	if ip.IPStreamProbe.Speed > 0 && ip.IPStreamProbe.MinSpeed > 0 &&
+		ip.IPStreamProbe.Speed < 8 &&
+		ip.IPStreamProbe.MinSpeed < 6 {
+		return "ProbeSpeed", false
+	}
+	return "ProbeSpeed", true
 }
 
 func (m *NodeMgr) Register(module NodeCallback) {

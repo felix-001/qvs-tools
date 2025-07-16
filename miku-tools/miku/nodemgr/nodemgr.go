@@ -59,18 +59,23 @@ func (m *NodeMgr) GetNodeByIp() {
 
 type BwStatistics struct {
 	avialiableNodeCnt  int
+	avialiableIpCnt    int
 	ispAvialiableBwMap map[string]float64
 	ipParser           *ipdb.City
 }
 
 func (b *BwStatistics) OnNode(node *commonModel.RtNode) {
-	log.Println("node:", node.Id)
+	//log.Println("node:", node.Id)
 	b.avialiableNodeCnt++
 }
 
 func (b *BwStatistics) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
 	isp, _, _ := util.GetLocate(ip.Ip, b.ipParser)
-	b.ispAvialiableBwMap[isp] += ip.MaxOutMBps - ip.OutMBps
+	if ip.MaxInMBps > 0 && ip.OutMBps > 0 {
+		b.avialiableIpCnt++
+		b.ispAvialiableBwMap[isp] += (ip.MaxOutMBps - ip.OutMBps) * 8 / 1000
+	}
+
 }
 
 func (b *BwStatistics) Done(result map[string]int) {
@@ -92,7 +97,12 @@ func (m *NodeMgr) BwStatistics() {
 	}
 	m.Register(b)
 	m.Traverse()
-	log.Println("avialiableNodeCnt:", b.avialiableNodeCnt, "ispAvialiableBwMap:", b.ispAvialiableBwMap)
+	log.Println("avialiableNodeCnt:", b.avialiableNodeCnt,
+		"avialiableIpCnt", b.avialiableIpCnt)
+	log.Println("ispAvialiableBwMap len:", len(b.ispAvialiableBwMap))
+	for k, bw := range b.ispAvialiableBwMap {
+		log.Printf("isp: %s, bw: %.1fGbps", k, bw)
+	}
 }
 
 func (m *NodeMgr) LoadNodes() {
