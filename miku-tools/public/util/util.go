@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/config"
 	"net"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -152,4 +153,14 @@ func GetLocate(ip string, ipParser *ipdb.City) (string, string, string) {
 	}
 	area, _ := schedUtil.ProvinceAreaRelation(locate.Region)
 	return locate.Isp, area, locate.Region
+}
+
+func UploadFile(filePath string) {
+	cmd := exec.Command("qup", filePath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("命令执行出错: %v\n", err)
+		return
+	}
+	fmt.Println(string(output))
 }

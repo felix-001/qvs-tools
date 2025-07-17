@@ -1,6 +1,7 @@
 package nodemgr
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -99,20 +100,27 @@ func (m *NodeMgr) BwStatistics() {
 	}
 }
 
-func (m *NodeMgr) LoadNodes() {
-	fmt.Println("LoadNodes")
-	if _, err := os.Stat("/tmp/allnodes.json"); err == nil {
+func (m *NodeMgr) LoadNodesFromFile(file string) bool {
+	if _, err := os.Stat(file); err == nil {
 		// 文件存在，从文件加载节点信息
-		file, err := os.ReadFile("/tmp/allnodes.json")
+		file, err := os.ReadFile(file)
 		if err != nil {
 			fmt.Println("LoadNodes ReadFile err:", err)
-			return
+			return false
 		}
 		if err := json.Unmarshal(file, &m.allNodesMap); err != nil {
 			fmt.Println("LoadNodes Unmarshal err:", err)
-			return
+			return false
 		}
 		fmt.Println("从/tmp/allNodes.json文件加载节点信息成功")
+		return true
+	}
+	return false
+}
+
+func (m *NodeMgr) LoadNodes() {
+	fmt.Println("LoadNodes")
+	if m.LoadNodesFromFile("/tmp/allNodes.json") {
 		return
 	}
 	allNodes, err := commonModel.GetAllRTNodes(zerolog.Logger{}, m.resources.Redis)
@@ -125,4 +133,36 @@ func (m *NodeMgr) LoadNodes() {
 		allNodesMap[node.Id] = node
 	}
 	m.allNodesMap = allNodesMap
+}
+
+func (m *NodeMgr) DumpNodes() {
+	data, err := json.Marshal(m.allNodesMap)
+	if err != nil {
+		fmt.Println("DumpNodes Marshal err:", err)
+		return
+	}
+	if err := os.WriteFile("allnodes.json", data, 0644); err != nil {
+		fmt.Println("DumpNodes WriteFile err:", err)
+		return
+	}
+	util.UploadFile("allnodes.json")
+	fmt.Println("DumpNodes 成功")
+}
+
+func (m *NodeMgr) WriteNodesToRedis() {
+	if !m.LoadNodesFromFile("/tmp/allnodes.json") {
+		return
+	}
+	for nodeId, node := range m.allNodesMap {
+		nodeData, err := json.Marshal(node)
+		if err != nil {
+			log.Println("WriteNodesToRedis Marshal err:", err, "key:", nodeId)
+			continue
+		}
+		_, err = m.resources.Redis.HSet(context.Background(), "mik_netprobe_runtime_nodes_map",
+			nodeId, string(nodeData)).Result()
+		if err != nil {
+			log.Println("WriteNodesToRedis HSet err:", err, "key:", nodeId)
+		}
+	}
 }

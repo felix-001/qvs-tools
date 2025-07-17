@@ -96,6 +96,7 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		if err != nil {
 			log.Println(err)
 		}
+		log.Println("loadResources Ping redis success")
 	}
 	if cmd.NeedCK {
 		m.resources.Ck = util.NewCk(m.config)

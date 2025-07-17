@@ -156,3 +156,29 @@ func (m *CommandManager) CmdBw() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdDumpNodes() *Command {
+	handler := func() {
+		m.nodeMgr.DumpNodes()
+	}
+	cmd := &Command{
+		Desc:         "dump nodes并上传",
+		Handler:      handler,
+		NeedRedis:    true,
+		NeedNodeInfo: true,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdImportNodes() *Command {
+	handler := func() {
+		m.nodeMgr.WriteNodesToRedis()
+	}
+	cmd := &Command{
+		Desc:         "从/tmp/allNodes.json导入节点信息, 写入redis",
+		Handler:      handler,
+		NeedRedis:    true,
+		NeedNodeInfo: true,
+	}
+	return cmd
+}
