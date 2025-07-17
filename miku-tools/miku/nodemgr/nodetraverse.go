@@ -4,30 +4,12 @@ import (
 	"fmt"
 
 	public "github.com/qbox/mikud-live/common/model"
-	commonUtil "github.com/qbox/mikud-live/common/util"
 )
 
 type NodeCallback interface {
 	OnIp(node *public.RtNode, ip *public.RtIpStatus)
 	OnNode(node *public.RtNode)
 	Done(result map[string]int)
-}
-
-func IpFilterPrivate(ip *public.RtIpStatus) (string, bool) {
-	return "PrivateIp", !commonUtil.IsPrivateIP(ip.Ip)
-}
-
-func IpFilterForbidden(ip *public.RtIpStatus) (string, bool) {
-	return "IpFrobidden", !ip.Forbidden
-}
-
-func IpFilterProbeSpeed(ip *public.RtIpStatus) (string, bool) {
-	if ip.IPStreamProbe.Speed > 0 && ip.IPStreamProbe.MinSpeed > 0 &&
-		ip.IPStreamProbe.Speed < 8 &&
-		ip.IPStreamProbe.MinSpeed < 6 {
-		return "ProbeSpeed", false
-	}
-	return "ProbeSpeed", true
 }
 
 func (m *NodeMgr) Register(module NodeCallback) {

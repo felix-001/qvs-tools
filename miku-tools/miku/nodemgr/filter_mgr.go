@@ -7,6 +7,7 @@ import (
 
 	commonUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	public "github.com/qbox/mikud-live/common/model"
+	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
 type NodeFilter interface {
@@ -95,6 +96,55 @@ func (f *TimeLimitFilter) Name() string {
 	return "TimeLimit"
 }
 
+type IpFilterPrivate struct {
+}
+
+func (f *IpFilterPrivate) Filter(ip *public.RtIpStatus) bool {
+	return !publicUtil.IsPrivateIP(ip.Ip)
+}
+
+func (f *IpFilterPrivate) Name() string {
+	return "PrivateIp"
+}
+
+type IpFilterForbidden struct {
+}
+
+func (f *IpFilterForbidden) Filter(ip *public.RtIpStatus) bool {
+	return !ip.Forbidden
+}
+
+func (f *IpFilterForbidden) Name() string {
+	return "IpFrobidden"
+}
+
+type IpFilterProbeSpeed struct {
+}
+
+func (f *IpFilterProbeSpeed) Filter(ip *public.RtIpStatus) bool {
+	if ip.IPStreamProbe.Speed > 0 && ip.IPStreamProbe.MinSpeed > 0 &&
+		ip.IPStreamProbe.Speed < 8 &&
+		ip.IPStreamProbe.MinSpeed < 6 {
+		return false
+	}
+	return true
+}
+
+func (f *IpFilterProbeSpeed) Name() string {
+	return "ProbeSpeed"
+}
+
+type IpFilterIpv6 struct {
+}
+
+func (f *IpFilterIpv6) Filter(ip *public.RtIpStatus) bool {
+	return publicUtil.IsIPv6(ip.Ip)
+}
+
+func (f *IpFilterIpv6) Name() string {
+	return "Ipv6"
+}
+
 func NewFilterMgr() *FilterMgr {
 	nodeFilters := []NodeFilter{
 		&DynamicFilter{},
@@ -103,9 +153,15 @@ func NewFilterMgr() *FilterMgr {
 		&NoStreamdPortsFilter{},
 		&TimeLimitFilter{},
 	}
+	ipFilters := []IpFilter{
+		&IpFilterPrivate{},
+		&IpFilterForbidden{},
+		&IpFilterProbeSpeed{},
+		&IpFilterIpv6{},
+	}
 	return &FilterMgr{
 		nodeFilters:      nodeFilters,
-		ipFilters:        []IpFilter{},
+		ipFilters:        ipFilters,
 		statistics:       make(map[string]int),
 		nodeAvailability: make(map[string]*commonUtil.NodeAvailabilityInfo),
 	}

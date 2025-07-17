@@ -182,3 +182,17 @@ func (m *CommandManager) CmdImportNodes() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdCover() *Command {
+	handler := func() {
+		m.nodeMgr.NodesCover()
+	}
+	cmd := &Command{
+		Desc:         "覆盖节点信息",
+		Handler:      handler,
+		NeedRedis:    true,
+		NeedNodeInfo: true,
+		NeedIpParser: true,
+	}
+	return cmd
+}
