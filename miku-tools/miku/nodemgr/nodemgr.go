@@ -20,12 +20,14 @@ type NodeMgr struct {
 	conf                    *config.Config
 	resources               resources.Resources
 	modules                 []NodeCallback
+	filterMgr               *FilterMgr
 }
 
 func NewNodeMgr() *NodeMgr {
 	return &NodeMgr{
 		allRootNodesMapByNodeId: make(map[string]*commonModel.RtNode),
 		allNodesMap:             make(map[string]*commonModel.RtNode),
+		filterMgr:               NewFilterMgr(),
 	}
 }
 
@@ -80,14 +82,6 @@ func (b *BwStatistics) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus
 
 func (b *BwStatistics) Done(result map[string]int) {
 	fmt.Printf("BwStatistics Done, %+v\n", result)
-}
-
-func (b *BwStatistics) GetNodeFilters() []NodeFilter {
-	return DefaultNodeFilters
-}
-
-func (b *BwStatistics) GetIpFilters() []IpFilter {
-	return DefaultIpFilters
 }
 
 func (m *NodeMgr) BwStatistics() {

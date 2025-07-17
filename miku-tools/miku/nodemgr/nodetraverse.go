@@ -7,58 +7,10 @@ import (
 	commonUtil "github.com/qbox/mikud-live/common/util"
 )
 
-type NodeFilter func(node *public.RtNode) (string, bool)
-type IpFilter func(ip *public.RtIpStatus) (string, bool)
-
 type NodeCallback interface {
 	OnIp(node *public.RtNode, ip *public.RtIpStatus)
 	OnNode(node *public.RtNode)
 	Done(result map[string]int)
-	GetNodeFilters() []NodeFilter
-	GetIpFilters() []IpFilter
-}
-
-var DefaultNodeFilters = []NodeFilter{
-	NodeFilterDynamic,
-	NodeFilterServing,
-	NodeFilterNoStreamdPorts,
-	NodeFilterNotBanProv,
-	NodeFilterTimeLimit,
-}
-
-func NodeFilterDynamic(node *public.RtNode) (string, bool) {
-	return "NotDynamic", node.IsDynamic
-}
-
-func NodeFilterNotBanProv(node *public.RtNode) (string, bool) {
-	return "BanProv", !node.IsBanTransProv
-}
-
-func NodeFilterServing(node *public.RtNode) (string, bool) {
-	return "NotServing", node.RuntimeStatus == "Serving"
-}
-
-func NodeFilterNoStreamdPorts(node *public.RtNode) (string, bool) {
-	if node.StreamdPorts.Http == 0 {
-		return "NoStreamdPorts", false
-	}
-	if node.StreamdPorts.Wt == 0 {
-		return "NoStreamdPorts", false
-	}
-	if node.StreamdPorts.Https == 0 {
-		return "NoStreamdPorts", false
-	}
-	return "NoStreamdPorts", true
-}
-
-func NodeFilterTimeLimit(node *public.RtNode) (string, bool) {
-	return "TimeLimit", len(node.Schedules) == 0
-}
-
-var DefaultIpFilters = []IpFilter{
-	IpFilterPrivate,
-	IpFilterForbidden,
-	IpFilterProbeSpeed,
 }
 
 func IpFilterPrivate(ip *public.RtIpStatus) (string, bool) {
@@ -89,43 +41,21 @@ func (m *NodeMgr) GetMoudleCnt() int {
 func (m *NodeMgr) Traverse() {
 	fmt.Println("NodeTraverse")
 	allNodes := m.allNodesMap
-	result := make(map[string]int)
+	result := map[string]int{}
 	for _, node := range allNodes {
 		result["totalNodes"]++
-		pass := true
-		for _, module := range m.modules {
-			filters := module.GetNodeFilters()
-			for _, filter := range filters {
-				if name, ok := filter(node); !ok {
-					result[name]++
-					pass = false
-					break
-				}
-			}
-			if !pass {
-				break
-			}
-			module.OnNode(node)
-		}
-		if !pass {
+		if !m.filterMgr.FilterNode(node) {
 			continue
+		}
+		for _, module := range m.modules {
+			module.OnNode(node)
 		}
 		for _, ip := range node.Ips {
 			result["totalIps"]++
+			if !m.filterMgr.FilterIp(&ip) {
+				continue
+			}
 			for _, module := range m.modules {
-				pass = true
-				filters := module.GetIpFilters()
-				for _, filter := range filters {
-					if name, ok := filter(&ip); !ok {
-						result[name]++
-						pass = false
-						break
-					}
-				}
-				if !pass {
-					break
-				}
-
 				module.OnIp(node, &ip)
 			}
 		}
