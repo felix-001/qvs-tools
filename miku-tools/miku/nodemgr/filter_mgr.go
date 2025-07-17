@@ -187,6 +187,40 @@ func (m *FilterMgr) FilterIp(ip *public.RtIpStatus) bool {
 	return true
 }
 
+func (m *FilterMgr) FilterNodeByAvailability(node *public.RtNode) bool {
+	if !node.IsDynamic {
+		return false
+	}
+	if node.IsBanTransProv {
+		return false
+	}
+	nodeInfo, ok := m.nodeAvailability[node.Id]
+	if !ok {
+		return true
+	}
+	if !nodeInfo.IsNodePass {
+		m.statistics[nodeInfo.ExcludeReason]++
+		return false
+	}
+	return true
+}
+
+func (m *FilterMgr) FilterIpByAvailability(node *public.RtNode, ip *public.RtIpStatus) bool {
+	nodeInfo, ok := m.nodeAvailability[node.Id]
+	if !ok {
+		return true
+	}
+	ipInfo, ok := nodeInfo.IpAvailability[ip.Ip]
+	if !ok {
+		return true
+	}
+	if !ipInfo.IsIPPass {
+		m.statistics[ipInfo.ExcludeReason]++
+		return false
+	}
+	return true
+}
+
 func (m *FilterMgr) GetStatistics() map[string]int {
 	return m.statistics
 }
@@ -201,18 +235,10 @@ func (m *FilterMgr) LoadFilterData() {
 		log.Println(err)
 		return
 	}
+	log.Println("LoadFilterData, result len:", len(result))
 	for _, resource := range result {
-		/*
-			nodeptr := s.GetNodePtr(resource.NodeId)
-			machineid := resource.NodeId
-			if nodeptr != nil && len(nodeptr.MachineId) > 0 {
-				machineid = nodeptr.MachineId
-			}
-		*/
-
 		nodeInfo := &commonUtil.NodeAvailabilityInfo{
-			NodeId: resource.NodeId,
-			//MachineId:      machineid,
+			NodeId:         resource.NodeId,
 			IsNodePass:     resource.IsNodePass,
 			ExcludeReason:  resource.ExcludeReason,
 			IpAvailability: make(map[string]commonUtil.IpAvailabilityInfo),

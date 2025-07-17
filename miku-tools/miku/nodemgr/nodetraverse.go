@@ -22,19 +22,21 @@ func (m *NodeMgr) GetMoudleCnt() int {
 
 func (m *NodeMgr) Traverse() {
 	fmt.Println("NodeTraverse")
+	m.filterMgr.LoadFilterData()
 	allNodes := m.allNodesMap
-	result := map[string]int{}
+	totalNodes := 0
+	totalIps := 0
 	for _, node := range allNodes {
-		result["totalNodes"]++
-		if !m.filterMgr.FilterNode(node) {
+		totalNodes++
+		if !m.filterMgr.FilterNodeByAvailability(node) {
 			continue
 		}
 		for _, module := range m.modules {
 			module.OnNode(node)
 		}
 		for _, ip := range node.Ips {
-			result["totalIps"]++
-			if !m.filterMgr.FilterIp(&ip) {
+			totalIps++
+			if !m.filterMgr.FilterIpByAvailability(node, &ip) {
 				continue
 			}
 			for _, module := range m.modules {
@@ -43,7 +45,11 @@ func (m *NodeMgr) Traverse() {
 		}
 	}
 
+	filterResult := m.filterMgr.GetStatistics()
+	filterResult["totalNodes"] = totalNodes
+	filterResult["totalIps"] = totalIps
+
 	for _, module := range m.modules {
-		module.Done(result)
+		module.Done(filterResult)
 	}
 }

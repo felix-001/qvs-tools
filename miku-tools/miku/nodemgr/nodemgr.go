@@ -38,6 +38,7 @@ func (m *NodeMgr) SetConf(conf *config.Config) {
 
 func (m *NodeMgr) SetResources(resources resources.Resources) {
 	m.resources = resources
+	m.filterMgr.SetResources(resources)
 }
 
 func (m *NodeMgr) GetRootNodeByNodeId(nodeId string) *commonModel.RtNode {
