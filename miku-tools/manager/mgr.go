@@ -9,6 +9,7 @@ import (
 	"mikutool/miku/nodemgr"
 	"mikutool/miku/streammgr"
 	"mikutool/public/util"
+	"mikutool/qvs/staging"
 	"mikutool/resources"
 	"reflect"
 	"strings"
@@ -22,18 +23,20 @@ import (
 )
 
 type CommandManager struct {
-	commands  map[string]*Command
-	config    *config.Config
-	resources resources.Resources
-	nodeMgr   *nodemgr.NodeMgr
-	streamMgr *streammgr.StreamMgr
+	commands    map[string]*Command
+	config      *config.Config
+	resources   resources.Resources
+	nodeMgr     *nodemgr.NodeMgr
+	streamMgr   *streammgr.StreamMgr
+	mikuStagMgr *staging.MikuStagMgr
 }
 
 func NewCommandManager() *CommandManager {
 	return &CommandManager{
-		commands:  make(map[string]*Command),
-		nodeMgr:   nodemgr.NewNodeMgr(),
-		streamMgr: streammgr.NewStreamMgr(),
+		commands:    make(map[string]*Command),
+		nodeMgr:     nodemgr.NewNodeMgr(),
+		streamMgr:   streammgr.NewStreamMgr(),
+		mikuStagMgr: staging.NewMikuStagMgr(),
 	}
 }
 
