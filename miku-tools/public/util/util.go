@@ -175,3 +175,30 @@ func LoadV4Ips() (ipMap map[string]map[string]string) {
 	}
 	return
 }
+
+func LoadV6Ips() (ipMap map[string]map[string]string) {
+	ipMap = make(map[string]map[string]string)
+	lines := strings.Split(RawIpv6s, "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		fields := strings.Split(line, ",")
+		if len(fields) < 5 {
+			continue
+		}
+		region := strings.TrimSpace(fields[0])
+		isp := strings.TrimSpace(fields[1])
+		remoteAddr := strings.TrimSpace(fields[4])
+		ip, _, err := net.SplitHostPort(remoteAddr)
+		if err != nil {
+			// 如果解析失败，跳过当前行
+			continue
+		}
+		if _, ok := ipMap[isp]; !ok {
+			ipMap[isp] = make(map[string]string)
+		}
+		ipMap[isp][region] = ip
+	}
+	return
+}

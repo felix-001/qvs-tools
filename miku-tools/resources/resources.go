@@ -16,4 +16,5 @@ type Resources struct {
 	Mongo         *mongo.MongoClient
 	NodeFilterCol filter.AvailableResourceRepository
 	V4Ips         map[string]map[string]string
+	V6Ips         map[string]map[string]string
 }

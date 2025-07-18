@@ -58,8 +58,8 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 	}
 	cmd := &Command{
 		Desc: "请求playcheck 302接口, -scheme <scheme, default: http> -domain <domain> " +
-			"-bucket <bucket> -stream <stream> -format <format> -sched_ip <sched_ip>" +
-			"-user <user> -node <node> -conn_id <conn_id> -ip <clientIp>",
+			"-bucket <bucket, 默认live> -stream <stream> -format <format, 默认flv> -sched_ip <sched_ip, 默认xs3427> " +
+			"-user <user, 默认iqiyi> -node <node, 默认vdn-jsyz1-dls-1-9> -conn_id <conn_id, 默认12345678abcdef> -ip <clientIp>",
 		Handler: handler,
 	}
 	return cmd
@@ -206,6 +206,18 @@ func (m *CommandManager) CmdLoopPlaycheck() *Command {
 	cmd := &Command{
 		Desc:    "对playcheck接口进行拨测, 遍历每个省份*isp的组合, 测试playcheck返回的情况",
 		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdLocate() *Command {
+	handler := func() {
+		m.Locate()
+	}
+	cmd := &Command{
+		Desc:         "查询ip的位置信息, -ip <ip>",
+		Handler:      handler,
+		NeedIpParser: true,
 	}
 	return cmd
 }

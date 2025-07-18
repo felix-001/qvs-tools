@@ -7,6 +7,10 @@ import (
 	"mikutool/config"
 	"mikutool/public/util"
 	"mikutool/resources"
+	"net/url"
+	"strings"
+
+	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
 type PlaycheckReq struct {
@@ -41,7 +45,7 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 	if conf.Https {
 		scheme += "s"
 	}
-	playUrl := fmt.Sprintf("%s://%s/%s/%s%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
+	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
 		scheme, conf.Domain, conf.Bucket, conf.Stream, conf.Format)
 	req := PlaycheckReq{
 		Bucket: conf.Bucket,
@@ -52,6 +56,7 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		ConnId: conf.ConnId,
 		User:   conf.User,
 	}
+	fmt.Printf("req: %+v\n", req)
 	bytes, err := json.Marshal(&req)
 	if err != nil {
 		log.Println(err)
@@ -67,7 +72,11 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 }
 
 func Playcheck(conf *config.Config) {
-	resp := playcheck(conf.Ip+":8080", conf)
+	remote := conf.Ip + ":8080"
+	if publicUtil.IsIPv6(conf.Ip) {
+		remote = fmt.Sprintf("[%s]:8080", conf.Ip)
+	}
+	resp := playcheck(remote, conf)
 	bytes, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		log.Println(err)
@@ -93,6 +102,55 @@ func (m *Miku) SetResources(resources resources.Resources) {
 	m.resources = resources
 }
 
+func (m *Miku) DumpIps() {
+	for isp, ips := range m.resources.V6Ips {
+		fmt.Println(isp)
+		for prov, ip := range ips {
+			fmt.Printf("\tprov: %s, ip: %s\n", prov, ip)
+		}
+	}
+	for isp, ips := range m.resources.V4Ips {
+		fmt.Println(isp)
+		for prov, ip := range ips {
+			fmt.Printf("\tprov: %s, ip: %s\n", prov, ip)
+		}
+	}
+}
+
 func (m *Miku) LoopPlaycheck() {
-	fmt.Printf("%+v\n", m.resources.V4Ips)
+	for _, ips := range m.resources.V6Ips {
+		for _, ip := range ips {
+			remote := ip + ":8080"
+			if publicUtil.IsIPv6(ip) {
+				remote = fmt.Sprintf("[%s]:8080", ip)
+			}
+			resp := playcheck(remote, m.conf)
+			bytes, err := json.MarshalIndent(resp, "", "  ")
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			fmt.Println(string(bytes))
+			if publicUtil.IsIPv6(ip) {
+				u, err := url.Parse(resp.Url302)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				// 处理 IPv6 地址，提取 IP 和端口
+				if strings.HasPrefix(u.Host, "[") && strings.Contains(u.Host, "]") {
+					idx := strings.Index(u.Host, "]")
+					ip := u.Host[1:idx]
+					if !publicUtil.IsIPv6(ip) {
+						log.Println("invalid ip, not ipv6")
+						continue
+					}
+				} else {
+					log.Println("invalid ipv6", u.Host)
+					continue
+				}
+			}
+		}
+	}
+
 }

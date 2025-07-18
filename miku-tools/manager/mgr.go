@@ -45,6 +45,15 @@ func NewCommandManager() *CommandManager {
 
 func (m *CommandManager) Exec() {
 	if m.config.H {
+		if m.config.Cmd != "" {
+			cmd, ok := m.commands[m.config.Cmd]
+			if !ok {
+				log.Println("command:", m.config.Cmd, "not found")
+				return
+			}
+			fmt.Println(cmd.Desc)
+			return
+		}
 		m.usage()
 		return
 	}
@@ -88,6 +97,7 @@ func (m *CommandManager) Register() {
 func (m *CommandManager) loadResources(cmd *Command) {
 	var err error
 	m.resources.V4Ips = util.LoadV4Ips()
+	m.resources.V6Ips = util.LoadV6Ips()
 	if cmd.NeedIpParser {
 		m.resources.IpParser, err = ipdb.NewCity(m.config.IPDB)
 		if err != nil {
@@ -131,4 +141,13 @@ func (m *CommandManager) usage() {
 		fmt.Printf("%s\n\t%s\n", key, cmd.Desc)
 		fmt.Println()
 	}
+}
+
+func (m *CommandManager) Locate() {
+	info, err := m.resources.IpParser.Find(m.config.Ip)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(info)
 }
