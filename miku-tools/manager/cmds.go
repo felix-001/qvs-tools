@@ -57,7 +57,9 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 		miku.Playcheck(m.config)
 	}
 	cmd := &Command{
-		Desc:    "请求playcheck 302接口",
+		Desc: "请求playcheck 302接口, -scheme <scheme, default: http> -domain <domain> " +
+			"-bucket <bucket> -stream <stream> -format <format> -sched_ip <sched_ip>" +
+			"-user <user> -node <node> -conn_id <conn_id>",
 		Handler: handler,
 	}
 	return cmd
