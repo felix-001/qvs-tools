@@ -28,7 +28,7 @@ func NewNodeMgr() *NodeMgr {
 	return &NodeMgr{
 		allRootNodesMapByNodeId: make(map[string]*commonModel.RtNode),
 		allNodesMap:             make(map[string]*commonModel.RtNode),
-		filterMgr:               NewFilterMgr(),
+		filterMgr:               NewFilterMgr(FilterTypeMongo),
 	}
 }
 
@@ -92,6 +92,7 @@ func (m *NodeMgr) BwStatistics() {
 		ipParser:           m.resources.IpParser,
 	}
 	m.Register(b)
+	m.filterMgr.SetFilterType(FilterTypeMongo)
 	m.Traverse()
 	log.Println("avialiableNodeCnt:", b.avialiableNodeCnt,
 		"avialiableIpCnt", b.avialiableIpCnt)
@@ -99,6 +100,8 @@ func (m *NodeMgr) BwStatistics() {
 	for k, bw := range b.ispAvialiableBwMap {
 		log.Printf("isp: %s, bw: %.1fGbps", k, bw)
 	}
+	m.filterMgr.SetFilterType(FilterTypeLocal)
+	m.Traverse()
 }
 
 func (m *NodeMgr) LoadNodesFromFile(file string) bool {

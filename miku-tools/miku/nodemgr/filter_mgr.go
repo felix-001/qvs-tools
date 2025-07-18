@@ -20,12 +20,18 @@ type IpFilter interface {
 	Name() string
 }
 
+const (
+	FilterTypeLocal = "local"
+	FilterTypeMongo = "mongo"
+)
+
 type FilterMgr struct {
 	nodeFilters      []NodeFilter
 	ipFilters        []IpFilter
 	statistics       map[string]int
 	resources        resources.Resources
 	nodeAvailability map[string]*commonUtil.NodeAvailabilityInfo
+	filterType       string
 }
 
 type DynamicFilter struct {
@@ -145,7 +151,7 @@ func (f *IpFilterIpv6) Name() string {
 	return "Ipv6"
 }
 
-func NewFilterMgr() *FilterMgr {
+func NewFilterMgr(filterType string) *FilterMgr {
 	nodeFilters := []NodeFilter{
 		&DynamicFilter{},
 		&NotBanProvFilter{},
@@ -164,10 +170,14 @@ func NewFilterMgr() *FilterMgr {
 		ipFilters:        ipFilters,
 		statistics:       make(map[string]int),
 		nodeAvailability: make(map[string]*commonUtil.NodeAvailabilityInfo),
+		filterType:       filterType,
 	}
 }
 
 func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
+	if m.filterType == FilterTypeMongo {
+		return m.FilterNodeByAvailability(node)
+	}
 	for _, filter := range m.nodeFilters {
 		if !filter.Filter(node) {
 			m.statistics[filter.Name()]++
@@ -177,7 +187,10 @@ func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
 	return true
 }
 
-func (m *FilterMgr) FilterIp(ip *public.RtIpStatus) bool {
+func (m *FilterMgr) FilterIp(node *public.RtNode, ip *public.RtIpStatus) bool {
+	if m.filterType == FilterTypeMongo {
+		return m.FilterIpByAvailability(node, ip)
+	}
 	for _, filter := range m.ipFilters {
 		if !filter.Filter(ip) {
 			m.statistics[filter.Name()]++
@@ -254,4 +267,8 @@ func (m *FilterMgr) LoadFilterData() {
 
 		m.nodeAvailability[resource.NodeId] = nodeInfo
 	}
+}
+
+func (m *FilterMgr) SetFilterType(filterType string) {
+	m.filterType = filterType
 }
