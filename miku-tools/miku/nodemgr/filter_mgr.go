@@ -13,11 +13,13 @@ import (
 type NodeFilter interface {
 	Filter(node *public.RtNode) bool
 	Name() string
+	Enable() bool
 }
 
 type IpFilter interface {
 	Filter(ip *public.RtIpStatus) bool
 	Name() string
+	Enable() bool
 }
 
 const (
@@ -35,6 +37,7 @@ type FilterMgr struct {
 }
 
 type DynamicFilter struct {
+	Switch
 }
 
 func (f *DynamicFilter) Filter(node *public.RtNode) bool {
@@ -46,6 +49,7 @@ func (f *DynamicFilter) Name() string {
 }
 
 type NotBanProvFilter struct {
+	Switch
 }
 
 func (f *NotBanProvFilter) Filter(node *public.RtNode) bool {
@@ -57,6 +61,7 @@ func (f *NotBanProvFilter) Name() string {
 }
 
 type ServingFilter struct {
+	Switch
 }
 
 func (f *ServingFilter) Filter(node *public.RtNode) bool {
@@ -72,6 +77,7 @@ func NodeFilterServing(node *public.RtNode) (string, bool) {
 }
 
 type NoStreamdPortsFilter struct {
+	Switch
 }
 
 func (f *NoStreamdPortsFilter) Filter(node *public.RtNode) bool {
@@ -91,7 +97,39 @@ func (f *NoStreamdPortsFilter) Name() string {
 	return "NoStreamdPorts"
 }
 
+type AbilitiesFilter struct {
+	Switch
+}
+
+func (f *AbilitiesFilter) Filter(node *public.RtNode) bool {
+	ability, ok := node.Abilities["live"]
+	if !ok || !ability.Can || ability.Frozen {
+		return false
+	}
+	return true
+}
+
+func (f *AbilitiesFilter) Name() string {
+	return "Abilities"
+}
+
+type ServicesFilter struct {
+	Switch
+}
+
+func (f *ServicesFilter) Filter(node *public.RtNode) bool {
+	if _, ok := node.Services["live"]; !ok {
+		return false
+	}
+	return true
+}
+
+func (f *ServicesFilter) Name() string {
+	return "Services"
+}
+
 type TimeLimitFilter struct {
+	Switch
 }
 
 func (f *TimeLimitFilter) Filter(node *public.RtNode) bool {
@@ -102,7 +140,40 @@ func (f *TimeLimitFilter) Name() string {
 	return "TimeLimit"
 }
 
+type LossFilter struct {
+	Switch
+	lossIpsMap map[string]bool
+}
+
+func (f *LossFilter) Filter(ip *public.RtIpStatus) bool {
+	// key := publicDal.GetIpPingKey(node.Id, ipIsp.Ip)
+	//		if lossIpsMap[key] {
+	// TODO
+	return !f.lossIpsMap[ip.Ip]
+}
+
+func (f *LossFilter) Name() string {
+	return "Loss"
+}
+
+type RttFilter struct {
+	Switch
+	rttIpsMap map[string]bool
+}
+
+func (f *RttFilter) Filter(ip *public.RtIpStatus) bool {
+	// key := publicDal.GetIpPingKey(node.Id, ipIsp.Ip)
+	//		if lossIpsMap[key] {
+	// TODO
+	return !f.rttIpsMap[ip.Ip]
+}
+
+func (f *RttFilter) Name() string {
+	return "Rtt"
+}
+
 type IpFilterPrivate struct {
+	Switch
 }
 
 func (f *IpFilterPrivate) Filter(ip *public.RtIpStatus) bool {
@@ -114,6 +185,7 @@ func (f *IpFilterPrivate) Name() string {
 }
 
 type IpFilterForbidden struct {
+	Switch
 }
 
 func (f *IpFilterForbidden) Filter(ip *public.RtIpStatus) bool {
@@ -125,6 +197,7 @@ func (f *IpFilterForbidden) Name() string {
 }
 
 type IpFilterProbeSpeed struct {
+	Switch
 }
 
 func (f *IpFilterProbeSpeed) Filter(ip *public.RtIpStatus) bool {
@@ -141,6 +214,7 @@ func (f *IpFilterProbeSpeed) Name() string {
 }
 
 type IpFilterIpv6 struct {
+	Switch
 }
 
 func (f *IpFilterIpv6) Filter(ip *public.RtIpStatus) bool {
@@ -151,19 +225,137 @@ func (f *IpFilterIpv6) Name() string {
 	return "Ipv6"
 }
 
-func NewFilterMgr(filterType string) *FilterMgr {
+type IpFilterTcpRetrans struct {
+	Switch
+}
+
+func (f *IpFilterTcpRetrans) Filter(ip *public.RtIpStatus) bool {
+	// TODO
+	return true
+}
+
+func (f *IpFilterTcpRetrans) Name() string {
+	return "TcpRetrans"
+}
+
+type IpFilterAvailableBw struct {
+	Switch
+}
+
+func (f *IpFilterAvailableBw) Filter(ip *public.RtIpStatus) bool {
+	// TODO
+	return true
+}
+
+func (f *IpFilterAvailableBw) Name() string {
+	return "AvailableBw"
+}
+
+type Switch struct {
+	enable bool
+}
+
+func (s *Switch) Enable() bool {
+	return s.enable
+}
+
+type SwitchConf struct {
+	Dynamic        bool
+	NotBanProv     bool
+	Serving        bool
+	NoStreamdPorts bool
+	TimeLimit      bool
+	Abilities      bool
+	Services       bool
+	PrivateIp      bool
+	Forbidden      bool
+	ProbeSpeed     bool
+	Ipv6           bool
+	Rtt            bool
+	Loss           bool
+	TcpRetrans     bool
+	AvailableBw    bool
+}
+
+func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 	nodeFilters := []NodeFilter{
-		&DynamicFilter{},
-		&NotBanProvFilter{},
-		&ServingFilter{},
-		&NoStreamdPortsFilter{},
-		&TimeLimitFilter{},
+		&AbilitiesFilter{
+			Switch: Switch{
+				enable: conf.Abilities,
+			},
+		},
+		&ServicesFilter{
+			Switch: Switch{
+				enable: conf.Services,
+			},
+		},
+		&DynamicFilter{
+			Switch: Switch{
+				enable: conf.Dynamic,
+			},
+		},
+		&NotBanProvFilter{
+			Switch: Switch{
+				enable: conf.NotBanProv,
+			},
+		},
+		&ServingFilter{
+			Switch: Switch{
+				enable: conf.Serving,
+			},
+		},
+		&NoStreamdPortsFilter{
+			Switch: Switch{
+				enable: conf.NoStreamdPorts,
+			},
+		},
+		&TimeLimitFilter{
+			Switch: Switch{
+				enable: conf.TimeLimit,
+			},
+		},
 	}
 	ipFilters := []IpFilter{
-		&IpFilterPrivate{},
-		&IpFilterForbidden{},
-		&IpFilterProbeSpeed{},
-		&IpFilterIpv6{},
+		&IpFilterPrivate{
+			Switch: Switch{
+				enable: conf.PrivateIp,
+			},
+		},
+		&IpFilterForbidden{
+			Switch: Switch{
+				enable: conf.Forbidden,
+			},
+		},
+		&IpFilterProbeSpeed{
+			Switch: Switch{
+				enable: conf.ProbeSpeed,
+			},
+		},
+		&IpFilterIpv6{
+			Switch: Switch{
+				enable: conf.Ipv6,
+			},
+		},
+		&RttFilter{
+			Switch: Switch{
+				enable: conf.Ipv6,
+			},
+		},
+		&LossFilter{
+			Switch: Switch{
+				enable: conf.Ipv6,
+			},
+		},
+		&IpFilterTcpRetrans{
+			Switch: Switch{
+				enable: conf.TcpRetrans,
+			},
+		},
+		&IpFilterAvailableBw{
+			Switch: Switch{
+				enable: conf.AvailableBw,
+			},
+		},
 	}
 	return &FilterMgr{
 		nodeFilters:      nodeFilters,
@@ -179,6 +371,9 @@ func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
 		return m.FilterNodeByAvailability(node)
 	}
 	for _, filter := range m.nodeFilters {
+		if !filter.Enable() {
+			continue
+		}
 		if !filter.Filter(node) {
 			m.statistics[filter.Name()]++
 			return false
@@ -192,6 +387,9 @@ func (m *FilterMgr) FilterIp(node *public.RtNode, ip *public.RtIpStatus) bool {
 		return m.FilterIpByAvailability(node, ip)
 	}
 	for _, filter := range m.ipFilters {
+		if !filter.Enable() {
+			continue
+		}
 		if !filter.Filter(ip) {
 			m.statistics[filter.Name()]++
 			return false

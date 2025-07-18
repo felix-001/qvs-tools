@@ -28,7 +28,7 @@ func (m *NodeMgr) Traverse() {
 	totalIps := 0
 	for _, node := range allNodes {
 		totalNodes++
-		if !m.filterMgr.FilterNodeByAvailability(node) {
+		if !m.filterMgr.FilterNode(node) {
 			continue
 		}
 		for _, module := range m.modules {
@@ -36,7 +36,7 @@ func (m *NodeMgr) Traverse() {
 		}
 		for _, ip := range node.Ips {
 			totalIps++
-			if !m.filterMgr.FilterIpByAvailability(node, &ip) {
+			if !m.filterMgr.FilterIp(node, &ip) {
 				continue
 			}
 			for _, module := range m.modules {

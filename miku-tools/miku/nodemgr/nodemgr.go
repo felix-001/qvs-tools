@@ -25,10 +25,27 @@ type NodeMgr struct {
 }
 
 func NewNodeMgr() *NodeMgr {
+	conf := SwitchConf{
+		Dynamic:        true,
+		NotBanProv:     true,
+		Serving:        true,
+		NoStreamdPorts: true,
+		Abilities:      true,
+		Services:       true,
+		TimeLimit:      true,
+		PrivateIp:      true,
+		Forbidden:      true,
+		ProbeSpeed:     true,
+		Ipv6:           false,
+		Rtt:            true,
+		Loss:           true,
+		TcpRetrans:     true,
+		AvailableBw:    false,
+	}
 	return &NodeMgr{
 		allRootNodesMapByNodeId: make(map[string]*commonModel.RtNode),
 		allNodesMap:             make(map[string]*commonModel.RtNode),
-		filterMgr:               NewFilterMgr(FilterTypeMongo),
+		filterMgr:               NewFilterMgr(FilterTypeMongo, conf),
 	}
 }
 
