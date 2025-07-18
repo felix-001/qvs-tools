@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/config"
 	"mikutool/public/util"
+	"mikutool/resources"
 )
 
 type PlaycheckReq struct {
@@ -66,11 +67,32 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 }
 
 func Playcheck(conf *config.Config) {
-	resp := playcheck(conf.SchedIp+":8080", conf)
+	resp := playcheck(conf.Ip+":8080", conf)
 	bytes, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	fmt.Println(string(bytes))
+}
+
+type Miku struct {
+	conf      *config.Config
+	resources resources.Resources
+}
+
+func NewMiku() *Miku {
+	return &Miku{}
+}
+
+func (m *Miku) SetConf(conf *config.Config) {
+	m.conf = conf
+}
+
+func (m *Miku) SetResources(resources resources.Resources) {
+	m.resources = resources
+}
+
+func (m *Miku) LoopPlaycheck() {
+	fmt.Printf("%+v\n", m.resources.V4Ips)
 }

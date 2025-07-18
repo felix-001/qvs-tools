@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"mikutool/config"
+	"mikutool/miku"
 	"mikutool/miku/nodemgr"
 	"mikutool/miku/streammgr"
 	"mikutool/public/util"
@@ -29,6 +30,7 @@ type CommandManager struct {
 	nodeMgr     *nodemgr.NodeMgr
 	streamMgr   *streammgr.StreamMgr
 	mikuStagMgr *staging.MikuStagMgr
+	miku        *miku.Miku
 }
 
 func NewCommandManager() *CommandManager {
@@ -37,6 +39,7 @@ func NewCommandManager() *CommandManager {
 		nodeMgr:     nodemgr.NewNodeMgr(),
 		streamMgr:   streammgr.NewStreamMgr(),
 		mikuStagMgr: staging.NewMikuStagMgr(),
+		miku:        miku.NewMiku(),
 	}
 }
 
@@ -64,6 +67,7 @@ func (m *CommandManager) Init() {
 	m.config = config.Load()
 	m.config.ParseConsole()
 	m.nodeMgr.SetConf(m.config)
+	m.miku.SetConf(m.config)
 }
 
 func (m *CommandManager) Register() {
@@ -83,6 +87,7 @@ func (m *CommandManager) Register() {
 
 func (m *CommandManager) loadResources(cmd *Command) {
 	var err error
+	m.resources.V4Ips = util.LoadV4Ips()
 	if cmd.NeedIpParser {
 		m.resources.IpParser, err = ipdb.NewCity(m.config.IPDB)
 		if err != nil {
@@ -118,6 +123,7 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		m.nodeMgr.SetResources(m.resources)
 		m.nodeMgr.LoadNodes()
 	}
+	m.miku.SetResources(m.resources)
 }
 
 func (m *CommandManager) usage() {

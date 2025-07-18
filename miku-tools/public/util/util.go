@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"mikutool/config"
@@ -163,4 +164,14 @@ func UploadFile(filePath string) {
 		return
 	}
 	fmt.Println(string(output))
+}
+
+// key1: isp key2: 省份
+func LoadV4Ips() (ipMap map[string]map[string]string) {
+	ipMap = make(map[string]map[string]string)
+	if err := json.Unmarshal([]byte(RawIpv4s), &ipMap); err != nil {
+		log.Println(err)
+		return
+	}
+	return
 }

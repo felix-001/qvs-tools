@@ -59,7 +59,7 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 	cmd := &Command{
 		Desc: "请求playcheck 302接口, -scheme <scheme, default: http> -domain <domain> " +
 			"-bucket <bucket> -stream <stream> -format <format> -sched_ip <sched_ip>" +
-			"-user <user> -node <node> -conn_id <conn_id>",
+			"-user <user> -node <node> -conn_id <conn_id> -ip <clientIp>",
 		Handler: handler,
 	}
 	return cmd
@@ -195,6 +195,17 @@ func (m *CommandManager) CmdCover() *Command {
 		NeedRedis:    true,
 		NeedNodeInfo: true,
 		NeedIpParser: true,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdLoopPlaycheck() *Command {
+	handler := func() {
+		m.miku.LoopPlaycheck()
+	}
+	cmd := &Command{
+		Desc:    "对playcheck接口进行拨测, 遍历每个省份*isp的组合, 测试playcheck返回的情况",
+		Handler: handler,
 	}
 	return cmd
 }
