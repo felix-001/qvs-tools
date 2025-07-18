@@ -177,7 +177,7 @@ func (m *CommandManager) CmdImportNodes() *Command {
 		m.nodeMgr.WriteNodesToRedis()
 	}
 	cmd := &Command{
-		Desc:         "从/tmp/allNodes.json导入节点信息, 写入redis",
+		Desc:         "从/tmp/allnodes.json导入节点信息, 写入redis",
 		Handler:      handler,
 		NeedRedis:    true,
 		NeedNodeInfo: true,
