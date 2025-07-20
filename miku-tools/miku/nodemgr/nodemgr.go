@@ -51,6 +51,7 @@ func NewNodeMgr() *NodeMgr {
 
 func (m *NodeMgr) SetConf(conf *config.Config) {
 	m.conf = conf
+	m.filterMgr.SetConf(conf)
 }
 
 func (m *NodeMgr) SetResources(resources resources.Resources) {
@@ -154,6 +155,7 @@ func (m *NodeMgr) LoadNodes() {
 		allNodesMap[node.Id] = node
 	}
 	m.allNodesMap = allNodesMap
+	m.filterMgr.SetAllNodes(allNodes)
 }
 
 func (m *NodeMgr) DumpNodes() {

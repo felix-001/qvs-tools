@@ -2,25 +2,18 @@ package nodemgr
 
 import (
 	"context"
+	"errors"
 	"log"
+	"mikutool/config"
 	"mikutool/resources"
+	"sort"
 
 	commonUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
+	"github.com/qbox/mikud-live/cmd/sched/dal"
 	public "github.com/qbox/mikud-live/common/model"
 	publicUtil "github.com/qbox/mikud-live/common/util"
+	"github.com/rs/zerolog"
 )
-
-type NodeFilter interface {
-	Filter(node *public.RtNode) bool
-	Name() string
-	Enable() bool
-}
-
-type IpFilter interface {
-	Filter(ip *public.RtIpStatus) bool
-	Name() string
-	Enable() bool
-}
 
 const (
 	FilterTypeLocal = "local"
@@ -34,221 +27,9 @@ type FilterMgr struct {
 	resources        resources.Resources
 	nodeAvailability map[string]*commonUtil.NodeAvailabilityInfo
 	filterType       string
-}
-
-type DynamicFilter struct {
-	Switch
-}
-
-func (f *DynamicFilter) Filter(node *public.RtNode) bool {
-	return node.IsDynamic
-}
-
-func (f *DynamicFilter) Name() string {
-	return "Dynamic"
-}
-
-type NotBanProvFilter struct {
-	Switch
-}
-
-func (f *NotBanProvFilter) Filter(node *public.RtNode) bool {
-	return !node.IsBanTransProv
-}
-
-func (f *NotBanProvFilter) Name() string {
-	return "NotBanProv"
-}
-
-type ServingFilter struct {
-	Switch
-}
-
-func (f *ServingFilter) Filter(node *public.RtNode) bool {
-	return node.RuntimeStatus == "Serving"
-}
-
-func (f *ServingFilter) Name() string {
-	return "Serving"
-}
-
-func NodeFilterServing(node *public.RtNode) (string, bool) {
-	return "NotServing", node.RuntimeStatus == "Serving"
-}
-
-type NoStreamdPortsFilter struct {
-	Switch
-}
-
-func (f *NoStreamdPortsFilter) Filter(node *public.RtNode) bool {
-	if node.StreamdPorts.Http == 0 {
-		return false
-	}
-	if node.StreamdPorts.Wt == 0 {
-		return false
-	}
-	if node.StreamdPorts.Https == 0 {
-		return false
-	}
-	return true
-}
-
-func (f *NoStreamdPortsFilter) Name() string {
-	return "NoStreamdPorts"
-}
-
-type AbilitiesFilter struct {
-	Switch
-}
-
-func (f *AbilitiesFilter) Filter(node *public.RtNode) bool {
-	ability, ok := node.Abilities["live"]
-	if !ok || !ability.Can || ability.Frozen {
-		return false
-	}
-	return true
-}
-
-func (f *AbilitiesFilter) Name() string {
-	return "Abilities"
-}
-
-type ServicesFilter struct {
-	Switch
-}
-
-func (f *ServicesFilter) Filter(node *public.RtNode) bool {
-	if _, ok := node.Services["live"]; !ok {
-		return false
-	}
-	return true
-}
-
-func (f *ServicesFilter) Name() string {
-	return "Services"
-}
-
-type TimeLimitFilter struct {
-	Switch
-}
-
-func (f *TimeLimitFilter) Filter(node *public.RtNode) bool {
-	return len(node.Schedules) == 0
-}
-
-func (f *TimeLimitFilter) Name() string {
-	return "TimeLimit"
-}
-
-type LossFilter struct {
-	Switch
-	lossIpsMap map[string]bool
-}
-
-func (f *LossFilter) Filter(ip *public.RtIpStatus) bool {
-	// key := publicDal.GetIpPingKey(node.Id, ipIsp.Ip)
-	//		if lossIpsMap[key] {
-	// TODO
-	return !f.lossIpsMap[ip.Ip]
-}
-
-func (f *LossFilter) Name() string {
-	return "Loss"
-}
-
-type RttFilter struct {
-	Switch
-	rttIpsMap map[string]bool
-}
-
-func (f *RttFilter) Filter(ip *public.RtIpStatus) bool {
-	// key := publicDal.GetIpPingKey(node.Id, ipIsp.Ip)
-	//		if lossIpsMap[key] {
-	// TODO
-	return !f.rttIpsMap[ip.Ip]
-}
-
-func (f *RttFilter) Name() string {
-	return "Rtt"
-}
-
-type IpFilterPrivate struct {
-	Switch
-}
-
-func (f *IpFilterPrivate) Filter(ip *public.RtIpStatus) bool {
-	return !publicUtil.IsPrivateIP(ip.Ip)
-}
-
-func (f *IpFilterPrivate) Name() string {
-	return "PrivateIp"
-}
-
-type IpFilterForbidden struct {
-	Switch
-}
-
-func (f *IpFilterForbidden) Filter(ip *public.RtIpStatus) bool {
-	return !ip.Forbidden
-}
-
-func (f *IpFilterForbidden) Name() string {
-	return "IpFrobidden"
-}
-
-type IpFilterProbeSpeed struct {
-	Switch
-}
-
-func (f *IpFilterProbeSpeed) Filter(ip *public.RtIpStatus) bool {
-	if ip.IPStreamProbe.Speed > 0 && ip.IPStreamProbe.MinSpeed > 0 &&
-		ip.IPStreamProbe.Speed < 8 &&
-		ip.IPStreamProbe.MinSpeed < 6 {
-		return false
-	}
-	return true
-}
-
-func (f *IpFilterProbeSpeed) Name() string {
-	return "ProbeSpeed"
-}
-
-type IpFilterIpv6 struct {
-	Switch
-}
-
-func (f *IpFilterIpv6) Filter(ip *public.RtIpStatus) bool {
-	return publicUtil.IsIPv6(ip.Ip)
-}
-
-func (f *IpFilterIpv6) Name() string {
-	return "Ipv6"
-}
-
-type IpFilterTcpRetrans struct {
-	Switch
-}
-
-func (f *IpFilterTcpRetrans) Filter(ip *public.RtIpStatus) bool {
-	// TODO
-	return true
-}
-
-func (f *IpFilterTcpRetrans) Name() string {
-	return "TcpRetrans"
-}
-
-type IpFilterAvailableBw struct {
-	Switch
-}
-
-func (f *IpFilterAvailableBw) Filter(ip *public.RtIpStatus) bool {
-	// TODO
-	return true
-}
-
-func (f *IpFilterAvailableBw) Name() string {
-	return "AvailableBw"
+	eventHandlers    []EventHandler
+	allNodes         []*public.RtNode
+	conf             *config.Config
 }
 
 type Switch struct {
@@ -275,6 +56,10 @@ type SwitchConf struct {
 	Loss           bool
 	TcpRetrans     bool
 	AvailableBw    bool
+}
+
+type EventHandler interface {
+	EventHandler(any)
 }
 
 func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
@@ -357,12 +142,24 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 			},
 		},
 	}
+	eventHandlers := []EventHandler{}
+	for _, filter := range ipFilters {
+		if f, ok := filter.(EventHandler); ok {
+			eventHandlers = append(eventHandlers, f)
+		}
+	}
+	for _, filter := range nodeFilters {
+		if f, ok := filter.(EventHandler); ok {
+			eventHandlers = append(eventHandlers, f)
+		}
+	}
 	return &FilterMgr{
 		nodeFilters:      nodeFilters,
 		ipFilters:        ipFilters,
 		statistics:       make(map[string]int),
 		nodeAvailability: make(map[string]*commonUtil.NodeAvailabilityInfo),
 		filterType:       filterType,
+		eventHandlers:    eventHandlers,
 	}
 }
 
@@ -390,7 +187,7 @@ func (m *FilterMgr) FilterIp(node *public.RtNode, ip *public.RtIpStatus) bool {
 		if !filter.Enable() {
 			continue
 		}
-		if !filter.Filter(ip) {
+		if !filter.Filter(node, ip) {
 			m.statistics[filter.Name()]++
 			return false
 		}
@@ -438,6 +235,9 @@ func (m *FilterMgr) GetStatistics() map[string]int {
 
 func (m *FilterMgr) SetResources(resources resources.Resources) {
 	m.resources = resources
+	for _, handler := range m.eventHandlers {
+		handler.EventHandler(resources)
+	}
 }
 
 func (m *FilterMgr) LoadFilterData() {
@@ -469,4 +269,113 @@ func (m *FilterMgr) LoadFilterData() {
 
 func (m *FilterMgr) SetFilterType(filterType string) {
 	m.filterType = filterType
+}
+
+func (m *FilterMgr) setTcpRetransMap(tcpRetransMap map[string]float64) {
+	for _, filter := range m.ipFilters {
+		if f, ok := filter.(*IpFilterTcpRetrans); ok {
+			f.SetData(tcpRetransMap)
+			return
+		}
+	}
+}
+
+func (m *FilterMgr) SetAllNodes(allNodes []*public.RtNode) {
+	m.allNodes = allNodes
+	tcpRetranMap, err := dal.GetAllNodesTcpRetranInfo(zerolog.Logger{}, m.resources.Redis, allNodes)
+	if err != nil {
+		log.Println("SetAllNodes GetAllNodesTcpRetranInfo err", err)
+		return
+	}
+	tcpRetranPreparedIPs, err := m.prepareTCPRetranFilter(allNodes, tcpRetranMap)
+	if err != nil {
+		log.Println("SetAllNodes prepareTCPRetranFilter err", err)
+		return
+	}
+	m.setTcpRetransMap(tcpRetranPreparedIPs)
+}
+
+func (m *FilterMgr) prepareTCPRetranFilter(nodes []*public.RtNode, tcpRetranMap map[string]*public.TcpRetranInfo) (map[string]float64, error) {
+	// 检查是否有节点重传率信息和节点信息
+	if len(nodes) == 0 || len(tcpRetranMap) == 0 || tcpRetranMap == nil {
+		return nil, errors.New("nodes or tcpRetranMap is nil")
+	}
+
+	type nodeRetran struct {
+		node *public.RtNode
+		rate float64
+		ips  []string
+	}
+
+	// 收集所有需要过滤的节点信息
+	nodeInfos := make([]nodeRetran, 0, len(nodes))
+	for _, node := range nodes {
+		if info, ok := tcpRetranMap[node.Id]; ok && info != nil {
+			if info.AverageRate < m.conf.TcpRetranFilterConfig.TCPRetranRateThreshold {
+				continue
+			}
+			validIPs := make([]string, 0, len(node.Ips))
+			for _, ip := range node.Ips {
+				if !ip.Forbidden && !publicUtil.IsPrivateIP(ip.Ip) {
+					validIPs = append(validIPs, ip.Ip)
+				}
+			}
+			if len(validIPs) > 0 {
+				nodeInfos = append(nodeInfos, nodeRetran{
+					node: node,
+					rate: info.AverageRate,
+					ips:  validIPs,
+				})
+			}
+		}
+	}
+
+	// 计算总的不合格 IP 数量
+	totalUnqualifiedIPs := 0
+	for _, nodeInfo := range nodeInfos {
+		for range nodeInfo.ips {
+			totalUnqualifiedIPs += len(nodeInfo.ips)
+		}
+	}
+
+	// 按照重传率排序
+	sort.Slice(nodeInfos, func(i, j int) bool {
+		return nodeInfos[i].rate > nodeInfos[j].rate
+	})
+
+	// 初始化待过滤 IP 列表
+	tcpRetranPreparedIPs := make(map[string]float64, m.conf.TcpRetranFilterConfig.MaxFilterIPs+1)
+
+	// 选择重传率最高的节点进行过滤
+	totalPreparedIPs := 0
+	for i := 0; i < len(nodeInfos) && i < m.conf.TcpRetranFilterConfig.MaxFilterNodes; i++ {
+		for _, ip := range nodeInfos[i].ips {
+			tcpRetranPreparedIPs[ip] = nodeInfos[i].rate
+			totalPreparedIPs++
+			// 如果达到最大过滤 IP 数量，退出
+			if totalPreparedIPs >= m.conf.TcpRetranFilterConfig.MaxFilterIPs {
+				break
+			}
+		}
+		// 如果达到最大过滤 IP 数量，退出
+		if totalPreparedIPs >= m.conf.TcpRetranFilterConfig.MaxFilterIPs {
+			break
+		}
+	}
+
+	log.Println("prepareTCPRetranFilter, tcpRetranPreparedIPs len:",
+		len(tcpRetranPreparedIPs), "totalPreparedIPs:", totalPreparedIPs,
+		"totalUnqualifiedIPs:", totalUnqualifiedIPs,
+		"totalUnqualifiedNodes:", len(nodeInfos))
+
+	return tcpRetranPreparedIPs, nil
+}
+
+func (m *FilterMgr) SetConf(conf *config.Config) {
+	m.conf = conf
+	for _, filter := range m.ipFilters {
+		if f, ok := filter.(*IpFilterTcpRetrans); ok {
+			f.SetConf(conf)
+		}
+	}
 }

@@ -19,56 +19,67 @@ type CkConfig struct {
 	Table  string   `json:"table"`
 }
 
+type TCPRetranFilterConfig struct {
+	Enable                 bool    `json:"enable"`                    // 是否开启
+	TCPRetranRateThreshold float64 `json:"tcp_retran_rate_threshold"` // TCP 重传率阈值
+	MaxFilterNodes         int     `json:"max_filter_nodes"`          // TCP 重传率过滤最大节点数量
+	MaxFilterIPs           int     `json:"max_filter_ips"`            // TCP 重传率过滤最大IP数量
+	EnableUnicomFilter     bool    `json:"enable_unicom_filter"`      // 是否过滤联通IP
+	EnableTelecomFilter    bool    `json:"enable_telecom_filter"`     // 是否过滤电信IP
+	EnableMobileFilter     bool    `json:"enable_mobile_filter"`      // 是否过滤移动IP
+}
+
 type Config struct {
-	Cmd         string
-	Uid         string
-	Method      string
-	Body        string
-	Addr        string
-	Help        bool
-	Https       bool
-	H           bool
-	Pcdn        string
-	User        string
-	Passwd      string
-	SchedIp     string
-	Bucket      string
-	Stream      string
-	Domain      string
-	Key         string
-	Province    string
-	SourceId    string
-	OriginKey   string
-	Origin      string
-	Area        string
-	Isp         string
-	OriginKeyDy string
-	ID          string
-	OriginKeyHw string
-	Format      string
-	Node        string
-	ConnId      string
-	Ip          string
-	Query       string
-	Basesub     int
-	SubStream   int
-	Startid     int
-	Port        int
-	F           string
-	T           string
-	Pattern     string
-	Replace     string
-	Raw         string
-	CK          CkConfig        `json:"ck"`
-	Ak          string          `json:"ak"`
-	Sk          string          `json:"sk"`
-	Secret      string          `json:"secret"`
-	IPDB        ipdb.Config     `json:"ipdb"`
-	RedisAddrs  []string        `json:"redis_addrs"`
-	AccountCfg  qnconfig.Config `json:"acc"`
-	DyApiSecret string          `json:"dy_api_secret"`
-	DyApiDomain string          `json:"dy_api_domain"`
-	MongoConf   *dal.MongoCfg   `json:"mongo_config"`
+	Cmd                   string
+	Uid                   string
+	Method                string
+	Body                  string
+	Addr                  string
+	Help                  bool
+	Https                 bool
+	H                     bool
+	Pcdn                  string
+	User                  string
+	Passwd                string
+	SchedIp               string
+	Bucket                string
+	Stream                string
+	Domain                string
+	Key                   string
+	Province              string
+	SourceId              string
+	OriginKey             string
+	Origin                string
+	Area                  string
+	Isp                   string
+	OriginKeyDy           string
+	ID                    string
+	OriginKeyHw           string
+	Format                string
+	Node                  string
+	ConnId                string
+	Ip                    string
+	Query                 string
+	Basesub               int
+	SubStream             int
+	Startid               int
+	Port                  int
+	F                     string
+	T                     string
+	Pattern               string
+	Replace               string
+	Raw                   string
+	CK                    CkConfig              `json:"ck"`
+	Ak                    string                `json:"ak"`
+	Sk                    string                `json:"sk"`
+	Secret                string                `json:"secret"`
+	IPDB                  ipdb.Config           `json:"ipdb"`
+	RedisAddrs            []string              `json:"redis_addrs"`
+	AccountCfg            qnconfig.Config       `json:"acc"`
+	DyApiSecret           string                `json:"dy_api_secret"`
+	DyApiDomain           string                `json:"dy_api_domain"`
+	MongoConf             *dal.MongoCfg         `json:"mongo_config"`
+	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config"`
 }
 
 func Load() *Config {
