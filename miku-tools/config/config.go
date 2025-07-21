@@ -140,6 +140,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
 	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
+	flag.BoolVar(&c.Https, "https", false, "是否https")
 
 	flag.Parse()
 }
