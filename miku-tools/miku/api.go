@@ -46,15 +46,16 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		scheme += "s"
 	}
 	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
-		scheme, conf.Domain, conf.Bucket, conf.Stream, conf.Format)
+		scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
 	req := PlaycheckReq{
-		Bucket: conf.Bucket,
-		Key:    conf.Stream,
-		Url:    playUrl,
-		Node:   conf.Node,
-		Remote: ip,
-		ConnId: conf.ConnId,
-		User:   conf.User,
+		Bucket:   conf.Bucket,
+		Key:      conf.Stream,
+		Url:      playUrl,
+		Node:     conf.Node,
+		Remote:   ip,
+		ConnId:   conf.ConnId,
+		User:     conf.User,
+		Protocol: conf.Protocol,
 	}
 	fmt.Printf("req: %+v\n", req)
 	bytes, err := json.Marshal(&req)

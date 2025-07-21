@@ -60,6 +60,7 @@ type Config struct {
 	ConnId                string
 	Ip                    string
 	Query                 string
+	App                   string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -69,6 +70,7 @@ type Config struct {
 	Pattern               string
 	Replace               string
 	Raw                   string
+	Protocol              string
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
 	Sk                    string                `json:"sk"`
@@ -136,6 +138,8 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Ip, "ip", "", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
+	flag.StringVar(&c.App, "app", "live", "app")
+	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
