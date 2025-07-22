@@ -48,6 +48,7 @@ type SwitchConf struct {
 	TimeLimit      bool
 	Abilities      bool
 	Services       bool
+	Nat1           bool
 	PrivateIp      bool
 	Forbidden      bool
 	ProbeSpeed     bool
@@ -97,6 +98,11 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 		&TimeLimitFilter{
 			Switch: Switch{
 				enable: conf.TimeLimit,
+			},
+		},
+		&NotFilterNat1{
+			Switch: Switch{
+				enable: conf.Nat1,
 			},
 		},
 	}

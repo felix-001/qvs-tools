@@ -111,3 +111,15 @@ func (f *TimeLimitFilter) Filter(node *public.RtNode) bool {
 func (f *TimeLimitFilter) Name() string {
 	return "TimeLimit"
 }
+
+type NotFilterNat1 struct {
+	Switch
+}
+
+func (f *NotFilterNat1) Filter(node *public.RtNode) bool {
+	return !node.IsNat1()
+}
+
+func (f *NotFilterNat1) Name() string {
+	return "NotNat1"
+}
