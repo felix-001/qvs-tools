@@ -106,7 +106,7 @@ func Load() *Config {
 
 func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Help, "help", false, "help")
-	flag.StringVar(&c.Cmd, "cmd", "streams", "需要执行的命令")
+	flag.StringVar(&c.Cmd, "cmd", "", "需要执行的命令")
 	flag.StringVar(&c.Uid, "uid", "", "uid")
 	flag.StringVar(&c.Method, "method", "", "method")
 	flag.StringVar(&c.Body, "body", "", "body")

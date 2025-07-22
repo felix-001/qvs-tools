@@ -221,3 +221,17 @@ func (m *CommandManager) CmdLocate() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdIpv6Nodes() *Command {
+	handler := func() {
+		m.nodeMgr.GetIpv6Nodes()
+	}
+	cmd := &Command{
+		Desc:         "获取ipv6节点列表",
+		Handler:      handler,
+		NeedRedis:    true,
+		NeedNodeInfo: true,
+		NeedMongo:    true,
+	}
+	return cmd
+}

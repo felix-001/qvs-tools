@@ -141,7 +141,7 @@ func (m *NodeMgr) LoadNodesFromFile(file string) bool {
 }
 
 func (m *NodeMgr) LoadNodes() {
-	fmt.Println("LoadNodes")
+	log.Println("LoadNodes")
 	if m.LoadNodesFromFile("/tmp/allNodes.json") {
 		return
 	}
@@ -156,6 +156,7 @@ func (m *NodeMgr) LoadNodes() {
 	}
 	m.allNodesMap = allNodesMap
 	m.filterMgr.SetAllNodes(allNodes)
+	log.Println("LoadNodes 成功")
 }
 
 func (m *NodeMgr) DumpNodes() {
