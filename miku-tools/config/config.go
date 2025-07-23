@@ -65,6 +65,7 @@ type Config struct {
 	SubStream             int
 	Startid               int
 	Port                  int
+	OnlineNum             int
 	F                     string
 	T                     string
 	Pattern               string
@@ -135,7 +136,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.SchedIp, "sched_ip", "10.34.146.62", "sched_ip")
 	flag.StringVar(&c.Node, "node", "16234ef0-03f7-38f6-9bd7-003d0ba2081e-vdn-jsyz1-dls-1-9", "node")
 	flag.StringVar(&c.ConnId, "conn_id", "12345678abcdef", "conn_id")
-	flag.StringVar(&c.Ip, "ip", "", "ip")
+	flag.StringVar(&c.Ip, "ip", "111.51.164.99", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
 	flag.StringVar(&c.App, "app", "live", "app")
@@ -143,6 +144,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
+	flag.IntVar(&c.OnlineNum, "online_num", 10, "online_num")
 	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 

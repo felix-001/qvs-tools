@@ -235,3 +235,16 @@ func (m *CommandManager) CmdIpv6Nodes() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdReport() *Command {
+	handler := func() {
+		m.streamMgr.NodeStreamReport()
+	}
+	cmd := &Command{
+		Desc: "上报节点流信息, -node <node, default: 1-9> -online_num <online_num, default: 10> " +
+			"-domain <domain, default> -app <app, default> -bucket <bucket, default> -stream <stream, default> " +
+			"-ip <ip, default>",
+		Handler: handler,
+	}
+	return cmd
+}

@@ -76,6 +76,7 @@ func (m *CommandManager) Init() {
 	m.config = config.Load()
 	m.config.ParseConsole()
 	m.nodeMgr.SetConf(m.config)
+	m.streamMgr.SetConf(m.config)
 	m.miku.SetConf(m.config)
 }
 
