@@ -13,4 +13,5 @@ type Command struct {
 	NeedNodeInfo       bool
 	NeedMongo          bool
 	NeedNodeFilterInfo bool
+	NeedDnsPod         bool
 }

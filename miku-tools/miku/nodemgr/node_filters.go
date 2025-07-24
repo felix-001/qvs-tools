@@ -1,11 +1,14 @@
 package nodemgr
 
-import public "github.com/qbox/mikud-live/common/model"
+import (
+	public "github.com/qbox/mikud-live/common/model"
+)
 
 type NodeFilter interface {
 	Filter(node *public.RtNode) bool
 	Name() string
 	Enable() bool
+	SetEnable(enable bool)
 }
 
 type DynamicFilter struct {
@@ -122,4 +125,16 @@ func (f *NotFilterNat1) Filter(node *public.RtNode) bool {
 
 func (f *NotFilterNat1) Name() string {
 	return "NotNat1"
+}
+
+type NodeFilterStatic struct {
+	Switch
+}
+
+func (f *NodeFilterStatic) Filter(node *public.RtNode) bool {
+	return !node.IsDynamic
+}
+
+func (f *NodeFilterStatic) Name() string {
+	return "Static"
 }

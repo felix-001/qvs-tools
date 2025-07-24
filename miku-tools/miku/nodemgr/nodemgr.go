@@ -67,16 +67,17 @@ func (m *NodeMgr) GetNodeByNodeId(nodeId string) *commonModel.RtNode {
 	return m.allNodesMap[nodeId]
 }
 
-func (m *NodeMgr) GetNodeByIp() {
+func (m *NodeMgr) GetNodeByIp() string {
 	for _, node := range m.allNodesMap {
 		for _, ipInfo := range node.Ips {
 			if ipInfo.Ip == m.conf.Ip {
 				_, ok := m.allRootNodesMapByNodeId[node.Id]
 				fmt.Println("nodeId:", node.Id, "machineId:", node.MachineId, "isRoot:", ok)
-				break
+				return node.Id
 			}
 		}
 	}
+	return ""
 }
 
 type BwStatistics struct {
@@ -134,7 +135,7 @@ func (m *NodeMgr) LoadNodesFromFile(file string) bool {
 			fmt.Println("LoadNodes Unmarshal err:", err)
 			return false
 		}
-		fmt.Println("从/tmp/allNodes.json文件加载节点信息成功")
+		fmt.Println("从/tmp/allnodes.json文件加载节点信息成功")
 		return true
 	}
 	return false
@@ -142,7 +143,7 @@ func (m *NodeMgr) LoadNodesFromFile(file string) bool {
 
 func (m *NodeMgr) LoadNodes() {
 	log.Println("LoadNodes")
-	if m.LoadNodesFromFile("/tmp/allNodes.json") {
+	if m.LoadNodesFromFile("/tmp/allnodes.json") {
 		return
 	}
 	allNodes, err := commonModel.GetAllRTNodes(zerolog.Logger{}, m.resources.Redis)

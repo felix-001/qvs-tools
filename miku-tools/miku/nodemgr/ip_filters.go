@@ -15,6 +15,7 @@ type IpFilter interface {
 	Filter(node *public.RtNode, ip *public.RtIpStatus) bool
 	Name() string
 	Enable() bool
+	SetEnable(enable bool)
 }
 type LossFilter struct {
 	Switch
@@ -37,6 +38,9 @@ func (f *LossFilter) EventHandler(data any) {
 		return
 	}
 	f.resources = resources
+	if f.resources.Redis == nil {
+		return
+	}
 	lossMap, err := dal.GetPingLossIps(zerolog.Logger{}, resources.Redis)
 	if err != nil {
 		log.Println("LossFilter EventHandler GetPingLossIps err")
@@ -66,6 +70,9 @@ func (f *RttFilter) EventHandler(data any) {
 		return
 	}
 	f.resources = resources
+	if f.resources.Redis == nil {
+		return
+	}
 	rttMap, err := dal.GetPingRttIps(zerolog.Logger{}, resources.Redis)
 	if err != nil {
 		log.Println("RttFilter EventHandler GetPingRttIps err")

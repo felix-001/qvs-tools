@@ -40,8 +40,13 @@ func (s *Switch) Enable() bool {
 	return s.enable
 }
 
+func (s *Switch) SetEnable(enable bool) {
+	s.enable = enable
+}
+
 type SwitchConf struct {
 	Dynamic        bool
+	Static         bool
 	NotBanProv     bool
 	Serving        bool
 	NoStreamdPorts bool
@@ -78,6 +83,11 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 		&DynamicFilter{
 			Switch: Switch{
 				enable: conf.Dynamic,
+			},
+		},
+		&NodeFilterStatic{
+			Switch: Switch{
+				enable: conf.Static,
 			},
 		},
 		&NotBanProvFilter{
@@ -247,6 +257,9 @@ func (m *FilterMgr) SetResources(resources resources.Resources) {
 }
 
 func (m *FilterMgr) LoadFilterData() {
+	if m.resources.NodeFilterCol == nil {
+		return
+	}
 	result, err := m.resources.NodeFilterCol.GetLatestAvailableResource(context.Background(), public.QualityLevelLow)
 	if err != nil {
 		log.Println(err)
@@ -275,6 +288,21 @@ func (m *FilterMgr) LoadFilterData() {
 
 func (m *FilterMgr) SetFilterType(filterType string) {
 	m.filterType = filterType
+}
+
+func (m *FilterMgr) FilterSwitch(name string, enable bool) {
+	for _, filter := range m.ipFilters {
+		if filter.Name() == name {
+			filter.SetEnable(enable)
+			return
+		}
+	}
+	for _, filter := range m.nodeFilters {
+		if filter.Name() == name {
+			filter.SetEnable(enable)
+			return
+		}
+	}
 }
 
 func (m *FilterMgr) setTcpRetransMap(tcpRetransMap map[string]float64) {

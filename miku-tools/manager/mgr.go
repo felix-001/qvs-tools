@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	publicCommon "github.com/qbox/mikud-live/common"
 	"github.com/qbox/mikud-live/common/dal/mongo"
 	"github.com/qbox/mikud-live/common/repository/filter"
@@ -131,9 +132,16 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		m.resources.NodeFilterCol = filter.NewAvailableResourceRepo(availableResourceCol, zerolog.Logger{})
 	}
 	if cmd.NeedNodeInfo {
-		m.nodeMgr.SetResources(m.resources)
 		m.nodeMgr.LoadNodes()
 	}
+	if cmd.NeedDnsPod {
+		var err error
+		m.resources.DnsPodCli, err = tencent_dnspod.NewTencentClient(m.config.DnsPod)
+		if err != nil {
+			log.Println("load dns pod client err", err)
+		}
+	}
+	m.nodeMgr.SetResources(m.resources)
 	m.miku.SetResources(m.resources)
 }
 

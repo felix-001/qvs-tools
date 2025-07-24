@@ -3,6 +3,7 @@ package resources
 import (
 	"mikutool/public/util"
 
+	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/mikud-live/common/dal/mongo"
 	"github.com/qbox/mikud-live/common/repository/filter"
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -17,4 +18,5 @@ type Resources struct {
 	NodeFilterCol filter.AvailableResourceRepository
 	V4Ips         map[string]map[string]string
 	V6Ips         map[string]map[string]string
+	DnsPodCli     *tencent_dnspod.TencentClient
 }

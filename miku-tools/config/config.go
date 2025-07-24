@@ -6,6 +6,7 @@ import (
 	"os"
 
 	qnconfig "github.com/qbox/bo-sdk/sdk/qconf/qconfapi/config"
+	"github.com/qbox/mikud-live/cmd/dnspod/config"
 	"github.com/qbox/mikud-live/common/dal"
 	"github.com/qbox/pili/common/ipdb.v1"
 	qconfig "github.com/qiniu/x/config"
@@ -38,6 +39,7 @@ type Config struct {
 	Help                  bool
 	Https                 bool
 	H                     bool
+	Detail                bool
 	Pcdn                  string
 	User                  string
 	Passwd                string
@@ -45,6 +47,7 @@ type Config struct {
 	Bucket                string
 	Stream                string
 	Domain                string
+	Name                  string
 	Key                   string
 	Province              string
 	SourceId              string
@@ -83,6 +86,7 @@ type Config struct {
 	DyApiDomain           string                `json:"dy_api_domain"`
 	MongoConf             *dal.MongoCfg         `json:"mongo_config"`
 	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config"`
+	DnsPod                config.DnspodConfig   `json:"dnspod"`
 }
 
 func Load() *Config {
@@ -141,12 +145,14 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Format, "format", "flv", "format")
 	flag.StringVar(&c.App, "app", "live", "app")
 	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
+	flag.StringVar(&c.Name, "name", "", "name")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
 	flag.IntVar(&c.OnlineNum, "online_num", 10, "online_num")
 	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
 	flag.BoolVar(&c.Https, "https", false, "是否https")
+	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
 
 	flag.Parse()
 }
