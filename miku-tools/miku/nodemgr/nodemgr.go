@@ -178,6 +178,7 @@ func (m *NodeMgr) WriteNodesToRedis() {
 	if !m.LoadNodesFromFile("/tmp/allnodes.json") {
 		return
 	}
+	log.Println("len:", len(m.allNodesMap))
 	for nodeId, node := range m.allNodesMap {
 		nodeData, err := json.Marshal(node)
 		if err != nil {
