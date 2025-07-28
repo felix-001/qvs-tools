@@ -98,6 +98,13 @@ func (m *CommandManager) Register() {
 
 func (m *CommandManager) loadResources(cmd *Command) {
 	var err error
+
+	if m.config.Local {
+		if cmd.NeedNodeInfo {
+			m.nodeMgr.LoadNodes()
+		}
+		return
+	}
 	m.resources.V4Ips = util.LoadV4Ips()
 	m.resources.V6Ips = util.LoadV6Ips()
 	if cmd.NeedIpParser {

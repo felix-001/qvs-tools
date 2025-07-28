@@ -40,6 +40,7 @@ type Config struct {
 	Https                 bool
 	H                     bool
 	Detail                bool
+	Local                 bool
 	Pcdn                  string
 	User                  string
 	Passwd                string
@@ -153,6 +154,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
+	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
 
 	flag.Parse()
 }

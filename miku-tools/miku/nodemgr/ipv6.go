@@ -17,7 +17,7 @@ func (b *Ipv6Getter) OnNode(node *commonModel.RtNode) {
 }
 
 func (b *Ipv6Getter) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
-	fmt.Println("nodeId:", node.Id, "machineId:", node.MachineId, "ip:", ip.Ip)
+	fmt.Println("nodeId:", node.Id, "machineId:", node.MachineId, "ip:", ip.Ip, "isp:", ip.Isp)
 }
 
 func (b *Ipv6Getter) Done(result map[string]int) {
