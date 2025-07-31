@@ -154,6 +154,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Task, "task", "3995057", "task")
 	flag.StringVar(&c.StartTime, "start", "", "start_time")
 	flag.StringVar(&c.EndTime, "end", "", "end_time")
+	flag.StringVar(&c.ID, "id", "", "id")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")

@@ -313,11 +313,19 @@ func (m *Miku) statisticsErrNodes(data string) {
 	log.Println("pcdnIpAbnormalResultsMap:", len(pcdnIpAbnormalResultsMap))
 	for ip, results := range pcdnIpAbnormalResultsMap {
 		if len(results) < 2 {
-			return
+			continue
 		}
 		fmt.Printf("ip: %s, cnt: %d\n", ip, len(results))
 		for _, result := range results {
 			fmt.Printf("\ttime: %s, client ip: %s, locate: %s, wait time: %.1f\n", result.Time, result.ClientIp, result.Locate, result.WaitTime)
 		}
+	}
+	tasks, err := m.getTaskList()
+	if err != nil {
+		log.Println("err:", err)
+		return
+	}
+	for _, task := range tasks {
+		fmt.Printf("task: %s, url: %s, id: %d, name: %s, expire: %s\n", task.Name, task.Url, task.ID, task.Name, task.Expire)
 	}
 }
