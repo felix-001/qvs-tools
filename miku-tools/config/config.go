@@ -65,6 +65,9 @@ type Config struct {
 	Ip                    string
 	Query                 string
 	App                   string
+	Task                  string
+	StartTime             string
+	EndTime               string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -147,6 +150,10 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.App, "app", "live", "app")
 	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
 	flag.StringVar(&c.Name, "name", "", "name")
+	flag.StringVar(&c.Key, "key", "", "key")
+	flag.StringVar(&c.Task, "task", "3995057", "task")
+	flag.StringVar(&c.StartTime, "start", "", "start_time")
+	flag.StringVar(&c.EndTime, "end", "", "end_time")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")

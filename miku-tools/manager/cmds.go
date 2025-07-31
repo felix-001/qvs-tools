@@ -261,3 +261,14 @@ func (m *CommandManager) CmdIpv6Records() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdTy() *Command {
+	handler := func() {
+		m.miku.TingYunErrNodes()
+	}
+	cmd := &Command{
+		Desc:    "获取听云原始数据,统计ton n异常节点, -key <key> -task <task, default>, -start <start, default>, -end <end, default>",
+		Handler: handler,
+	}
+	return cmd
+}
