@@ -2,6 +2,7 @@ package manager
 
 import (
 	"mikutool/miku"
+	mikumock "mikutool/miku/mock"
 	"mikutool/miku/users"
 	"mikutool/public/util"
 	"mikutool/qvs"
@@ -268,6 +269,17 @@ func (m *CommandManager) CmdTy() *Command {
 	}
 	cmd := &Command{
 		Desc:    "获取听云原始数据,统计ton n异常节点, -key <key> -task <task, default>, -start <start, default>, -end <end, default>",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdMockTingyun() *Command {
+	handler := func() {
+		mikumock.MockTingyun()
+	}
+	cmd := &Command{
+		Desc:    "模拟听云API服务",
 		Handler: handler,
 	}
 	return cmd
