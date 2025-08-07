@@ -131,7 +131,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.OriginKey, "origin_key", "", "origin_key")
 	flag.StringVar(&c.OriginKeyDy, "origin_key_dy", "", "origin_key_dy")
 	flag.StringVar(&c.OriginKeyHw, "origin_key_hw", "", "origin_key_hw")
-	flag.StringVar(&c.Origin, "origin", "", "origin")
+	flag.StringVar(&c.Origin, "origin", "www.example.com", "origin")
 	flag.StringVar(&c.Area, "area", "华东", "area")
 	flag.StringVar(&c.Isp, "isp", "电信", "isp")
 	flag.StringVar(&c.F, "f", "", "f")
