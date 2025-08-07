@@ -7,6 +7,7 @@ import (
 	"log"
 	"mikutool/config"
 	"net"
+	"os"
 	"os/exec"
 	"sort"
 	"strconv"
@@ -17,7 +18,10 @@ import (
 	"github.com/qbox/bo-sdk/sdk/qconf/appg"
 	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
+	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
+	"github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
+	"github.com/rs/zerolog"
 )
 
 func Str2unix(s string) (int64, error) {
@@ -201,4 +205,55 @@ func LoadV6Ips() (ipMap map[string]map[string]string) {
 		ipMap[isp][region] = ip
 	}
 	return
+}
+
+var sublogger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+
+func GetPcdnFromSchedAPI(conf *config.Config) (string, string) {
+	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
+	resp, err := Get(addr)
+	if err != nil {
+		sublogger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
+		return "", ""
+	}
+	//fmt.Println(resp)
+	areaNodesMap := make(map[string][]*schedModel.NodeIpsPair)
+	if err := json.Unmarshal([]byte(resp), &areaNodesMap); err != nil {
+		sublogger.Error().Err(err).Msg("unmashal err")
+		return "", ""
+	}
+	key := fmt.Sprintf("area_isp_group_%s_%s", conf.Area, conf.Isp)
+	nodes, ok := areaNodesMap[key]
+	if !ok {
+		sublogger.Error().
+			Str("area", conf.Area).
+			Str("isp", conf.Isp).
+			Msg("area isp not found nodes")
+		return "", ""
+	}
+	if len(nodes) == 0 {
+		sublogger.Error().Msg("nodes len is 0")
+		return "", ""
+	}
+	pcdn := ""
+	var selectNode *schedModel.NodeIpsPair
+	for _, nodeInfo := range nodes {
+		for _, ipInfo := range nodeInfo.Ips {
+			if ipInfo.IsIPv6 {
+				continue
+			}
+			if util.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			pcdn = fmt.Sprintf("%s:%d", ipInfo.Ip, nodeInfo.Node.StreamdPorts.Http)
+			selectNode = nodeInfo
+			break
+		}
+	}
+	if pcdn == "" {
+		sublogger.Error().Msg("pcdn empty")
+		return "", ""
+	}
+	sublogger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
+	return selectNode.Node.Id, pcdn
 }

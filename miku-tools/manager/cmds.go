@@ -284,3 +284,16 @@ func (m *CommandManager) CmdMockTingyun() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdPathquery() *Command {
+	handler := func() {
+		m.miku.Pathquery()
+	}
+	cmd := &Command{
+		Desc: "请求pathquery API, -conn_id <conn_id, default> -stream <stream, default> -domain <domain, default> " +
+			"-area <area, default> -isp <isp, default> -bucket <bucket, default> -user <user, default> -sched_ip " +
+			"<sched_ip, default> -format <format, default>",
+		Handler: handler,
+	}
+	return cmd
+}
