@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/public/util"
 	"os"
+	"strings"
 
 	"github.com/qbox/mikud-live/common/model"
 	"github.com/rs/zerolog"
@@ -14,7 +15,7 @@ import (
 var logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 func (m *Miku) Pathquery() {
-	nodeId, _ := util.GetPcdnFromSchedAPI(m.conf)
+	nodeId, pcdn := util.GetPcdnFromSchedAPI(m.conf)
 	if nodeId == "" {
 		logger.Info().Str("area", m.conf.Area).Str("isp", m.conf.Isp).Msg("get pcdn err")
 		return
@@ -41,11 +42,13 @@ func (m *Miku) Pathquery() {
 	var resp model.PathQueryResponse
 	addr := fmt.Sprintf("http://%s:6060/api/v1/pathquery?QiNiuTestTag=%s&QiNiuTime=%s", m.conf.SchedIp, util.QiNiuTestTag, util.QiniuTime)
 	fmt.Println("addr:", addr)
-	clientIp := m.resources.V4Ips[m.conf.Isp][m.conf.Province]
-	if clientIp == "" {
-		logger.Error().Str("isp", m.conf.Isp).Str("prov", m.conf.Province).Msg("get ip err")
+
+	fields := strings.Split(pcdn, ":")
+	if len(fields) != 2 {
+		logger.Error().Str("pcdn", pcdn).Msg("pcdn format err")
 		return
 	}
+	clientIp := fields[0]
 	headers := map[string]string{
 		"X-Real-IP": clientIp,
 	}
