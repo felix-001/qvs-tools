@@ -233,6 +233,7 @@ func (m *CommandManager) CmdIpv6Nodes() *Command {
 		NeedRedis:    true,
 		NeedNodeInfo: true,
 		NeedMongo:    true,
+		NeedIpParser: true,
 	}
 	return cmd
 }

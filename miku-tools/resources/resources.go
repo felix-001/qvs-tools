@@ -16,7 +16,8 @@ type Resources struct {
 	Ck            *util.Ck
 	Mongo         *mongo.MongoClient
 	NodeFilterCol filter.AvailableResourceRepository
-	V4Ips         map[string]map[string]string
-	V6Ips         map[string]map[string]string
-	DnsPodCli     *tencent_dnspod.TencentClient
+	// key1: isp key2: prov value: ip
+	V4Ips     map[string]map[string]string
+	V6Ips     map[string]map[string]string
+	DnsPodCli *tencent_dnspod.TencentClient
 }

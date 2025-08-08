@@ -5,12 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mikutool/public/util"
 
 	commonModel "github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
+	"github.com/qbox/pili/common/ipdb.v1"
 )
 
 type Ipv6Getter struct {
+	nodeMap  map[string]int
+	areaMap  map[string]int
+	provMap  map[string]int
+	ipParser *ipdb.City
 }
 
 func (b *Ipv6Getter) OnNode(node *commonModel.RtNode) {
@@ -18,21 +24,35 @@ func (b *Ipv6Getter) OnNode(node *commonModel.RtNode) {
 
 func (b *Ipv6Getter) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
 	fmt.Println("nodeId:", node.Id, "machineId:", node.MachineId, "ip:", ip.Ip, "isp:", ip.Isp)
+	_, area, prov := util.GetLocate(ip.Ip, b.ipParser)
+	b.areaMap[area]++
+	b.provMap[prov]++
+	b.nodeMap[node.Id]++
 }
 
 func (b *Ipv6Getter) Done(result map[string]int) {
-	log.Printf("%+v\n", result)
+	log.Printf("%+v ipv6 nodes count: %d\n", result, len(b.nodeMap))
+	for k, v := range b.areaMap {
+		fmt.Println(k+":", v)
+	}
+	for k, v := range b.provMap {
+		fmt.Println(k+":", v)
+	}
 }
 
 func (m *NodeMgr) GetIpv6Nodes() {
-	g := &Ipv6Getter{}
+	g := &Ipv6Getter{
+		nodeMap:  make(map[string]int),
+		areaMap:  make(map[string]int),
+		provMap:  make(map[string]int),
+		ipParser: m.resources.IpParser}
 	m.Register(g)
 	m.filterMgr.SetFilterType(FilterTypeLocal)
-	m.filterMgr.FilterSwitch("Dynamic", false)
-	m.filterMgr.FilterSwitch("Static", true)
-	m.filterMgr.FilterSwitch("Abilities", false)
-	m.filterMgr.FilterSwitch("Serving", false)
-	m.filterMgr.FilterSwitch("Services", false)
+	m.filterMgr.FilterSwitch("Dynamic", true)
+	m.filterMgr.FilterSwitch("Static", false)
+	m.filterMgr.FilterSwitch("Abilities", true)
+	m.filterMgr.FilterSwitch("Serving", true)
+	m.filterMgr.FilterSwitch("Services", true)
 	m.filterMgr.FilterSwitch("Ipv6", true)
 	m.Traverse()
 }

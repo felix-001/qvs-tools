@@ -138,9 +138,6 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		availableResourceCol := mongoClient.Collection(publicCommon.AvailableResourceCollection)
 		m.resources.NodeFilterCol = filter.NewAvailableResourceRepo(availableResourceCol, zerolog.Logger{})
 	}
-	if cmd.NeedNodeInfo {
-		m.nodeMgr.LoadNodes()
-	}
 	if cmd.NeedDnsPod {
 		var err error
 		m.resources.DnsPodCli, err = tencent_dnspod.NewTencentClient(m.config.DnsPod)
@@ -150,6 +147,9 @@ func (m *CommandManager) loadResources(cmd *Command) {
 	}
 	m.nodeMgr.SetResources(m.resources)
 	m.miku.SetResources(m.resources)
+	if cmd.NeedNodeInfo {
+		m.nodeMgr.LoadNodes()
+	}
 }
 
 func (m *CommandManager) usage() {

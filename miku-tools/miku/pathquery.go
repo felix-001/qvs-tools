@@ -41,7 +41,15 @@ func (m *Miku) Pathquery() {
 	var resp model.PathQueryResponse
 	addr := fmt.Sprintf("http://%s:6060/api/v1/pathquery?QiNiuTestTag=%s&QiNiuTime=%s", m.conf.SchedIp, util.QiNiuTestTag, util.QiniuTime)
 	fmt.Println("addr:", addr)
-	respData, err := util.GetWithBody(addr, string(bytes))
+	clientIp := m.resources.V4Ips[m.conf.Isp][m.conf.Province]
+	if clientIp == "" {
+		logger.Error().Str("isp", m.conf.Isp).Str("prov", m.conf.Province).Msg("get ip err")
+		return
+	}
+	headers := map[string]string{
+		"X-Real-IP": clientIp,
+	}
+	respData, err := util.HttpReq("GET", addr, string(bytes), headers)
 	if err != nil {
 		logger.Error().Err(err).Msg("req pathquery err")
 		return

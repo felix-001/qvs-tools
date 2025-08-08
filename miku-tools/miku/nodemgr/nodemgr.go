@@ -146,6 +146,7 @@ func (m *NodeMgr) LoadNodes() {
 	if m.LoadNodesFromFile("/tmp/allnodes.json") {
 		return
 	}
+	log.Println("redis:", m.resources.Redis)
 	allNodes, err := commonModel.GetAllRTNodes(zerolog.Logger{}, m.resources.Redis)
 	if err != nil {
 		fmt.Println("LoadNodes GetAllRTNodes err:", err)
