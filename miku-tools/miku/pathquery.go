@@ -20,8 +20,17 @@ func (m *Miku) Pathquery() {
 		logger.Info().Str("area", m.conf.Area).Str("isp", m.conf.Isp).Msg("get pcdn err")
 		return
 	}
+	fields := strings.Split(pcdn, ":")
+	if len(fields) != 2 {
+		logger.Error().Str("pcdn", pcdn).Msg("pcdn format err")
+		return
+	}
+	clientIp := fields[0]
 	playUrl := fmt.Sprintf("http://%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e",
 		m.conf.Domain, m.conf.Bucket, m.conf.Stream, m.conf.Format)
+	if m.conf.Protocol == "slice" {
+		playUrl += "&ex1=" + clientIp
+	}
 	req := model.PathQueryRequest{
 		Bucket:    m.conf.Bucket,
 		Key:       m.conf.Stream,
@@ -43,12 +52,6 @@ func (m *Miku) Pathquery() {
 	addr := fmt.Sprintf("http://%s:6060/api/v1/pathquery?QiNiuTestTag=%s&QiNiuTime=%s", m.conf.SchedIp, util.QiNiuTestTag, util.QiniuTime)
 	fmt.Println("addr:", addr)
 
-	fields := strings.Split(pcdn, ":")
-	if len(fields) != 2 {
-		logger.Error().Str("pcdn", pcdn).Msg("pcdn format err")
-		return
-	}
-	clientIp := fields[0]
 	headers := map[string]string{
 		"X-Real-IP": clientIp,
 	}
