@@ -257,3 +257,16 @@ func GetPcdnFromSchedAPI(conf *config.Config) (string, string) {
 	sublogger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
 	return selectNode.Node.Id, pcdn
 }
+
+// InetAton converts an IPv4 string to a uint32, similar to inet_aton in C.
+func InetAton(ipStr string) (uint32, error) {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return 0, fmt.Errorf("invalid IP: %s", ipStr)
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return 0, fmt.Errorf("not an IPv4 address: %s", ipStr)
+	}
+	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3]), nil
+}

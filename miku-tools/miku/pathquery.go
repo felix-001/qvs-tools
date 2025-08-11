@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/public/util"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/qbox/mikud-live/common/model"
@@ -33,7 +34,12 @@ func (m *Miku) Pathquery() {
 	playUrl := fmt.Sprintf("http://%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e",
 		m.conf.Domain, m.conf.Bucket, m.conf.Stream, m.conf.Format)
 	if m.conf.Format == "slice" {
-		playUrl += "&ex1=" + clientIp
+		res, err := util.InetAton(m.conf.Origin)
+		if err != nil {
+			logger.Error().Str("origin", m.conf.Origin).Msg("inet aton err")
+			return
+		}
+		playUrl += "&ex1=" + strconv.FormatInt(int64(res), 10)
 	}
 	req := model.PathQueryRequest{
 		Bucket:    m.conf.Bucket,
