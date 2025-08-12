@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/qbox/bo-sdk/base/xlog.v1"
 	"github.com/qbox/bo-sdk/sdk/qconf/appg"
@@ -85,7 +86,7 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 
 func HttpReq(method, addr, body string, headers map[string]string) (string, error) {
 	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	client := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr, Timeout: 5 * time.Second}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
 		if key == "Host" {

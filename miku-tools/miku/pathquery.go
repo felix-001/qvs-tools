@@ -17,20 +17,27 @@ var logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 func (m *Miku) Pathquery() {
 	node := m.conf.Node
-	nodeId, pcdn := util.GetPcdnFromSchedAPI(m.conf)
-	if nodeId == "" {
-		logger.Info().Str("area", m.conf.Area).Str("isp", m.conf.Isp).Msg("get pcdn err")
-		return
+	pcdn := ""
+	if !m.conf.Local {
+		nodeId, pcdnId := util.GetPcdnFromSchedAPI(m.conf)
+		if nodeId == "" {
+			logger.Info().Str("area", m.conf.Area).Str("isp", m.conf.Isp).Msg("get pcdn err")
+			return
+		}
+		pcdn = pcdnId
+		if node == "" {
+			node = nodeId
+		}
 	}
-	if node == "" {
-		node = nodeId
+	clientIp := m.conf.Ip
+	if pcdn != "" {
+		fields := strings.Split(pcdn, ":")
+		if len(fields) != 2 {
+			logger.Error().Str("pcdn", pcdn).Msg("pcdn format err")
+			return
+		}
+		clientIp = fields[0]
 	}
-	fields := strings.Split(pcdn, ":")
-	if len(fields) != 2 {
-		logger.Error().Str("pcdn", pcdn).Msg("pcdn format err")
-		return
-	}
-	clientIp := fields[0]
 	playUrl := fmt.Sprintf("http://%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e",
 		m.conf.Domain, m.conf.Bucket, m.conf.Stream, m.conf.Format)
 	if m.conf.Format == "slice" {
