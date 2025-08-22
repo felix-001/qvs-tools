@@ -78,7 +78,7 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 		data += body
 	}
 	//log.Println("data:")
-	//fmt.Println(data)
+	fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
 	//log.Println("token:", token)
 	return token
@@ -125,7 +125,7 @@ func QnHttpReq(method, addr, body, ak, sk string) (string, error) {
 	u.Host = ""
 	u.Scheme = ""
 	headers := map[string]string{}
-	if body != "" {
+	if body != "" || method == "PUT" {
 		headers["Content-Type"] = "application/json"
 	}
 	//token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
@@ -172,12 +172,11 @@ func GetWithBody(addr, body string) (string, error) {
 
 func Http(conf *config.Config) {
 	method := "GET"
-	if conf.Body != "" {
-		if conf.Method != "" {
-			method = conf.Method
-		} else {
-			method = "POST"
-		}
+	if conf.Method != "" {
+		method = conf.Method
+	}
+	if conf.Body != "" && conf.Method == "" {
+		method = "POST"
 	}
 	if conf.Uid != "" {
 		conf.Ak, conf.Sk = GetAkSk(conf)
