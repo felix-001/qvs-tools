@@ -2,8 +2,10 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	qnconfig "github.com/qbox/bo-sdk/sdk/qconf/qconfapi/config"
 	"github.com/qbox/mikud-live/cmd/dnspod/config"
@@ -79,6 +81,7 @@ type Config struct {
 	Replace               string
 	Raw                   string
 	Protocol              string
+	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
 	Sk                    string                `json:"sk"`
@@ -95,6 +98,7 @@ type Config struct {
 
 func Load() *Config {
 	var conf Config
+	conf.HeaderMap = make(map[string]string)
 	_, err := os.Stat("/usr/local/etc/mikutool.json")
 	if !os.IsNotExist(err) {
 		if err = qconfig.LoadFile(&conf, "/usr/local/etc/mikutool.json"); err != nil {
@@ -164,6 +168,32 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
 	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
+	flag.Var(&c.HeaderMap, "header", "header")
 
 	flag.Parse()
+}
+
+// HeaderMap 自定义类型用于存储多个 header
+type HeaderMap map[string]string
+
+// String 实现 flag.Value 接口的 String 方法
+func (h *HeaderMap) String() string {
+	return fmt.Sprintf("%v", *h)
+}
+
+// Set 实现 flag.Value 接口的 Set 方法
+func (h *HeaderMap) Set(value string) error {
+	if *h == nil {
+		*h = make(HeaderMap)
+	}
+
+	parts := strings.SplitN(value, ":", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid header format: %s", value)
+	}
+
+	key := strings.TrimSpace(parts[0])
+	val := strings.TrimSpace(parts[1])
+	(*h)[key] = val
+	return nil
 }

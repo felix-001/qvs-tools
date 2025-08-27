@@ -14,7 +14,7 @@ func (m *CommandManager) CmdHttp() *Command {
 		util.Http(m.config)
 	}
 	cmd := &Command{
-		Desc:    "qn http客户端, -uid <uid> -method <method(默认为GET)> -addr <url> -body <body>",
+		Desc:    "qn http客户端, -uid <uid> -method <method(默认为GET)> -addr <url> -body <body> -header <key: value>",
 		Handler: handler,
 	}
 	return cmd

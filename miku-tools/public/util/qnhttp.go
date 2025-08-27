@@ -71,6 +71,9 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	data := method + " " + path + "\n"
 	data += "Host: " + host
 	for key, value := range headers {
+		if key != "Content-Type" {
+			continue
+		}
 		data += "\n" + key + ": " + value
 	}
 	data += "\n\n"
@@ -115,7 +118,7 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 	return string(resp_body), err
 }
 
-func QnHttpReq(method, addr, body, ak, sk string) (string, error) {
+func QnHttpReq(method, addr, body, ak, sk string, headerMap map[string]string) (string, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		log.Println(err)
@@ -124,7 +127,7 @@ func QnHttpReq(method, addr, body, ak, sk string) (string, error) {
 	host := u.Host
 	u.Host = ""
 	u.Scheme = ""
-	headers := map[string]string{}
+	headers := headerMap
 	if body != "" || method == "PUT" {
 		headers["Content-Type"] = "application/json"
 	}
@@ -145,7 +148,7 @@ func S3get(addr string, conf *config.Config) (string, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return QnHttpReq("GET", addr, "", ak, sk)
+	return QnHttpReq("GET", addr, "", ak, sk, map[string]string{})
 }
 
 func S3patch(addr, body string, conf *config.Config) (string, error) {
@@ -159,7 +162,7 @@ func S3patch(addr, body string, conf *config.Config) (string, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return QnHttpReq("PATCH", addr, body, ak, sk)
+	return QnHttpReq("PATCH", addr, body, ak, sk, map[string]string{})
 }
 
 func Get(addr string) (string, error) {
@@ -193,7 +196,8 @@ func Http(conf *config.Config) {
 		log.Println("need -sk <sk>")
 		return
 	}
-	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk)
+	log.Println("headers:", conf.HeaderMap)
+	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
 	if err != nil {
 		log.Println(err)
 		return

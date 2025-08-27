@@ -193,3 +193,21 @@ func (m *NodeMgr) WriteNodesToRedis() {
 		}
 	}
 }
+
+func (m *NodeMgr) dumpOutProvNodes() {
+	m.filterMgr.LoadFilterData()
+	allNodes := m.allNodesMap
+	statusCntMap := make(map[string]int)
+	for _, node := range allNodes {
+		if !node.IsDynamic {
+			continue
+		}
+		statusCntMap["total"]++
+		nodeAbilility := m.filterMgr.GetNodeAbility(node.Id)
+		if nodeAbilility == nil {
+			log.Println("dumpOutProvNodes GetNodeAbility err:", node.Id)
+			continue
+		}
+
+	}
+}

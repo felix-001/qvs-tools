@@ -286,6 +286,10 @@ func (m *FilterMgr) LoadFilterData() {
 	}
 }
 
+func (m *FilterMgr) GetNodeAbility(nodeId string) *commonUtil.NodeAvailabilityInfo {
+	return m.nodeAvailability[nodeId]
+}
+
 func (m *FilterMgr) SetFilterType(filterType string) {
 	m.filterType = filterType
 }
