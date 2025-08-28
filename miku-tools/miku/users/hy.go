@@ -29,7 +29,7 @@ func HyAuth(conf *config.Config) {
 	wsSecret = getMd5Hash(wsSecret)
 
 	// 生成请求地址
-	u := "http://al.flv.huya.com/src/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
+	u := "http://test-qn.flv.huya.com/src/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
 	log.Println(u)
 
 	// 对url进行urlEncode编码
