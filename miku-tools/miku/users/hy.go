@@ -20,16 +20,17 @@ func getMd5Hash(text string) string {
 
 func HyAuth(conf *config.Config) {
 	// 将Unix时间戳转换为十六进制小写字符串
-	t := time.Now().Unix()
+	t := time.Now().Unix() + 3600 // 300天
 	timestamp := strconv.FormatInt(t, 16)
 	// 拼接固定部分和变动部分
 	dataToHash := "huya.com@live/huyalive/" + conf.Stream + ".flv" + timestamp
-	wsSecret := fmt.Sprintf("%x", dataToHash)
+	log.Println("dataToHash:", dataToHash)
+	//wsSecret := fmt.Sprintf("%x", dataToHash)
 
-	wsSecret = getMd5Hash(wsSecret)
+	wsSecret := getMd5Hash(dataToHash)
 
 	// 生成请求地址
-	u := "http://test-qn.flv.huya.com/src/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
+	u := "http://test-qn.flv.huya.com/huyalive/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
 	log.Println(u)
 
 	// 对url进行urlEncode编码
