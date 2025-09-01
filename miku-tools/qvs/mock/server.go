@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mikutool/miku/mock"
 	"net"
 	"net/http"
 	"regexp"
@@ -141,6 +142,7 @@ func srvRoute() http.HandlerFunc {
 func MockSrv() {
 	go MockThemisd()
 	go MockTracker()
+	go mock.MockLived()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
