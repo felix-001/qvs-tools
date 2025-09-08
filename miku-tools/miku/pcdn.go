@@ -19,6 +19,13 @@ type HuyaP2pPcdnBatchPostBody struct {
 }
 
 func (m *Miku) GetPCDN() {
+	for i := 0; i < 30; i++ {
+		go m.loopReq()
+	}
+	time.Sleep(time.Second)
+}
+
+func (m *Miku) loopReq() {
 	for i := 0; i < m.conf.N; i++ {
 		resp, err := m.ExecuteGetPCDNBatchRequest()
 		if err != nil {
@@ -27,6 +34,7 @@ func (m *Miku) GetPCDN() {
 		}
 		fmt.Println("Response:", string(resp))
 	}
+
 }
 
 // ExecuteGetPCDNBatchRequest 执行请求 http://127.0.0.1:9090/huyalive/aaa/getpcdnbatch
@@ -35,7 +43,7 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	// 生成1-1000的随机数
-	randomNum := rand.Intn(1000) + 1
+	randomNum := rand.Intn(10) + 1
 
 	// 将随机数转成字符串并格式化
 	randomNumStr := strconv.Itoa(randomNum)
@@ -50,14 +58,12 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	}
 
 	// 定义26个英文字母
-	letters := "abcdefghijklmnopqrstuvwxyz"
-	for i := 0; i < 10; i++ {
+	letters := "abcdef"
+	for i := 0; i < 3; i++ {
 		// 初始化随机字符串
-		randomStr := ""
-		// 随机挑选3个字母
-		for i := 0; i < 3; i++ {
-			randomStr += string(letters[rand.Intn(len(letters))])
-		}
+		randomStr := "test"
+		// 随机挑选1个字母
+		randomStr += string(letters[rand.Intn(len(letters))])
 		body.StreamNameArr = append(body.StreamNameArr, randomStr)
 	}
 	jsonBody, err := json.Marshal(body)
@@ -73,7 +79,7 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	wsTime := fmt.Sprintf("%x", t.Unix())
 	wsSecret := users.HuyaP2pToken("teststream", wsTime)
 	addr := fmt.Sprintf("http://127.0.0.1:9090/huyalive/teststream/getpcdnbatch?uid=%s&wsTime=%s&wsSecret=%s&ClientIp=%s",
-		randomNumStr, wsTime, wsSecret, "127.0.0.1")
+		randomNumStr, wsTime, wsSecret, m.conf.Ip)
 	resp, err := http.Post(addr, "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err

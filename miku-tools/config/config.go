@@ -149,7 +149,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.SchedIp, "sched_ip", "10.34.146.62", "sched_ip")
 	flag.StringVar(&c.Node, "node", "", "node")
 	flag.StringVar(&c.ConnId, "conn_id", "12345678abcdef", "conn_id")
-	flag.StringVar(&c.Ip, "ip", "111.51.164.99", "ip")
+	flag.StringVar(&c.Ip, "ip", "103.85.174.230", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
 	flag.StringVar(&c.App, "app", "live", "app")
