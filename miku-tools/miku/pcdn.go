@@ -48,9 +48,9 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	// 将随机数转成字符串并格式化
 	randomNumStr := strconv.Itoa(randomNum)
 	if len(randomNumStr) == 1 {
-		randomNumStr = "00" + randomNumStr
+		randomNumStr = "uid-00" + randomNumStr
 	} else if len(randomNumStr) == 2 {
-		randomNumStr = "0" + randomNumStr
+		randomNumStr = "uid-0" + randomNumStr
 	}
 
 	body := HuyaP2pPcdnBatchPostBody{
