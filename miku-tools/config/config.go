@@ -75,6 +75,7 @@ type Config struct {
 	Startid               int
 	Port                  int
 	OnlineNum             int
+	N                     int
 	F                     string
 	T                     string
 	Pattern               string
@@ -169,6 +170,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
 	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
 	flag.Var(&c.HeaderMap, "header", "header")
+	flag.IntVar(&c.N, "n", 100, "n")
 
 	flag.Parse()
 }

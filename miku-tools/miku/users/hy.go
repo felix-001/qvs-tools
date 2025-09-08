@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -84,4 +85,15 @@ func hyP2pAuth(conf *config.Config) {
 		return
 	}
 	log.Printf("拉流响应内容: %s", string(body))
+}
+
+func HuyaP2pToken(streamName, wsTime string) string {
+	splits := strings.Split(streamName, "_")
+	streamSplit := ""
+	if len(splits) > 0 {
+		streamSplit = splits[0]
+	}
+	seed := "huya.com@live/pcdn/" + streamSplit + wsTime
+	expectedSecret := getMd5Hash(seed)
+	return expectedSecret
 }

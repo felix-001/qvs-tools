@@ -298,3 +298,14 @@ func (m *CommandManager) CmdPathquery() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdGetpcdn() *Command {
+	handler := func() {
+		m.miku.GetPCDN()
+	}
+	cmd := &Command{
+		Desc:    "并发获取PCDN节点,测试lived性能, -n <n, default: 100>",
+		Handler: handler,
+	}
+	return cmd
+}
