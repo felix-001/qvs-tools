@@ -19,7 +19,7 @@ type HuyaP2pPcdnBatchPostBody struct {
 }
 
 func (m *Miku) GetPCDN() {
-	for i := 0; i < 30; i++ {
+	for i := 0; i < m.conf.Loop; i++ {
 		go m.loopReq()
 	}
 	time.Sleep(time.Second)
@@ -43,14 +43,14 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	// 生成1-1000的随机数
-	randomNum := rand.Intn(10) + 1
+	randomNum := rand.Intn(22) + 1
 
 	// 将随机数转成字符串并格式化
 	randomNumStr := strconv.Itoa(randomNum)
 	if len(randomNumStr) == 1 {
-		randomNumStr = "uid-00" + randomNumStr
+		randomNumStr = "uid-new-00" + randomNumStr
 	} else if len(randomNumStr) == 2 {
-		randomNumStr = "uid-0" + randomNumStr
+		randomNumStr = "uid-new-0" + randomNumStr
 	}
 
 	body := HuyaP2pPcdnBatchPostBody{
@@ -78,8 +78,8 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	}
 	wsTime := fmt.Sprintf("%x", t.Unix())
 	wsSecret := users.HuyaP2pToken("teststream", wsTime)
-	addr := fmt.Sprintf("http://127.0.0.1:9090/huyalive/teststream/getpcdnbatch?uid=%s&wsTime=%s&wsSecret=%s&ClientIp=%s",
-		randomNumStr, wsTime, wsSecret, m.conf.Ip)
+	addr := fmt.Sprintf("http://%s:9090/huyalive/teststream/getpcdnbatch?uid=%s&wsTime=%s&wsSecret=%s&ClientIp=%s",
+		m.conf.SchedIp, randomNumStr, wsTime, wsSecret, m.conf.Ip)
 	resp, err := http.Post(addr, "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, err
