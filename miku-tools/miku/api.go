@@ -50,13 +50,22 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 	if conf.Https {
 		scheme += "s"
 	}
+	node := conf.Node
+	if node == "" {
+		node = ""
+	}
+
 	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
 		scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
+	if conf.Redirect {
+		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
+			scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
+	}
 	req := PlaycheckReq{
 		Bucket:   conf.Bucket,
 		Key:      conf.Stream,
 		Url:      playUrl,
-		Node:     conf.Node,
+		Node:     node,
 		Remote:   ip,
 		ConnId:   conf.ConnId,
 		User:     conf.User,

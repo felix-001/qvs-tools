@@ -83,6 +83,7 @@ type Config struct {
 	Replace               string
 	Raw                   string
 	Protocol              string
+	Redirect              bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
@@ -170,6 +171,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
 	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
+	flag.BoolVar(&c.Redirect, "redirect", false, "是否开启302")
 	flag.Var(&c.HeaderMap, "header", "header")
 	flag.IntVar(&c.N, "n", 100, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
