@@ -61,6 +61,10 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
 			scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
 	}
+	if conf.Internal {
+		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&domain=%s",
+			scheme, conf.App, conf.Stream, conf.Format, conf.Domain)
+	}
 	req := PlaycheckReq{
 		Bucket:   conf.Bucket,
 		Key:      conf.Stream,
