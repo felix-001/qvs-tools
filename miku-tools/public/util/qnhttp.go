@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"mikutool/config"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -80,16 +81,32 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
-	//log.Println("data:")
+	log.Println("data:")
 	fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
-	//log.Println("token:", token)
+	log.Println("token:", token)
 	return token
 }
 
 func HttpReq(method, addr, body string, headers map[string]string) (string, error) {
-	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	client := &http.Client{Transport: tr, Timeout: 5 * time.Second}
+	dailCtx := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := net.Dialer{Timeout: 30 * time.Second}
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		// 获取并打印服务端地址
+		if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+			fmt.Printf("Connected to server IP: %s\n", tcpAddr.IP.String())
+		} else {
+			fmt.Printf("Connected to server: %s\n", conn.RemoteAddr().String())
+		}
+
+		return conn, nil
+	}
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DialContext: dailCtx}
+	client := &http.Client{Transport: tr, Timeout: 30 * time.Second}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
 		if key == "Host" {
@@ -106,6 +123,7 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
+	fmt.Printf("resp: %+v\n", resp)
 	//log.Print("resp body", string(resp_body))
 	if err != nil {
 		log.Println(err)
@@ -203,6 +221,17 @@ func Http(conf *config.Config) {
 		return
 	}
 	fmt.Println(resp)
+	respMap := make(map[string]any)
+	if err := json.Unmarshal([]byte(resp), &respMap); err != nil {
+		log.Println("err:", err)
+		return
+	}
+	bytes, err := json.MarshalIndent(respMap, "", "  ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(bytes))
 }
 
 func httpReqReturnHdr(method, addr, body string, headers map[string]string) (int, string, http.Header) {
