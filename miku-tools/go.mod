@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
 	github.com/emiago/sipgo v0.33.0
+	github.com/go-echarts/go-echarts/v2 v2.6.3
 	github.com/gorilla/websocket v1.5.3
 	github.com/icholy/digest v1.1.0
 	github.com/qbox/bo-sdk/base v0.0.0-20250521054513-92c7331f4f8d

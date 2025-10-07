@@ -16,6 +16,8 @@ import (
 
 	"mikutool/public/util"
 
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/gorilla/websocket"
 )
 
@@ -305,5 +307,148 @@ func traceNode(metrics []DyAbnormalNodesInfo) {
 			}
 		}
 
+	}
+}
+
+type HttpCodeListResp struct {
+	HttpCodeList []*CodeListItem `json:"httpCodeList"`
+	RequestID    string          `json:"requestID"`
+}
+
+type CodeListItem struct {
+	Time      string     `json:"time"`
+	CodeArray []CodeInfo `json:"codeArray"`
+}
+
+type CodeInfo struct {
+	HttpCode string  `json:"httpCode"`
+	Count    int     `json:"count"`
+	Percent  float64 `json:"percent"` // 时间段内的占比
+}
+
+func Dy500(conf *config.Config) {
+	codeList := getCodeList(conf)
+	line := charts.NewLine()
+	initChart(line)
+
+	quarters := []string{}
+	for _, item := range codeList {
+		quarters = append(quarters, item.Time)
+	}
+	dumpCodeList(codeList)
+	items := codeListToItems(codeList)
+	addData(line, quarters, items)
+
+	// 生成HTML文件
+	f, _ := os.Create("dy_500.html")
+	line.Render(f)
+}
+
+func getCodeList(conf *config.Config) []*CodeListItem {
+	if conf.Uid != "" {
+		conf.Ak, conf.Sk = util.GetAkSk(conf)
+	} else {
+		log.Println("need uid")
+		return nil
+	}
+
+	timeStr := "2025-08-01 00:00:00"
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", timeStr, time.Local)
+	if err != nil {
+		log.Println("parse time err:", err)
+		return nil
+	}
+	start := t.Unix()
+	codeList := make([]*CodeListItem, 0)
+	errCnt := 0
+	for i := 0; i < conf.Loop; i++ {
+		end := start + 24*60*60
+		addr := fmt.Sprintf("http://miku-statd.qiniuapi.com/statd/v1/codecount?"+
+			"start=%d&end=%d&domain=qn-ss.douyucdn.cn", start, end)
+		resp, err := util.QnHttpReq("GET", addr, "", conf.Ak, conf.Sk, map[string]string{})
+		if err != nil {
+			log.Println("get 500 err:", err)
+			errCnt++
+			continue
+		}
+		codeListResp := &HttpCodeListResp{}
+		if err := json.Unmarshal([]byte(resp), codeListResp); err != nil {
+			log.Println("unmarshal err 1", err, resp)
+			errCnt++
+			continue
+		}
+		codeList = append(codeList, codeListResp.HttpCodeList...)
+		start += 24 * 60 * 60
+		time.Sleep(time.Second * 10)
+		log.Printf("i: %d, total: %d\n", i, conf.Loop)
+	}
+	log.Println("errCnt:", errCnt)
+	return codeList
+}
+
+func initChart(line *charts.Line) {
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "500错误码增长趋势",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger: "axis",
+			Show:    opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Name: "500错误码百分比",
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Name: "时间",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+}
+
+func codeListToItems(codeList []*CodeListItem) []opts.LineData {
+	items := make([]opts.LineData, 0)
+	for _, item := range codeList {
+		for _, code := range item.CodeArray {
+			if code.HttpCode == "500" {
+				item := opts.LineData{
+					Value:      code.Percent * 100,
+					Symbol:     "circle",
+					SymbolSize: 10,
+				}
+				items = append(items, item)
+			}
+		}
+	}
+	return items
+}
+
+func addData(line *charts.Line, quarters []string, items []opts.LineData) {
+	line.SetXAxis(quarters).
+		AddSeries("500错误码占比", items).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithMarkPointNameTypeItemOpts(
+				opts.MarkPointNameTypeItem{Name: "最大值", Type: "max"},
+				opts.MarkPointNameTypeItem{Name: "最小值", Type: "min"},
+			),
+			charts.WithMarkPointStyleOpts(
+				opts.MarkPointStyle{Label: &opts.Label{Show: opts.Bool(true)}},
+			),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Opacity: opts.Float(0.2),
+			}),
+		)
+}
+
+func dumpCodeList(codeList []*CodeListItem) {
+	bytes, _ := json.Marshal(codeList)
+	err := os.WriteFile("dy_500.json", bytes, 0644)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }

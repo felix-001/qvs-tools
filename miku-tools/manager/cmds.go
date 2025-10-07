@@ -309,3 +309,14 @@ func (m *CommandManager) CmdGetpcdn() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdDy500() *Command {
+	handler := func() {
+		users.Dy500(m.config)
+	}
+	cmd := &Command{
+		Desc:    "获取斗鱼500状态码百分比，画图表",
+		Handler: handler,
+	}
+	return cmd
+}
