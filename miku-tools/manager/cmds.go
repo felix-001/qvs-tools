@@ -293,7 +293,7 @@ func (m *CommandManager) CmdPathquery() *Command {
 	cmd := &Command{
 		Desc: "请求pathquery API, -conn_id <conn_id, default> -stream <stream, default> -domain <domain, default> " +
 			"-area <area, default> -isp <isp, default> -bucket <bucket, default> -user <user, default> -sched_ip " +
-			"<sched_ip, default> -format <format, default> -origin <origin, default>",
+			"<sched_ip, default> -format <format, default> -origin <origin, default> -ip <指定clientip>",
 		Handler: handler,
 	}
 	return cmd
