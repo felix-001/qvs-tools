@@ -143,6 +143,7 @@ func MockSrv() {
 	go MockThemisd()
 	go MockTracker()
 	go mock.MockLived()
+	go MockHy()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
@@ -204,6 +205,32 @@ func MockTracker() {
 	http.HandleFunc("/api/v1/getnodes", getNodesHandler)
 	go func() {
 		if err := http.ListenAndServe("127.0.0.1:6008", nil); err != nil {
+			log.Println("HTTP server error:", err)
+		}
+	}()
+}
+
+func MockHy() {
+	http.HandleFunc("/cdngw/backstreamurl/", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Extract the dynamic part (xxx) from the URL
+		path := req.URL.Path[len("/cdngw/backstreamurl/"):]
+		if path == "" {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+
+		// Set the 302 redirect response
+		http.Redirect(w, req, "http://124.236.65.37:1360/bj/31011500991180034748_31011500991320000091.flv", http.StatusFound)
+	})
+
+	go func() {
+		log.Println("Starting Hy mock server on")
+		if err := http.ListenAndServe("127.0.0.1:8008", nil); err != nil {
 			log.Println("HTTP server error:", err)
 		}
 	}()

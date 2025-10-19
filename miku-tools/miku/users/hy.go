@@ -3,6 +3,7 @@ package users
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -31,9 +32,15 @@ func HyAuth(conf *config.Config) {
 	wsSecret := getMd5Hash(dataToHash)
 
 	// 生成请求地址
-	u := "http://test-qn.flv.huya.com/huyalive/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
+	u := "http://qn.flv.huya.com/src/" + conf.Stream + ".flv?wsSecret=" + wsSecret + "&wsTime=" + timestamp
+	u += "&seqid=3230596006172&ctype=huya_webh5&ver=1&fs=bgct&ratio=500&dMod=mseh-0&sdkPcdn=1_1&u=1470545821501&t=100&sv=2507070933&sdk_sid=1760687268998&a_block=0"
 	log.Println(u)
+	referer := "https://liveshare.huya.com/"
+	origin := "https://liveshare.huya.com"
+	ua := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0"
+	res, interval, cnt, err := HuyaRemoteAuth("111.199.230.32", origin, referer, ua, u)
 
+	log.Println("Auth Result:", res, " RetryInterval:", interval, " RetryCnt:", cnt, " Err:", err)
 	// 对url进行urlEncode编码
 	encodedUrl := url.QueryEscape(u)
 
@@ -42,7 +49,7 @@ func HyAuth(conf *config.Config) {
 		conf.Stream, wsSecret, timestamp, encodedUrl)
 	log.Println("sourceUrl:", sourceUrl)
 
-	hyP2pAuth(conf)
+	//hyP2pAuth(conf)
 }
 
 func hyP2pAuth(conf *config.Config) {
@@ -96,4 +103,52 @@ func HuyaP2pToken(streamName, wsTime string) string {
 	seed := "huya.com@live/pcdn/" + streamSplit + wsTime
 	expectedSecret := getMd5Hash(seed)
 	return expectedSecret
+}
+
+func HuyaRemoteAuth(userIp, origin, referer, userAgent, url string) (int, int, int, error) {
+	// 构造请求体
+	requestBody := fmt.Sprintf(`{
+		"UserIp": "%s",
+		"Origin": "%s",
+		"Referer": "%s",
+		"User-Agent": "%s",
+		"URL": "%s"
+	}`, userIp, origin, referer, userAgent, url)
+
+	// 发送 HTTP POST 请求
+	authURL := "http://urltoken.huya.com/urltoken/auth" // 测试地址
+	resp, err := http.Post(authURL, "application/json", strings.NewReader(requestBody))
+	if err != nil {
+		log.Printf("发送远程鉴权请求失败: %v", err)
+		return 0, 0, 0, err
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态码
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("远程鉴权请求返回状态码异常: %d", resp.StatusCode)
+		return 0, 0, 0, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// 解析响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("读取远程鉴权响应体失败: %v", err)
+		return 0, 0, 0, err
+	}
+
+	var response struct {
+		AuthResult    int `json:"AuthResult"`
+		RetryInterval int `json:"RetryInterval"`
+		RetryCnt      int `json:"RetryCnt"`
+	}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		log.Printf("解析远程鉴权响应体失败: %v", err)
+		return 0, 0, 0, err
+	}
+
+	log.Printf("远程鉴权结果: AuthResult=%d, RetryInterval=%d, RetryCnt=%d", response.AuthResult, response.RetryInterval, response.RetryCnt)
+	return response.AuthResult, response.RetryInterval, response.RetryCnt, nil
 }
