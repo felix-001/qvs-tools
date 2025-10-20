@@ -230,7 +230,7 @@ func MockHy() {
 
 	go func() {
 		log.Println("Starting Hy mock server on")
-		if err := http.ListenAndServe("127.0.0.1:8008", nil); err != nil {
+		if err := http.ListenAndServe("10.210.32.25:8008", nil); err != nil {
 			log.Println("HTTP server error:", err)
 		}
 	}()

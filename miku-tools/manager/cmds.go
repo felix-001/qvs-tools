@@ -3,6 +3,7 @@ package manager
 import (
 	"mikutool/miku"
 	mikumock "mikutool/miku/mock"
+	"mikutool/miku/staging"
 	"mikutool/miku/users"
 	"mikutool/public/util"
 	"mikutool/qvs"
@@ -316,6 +317,17 @@ func (m *CommandManager) CmdDy500() *Command {
 	}
 	cmd := &Command{
 		Desc:    "获取斗鱼500状态码百分比，画图表",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdTestdns() *Command {
+	handler := func() {
+		staging.TestDns(m.config, &m.resources)
+	}
+	cmd := &Command{
+		Desc:    "httpdns接口拨测",
 		Handler: handler,
 	}
 	return cmd
