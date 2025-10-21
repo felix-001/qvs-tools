@@ -332,3 +332,14 @@ func (m *CommandManager) CmdTestdns() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdTalk() *Command {
+	handler := func() {
+		qvs.TalkApi(m.config)
+	}
+	cmd := &Command{
+		Desc:    "qvs对讲测试, -nsid <nsid> -gbid <gbid> -silence <true/false, 是否发送静音数据>",
+		Handler: handler,
+	}
+	return cmd
+}

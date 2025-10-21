@@ -70,6 +70,8 @@ type Config struct {
 	Task                  string
 	StartTime             string
 	EndTime               string
+	NsId                  string
+	GBId                  string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -85,6 +87,7 @@ type Config struct {
 	Protocol              string
 	Redirect              bool
 	Internal              bool
+	Silence               bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
@@ -164,6 +167,9 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.EndTime, "end", "", "end_time")
 	flag.StringVar(&c.ID, "id", "", "id")
 	flag.StringVar(&c.Province, "prov", "江苏", "province")
+	flag.StringVar(&c.NsId, "nsid", "bj", "nsid")
+	flag.StringVar(&c.GBId, "gbid", "31011500991320021895", "gbid")
+	flag.IntVar(&c.Port, "port", 8080, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
@@ -174,6 +180,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
 	flag.BoolVar(&c.Redirect, "redirect", false, "是否开启302")
 	flag.BoolVar(&c.Internal, "internal", false, "是否是内部的")
+	flag.BoolVar(&c.Silence, "silence", false, "是否发送静音的语音数据")
 	flag.Var(&c.HeaderMap, "header", "header")
 	flag.IntVar(&c.N, "n", 100, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
