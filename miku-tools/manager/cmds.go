@@ -343,3 +343,15 @@ func (m *CommandManager) CmdTalk() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdTestiqiyi() *Command {
+	handler := func() {
+		staging.TestIqiyi(m.config, &m.resources)
+	}
+	cmd := &Command{
+		Desc:         "测试iqiyi返点",
+		Handler:      handler,
+		NeedIpParser: true,
+	}
+	return cmd
+}
