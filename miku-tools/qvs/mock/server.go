@@ -144,6 +144,7 @@ func MockSrv() {
 	go MockTracker()
 	go mock.MockLived()
 	go MockHy()
+	go Mockflume()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
@@ -234,4 +235,26 @@ func MockHy() {
 			log.Println("HTTP server error:", err)
 		}
 	}()
+}
+
+func Mockflume() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Error reading request body", http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		fmt.Printf("Received request at path: %s\n", r.URL.Path)
+		fmt.Printf("Request body: %s\n", string(body))
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Request received and logged"))
+	})
+
+	fmt.Println("Starting HTTP server on port 8085...")
+	if err := http.ListenAndServe(":8085", nil); err != nil {
+		fmt.Printf("Server error: %v\n", err)
+	}
 }
