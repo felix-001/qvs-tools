@@ -268,5 +268,5 @@ func InetAton(ipStr string) (uint32, error) {
 	if ip == nil {
 		return 0, fmt.Errorf("not an IPv4 address: %s", ipStr)
 	}
-	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3]), nil
+	return uint32(ip[0]) | uint32(ip[1])<<8 | uint32(ip[2])<<16 | uint32(ip[3])<<24, nil
 }
