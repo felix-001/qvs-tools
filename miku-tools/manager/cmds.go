@@ -355,3 +355,15 @@ func (m *CommandManager) CmdTestiqiyi() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdTestSip() *Command {
+	handler := func() {
+		staging.TestSip(m.config)
+
+	}
+	cmd := &Command{
+		Desc:    "测试sip拨测, qvs-sip可能由于gb设备重启导致的崩溃问题, 0x556710094386 in SrsResourceManager::do_clear() src/app/srs_app_conn.cpp:367",
+		Handler: handler,
+	}
+	return cmd
+}
