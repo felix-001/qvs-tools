@@ -257,10 +257,11 @@ func (m *CommandManager) CmdIpv6Records() *Command {
 		m.nodeMgr.GetIpv6DnsRecords()
 	}
 	cmd := &Command{
-		Desc:         "获取ipv6 dns记录列表, -name <name> -domain <domain>",
-		Handler:      handler,
-		NeedNodeInfo: true,
-		NeedDnsPod:   true,
+		Desc:       "获取ipv6 dns记录列表, -name <name> -domain <domain>",
+		Handler:    handler,
+		NeedDnsPod: true,
+		//NeedNodeInfo: true,
+		//NeedDnsPod:   true,
 	}
 	return cmd
 }

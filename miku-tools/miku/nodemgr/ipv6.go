@@ -88,9 +88,9 @@ func (m *NodeMgr) GetIpv6DnsRecords() {
 		if record.Type == nil {
 			continue
 		}
-		if *record.Type != "AAAA" {
-			continue
-		}
+		//if *record.Type != "AAAA" {
+		//continue
+		//}
 		if record.Status == nil {
 			continue
 		}
@@ -102,8 +102,8 @@ func (m *NodeMgr) GetIpv6DnsRecords() {
 			remark = *record.Remark
 		}
 		m.conf.Ip = *record.Value
-		nodeId := m.GetNodeByIp()
-		fmt.Println("name:", *record.Name, "line:", *record.Line, "value:", *record.Value, "remark:", remark, "nodeId:", nodeId)
+		//nodeId := m.GetNodeByIp()
+		fmt.Println("name:", *record.Name, "line:", *record.Line, "value:", *record.Value, "remark:", remark)
 	}
 
 }

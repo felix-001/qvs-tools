@@ -310,26 +310,26 @@ func runGbCli(conf *config.Config, gbid string) {
 		return
 	}
 	log.Println("sip resp 200, gbid:", gbid)
-	//time.Sleep(time.Second * 600)
+	time.Sleep(time.Second * 600)
 	for {
 		if err := sendSipKeepalive(gbid, conn); err != nil {
 			log.Println("Error sending:", err)
-			return
+			//return
 		}
 		log.Println("SIP KEEPALIVE message sent successfully, gbid:", gbid)
 		if err := read200(conf, conn); err != nil {
 			log.Println("Error receiving:", err)
-			return
+			//return
 		}
 		log.Println("sip keepalive resp 200, gbid:", gbid)
 		if err := recvCatalog(conf, conn); err != nil {
 			log.Println("Error receiving:", err)
-			return
+			//return
 		}
 		log.Println("got sip catalog req, gbid:", gbid)
 		if err := sendCatalogResp(gbid, conn); err != nil {
 			log.Println("Error sending:", err)
-			return
+			//return
 		}
 		log.Println("sip catalog resp sent, gbid:", gbid)
 	}
@@ -414,16 +414,16 @@ func generateRandomString() string {
 
 func TestSip(conf *config.Config) {
 	// 创建本地随机数生成器
-	localRand := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+	//localRand := mrand.New(mrand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < conf.N; i++ {
-		go func() {
-			gbid := generateRandomString()
-			go runGbCli(conf, gbid)
-			randomNum := localRand.Intn(30) + 1 // Generates random number between 1-5
-			log.Println("randomNum:", randomNum, "gbid:", gbid)
-			time.Sleep(time.Second * time.Duration(randomNum))
-			go runGbCli(conf, gbid)
-		}()
+		//go func() {
+		gbid := generateRandomString()
+		go runGbCli(conf, gbid)
+		//randomNum := localRand.Intn(3) + 1 // Generates random number between 1-5
+		//log.Println("randomNum:", randomNum, "gbid:", gbid)
+		time.Sleep(time.Second * time.Duration(1))
+		runGbCli(conf, gbid)
+		//}()
 	}
 	time.Sleep(time.Second * 10000)
 }
