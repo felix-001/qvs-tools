@@ -85,6 +85,7 @@ type Config struct {
 	Replace               string
 	Raw                   string
 	Protocol              string
+	Skip                  string
 	Redirect              bool
 	Internal              bool
 	Silence               bool
@@ -137,7 +138,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Pcdn, "pcdn", "", "pcdn")
 	flag.StringVar(&c.Bucket, "bucket", "livessports", "bucket")
 	flag.StringVar(&c.Stream, "stream", "teststream", "stream")
-	flag.StringVar(&c.Domain, "domain", "flv-qnplay.inter.71edge.com", "domain")
+	flag.StringVar(&c.Domain, "domain", "www.test.com", "domain")
 	flag.StringVar(&c.SourceId, "source_id", "", "source_id")
 	flag.StringVar(&c.OriginKey, "origin_key", "", "origin_key")
 	flag.StringVar(&c.OriginKeyDy, "origin_key_dy", "", "origin_key_dy")
@@ -169,6 +170,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Province, "prov", "江苏", "province")
 	flag.StringVar(&c.NsId, "nsid", "bj", "nsid")
 	flag.StringVar(&c.GBId, "gbid", "31011500991320021895", "gbid")
+	flag.StringVar(&c.Skip, "skip", "", "skip")
 	flag.IntVar(&c.Port, "port", 8080, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
