@@ -63,6 +63,7 @@ func (m *Miku) Pathquery() {
 		User:      m.conf.User,
 		PlayUrl:   playUrl,
 		OriginUrl: m.conf.Origin,
+		Skip:      strings.Split(m.conf.Skip, ","),
 	}
 	bytes, err := json.MarshalIndent(req, "", "  ")
 	if err != nil {
