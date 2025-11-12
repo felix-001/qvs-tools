@@ -145,6 +145,7 @@ func MockSrv() {
 	go mock.MockLived()
 	go MockHy()
 	go Mockflume()
+	go MockEcho()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
@@ -255,6 +256,17 @@ func Mockflume() {
 
 	fmt.Println("Starting HTTP server on port 8085...")
 	if err := http.ListenAndServe(":8085", nil); err != nil {
+		fmt.Printf("Server error: %v\n", err)
+	}
+}
+
+func MockEcho() {
+	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "your addr is: "+r.RemoteAddr)
+	})
+
+	err := http.ListenAndServe(":51370", nil)
+	if err != nil {
 		fmt.Printf("Server error: %v\n", err)
 	}
 }
