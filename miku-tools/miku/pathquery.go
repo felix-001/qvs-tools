@@ -22,7 +22,11 @@ func (m *Miku) Pathquery() {
 		nodeId, pcdnId := util.GetPcdnFromSchedAPI(m.conf)
 		if nodeId == "" {
 			logger.Info().Str("area", m.conf.Area).Str("isp", m.conf.Isp).Msg("get pcdn err")
-			return
+			nodeId, pcdnId = util.GetRandomPcdnFromSchedAPI(m.conf)
+			if nodeId == "" {
+				logger.Info().Str("isp", m.conf.Isp).Msg("get random pcdn err")
+				return
+			}
 		}
 		pcdn = pcdnId
 		if node == "" {

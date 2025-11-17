@@ -89,6 +89,7 @@ type Config struct {
 	Redirect              bool
 	Internal              bool
 	Silence               bool
+	Random                bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
@@ -184,6 +185,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Internal, "internal", false, "是否是内部的")
 	flag.BoolVar(&c.Silence, "silence", false, "是否发送静音的语音数据")
 	flag.Var(&c.HeaderMap, "header", "header")
+	flag.BoolVar(&c.Random, "random", false, "随机")
 	flag.IntVar(&c.N, "n", 100, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
 

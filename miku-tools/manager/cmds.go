@@ -293,9 +293,12 @@ func (m *CommandManager) CmdPathquery() *Command {
 		m.miku.Pathquery()
 	}
 	cmd := &Command{
-		Desc: "请求pathquery API, -conn_id <conn_id, default> -stream <stream, default> -domain <domain, default> " +
-			"-area <area, default> -isp <isp, default> -bucket <bucket, default> -user <user, default> -sched_ip -node <node>" +
-			"<sched_ip, default> -format <format, default> -origin <origin, default> -ip <指定clientip> -skip <需要skip的节点>",
+		Desc: "请求pathquery API\n" +
+			"如果指定-local, 则需要指定-node, -ip可选指定, 如果-ip不指定, 则传给调度的x-real-ip的header是空值\n" +
+			" -conn_id <conn_id, default>\n -stream <stream, default>\n -domain <domain, default>\n " +
+			"-area <area, default>\n -isp <isp, default>\n -bucket <bucket, default>\n -user <user, default>\n " +
+			"-sched_ip <sched_ip, default>\n -node <node>\n -format <format, default>\n -origin <origin, default>\n " +
+			"-ip <指定clientip>\n -skip <需要skip的节点>\n -random <如果指定了-area和-isp, 选点失败, 则默认会随机选个点>",
 		Handler: handler,
 	}
 	return cmd
