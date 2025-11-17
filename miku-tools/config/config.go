@@ -72,6 +72,7 @@ type Config struct {
 	EndTime               string
 	NsId                  string
 	GBId                  string
+	Host                  string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -172,6 +173,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.NsId, "nsid", "bj", "nsid")
 	flag.StringVar(&c.GBId, "gbid", "31011500991320021895", "gbid")
 	flag.StringVar(&c.Skip, "skip", "", "skip")
+	flag.StringVar(&c.Host, "host", "", "host")
 	flag.IntVar(&c.Port, "port", 8080, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
