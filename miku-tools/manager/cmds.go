@@ -298,7 +298,8 @@ func (m *CommandManager) CmdPathquery() *Command {
 			" -conn_id <conn_id, default>\n -stream <stream, default>\n -domain <domain, default>\n " +
 			"-area <area, default>\n -isp <isp, default>\n -bucket <bucket, default>\n -user <user, default>\n " +
 			"-sched_ip <sched_ip, default>\n -node <node>\n -format <format, default>\n -origin <origin, default>\n " +
-			"-ip <指定clientip>\n -skip <需要skip的节点>\n -random <如果指定了-area和-isp, 选点失败, 则默认会随机选个点>",
+			"-ip <指定clientip>\n -skip <需要skip的节点>\n -random <如果指定了-area和-isp, 选点失败, 则默认会随机选个点>\n " +
+			"-app <指定传入的playurl的app,如果不传，默认使用-bucket指定的参数>",
 		Handler: handler,
 	}
 	return cmd

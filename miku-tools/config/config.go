@@ -161,7 +161,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Ip, "ip", "103.85.174.230", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
-	flag.StringVar(&c.App, "app", "live", "app")
+	flag.StringVar(&c.App, "app", "", "app")
 	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
 	flag.StringVar(&c.Name, "name", "", "name")
 	flag.StringVar(&c.Key, "key", "", "key")
