@@ -47,6 +47,9 @@ func (m *Miku) Pathquery() {
 	}
 	playUrl := fmt.Sprintf("http://%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e",
 		m.conf.Domain, m.conf.App, m.conf.Stream, m.conf.Format)
+	if m.conf.RawApp != "" {
+		playUrl += "&rawApp=" + m.conf.RawApp
+	}
 	if m.conf.Redirect {
 		playUrl = fmt.Sprintf("http://127.0.0.1/%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e&domain=%s",
 			m.conf.Domain, m.conf.Bucket, m.conf.Stream, m.conf.Format, m.conf.Domain)

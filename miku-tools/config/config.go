@@ -67,6 +67,7 @@ type Config struct {
 	Ip                    string
 	Query                 string
 	App                   string
+	RawApp                string
 	Task                  string
 	StartTime             string
 	EndTime               string
@@ -174,6 +175,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.GBId, "gbid", "31011500991320021895", "gbid")
 	flag.StringVar(&c.Skip, "skip", "", "skip")
 	flag.StringVar(&c.Host, "host", "", "host")
+	flag.StringVar(&c.RawApp, "raw_app", "", "raw_app")
 	flag.IntVar(&c.Port, "port", 8080, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
