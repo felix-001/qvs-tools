@@ -81,10 +81,10 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	if body != "" {
 		data += body
 	}
-	log.Println("data:")
-	fmt.Println(data)
+	//log.Println("data:")
+	//fmt.Println(data)
 	token := "Qiniu " + ak + ":" + hmacSha1(sk, data)
-	log.Println("token:", token)
+	//log.Println("token:", token)
 	return token
 }
 
@@ -97,11 +97,13 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		}
 
 		// 获取并打印服务端地址
-		if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-			fmt.Printf("Connected to server IP: %s\n", tcpAddr.IP.String())
-		} else {
-			fmt.Printf("Connected to server: %s\n", conn.RemoteAddr().String())
-		}
+		/*
+			if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+				fmt.Printf("Connected to server IP: %s\n", tcpAddr.IP.String())
+			} else {
+				fmt.Printf("Connected to server: %s\n", conn.RemoteAddr().String())
+			}
+		*/
 
 		return conn, nil
 	}
@@ -123,7 +125,7 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 	}
 	defer resp.Body.Close()
 	resp_body, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("resp: %+v\n", resp)
+	//fmt.Printf("resp: %+v\n", resp)
 	//log.Print("resp body", string(resp_body))
 	if err != nil {
 		log.Println(err)
