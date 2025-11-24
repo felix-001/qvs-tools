@@ -61,6 +61,9 @@ func (m *Miku) Pathquery() {
 	}
 	playUrl := fmt.Sprintf("http://%s/%s/%s.%s?wsSecret=208262e79b30d92b8187646fdc3a1729&wsTime=65ae654e",
 		m.conf.Domain, m.conf.App, m.conf.Stream, m.conf.Format)
+	if m.conf.QnTestUrl != "" {
+		playUrl += "&qnTestUrl=" + m.conf.QnTestUrl
+	}
 	if m.conf.RawApp != "" {
 		playUrl += "&rawApp=" + m.conf.RawApp
 	}
@@ -103,7 +106,11 @@ func (m *Miku) Pathquery() {
 	}
 	fmt.Println("req:", string(bytes))
 	var resp PathQueryResponse
-	addr := fmt.Sprintf("http://%s:6060/api/v1/pathquery?QiNiuTestTag=%s&QiNiuTime=%s", m.conf.SchedIp, util.QiNiuTestTag, util.QiniuTime)
+	port := m.conf.Port
+	if port == 0 {
+		port = 6060
+	}
+	addr := fmt.Sprintf("http://%s:%d/api/v1/pathquery?QiNiuTestTag=%s&QiNiuTime=%s", m.conf.SchedIp, port, util.QiNiuTestTag, util.QiniuTime)
 	fmt.Println("addr:", addr)
 
 	headers := map[string]string{

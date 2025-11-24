@@ -74,6 +74,8 @@ type Config struct {
 	NsId                  string
 	GBId                  string
 	Host                  string
+	QnTestUrl             string
+	Player                string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -176,7 +178,9 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Skip, "skip", "", "skip")
 	flag.StringVar(&c.Host, "host", "", "host")
 	flag.StringVar(&c.RawApp, "raw_app", "", "raw_app")
-	flag.IntVar(&c.Port, "port", 8080, "port")
+	flag.StringVar(&c.QnTestUrl, "qn_test_url", "", "qn_test_url")
+	flag.StringVar(&c.Player, "player", "", "player")
+	flag.IntVar(&c.Port, "port", 0, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")

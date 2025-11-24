@@ -59,9 +59,10 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 		miku.Playcheck(m.config)
 	}
 	cmd := &Command{
-		Desc: "请求playcheck 302接口, -https <true/false> -domain <domain> -app <app, 默认live> protocol <protocol, 默认flv> " +
-			"-bucket <bucket, 默认live> -stream <stream> -format <format, 默认flv> -sched_ip <sched_ip, 默认xs3427> " +
-			"-user <user, 默认iqiyi> -node <node, 默认vdn-jsyz1-dls-1-9> -conn_id <conn_id, 默认12345678abcdef> -ip <clientIp>",
+		Desc: "请求playcheck 302接口, -https <true/false> \n-domain <domain> \n-app <app, 默认live> \n-protocol <protocol, 默认flv> \n" +
+			"-bucket <bucket, 默认live> \n-stream <stream> \n-format <format, 默认flv> \n-sched_ip <sched_ip, 默认xs3427> \n" +
+			"-user <user, 默认iqiyi> \n-node <node, 默认vdn-jsyz1-dls-1-9> \n-conn_id <conn_id, 默认12345678abcdef> \n-ip <clientIp> \n" +
+			"-qn_test_url <streamd向lived请求playcheck的domain>",
 		Handler: handler,
 	}
 	return cmd
@@ -372,3 +373,18 @@ func (m *CommandManager) CmdTestSip() *Command {
 	}
 	return cmd
 }
+
+/*
+
+func (m *CommandManager) CmdProxy() *Command {
+	handler := func() {
+		miku.Proxy(m.config)
+	}
+	cmd := &Command{
+		Desc:    "http代理,接收http请求,转发给upstream,相当于是一个代理,具体逻辑以及html是由upstream返回",
+		Handler: handler,
+	}
+	return cmd
+}
+
+*/
