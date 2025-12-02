@@ -388,3 +388,14 @@ func (m *CommandManager) CmdProxy() *Command {
 }
 
 */
+
+func (m *CommandManager) CmdTestHy1() *Command {
+	handler := func() {
+		staging.TestHy1(m.config)
+	}
+	cmd := &Command{
+		Desc:    "测试虎牙",
+		Handler: handler,
+	}
+	return cmd
+}

@@ -2,6 +2,7 @@ package staging
 
 import (
 	"crypto/rand"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -409,4 +411,94 @@ func TestSip(conf *config.Config) {
 		//}()
 	}
 	time.Sleep(time.Second * 10000)
+}
+
+func TestHy1(conf *config.Config) {
+	file, err := os.Open("/Users/rigensen/Downloads/sqllab_liyqhy_20251202T122609.csv")
+	if err != nil {
+		log.Println("打开CSV文件失败:", err)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1 // 允许列数不一致
+
+	// 四个map：cdn和client各两个
+	cdnBadMap := make(map[string]bool)    // cdnip -> field_video_bad_quality=="100"
+	cdnAllMap := make(map[string]bool)    // 所有cdnip
+	clientBadMap := make(map[string]bool) // clientIp -> field_video_bad_quality=="100"
+	clientAllMap := make(map[string]bool) // 所有clientIp
+
+	for {
+		record, err := reader.Read()
+		if err != nil {
+			break
+		}
+		if len(record) < 16 {
+			log.Println("记录字段数不足16:", record)
+			continue
+		}
+
+		// 第6列cdnip
+		cdnip := strings.TrimSpace(record[5])
+		if cdnip == "" {
+			// 第14列url
+			rawURL := strings.TrimSpace(record[13])
+			if rawURL != "" {
+				if u, err := url.Parse(rawURL); err == nil {
+					host := u.Host
+					if h, _, err := net.SplitHostPort(host); err == nil {
+						cdnip = h
+					} else {
+						cdnip = host
+					}
+				} else {
+					log.Println("url解析失败:", rawURL)
+				}
+			}
+		}
+
+		// 第16列field_video_bad_quality
+		field_video_bad_quality := strings.TrimSpace(record[15])
+
+		// 第3列clientIp
+		clientIp := strings.TrimSpace(record[2])
+
+		// 处理cdn
+		if cdnip != "" {
+			cdnAllMap[cdnip] = true
+			if field_video_bad_quality == "100" {
+				cdnBadMap[cdnip] = true
+			}
+		}
+
+		// 处理client
+		if clientIp != "" {
+			clientAllMap[clientIp] = true
+			if field_video_bad_quality == "100" {
+				clientBadMap[clientIp] = true
+			}
+		} else {
+			log.Println("clientIp为空")
+		}
+	}
+
+	// 计算百分比
+	cdnBadCount := len(cdnBadMap)
+	cdnTotal := len(cdnAllMap)
+	cdnPercent := 0.0
+	if cdnTotal > 0 {
+		cdnPercent = float64(cdnBadCount) / float64(cdnTotal) * 100
+	}
+
+	clientBadCount := len(clientBadMap)
+	clientTotal := len(clientAllMap)
+	clientPercent := 0.0
+	if clientTotal > 0 {
+		clientPercent = float64(clientBadCount) / float64(clientTotal) * 100
+	}
+
+	fmt.Printf("CDN: bad/total = %d/%d, 占比: %.2f%%\n", cdnBadCount, cdnTotal, cdnPercent)
+	fmt.Printf("Client: bad/total = %d/%d, 占比: %.2f%%\n", clientBadCount, clientTotal, clientPercent)
 }
