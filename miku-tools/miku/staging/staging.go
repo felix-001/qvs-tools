@@ -386,6 +386,12 @@ func sendSipKeepalive(gbid string, conn net.Conn) error {
 	return nil
 }
 
+// 将 cdnNogLagCnt 按无延迟次数降序排序并打印
+type noLagItem struct {
+	cdn string
+	cnt int
+}
+
 func generateRandomString() string {
 	// 创建本地随机数生成器避免并发问题
 	localRand := mrand.New(mrand.NewSource(time.Now().UnixNano()))
@@ -429,6 +435,8 @@ func TestHy1(conf *config.Config) {
 	cdnAllMap := make(map[string]bool)    // 所有cdnip
 	clientBadMap := make(map[string]bool) // clientIp -> field_video_bad_quality=="100"
 	clientAllMap := make(map[string]bool) // 所有clientIp
+	cdnLagCnt := make(map[string]int)     // cdnip -> 延迟数
+	cdnNogLagCnt := make(map[string]int)  // cdnip -> 无延迟数
 
 	for {
 		record, err := reader.Read()
@@ -470,6 +478,9 @@ func TestHy1(conf *config.Config) {
 			cdnAllMap[cdnip] = true
 			if field_video_bad_quality == "100" {
 				cdnBadMap[cdnip] = true
+				cdnLagCnt[cdnip]++
+			} else {
+				cdnNogLagCnt[cdnip]++
 			}
 		}
 
@@ -501,4 +512,43 @@ func TestHy1(conf *config.Config) {
 
 	fmt.Printf("CDN: bad/total = %d/%d, 占比: %.2f%%\n", cdnBadCount, cdnTotal, cdnPercent)
 	fmt.Printf("Client: bad/total = %d/%d, 占比: %.2f%%\n", clientBadCount, clientTotal, clientPercent)
+	// 将 cdnLagCnt 按 lag 数量降序排序并打印
+	type lagItem struct {
+		cdn string
+		cnt int
+	}
+	var lagList []lagItem
+	for cdn, cnt := range cdnLagCnt {
+		lagList = append(lagList, lagItem{cdn, cnt})
+	}
+	// 按 cnt 降序
+	for i := 0; i < len(lagList)-1; i++ {
+		for j := i + 1; j < len(lagList); j++ {
+			if lagList[i].cnt < lagList[j].cnt {
+				lagList[i], lagList[j] = lagList[j], lagList[i]
+			}
+		}
+	}
+	fmt.Println("CDN IP 延迟统计（按延迟次数降序）：")
+	for _, item := range lagList {
+		fmt.Printf("%s: %d\n", item.cdn, item.cnt)
+	}
+
+	var noLagList []noLagItem
+	for cdn, cnt := range cdnNogLagCnt {
+		noLagList = append(noLagList, noLagItem{cdn, cnt})
+	}
+	// 按 cnt 降序
+	for i := 0; i < len(noLagList)-1; i++ {
+		for j := i + 1; j < len(noLagList); j++ {
+			if noLagList[i].cnt < noLagList[j].cnt {
+				noLagList[i], noLagList[j] = noLagList[j], noLagList[i]
+			}
+		}
+	}
+	fmt.Println("CDN IP 无延迟统计（按无延迟次数降序）：")
+	for _, item := range noLagList {
+		fmt.Printf("%s: %d\n", item.cdn, item.cnt)
+
+	}
 }
