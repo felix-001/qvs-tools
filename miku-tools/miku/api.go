@@ -1,10 +1,12 @@
 package miku
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"mikutool/config"
 	"mikutool/public/util"
 	"mikutool/resources"
@@ -52,11 +54,20 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 	}
 	node := conf.Node
 	if node == "" {
-		node = ""
+		node = "cf1b9ef8-33e6-3569-80f8-85ba87e4039f-vdn-jsyz1-dls-1-87"
+	}
+	if conf.App == "" {
+		conf.App = "live"
 	}
 
 	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
 		scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
+	if conf.QnTestUrl != "" {
+		playUrl += "&qnTestUrl=" + conf.QnTestUrl
+	}
+	if conf.Player != "" {
+		playUrl += "&player=" + conf.Player
+	}
 	if conf.Redirect {
 		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
 			scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
@@ -65,6 +76,11 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&domain=%s",
 			scheme, conf.App, conf.Stream, conf.Format, conf.Domain)
 	}
+
+	b := make([]byte, 10)
+	rand.Read(b)
+	conf.ConnId = hex.EncodeToString(b)
+
 	req := PlaycheckReq{
 		Bucket:   conf.Bucket,
 		Key:      conf.Stream,
@@ -74,6 +90,7 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		ConnId:   conf.ConnId,
 		User:     conf.User,
 		Protocol: conf.Protocol,
+		Local:    "127.0.0.1:1234",
 	}
 	fmt.Printf("req: %+v\n", req)
 	bytes, err := json.Marshal(&req)
@@ -82,7 +99,11 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		return nil
 	}
 	var resp PlayCheckResp
-	addr := fmt.Sprintf("http://%s:6060/api/v1/playcheck", conf.SchedIp)
+	port := conf.Port
+	if port == 0 {
+		port = 6060
+	}
+	addr := fmt.Sprintf("http://%s:%d/api/v1/playcheck", conf.SchedIp, port)
 	if err := util.Post(addr, string(bytes), &resp); err != nil {
 		log.Println(err)
 		return nil

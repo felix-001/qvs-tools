@@ -59,7 +59,7 @@ func (m *NodeMgr) GetIpv6Nodes() {
 
 func (m *NodeMgr) GetIpv6DnsRecords() {
 	xl := xlog.NewDummyWithCtx(context.Background())
-	resp, err := m.resources.DnsPodCli.GetRecords(xl, m.conf.Domain, "", "", 0)
+	resp, err := m.resources.DnsPodCli.GetRecords(xl, m.conf.Domain, m.conf.Host, "", 0)
 	if err != nil {
 		log.Println(err)
 		return

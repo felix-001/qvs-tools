@@ -67,11 +67,15 @@ type Config struct {
 	Ip                    string
 	Query                 string
 	App                   string
+	RawApp                string
 	Task                  string
 	StartTime             string
 	EndTime               string
 	NsId                  string
 	GBId                  string
+	Host                  string
+	QnTestUrl             string
+	Player                string
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -89,6 +93,7 @@ type Config struct {
 	Redirect              bool
 	Internal              bool
 	Silence               bool
+	Random                bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
@@ -159,7 +164,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Ip, "ip", "103.85.174.230", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
-	flag.StringVar(&c.App, "app", "live", "app")
+	flag.StringVar(&c.App, "app", "", "app")
 	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
 	flag.StringVar(&c.Name, "name", "", "name")
 	flag.StringVar(&c.Key, "key", "", "key")
@@ -171,7 +176,11 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.NsId, "nsid", "bj", "nsid")
 	flag.StringVar(&c.GBId, "gbid", "31011500991320021895", "gbid")
 	flag.StringVar(&c.Skip, "skip", "", "skip")
-	flag.IntVar(&c.Port, "port", 8080, "port")
+	flag.StringVar(&c.Host, "host", "", "host")
+	flag.StringVar(&c.RawApp, "raw_app", "", "raw_app")
+	flag.StringVar(&c.QnTestUrl, "qn_test_url", "", "qn_test_url")
+	flag.StringVar(&c.Player, "player", "", "player")
+	flag.IntVar(&c.Port, "port", 0, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
@@ -184,6 +193,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Internal, "internal", false, "是否是内部的")
 	flag.BoolVar(&c.Silence, "silence", false, "是否发送静音的语音数据")
 	flag.Var(&c.HeaderMap, "header", "header")
+	flag.BoolVar(&c.Random, "random", false, "随机")
 	flag.IntVar(&c.N, "n", 100, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
 

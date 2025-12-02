@@ -270,3 +270,51 @@ func InetAton(ipStr string) (uint32, error) {
 	}
 	return uint32(ip[0]) | uint32(ip[1])<<8 | uint32(ip[2])<<16 | uint32(ip[3])<<24, nil
 }
+
+func GetRandomPcdnFromSchedAPI(conf *config.Config) (string, string) {
+	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=isp&mode=detail&ipversion=ipv4"
+	resp, err := Get(addr)
+	if err != nil {
+		sublogger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
+		return "", ""
+	}
+	//fmt.Println(resp)
+	ispNodesMap := make(map[string][]*schedModel.NodeIpsPair)
+	if err := json.Unmarshal([]byte(resp), &ispNodesMap); err != nil {
+		sublogger.Error().Err(err).Msg("unmashal err")
+		return "", ""
+	}
+	key := fmt.Sprintf("isp_group_%s", conf.Isp)
+	nodes, ok := ispNodesMap[key]
+	if !ok {
+		sublogger.Error().
+			Str("isp", conf.Isp).
+			Msg("isp not found nodes")
+		return "", ""
+	}
+	if len(nodes) == 0 {
+		sublogger.Error().Msg("nodes len is 0")
+		return "", ""
+	}
+	pcdn := ""
+	var selectNode *schedModel.NodeIpsPair
+	for _, nodeInfo := range nodes {
+		for _, ipInfo := range nodeInfo.Ips {
+			if ipInfo.IsIPv6 {
+				continue
+			}
+			if util.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			pcdn = fmt.Sprintf("%s:%d", ipInfo.Ip, nodeInfo.Node.StreamdPorts.Http)
+			selectNode = nodeInfo
+			break
+		}
+	}
+	if pcdn == "" {
+		sublogger.Error().Msg("pcdn empty")
+		return "", ""
+	}
+	sublogger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
+	return selectNode.Node.Id, pcdn
+}
