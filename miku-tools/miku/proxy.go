@@ -1,6 +1,5 @@
 package miku
 
-/*
 import (
 	//"context"
 	"encoding/json"
@@ -13,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"proxy/protocol"
+	"mikutool/public/util"
 )
 
 // Server 代理服务器A
@@ -41,7 +40,7 @@ type ClientConnection struct {
 
 // PendingRequest 等待响应的请求
 type PendingRequest struct {
-	Chan     chan *protocol.HTTPResponseData
+	Chan     chan *util.HTTPResponseData
 	Deadline time.Time
 }
 
@@ -136,15 +135,15 @@ func (s *Server) handleTCPConnection(conn net.Conn) {
 
 // handleMessage 处理消息
 func (s *Server) handleMessage(clientID string, data []byte) error {
-	msg, err := protocol.DecodeMessage(data)
+	msg, err := util.DecodeMessage(data)
 	if err != nil {
 		return fmt.Errorf("decode message error: %w", err)
 	}
 
 	switch msg.Type {
-	case protocol.HTTPResponse:
+	case util.HTTPResponse:
 		// 处理HTTP响应
-		var responseData protocol.HTTPResponseData
+		var responseData util.HTTPResponseData
 		if err := json.Unmarshal(msg.Data, &responseData); err != nil {
 			return fmt.Errorf("unmarshal response data error: %w", err)
 		}
@@ -159,7 +158,7 @@ func (s *Server) handleMessage(clientID string, data []byte) error {
 		}
 		s.requestsMutex.Unlock()
 
-	case protocol.Heartbeat:
+	case util.Heartbeat:
 		// 心跳响应
 		log.Printf("Heartbeat received from client %s", clientID)
 
@@ -213,7 +212,7 @@ func (s *Server) handleHTTPRequest(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// 构建HTTP请求数据
-	requestData := protocol.HTTPRequestData{
+	requestData := util.HTTPRequestData{
 		Method:  r.Method,
 		Path:    r.URL.Path,
 		Headers: make(map[string]string),
@@ -238,22 +237,22 @@ func (s *Server) handleHTTPRequest(w http.ResponseWriter, r *http.Request) {
 	messageID := fmt.Sprintf("req_%d", time.Now().UnixNano())
 
 	// 创建协议消息
-	protocolMsg := protocol.ProtocolMessage{
-		Type:      protocol.HTTPRequest,
+	protocolMsg := util.ProtocolMessage{
+		Type:      util.HTTPRequest,
 		MessageID: messageID,
 		Data:      requestDataBytes,
 		Headers:   make(map[string]string),
 	}
 
 	// 编码协议消息
-	protocolMsgBytes, err := protocol.EncodeMessage(protocolMsg)
+	protocolMsgBytes, err := util.EncodeMessage(protocolMsg)
 	if err != nil {
 		http.Error(w, "Failed to encode protocol message", http.StatusInternalServerError)
 		return
 	}
 
 	// 创建等待响应的channel
-	responseChan := make(chan *protocol.HTTPResponseData, 1)
+	responseChan := make(chan *util.HTTPResponseData, 1)
 	s.requestsMutex.Lock()
 	s.pendingRequests[messageID] = &PendingRequest{
 		Chan:     responseChan,
@@ -304,6 +303,9 @@ func (s *Server) CleanupExpiredRequests() {
 	}
 }
 
+// 日期
+// bucket(下拉菜单，查询ck获取, select distinct Appname from miku.streamd_qos)
+// 流id输入框(是否支持模糊匹配)
 func Proxy(conf *config.Config) {
 	if conf.Port != 0 {
 		conf.Port = 58088
@@ -318,5 +320,3 @@ func Proxy(conf *config.Config) {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
-
-*/

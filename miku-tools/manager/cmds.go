@@ -374,8 +374,6 @@ func (m *CommandManager) CmdTestSip() *Command {
 	return cmd
 }
 
-/*
-
 func (m *CommandManager) CmdProxy() *Command {
 	handler := func() {
 		miku.Proxy(m.config)
@@ -386,8 +384,6 @@ func (m *CommandManager) CmdProxy() *Command {
 	}
 	return cmd
 }
-
-*/
 
 func (m *CommandManager) CmdTestHy() *Command {
 	handler := func() {
@@ -407,6 +403,28 @@ func (m *CommandManager) CmdTestHy1() *Command {
 	}
 	cmd := &Command{
 		Desc:    "测试虎牙",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdQos() *Command {
+	handler := func() {
+		miku.Qos(m.config)
+	}
+	cmd := &Command{
+		Desc:    "miku qos, upstream, 查询ck质量数据，返回html页面， 包含各种图表",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdTrino() *Command {
+	handler := func() {
+		miku.TrinoSrv(m.config)
+	}
+	cmd := &Command{
+		Desc:    "trino",
 		Handler: handler,
 	}
 	return cmd

@@ -8,6 +8,7 @@ require (
 	github.com/go-echarts/go-echarts/v2 v2.6.3
 	github.com/gorilla/websocket v1.5.3
 	github.com/icholy/digest v1.1.0
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/qbox/bo-sdk/base v0.0.0-20250521054513-92c7331f4f8d
 	github.com/qbox/bo-sdk/sdk v0.0.0-20250521054513-92c7331f4f8d
 	github.com/qbox/mikud-live v1.5.1-0.20250702060638-1215de47f118
@@ -15,11 +16,11 @@ require (
 	github.com/qiniu/x v1.15.1
 	github.com/redis/go-redis/v9 v9.11.0
 	github.com/rs/zerolog v1.32.0
+	github.com/trinodb/trino-go-client v0.326.0
 )
 
 require (
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
-	github.com/Masterminds/squirrel v1.5.4 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -54,17 +55,21 @@ require (
 	github.com/hashicorp/go-hclog v0.16.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
+	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/serf v0.9.5 // indirect
+	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
+	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
+	github.com/jcmturner/gofork v1.7.6 // indirect
+	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
+	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
+	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
@@ -76,6 +81,7 @@ require (
 	github.com/panjf2000/ants v1.2.1 // indirect
 	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.18.0 // indirect
@@ -85,7 +91,6 @@ require (
 	github.com/qiniu/dyn v1.3.0 // indirect
 	github.com/qiniu/qmgo v1.1.8 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
-	github.com/segmentio/kafka-go v0.4.42 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.721 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/dnspod v1.0.721 // indirect
