@@ -10,6 +10,8 @@ MIKU QOS排障系统是一个基于Web的质量分析工具，用于查询和分
 - **时间范围选择**: 支持开始和结束日期时间的选择，也支持手动输入
 - **应用名称筛选**: 通过下拉框选择不同的AppName
 - **流ID查询**: 支持精确匹配和模糊查询
+- **域名查询**: 支持对CDN域名进行精确或模糊搜索
+- **UID查询**: 支持对UID相关信息进行查询（在stream_url字段中搜索）
 - **实时分析**: 点击"开始质量分析"按钮即可获取分析结果
 
 ### 2. 后端API接口
@@ -71,7 +73,10 @@ go build main_qos.go -o qos-server
 ### 查询条件
 - **时间范围**: 支持开始和结束时间筛选
 - **应用名称**: 精确匹配平台信息
-- **流ID**: 支持精确和模糊匹配
+- **流ID**: 支持精确和模糊匹配，对应字段 `dim_stream`
+- **域名**: 支持精确和模糊匹配，对应字段 `dim_cdndomain`
+- **UID**: 支持精确和模糊匹配，在 `dim_stream_url` 字段中搜索
+- **模糊搜索**: 选中后，流ID、域名和UID都使用LIKE模式搜索
 
 ## API接口文档
 
@@ -93,6 +98,8 @@ go build main_qos.go -o qos-server
   "startTime": "2025-12-01T00:00",
   "endTime": "2025-12-03T23:59",
   "streamId": "stream123",
+  "domain": "example.com",
+  "uid": "user123",
   "fuzzySearch": true
 }
 ```
