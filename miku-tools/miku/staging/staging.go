@@ -666,7 +666,7 @@ func TestHy(conf *config.Config, resources *resources.Resources) {
 }
 
 func TestHy1(conf *config.Config) {
-	file, err := os.Open("/Users/liyuanquan/Downloads/sqllab_liyqhy_20251201T021548.csv")
+	file, err := os.Open("qos_report.csv")
 	if err != nil {
 		log.Println("打开CSV文件失败:", err)
 		return

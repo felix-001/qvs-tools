@@ -1,17 +1,27 @@
 package miku
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"mikutool/config"
 	"mikutool/public/util"
+
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // QOSRequest 前端查询请求结构
@@ -68,11 +78,10 @@ func (s *QOSServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// 模拟AppName列表，实际应该从数据库获取
 	appNames := []string{
-		"miku_live",
-		"miku_vod",
-		"miku_short",
-		"miku_game",
-		"miku_education",
+		"huyacdn",
+		"livessports",
+		"douyu",
+		"vzan",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -92,7 +101,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 构建SQL查询
+	// 构建SQL查询（获取原始数据）
 	sql := s.buildSQLQuery(req, true)
 	log.Printf("执行SQL查询: %s", sql)
 
@@ -105,12 +114,81 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("查询结果:", len(reports))
 
-	// 生成图表HTML
-	chartHTML := s.generateChartHTML(reports)
+	// 将reports格式化为CSV并写入文件
+	csvFile, err := os.Create("qos_report.csv")
+	if err != nil {
+		log.Printf("创建CSV文件失败: %v", err)
+	} else {
+		defer csvFile.Close()
 
-	// 返回图表HTML
+		writer := csv.NewWriter(csvFile)
+		defer writer.Flush()
+
+		// 写入CSV头
+		headers := []string{
+			"ClientType", "Cts", "DimIp", "DimIsp", "DimCdndomain", "DimCdnip",
+			"DimCoderatebps", "DimHeartType", "DimIsInBackground", "DimLine",
+			"DimNetworktype", "DimPlatform", "DimStream", "DimStreamUrl", "DimVersion",
+			"FieldVideoBadQuality", "InsertTs", "LogTime", "Systs", "Minute",
+			"Innerreporttime", "Innerfilepath", "Day", "Hour",
+		}
+		if err := writer.Write(headers); err != nil {
+			log.Printf("写入CSV头失败: %v", err)
+		}
+
+		// 写入数据行
+		for _, report := range reports {
+			record := []string{
+				s.getString(report.ClientType),
+				s.getInt64(report.Cts),
+				s.getString(report.DimIp),
+				s.getString(report.DimIsp),
+				s.getString(report.DimCdndomain),
+				s.getString(report.DimCdnip),
+				s.getString(report.DimCoderatebps),
+				s.getString(report.DimHeartType),
+				s.getString(report.DimIsInBackground),
+				s.getString(report.DimLine),
+				s.getString(report.DimNetworktype),
+				s.getString(report.DimPlatform),
+				s.getString(report.DimStream),
+				s.getString(report.DimStreamUrl),
+				s.getString(report.DimVersion),
+				s.getInt64(report.FieldVideoBadQuality),
+				s.getInt64(report.InsertTs),
+				s.getInt64(report.LogTime),
+				s.getInt64(report.Systs),
+				s.getString(report.Minute),
+				s.getInt64(report.Innerreporttime),
+				s.getString(report.Innerfilepath),
+				s.getString(report.Day),
+				s.getString(report.Hour),
+			}
+			if err := writer.Write(record); err != nil {
+				log.Printf("写入CSV记录失败: %v", err)
+			}
+		}
+		log.Println("CSV报告已保存到 qos_report.csv")
+	}
+
+	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
+	minuteAggregated := s.aggregateByMinute(reports)
+
+	// 按照TestHy1方式聚合数据
+	cdnAggregated, clientAggregated := s.aggregateByTestHy1(reports)
+
+	// 生成分钟聚合数据的折线图
+	minuteChartHTML := s.generateMinuteChartHTML(minuteAggregated)
+
+	// 生成聚合数据表格HTML
+	tableHTML := s.generateTableHTML(minuteAggregated, cdnAggregated, clientAggregated)
+
+	// 合并图表和表格HTML
+	fullHTML := minuteChartHTML + tableHTML
+
+	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(chartHTML))
+	w.Write([]byte(fullHTML))
 }
 
 // buildSQLQuery 构建SQL查询语句
@@ -205,338 +283,6 @@ func (s *QOSServer) convertToDay(timeStr string) string {
 	// 如果解析失败，直接返回原始字符串
 	log.Printf("时间转换失败，返回原始字符串: %s", timeStr)
 	return timeStr
-}
-
-// generateChartHTML 生成图表HTML
-func (s *QOSServer) generateChartHTML(reports []util.QualityReport) string {
-	if len(reports) == 0 {
-		return `
-		<html>
-		<head><title>QOS分析结果</title></head>
-		<body>
-			<h2>QOS分析结果</h2>
-			<p>未找到匹配的数据</p>
-			<button onclick="window.history.back()">返回</button>
-		</body>
-		</html>
-		`
-	}
-
-	// 使用echarts生成可视化图表
-	html := `
-	<!DOCTYPE html>
-	<html lang="zh-CN">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>QOS分析结果</title>
-		<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-		<style>
-			body { 
-				font-family: 'Microsoft YaHei', Arial, sans-serif; 
-				margin: 20px; 
-				background-color: #f5f5f5;
-			}
-			.container {
-				max-width: 1400px;
-				margin: 0 auto;
-				background-color: white;
-				padding: 30px;
-				border-radius: 10px;
-				box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-			}
-			h1 { 
-				color: #333; 
-				text-align: center;
-				margin-bottom: 30px;
-				border-bottom: 3px solid #007bff;
-				padding-bottom: 10px;
-			}
-			.chart-container {
-				display: grid;
-				grid-template-columns: 1fr 1fr;
-				gap: 20px;
-				margin-bottom: 30px;
-			}
-			.chart-box {
-				border: 1px solid #ddd;
-				border-radius: 8px;
-				padding: 15px;
-				background-color: white;
-				box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-			}
-			.chart-title {
-				font-size: 16px;
-				font-weight: bold;
-				margin-bottom: 15px;
-				color: #333;
-				text-align: center;
-			}
-			.chart {
-				width: 100%;
-				height: 300px;
-			}
-			.data-table {
-				margin-top: 30px;
-			}
-			table { 
-				width: 100%; 
-				border-collapse: collapse; 
-				margin-top: 20px;
-				font-size: 12px;
-			}
-			th, td { 
-				border: 1px solid #ddd; 
-				padding: 8px; 
-				text-align: left;
-				max-width: 150px;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				white-space: nowrap;
-			}
-			th { 
-				background-color: #f2f2f2; 
-				font-weight: bold;
-			}
-			.back-btn { 
-				background-color: #007bff; 
-				color: white; 
-				padding: 10px 20px; 
-				border: none; 
-				border-radius: 4px; 
-				cursor: pointer;
-				margin-bottom: 20px;
-				font-size: 14px;
-				transition: background-color 0.3s;
-			}
-			.back-btn:hover {
-				background-color: #0056b3;
-			}
-			.summary-info {
-				display: grid;
-				grid-template-columns: repeat(4, 1fr);
-				gap: 20px;
-				margin-bottom: 30px;
-			}
-			summary-card {
-				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-				color: white;
-				padding: 20px;
-				border-radius: 8px;
-				text-align: center;
-			}
-			summary-card h3 {
-				margin: 0 0 10px 0;
-				font-size: 14px;
-			}
-			summary-card p {
-				margin: 0;
-				font-size: 24px;
-				font-weight: bold;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="container">
-			<button class="back-btn" onclick="window.history.back()">← 返回</button>
-			<h1>QOS质量分析报告</h1>
-			
-			<!-- 统计摘要 -->
-			<div class="summary-info">
-				<div class="summary-card">
-					<h3>总记录数</h3>
-					<p>` + fmt.Sprintf("%d", len(reports)) + `</p>
-				</div>
-				<div class="summary-card">
-					<h3>平均不良质量</h3>
-					<p>` + s.calculateAverageBadQuality(reports) + `</p>
-				</div>
-				<div class="summary-card">
-					<h3>最高码率</h3>
-					<p>` + s.getMaxBitrate(reports) + `</p>
-				</div>
-				<div class="summary-card">
-					<h3>涉及域名</h3>
-					<p>` + s.getUniqueDomainCount(reports) + `</p>
-				</div>
-			</div>
-
-			<!-- 图表区域 -->
-			<div class="chart-container">
-				<div class="chart-box">
-					<div class="chart-title">不良质量趋势</div>
-					<div id="qualityChart" class="chart"></div>
-				</div>
-				<div class="chart-box">
-					<div class="chart-title">CDN域名分布</div>
-					<div id="domainChart" class="chart"></div>
-				</div>
-				<div class="chart-box">
-					<div class="chart-title">平台分布</div>
-					<div id="platformChart" class="chart"></div>
-				</div>
-				<div class="chart-box">
-					<div class="chart-title">码率分布</div>
-					<div id="bitrateChart" class="chart"></div>
-				</div>
-			</div>
-
-			<!-- 数据表格 -->
-			<div class="data-table">
-				<h2>详细数据</h2>
-				<table>
-					<thead>
-						<tr>
-							<th>时间</th>
-							<th>流ID</th>
-							<th>平台</th>
-							<th>IP</th>
-							<th>ISP</th>
-							<th>CDN域名</th>
-							<th>码率</th>
-							<th>不良质量</th>
-						</tr>
-					</thead>
-					<tbody>
-	`
-
-	for _, report := range reports {
-		html += `
-						<tr>
-							<td>` + s.formatTime(report.LogTime) + `</td>
-							<td>` + s.getString(report.DimStream) + `</td>
-							<td>` + s.getString(report.DimPlatform) + `</td>
-							<td>` + s.getString(report.DimIp) + `</td>
-							<td>` + s.getString(report.DimIsp) + `</td>
-							<td>` + s.getString(report.DimCdndomain) + `</td>
-							<td>` + s.getString(report.DimCoderatebps) + `</td>
-							<td>` + s.getInt64(report.FieldVideoBadQuality) + `</td>
-						</tr>
-		`
-	}
-
-	html += `
-					</tbody>
-				</table>
-			</div>
-		</div>
-
-		<script>
-			// 准备图表数据
-			const reports = ` + s.generateJSReports(reports) + `;
-			
-			// 质量趋势图表
-			const qualityChart = echarts.init(document.getElementById('qualityChart'));
-			const qualityOption = {
-				title: { show: false },
-				tooltip: { trigger: 'axis' },
-				xAxis: { 
-					type: 'category',
-					data: reports.map(r => r.time),
-					axisLabel: { rotate: 45 }
-				},
-				yAxis: { type: 'value' },
-				series: [{
-					name: '不良质量',
-					type: 'line',
-					data: reports.map(r => r.badQuality),
-					itemStyle: { color: '#ff6b6b' },
-					areaStyle: { opacity: 0.3 }
-				}]
-			};
-			qualityChart.setOption(qualityOption);
-
-			// CDN域名分布图表
-			const domainChart = echarts.init(document.getElementById('domainChart'));
-			const domainData = {};
-			reports.forEach(r => {
-				domainData[r.domain] = (domainData[r.domain] || 0) + 1;
-			});
-			const domainOption = {
-				title: { show: false },
-				tooltip: { trigger: 'item' },
-				series: [{
-					name: '域名分布',
-					type: 'pie',
-					radius: '60%',
-					data: Object.entries(domainData).map(([name, value]) => ({ name, value })),
-					emphasis: {
-						itemStyle: {
-							shadowBlur: 10,
-							shadowOffsetX: 0,
-							shadowColor: 'rgba(0, 0, 0, 0.5)'
-						}
-					}
-				}]
-			};
-			domainChart.setOption(domainOption);
-
-			// 平台分布图表
-			const platformChart = echarts.init(document.getElementById('platformChart'));
-			const platformData = {};
-			reports.forEach(r => {
-				platformData[r.platform] = (platformData[r.platform] || 0) + 1;
-			});
-			const platformOption = {
-				title: { show: false },
-				tooltip: { trigger: 'item' },
-				series: [{
-					name: '平台分布',
-					type: 'pie',
-					radius: '60%',
-					data: Object.entries(platformData).map(([name, value]) => ({ name, value })),
-					emphasis: {
-						itemStyle: {
-							shadowBlur: 10,
-							shadowOffsetX: 0,
-							shadowColor: 'rgba(0, 0, 0, 0.5)'
-						}
-					}
-				}]
-			};
-			platformChart.setOption(platformOption);
-
-			// 码率分布图表
-			const bitrateChart = echarts.init(document.getElementById('bitrateChart'));
-			const bitrateGroups = {
-				'0-1Mbps': 0, '1-2Mbps': 0, '2-5Mbps': 0, 
-				'5-10Mbps': 0, '10Mbps+': 0
-			};
-			reports.forEach(r => {
-				const bitrate = parseFloat(r.bitrate) || 0;
-				if (bitrate < 1) bitrateGroups['0-1Mbps']++;
-				else if (bitrate < 2) bitrateGroups['1-2Mbps']++;
-				else if (bitrate < 5) bitrateGroups['2-5Mbps']++;
-				else if (bitrate < 10) bitrateGroups['5-10Mbps']++;
-				else bitrateGroups['10Mbps+']++;
-			});
-			const bitrateOption = {
-				title: { show: false },
-				tooltip: { trigger: 'axis' },
-				xAxis: { type: 'category', data: Object.keys(bitrateGroups) },
-				yAxis: { type: 'value' },
-				series: [{
-					name: '码率分布',
-					type: 'bar',
-					data: Object.values(bitrateGroups),
-					itemStyle: { color: '#4ecdc4' }
-				}]
-			};
-			bitrateChart.setOption(bitrateOption);
-
-			// 响应式处理
-			window.addEventListener('resize', () => {
-				qualityChart.resize();
-				domainChart.resize();
-				platformChart.resize();
-				bitrateChart.resize();
-			});
-		</script>
-	</body>
-	</html>
-	`
-
-	return html
 }
 
 // formatTime 格式化时间戳
@@ -1250,6 +996,509 @@ func (s *QOSServer) getHomePageTemplate() string {
 </body>
 </html>
 `
+}
+
+// MinuteAggregatedData 按分钟聚合数据结构
+type MinuteAggregatedData struct {
+	Timestamp  string  `json:"timestamp"`
+	Percent    float64 `json:"percent"`
+	LagCount   int     `json:"lag_count"`
+	TotalCount int     `json:"total_count"`
+}
+
+// AggregatedData 聚合数据结构
+type AggregatedData struct {
+	CDNIP      string  `json:"cdn_ip"`
+	BadCount   int     `json:"bad_count"`
+	TotalCount int     `json:"total_count"`
+	BadPercent float64 `json:"bad_percent"`
+	LagCount   int     `json:"lag_count"`
+	NoLagCount int     `json:"no_lag_count"`
+}
+
+// ClientAggregatedData Client聚合数据
+type ClientAggregatedData struct {
+	ClientIP   string  `json:"client_ip"`
+	BadCount   int     `json:"bad_count"`
+	TotalCount int     `json:"total_count"`
+	BadPercent float64 `json:"bad_percent"`
+}
+
+// aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
+func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
+	// 按分钟分组聚合
+	minuteMap := make(map[string]*MinuteAggregatedData)
+
+	for _, report := range reports {
+		// 获取时间戳并按分钟截断
+		var timestamp time.Time
+		if report.Cts != nil {
+			timestamp = time.Unix(*report.Cts, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
+		} else if report.LogTime != nil {
+			timestamp = time.Unix(*report.LogTime, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
+		} else {
+			continue
+		}
+
+		// 按分钟截断时间
+		truncatedTime := time.Date(
+			timestamp.Year(), timestamp.Month(), timestamp.Day(),
+			timestamp.Hour(), timestamp.Minute(), 0, 0,
+			time.FixedZone("Asia/Shanghai", 8*60*60),
+		).Format("2006-01-02 15:04:05")
+
+		// 初始化分钟数据
+		if _, exists := minuteMap[truncatedTime]; !exists {
+			minuteMap[truncatedTime] = &MinuteAggregatedData{
+				Timestamp:  truncatedTime,
+				Percent:    0.0,
+				LagCount:   0,
+				TotalCount: 0,
+			}
+		}
+
+		// 统计数据
+		minuteData := minuteMap[truncatedTime]
+		minuteData.TotalCount++
+
+		// 检查是否为不良质量
+		if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
+			minuteData.LagCount++
+		}
+	}
+
+	// 计算百分比并转换为切片
+	var result []MinuteAggregatedData
+	for _, data := range minuteMap {
+		if data.TotalCount > 0 {
+			data.Percent = float64(data.LagCount) / float64(data.TotalCount) * 100
+		}
+		result = append(result, *data)
+	}
+
+	// 按时间排序
+	sort.Slice(result, func(i, j int) bool {
+		timeI, _ := time.Parse("2006-01-02 15:04:05", result[i].Timestamp)
+		timeJ, _ := time.Parse("2006-01-02 15:04:05", result[j].Timestamp)
+		return timeI.Before(timeJ)
+	})
+
+	return result
+}
+
+// aggregateByTestHy1 按照TestHy1方式聚合数据
+func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]AggregatedData, []ClientAggregatedData) {
+	// CDN IP聚合
+	cdnBadMap := make(map[string]bool)   // cdnip -> field_video_bad_quality=="100"
+	cdnAllMap := make(map[string]bool)   // 所有cdnip
+	cdnLagCnt := make(map[string]int)    // cdnip -> 延迟数
+	cdnNogLagCnt := make(map[string]int) // cdnip -> 无延迟数
+
+	// Client IP聚合
+	clientBadMap := make(map[string]bool) // clientIp -> field_video_bad_quality=="100"
+	clientAllMap := make(map[string]bool) // 所有clientIp
+
+	for _, report := range reports {
+		// 获取CDN IP
+		var cdnip string
+		if report.DimCdnip != nil && *report.DimCdnip != "" {
+			cdnip = *report.DimCdnip
+		}
+
+		if (cdnip == "" || cdnip == "qn.flv.huya.com" || cdnip == "http://qn.flv.huya.com") && report.DimStreamUrl != nil && *report.DimStreamUrl != "" {
+			// 从URL中提取域名作为CDN IP
+			if u, err := url.Parse(*report.DimStreamUrl); err == nil {
+				host := u.Host
+				if h, _, err := net.SplitHostPort(host); err == nil {
+					cdnip = h
+				} else {
+					cdnip = host
+				}
+			}
+		}
+
+		// 获取Client IP
+		var clientIp string
+		if report.DimIp != nil {
+			clientIp = *report.DimIp
+		}
+
+		// 获取不良质量状态
+		var isBadQuality bool
+		if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
+			isBadQuality = true
+		}
+
+		// 处理CDN IP聚合
+		if cdnip != "" {
+			cdnAllMap[cdnip] = true
+			if isBadQuality {
+				cdnBadMap[cdnip] = true
+				cdnLagCnt[cdnip]++
+			} else {
+				cdnNogLagCnt[cdnip]++
+			}
+		}
+
+		// 处理Client IP聚合
+		if clientIp != "" {
+			clientAllMap[clientIp] = true
+			if isBadQuality {
+				clientBadMap[clientIp] = true
+			}
+		}
+	}
+
+	// 生成CDN聚合数据
+	var cdnAggregated []AggregatedData
+	for cdnip := range cdnAllMap {
+		badCount := 0
+		if cdnBadMap[cdnip] {
+			badCount = 1
+		}
+		totalCount := 1
+		if cdnLagCnt[cdnip] > 0 || cdnNogLagCnt[cdnip] > 0 {
+			totalCount = cdnLagCnt[cdnip] + cdnNogLagCnt[cdnip]
+		}
+
+		badPercent := 0.0
+		if totalCount > 0 {
+			badPercent = float64(badCount) / float64(totalCount) * 100
+		}
+
+		cdnAggregated = append(cdnAggregated, AggregatedData{
+			CDNIP:      cdnip,
+			BadCount:   badCount,
+			TotalCount: totalCount,
+			BadPercent: badPercent,
+			LagCount:   cdnLagCnt[cdnip],
+			NoLagCount: cdnNogLagCnt[cdnip],
+		})
+	}
+
+	// 按延迟次数降序排序
+	sort.Slice(cdnAggregated, func(i, j int) bool {
+		return cdnAggregated[i].LagCount > cdnAggregated[j].LagCount
+	})
+
+	// 生成Client聚合数据
+	var clientAggregated []ClientAggregatedData
+	for clientIp := range clientAllMap {
+		badCount := 0
+		if clientBadMap[clientIp] {
+			badCount = 1
+		}
+		totalCount := 1
+
+		badPercent := 0.0
+		if totalCount > 0 {
+			badPercent = float64(badCount) / float64(totalCount) * 100
+		}
+
+		clientAggregated = append(clientAggregated, ClientAggregatedData{
+			ClientIP:   clientIp,
+			BadCount:   badCount,
+			TotalCount: totalCount,
+			BadPercent: badPercent,
+		})
+	}
+
+	// 按不良质量次数降序排序
+	sort.Slice(clientAggregated, func(i, j int) bool {
+		return clientAggregated[i].BadCount > clientAggregated[j].BadCount
+	})
+
+	return cdnAggregated, clientAggregated
+}
+
+// generateMinuteChartHTML 生成分钟聚合数据的折线图HTML
+func (s *QOSServer) generateMinuteChartHTML(minuteAggregated []MinuteAggregatedData) string {
+	if len(minuteAggregated) == 0 {
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "每分钟不良质量占比趋势",
+			Left:  "center",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c}%",
+			Show:      opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value}%",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// 准备X轴数据（时间戳）
+	var xAxisData []string
+	// 准备Y轴数据（百分比）
+	var yAxisData []opts.LineData
+
+	for _, data := range minuteAggregated {
+		xAxisData = append(xAxisData, data.Timestamp)
+		yAxisData = append(yAxisData, opts.LineData{
+			Value: data.Percent,
+		})
+	}
+	log.Println(xAxisData, yAxisData)
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries("不良质量占比", yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#dc3545",
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   "#dc3545",
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 使用iframe包装图表HTML作为web component
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">每分钟不良质量占比趋势图</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+
+	return htmlContent
+}
+
+// formatArrayToJS 将字符串数组格式化为JavaScript数组
+func formatArrayToJS(arr []string) string {
+	if len(arr) == 0 {
+		return "[]"
+	}
+
+	var jsArray strings.Builder
+	jsArray.WriteString("[")
+	for i, item := range arr {
+		if i > 0 {
+			jsArray.WriteString(",")
+		}
+		jsArray.WriteString(fmt.Sprintf("'%s'", item))
+	}
+	jsArray.WriteString("]")
+
+	return jsArray.String()
+}
+
+// formatFloatArrayToJS 将浮点数数组格式化为JavaScript数组
+func formatFloatArrayToJS(arr []float64) string {
+	if len(arr) == 0 {
+		return "[]"
+	}
+
+	var jsArray strings.Builder
+	jsArray.WriteString("[")
+	for i, item := range arr {
+		if i > 0 {
+			jsArray.WriteString(",")
+		}
+		jsArray.WriteString(fmt.Sprintf("%.2f", item))
+	}
+	jsArray.WriteString("]")
+
+	return jsArray.String()
+}
+
+// generateTableHTML 生成聚合数据表格HTML
+func (s *QOSServer) generateTableHTML(minuteAggregated []MinuteAggregatedData, cdnAggregated []AggregatedData, clientAggregated []ClientAggregatedData) string {
+	if len(cdnAggregated) == 0 && len(clientAggregated) == 0 {
+		return ""
+	}
+
+	htmlContent := `
+	<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">聚合数据分析</h2>
+	`
+
+	// 生成按分钟聚合的表格
+	if len(minuteAggregated) > 0 {
+		htmlContent += `
+		<h3 style="color: #555; margin-bottom: 20px;">按分钟聚合分析</h3>
+		<div style="overflow-x: auto;">
+			<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+				<thead>
+					<tr style="background-color: #f2f2f2;">
+						<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">时间</th>
+						<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量占比</th>
+						<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">延迟次数</th>
+						<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">总次数</th>
+					</tr>
+				</thead>
+				<tbody>
+		`
+
+		for _, data := range minuteAggregated {
+			percentColor := "color: #28a745;"
+			if data.Percent > 0 {
+				percentColor = "color: #dc3545;"
+			}
+
+			htmlContent += fmt.Sprintf(`
+					<tr>
+						<td style="border: 1px solid #ddd; padding: 8px;">%s</td>
+						<td style="border: 1px solid #ddd; padding: 8px; %s">%.2f%%</td>
+						<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+						<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+					</tr>
+			`, data.Timestamp, percentColor, data.Percent, data.LagCount, data.TotalCount)
+		}
+
+		htmlContent += `
+				</tbody>
+			</table>
+		</div>
+	`
+	}
+
+	htmlContent += `
+		<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+	`
+
+	// 生成CDN IP表格
+	if len(cdnAggregated) > 0 {
+		htmlContent += `
+			<div class="chart-box">
+				<div class="chart-title">CDN IP质量分析统计</div>
+				<div style="overflow-x: auto;">
+					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+						<thead>
+							<tr style="background-color: #f2f2f2;">
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">CDN IP</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量次数</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">总次数</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量占比</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">延迟次数</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">无延迟次数</th>
+							</tr>
+						</thead>
+						<tbody>
+		`
+
+		for _, data := range cdnAggregated {
+			badPercentColor := "color: #28a745;"
+			if data.BadPercent > 0 {
+				badPercentColor = "color: #dc3545;"
+			}
+
+			htmlContent += fmt.Sprintf(`
+							<tr>
+								<td style="border: 1px solid #ddd; padding: 8px;">%s</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+								<td style="border: 1px solid #ddd; padding: 8px; %s">%.2f%%</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+							</tr>
+			`, data.CDNIP, data.BadCount, data.TotalCount, badPercentColor, data.BadPercent, data.LagCount, data.NoLagCount)
+		}
+
+		htmlContent += `
+						</tbody>
+					</table>
+				</div>
+			</div>
+		`
+	}
+
+	// 生成Client IP表格
+	if len(clientAggregated) > 0 {
+		htmlContent += `
+			<div class="chart-box">
+				<div class="chart-title">Client IP质量分析统计</div>
+				<div style="overflow-x: auto;">
+					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+						<thead>
+							<tr style="background-color: #f2f2f2;">
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Client IP</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量次数</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">总次数</th>
+								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量占比</th>
+							</tr>
+						</thead>
+						<tbody>
+		`
+
+		for _, data := range clientAggregated {
+			badPercentColor := "color: #28a745;"
+			if data.BadPercent > 0 {
+				badPercentColor = "color: #dc3545;"
+			}
+
+			htmlContent += fmt.Sprintf(`
+							<tr>
+								<td style="border: 1px solid #ddd; padding: 8px;">%s</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
+								<td style="border: 1px solid #ddd; padding: 8px; %s">%.2f%%</td>
+							</tr>
+			`, data.ClientIP, data.BadCount, data.TotalCount, badPercentColor, data.BadPercent)
+		}
+
+		htmlContent += `
+						</tbody>
+					</table>
+				</div>
+			</div>
+		`
+	}
+
+	htmlContent += `
+		</div>
+	</div>
+	`
+
+	return htmlContent
 }
 
 // Qos 主函数，启动QOS服务器
