@@ -144,20 +144,20 @@ func Province2Area(conf *config.Config) {
 	log.Println(result)
 }
 
-func GetLocate(ip string, ipParser *ipdb.City) (string, string, string) {
+func GetLocate(ip string, ipParser *ipdb.City) (string, string, string, string) {
 	locate, err := ipParser.Find(ip)
 	if err != nil {
 		log.Println(err, ip)
-		return "", "", ""
+		return "", "", "", ""
 	}
 	if locate.Isp == "" {
 		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
 	}
 	if locate.Country != "中国" {
-		log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
+		//log.Println("country", locate.Country, "isp", locate.Isp, "city", locate.City, "region", locate.Region, "ip", ip)
 	}
 	area, _ := schedUtil.ProvinceAreaRelation(locate.Region)
-	return locate.Isp, area, locate.Region
+	return locate.Country, locate.Isp, area, locate.Region
 }
 
 func UploadFile(filePath string) {

@@ -18,7 +18,7 @@ func (b *CoverStatistics) OnNode(node *commonModel.RtNode) {
 }
 
 func (b *CoverStatistics) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
-	isp, area, _ := util.GetLocate(ip.Ip, b.ipParser)
+	_, isp, area, _ := util.GetLocate(ip.Ip, b.ipParser)
 	if isp != "" {
 		b.ispAreaMap[area+isp]++
 	}

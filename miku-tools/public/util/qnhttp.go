@@ -131,6 +131,7 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		log.Println(err)
 		return "", err
 	}
+	log.Printf("resp header: %+v\n", resp.Header)
 	if resp.StatusCode != 200 {
 		log.Println("status code:", resp.StatusCode, "body:", string(resp_body), "status:", resp.Status)
 		return "", errHttpStatusCode

@@ -389,6 +389,18 @@ func (m *CommandManager) CmdProxy() *Command {
 
 */
 
+func (m *CommandManager) CmdTestHy() *Command {
+	handler := func() {
+		staging.TestHy(m.config, &m.resources)
+	}
+	cmd := &Command{
+		Desc:         "分析虎牙投递的质量数据",
+		Handler:      handler,
+		NeedIpParser: true,
+	}
+	return cmd
+}
+
 func (m *CommandManager) CmdTestHy1() *Command {
 	handler := func() {
 		staging.TestHy1(m.config)

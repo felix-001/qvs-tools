@@ -24,7 +24,7 @@ func (b *Ipv6Getter) OnNode(node *commonModel.RtNode) {
 
 func (b *Ipv6Getter) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
 	fmt.Println("nodeId:", node.Id, "machineId:", node.MachineId, "ip:", ip.Ip, "isp:", ip.Isp)
-	_, area, prov := util.GetLocate(ip.Ip, b.ipParser)
+	_, _, area, prov := util.GetLocate(ip.Ip, b.ipParser)
 	b.areaMap[area]++
 	b.provMap[prov]++
 	b.nodeMap[node.Id]++

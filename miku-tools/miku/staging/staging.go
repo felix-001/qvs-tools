@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	mrand "math/rand"
@@ -15,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -149,7 +151,7 @@ func get302(streamId string, res *resources.Resources) string {
 	}
 
 	fmt.Printf("提取的 IP 地址: %s, location: %s\n", host, location)
-	_, area, _ := util.GetLocate(host, res.IpParser)
+	_, _, area, _ := util.GetLocate(host, res.IpParser)
 	//log.Println(isp, area, region)
 	return area
 }
@@ -417,6 +419,250 @@ func TestSip(conf *config.Config) {
 		//}()
 	}
 	time.Sleep(time.Second * 10000)
+}
+
+func TestHy(conf *config.Config, resources *resources.Resources) {
+	// 读取 CSV 文件
+	file, err := os.Open("/Users/liyuanquan/Downloads/sqllab_liyqhy_20251201T021548.csv")
+	if err != nil {
+		log.Fatal("打开 CSV 文件失败:", err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.Comma = ',' // 默认分隔符
+
+	countryIps := make(map[string]map[string]bool)              // country -> count
+	regionIspIps := make(map[string]map[string]map[string]bool) // region -> isp -> ip
+	areaIspIps := make(map[string]map[string]map[string]bool)   // area -> isp -> ip
+	areaIps := make(map[string]map[string]bool)                 // area -> ip
+	lagIpCount := make(map[string]int)                          // area -> count
+	cdnIpLagCnt := make(map[string]int)                         // ip -> count
+	cdnIpLagClientIps := make(map[string]map[string]bool)       // ip -> clientIp
+	userIps := make(map[string]bool)
+	lagRegionIspIps := make(map[string]map[string]map[string]bool) // region -> isp -> ip
+	lagAreaIspIps := make(map[string]map[string]map[string]bool)   // area -> isp -> ip
+	lagAreaIps := make(map[string]map[string]bool)                 // area -> ip
+	lagAreaCnt := make(map[string]int)                             // area -> count
+	lagCdnIpCnt := make(map[string]int)                            // ip -> count
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Println("读取 CSV 行失败:", err)
+			continue
+		}
+		if len(record) < 3 {
+			log.Println("CSV 行格式错误，跳过:", record)
+			continue
+		}
+		ip := strings.TrimSpace(record[2])
+		if net.ParseIP(ip) == nil {
+			log.Println("无效 IP，跳过:", ip)
+			continue
+		}
+
+		field_video_bad_quality := strings.TrimSpace(record[15])
+		cdnip := strings.TrimSpace(record[5])
+		if net.ParseIP(cdnip) == nil {
+			log.Println("无效 CDN IP", cdnip, "client ip:", ip)
+			//continue
+		}
+		userIps[ip] = true
+
+		// 使用 ip 库解析
+		country, isp, area, region := util.GetLocate(ip, resources.IpParser)
+		if country == "" && (isp == "" || area == "" || region == "") {
+			log.Println("解析失败，跳过:", ip)
+			continue
+		}
+		if field_video_bad_quality == "100" {
+			lagIpCount[ip]++
+			cdnIpLagCnt[cdnip]++
+			if cdnIpLagClientIps[cdnip] == nil {
+				cdnIpLagClientIps[cdnip] = make(map[string]bool)
+			}
+			cdnIpLagClientIps[cdnip][ip] = true
+			if lagRegionIspIps[region] == nil {
+				lagRegionIspIps[region] = make(map[string]map[string]bool)
+			}
+			if lagRegionIspIps[region][isp] == nil {
+				lagRegionIspIps[region][isp] = make(map[string]bool)
+			}
+			lagRegionIspIps[region][isp][ip] = true
+			if lagAreaIspIps[area] == nil {
+				lagAreaIspIps[area] = make(map[string]map[string]bool)
+			}
+			if lagAreaIspIps[area][isp] == nil {
+				lagAreaIspIps[area][isp] = make(map[string]bool)
+			}
+			lagAreaIspIps[area][isp][ip] = true
+
+			if lagAreaIps[area] == nil {
+				lagAreaIps[area] = make(map[string]bool)
+			}
+			lagAreaIps[area][ip] = true
+			lagAreaCnt[area]++
+			lagCdnIpCnt[cdnip]++
+		}
+
+		if countryIps[country] == nil {
+			countryIps[country] = make(map[string]bool)
+		}
+		countryIps[country][ip] = true
+
+		if country != "中国" {
+			continue
+		}
+
+		// region & isp 维度计数
+		if regionIspIps[region] == nil {
+			regionIspIps[region] = make(map[string]map[string]bool)
+		}
+		if regionIspIps[region][isp] == nil {
+			regionIspIps[region][isp] = make(map[string]bool)
+		}
+		regionIspIps[region][isp][ip] = true
+
+		// area & isp 维度计数
+		if areaIspIps[area] == nil {
+			areaIspIps[area] = make(map[string]map[string]bool)
+		}
+		if areaIspIps[area][isp] == nil {
+			areaIspIps[area][isp] = make(map[string]bool)
+		}
+		areaIspIps[area][isp][ip] = true
+
+		// area & ip 维度计数
+		if areaIps[area] == nil {
+			areaIps[area] = make(map[string]bool)
+		}
+		areaIps[area][ip] = true
+
+	}
+
+	// 打印 country 统计
+	fmt.Println("\n=== Country 统计 ===")
+	oversea := 0
+	for country, ips := range countryIps {
+		fmt.Printf("Country: %-20s Count: %d\n", country, len(ips))
+		if country != "中国" {
+			oversea++
+		}
+	}
+	fmt.Printf("Oversea: %d\n", oversea)
+
+	for region, ispMap := range regionIspIps {
+		for isp, ips := range ispMap {
+			fmt.Printf("Region: %-20s ISP: %-15s Count: %d\n", region, isp, len(ips))
+		}
+	}
+
+	for area, ispMap := range areaIspIps {
+		for isp, ips := range ispMap {
+			fmt.Printf("Area: %-20s ISP: %-15s Count: %d\n", area, isp, len(ips))
+		}
+	}
+
+	// 打印 area 统计
+	fmt.Println("\n=== Area client ip统计 ===")
+	for area, ips := range areaIps {
+		fmt.Printf("Area: %-20s Count: %d\n", area, len(ips))
+	}
+
+	// 打印 lagIpCount 统计
+	fmt.Println("\n=== LagIpCount 统计 ===")
+	// 将 map 转换为 slice 以便排序
+	type lagIpItem struct {
+		ip    string
+		count int
+	}
+	var lagIpList []lagIpItem
+	for ip, count := range lagIpCount {
+		lagIpList = append(lagIpList, lagIpItem{ip, count})
+	}
+	// 按 count 倒序排序
+	sort.Slice(lagIpList, func(i, j int) bool {
+		return lagIpList[i].count > lagIpList[j].count
+	})
+	for _, item := range lagIpList {
+		fmt.Printf("IP: %-20s Count: %d\n", item.ip, item.count)
+	}
+
+	// 打印 cdnIpLagCnt 统计
+	fmt.Println("\n=== CdnIpLagCnt 统计 ===")
+	// 将 map 转换为 slice 以便排序
+	type cdnIpLagItem struct {
+		ip    string
+		count int
+	}
+	var cdnIpLagList []cdnIpLagItem
+	for ip, count := range cdnIpLagCnt {
+		cdnIpLagList = append(cdnIpLagList, cdnIpLagItem{ip, count})
+	}
+	// 按 count 倒序排序
+	sort.Slice(cdnIpLagList, func(i, j int) bool {
+		return cdnIpLagList[i].count > cdnIpLagList[j].count
+	})
+	for _, item := range cdnIpLagList {
+		fmt.Printf("IP: %-20s Count: %d\n", item.ip, item.count)
+	}
+
+	// 打印 cdnIpLagClientIps 统计
+	fmt.Println("\n=== CdnIpLagClientIps 统计 ===")
+	for ip, clientIps := range cdnIpLagClientIps {
+		fmt.Printf("CDN IP: %-20s Client IP Count: %d\n", ip, len(clientIps))
+		for clientIp := range clientIps {
+			fmt.Printf("  Client IP: %-20s\n", clientIp)
+		}
+	}
+
+	// 打印 userIps 统计
+	fmt.Println("\n=== UserIps 统计 ===")
+	fmt.Println("Total User IPs:", len(userIps))
+	/*
+		for ip := range userIps {
+			fmt.Printf("IP: %-20s\n", ip)
+		}
+	*/
+
+	// 打印 lagRegionIspIps 统计
+	fmt.Println("\n=== LagRegionIspIps 统计 ===")
+	for region, ispMap := range lagRegionIspIps {
+		for isp, ips := range ispMap {
+			fmt.Printf("Region: %-20s ISP: %-15s Count: %d\n", region, isp, len(ips))
+		}
+	}
+
+	// 打印 lagAreaIspIps 统计
+	fmt.Println("\n=== LagAreaIspIps 统计 ===")
+	for area, ispMap := range lagAreaIspIps {
+		for isp, ips := range ispMap {
+			fmt.Printf("Area: %-20s ISP: %-15s Count: %d\n", area, isp, len(ips))
+		}
+	}
+
+	// 打印 lagAreaIps 统计
+	fmt.Println("\n=== LagAreaIps 统计 ===")
+	for area, ips := range lagAreaIps {
+		fmt.Printf("Area: %-20s Count: %d\n", area, len(ips))
+	}
+
+	// 打印 lagAreaCnt 统计
+	fmt.Println("\n=== LagAreaCnt 统计 ===")
+	for area, cnt := range lagAreaCnt {
+		fmt.Printf("Area: %-20s Count: %d\n", area, cnt)
+	}
+
+	// 打印 lagCdnIpCnt 统计
+	fmt.Println("\n=== LagCdnIpCnt 统计 ===")
+	for ip, cnt := range lagCdnIpCnt {
+		fmt.Printf("IP: %-20s Count: %d\n", ip, cnt)
+	}
+
 }
 
 func TestHy1(conf *config.Config) {

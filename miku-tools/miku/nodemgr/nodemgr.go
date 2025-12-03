@@ -93,7 +93,7 @@ func (b *BwStatistics) OnNode(node *commonModel.RtNode) {
 }
 
 func (b *BwStatistics) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
-	isp, _, _ := util.GetLocate(ip.Ip, b.ipParser)
+	_, isp, _, _ := util.GetLocate(ip.Ip, b.ipParser)
 	if ip.MaxInMBps > 0 && ip.OutMBps > 0 {
 		b.avialiableIpCnt++
 		b.ispAvialiableBwMap[isp] += (ip.MaxOutMBps - ip.OutMBps) * 8 / 1000
