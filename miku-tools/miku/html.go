@@ -6,121 +6,202 @@ import (
 	"fmt"
 	"log"
 	"mikutool/public/util"
+	"strings"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // generateTableHTML 生成聚合数据表格HTML
-func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggregated []ClientAggregatedData) string {
+func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
 	if len(cdnAggregated) == 0 && len(clientAggregated) == 0 {
 		log.Println("generateTableHTML: 聚合数据为空")
 		return ""
 	}
 
-	htmlContent := `
-	<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
-		<h2 style="text-align: center; color: #333; margin-bottom: 30px;">聚合数据分析</h2>
-	`
-
-	htmlContent += `
-		<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
-	`
-
 	// 生成CDN IP表格
+	var cdnTableHTML string
 	if len(cdnAggregated) > 0 {
-		htmlContent += `
-			<div class="chart-box">
-				<div class="chart-title">CDN IP质量分析统计</div>
-				<div style="overflow-x: auto;">
-					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-						<thead>
-							<tr style="background-color: #f2f2f2;">
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">CDN IP</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量次数</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">总次数</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量占比</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">延迟次数</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">无延迟次数</th>
-							</tr>
-						</thead>
-						<tbody>
-		`
-
-		for _, data := range cdnAggregated {
-			badPercentColor := "color: #28a745;"
-			if data.BadPercent > 0 {
-				badPercentColor = "color: #dc3545;"
-			}
-
-			htmlContent += fmt.Sprintf(`
-							<tr>
-								<td style="border: 1px solid #ddd; padding: 8px;">%s</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-								<td style="border: 1px solid #ddd; padding: 8px; %s">%.2f%%</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-							</tr>
-			`, data.CDNIP, data.BadCount, data.TotalCount, badPercentColor, data.BadPercent, data.LagCount, data.NoLagCount)
-		}
-
-		htmlContent += `
-						</tbody>
-					</table>
-				</div>
-			</div>
-		`
+		cdnTableHTML = s.generateEchartsTable(cdnAggregated, "CDN IP质量分析统计", true)
 	}
 
 	// 生成Client IP表格
+	var clientTableHTML string
 	if len(clientAggregated) > 0 {
-		htmlContent += `
-			<div class="chart-box">
-				<div class="chart-title">Client IP质量分析统计</div>
-				<div style="overflow-x: auto;">
-					<table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-						<thead>
-							<tr style="background-color: #f2f2f2;">
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Client IP</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量次数</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">总次数</th>
-								<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">不良质量占比</th>
-							</tr>
-						</thead>
-						<tbody>
-		`
-
-		for _, data := range clientAggregated {
-			badPercentColor := "color: #28a745;"
-			if data.BadPercent > 0 {
-				badPercentColor = "color: #dc3545;"
-			}
-
-			htmlContent += fmt.Sprintf(`
-							<tr>
-								<td style="border: 1px solid #ddd; padding: 8px;">%s</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-								<td style="border: 1px solid #ddd; padding: 8px;">%d</td>
-								<td style="border: 1px solid #ddd; padding: 8px; %s">%.2f%%</td>
-							</tr>
-			`, data.ClientIP, data.BadCount, data.TotalCount, badPercentColor, data.BadPercent)
-		}
-
-		htmlContent += `
-						</tbody>
-					</table>
-				</div>
-			</div>
-		`
+		clientTableHTML = s.generateEchartsTable(clientAggregated, "Client IP质量分析统计", false)
 	}
 
-	htmlContent += `
+	// 合并表格HTML
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">聚合数据分析</h2>
+			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+				%s
+				%s
+			</div>
 		</div>
-	</div>
-	`
+	`, cdnTableHTML, clientTableHTML)
 
 	return htmlContent
+}
+
+// generateEchartsTable 使用AG Grid Community生成表格
+func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ bool) string {
+	// 限制最多显示30行数据
+	maxRows := 30
+	if len(data) > maxRows {
+		data = data[:maxRows]
+	}
+
+	// 准备表格数据
+	var tableRows []string
+	for _, item := range data {
+		lagRatio := 0.0
+		if item.TotalCount > 0 {
+			lagRatio = float64(item.LagCount) * 100.0 / float64(item.TotalCount)
+		}
+
+		tableRows = append(tableRows, fmt.Sprintf(`{
+			"ip": "%s",
+			"lagCount": %d,
+			"totalCount": %d,
+			"lagRatio": "%.2f%%"
+		}`, item.IP, item.LagCount, item.TotalCount, lagRatio))
+	}
+
+	tableData := strings.Join(tableRows, ",\n")
+	log.Println(tableData)
+
+	// 创建包含AG Grid的HTML页面
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>%s</title>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #grid-container {
+            height: 600px;
+            width: 100%%;
+        }
+        .ag-theme-alpine {
+            height: 100%%;
+            width: 100%%;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">%s</h2>
+    <div id="grid-container">
+        <div id="myGrid" class="ag-theme-alpine"></div>
+    </div>
+
+    <script>
+        // 定义表格列配置
+        const columnDefs = [
+            {
+                headerName: "IP",
+                field: "ip",
+                sortable: true,
+                filter: true,
+                width: 150,
+                comparator: (valueA, valueB) => {
+                    // IP地址排序比较器
+                    const partsA = valueA.split('.').map(Number);
+                    const partsB = valueB.split('.').map(Number);
+                    
+                    for (let i = 0; i < 4; i++) {
+                        if (partsA[i] !== partsB[i]) {
+                            return partsA[i] - partsB[i];
+                        }
+                    }
+                    return 0;
+                }
+            },
+            {
+                headerName: "卡顿样本数",
+                field: "lagCount",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB
+            },
+            {
+                headerName: "总样本数",
+                field: "totalCount",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB
+            },
+            {
+                headerName: "卡顿比",
+                field: "lagRatio",
+                sortable: true,
+                filter: true,
+                width: 120,
+                comparator: (valueA, valueB) => {
+                    // 百分比排序比较器
+                    const numA = parseFloat(valueA.replace('%%', ''));
+                    const numB = parseFloat(valueB.replace('%%', ''));
+                    return numA - numB;
+                }
+            }
+        ];
+
+        // 定义表格数据
+        const rowData = [%s];
+
+        // 创建AG Grid实例
+        const gridOptions = {
+            columnDefs: columnDefs,
+            rowData: rowData,
+            defaultColDef: {
+                resizable: true,
+                sortable: true,
+                filter: true
+            },
+            enableRangeSelection: true,
+            enableRangeHandle: true,
+            enableFillHandle: true,
+            pagination: false,
+            rowSelection: 'multiple',
+            animateRows: true,
+            suppressMenuHide: true,
+            onFirstDataRendered: function(params) {
+                params.api.sizeColumnsToFit();
+            }
+        };
+
+        // 等待DOM加载完成后初始化表格
+        document.addEventListener('DOMContentLoaded', function() {
+            const gridDiv = document.querySelector('#myGrid');
+            agGrid.createGrid(gridDiv, gridOptions);
+        });
+    </script>
+</body>
+</html>`, title, title, tableData)
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(htmlContent))
+
+	// 返回包含iframe的HTML
+	return fmt.Sprintf(`
+		<div class="chart-box">
+			<div style="margin-bottom: 10px; font-weight: bold; color: #333;">%s</div>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 800px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, title, encodedHTML)
 }
 
 // getHomePageTemplate 获取主页HTML模板

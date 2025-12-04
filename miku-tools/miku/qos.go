@@ -121,8 +121,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
 	minuteAggregated := s.aggregateByMinute(reports)
 
-	// 按照TestHy1方式聚合数据
-	cdnAggregated, clientAggregated := s.aggregateByTestHy1(reports)
+	cdnAggregated, clientAggregated := s.aggregateReport(reports)
 
 	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
 	onlineUsersAggregated := s.aggregateOnlineUsers(reports)
@@ -194,20 +193,9 @@ type MinuteAggregatedData struct {
 
 // AggregatedData 聚合数据结构
 type AggregatedData struct {
-	CDNIP      string  `json:"cdn_ip"`
-	BadCount   int     `json:"bad_count"`
-	TotalCount int     `json:"total_count"`
-	BadPercent float64 `json:"bad_percent"`
-	LagCount   int     `json:"lag_count"`
-	NoLagCount int     `json:"no_lag_count"`
-}
-
-// ClientAggregatedData Client聚合数据
-type ClientAggregatedData struct {
-	ClientIP   string  `json:"client_ip"`
-	BadCount   int     `json:"bad_count"`
-	TotalCount int     `json:"total_count"`
-	BadPercent float64 `json:"bad_percent"`
+	IP         string `json:"ip"`
+	TotalCount int    `json:"total_count"`
+	LagCount   int    `json:"lag_count"`
 }
 
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
@@ -273,17 +261,14 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 	return result
 }
 
-// aggregateByTestHy1 按照TestHy1方式聚合数据
-func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]AggregatedData, []ClientAggregatedData) {
+func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData) {
 	// CDN IP聚合
-	cdnBadMap := make(map[string]bool)   // cdnip -> field_video_bad_quality=="100"
-	cdnAllMap := make(map[string]bool)   // 所有cdnip
-	cdnLagCnt := make(map[string]int)    // cdnip -> 延迟数
-	cdnNogLagCnt := make(map[string]int) // cdnip -> 无延迟数
+	cdnLagCntMap := make(map[string]int)   // cdnip -> 延迟数
+	cdnTotalCntMap := make(map[string]int) // cdnip -> 总数
 
 	// Client IP聚合
-	clientBadMap := make(map[string]bool) // clientIp -> field_video_bad_quality=="100"
-	clientAllMap := make(map[string]bool) // 所有clientIp
+	clientLagCntMap := make(map[string]int)   // clientIp -> 延迟数
+	clientTotalCntMap := make(map[string]int) // clientIp -> 总数
 
 	for _, report := range reports {
 		// 获取CDN IP
@@ -292,7 +277,8 @@ func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]Aggregat
 			cdnip = *report.DimCdnip
 		}
 
-		if (cdnip == "" || cdnip == "qn.flv.huya.com" || cdnip == "http://qn.flv.huya.com") && report.DimStreamUrl != nil && *report.DimStreamUrl != "" {
+		if (cdnip == "" || cdnip == "qn.flv.huya.com" || cdnip == "http://qn.flv.huya.com") &&
+			report.DimStreamUrl != nil && *report.DimStreamUrl != "" {
 			// 从URL中提取域名作为CDN IP
 			if u, err := url.Parse(*report.DimStreamUrl); err == nil {
 				host := u.Host
@@ -318,48 +304,28 @@ func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]Aggregat
 
 		// 处理CDN IP聚合
 		if cdnip != "" {
-			cdnAllMap[cdnip] = true
+			cdnTotalCntMap[cdnip]++
 			if isBadQuality {
-				cdnBadMap[cdnip] = true
-				cdnLagCnt[cdnip]++
-			} else {
-				cdnNogLagCnt[cdnip]++
+				cdnLagCntMap[cdnip]++
 			}
 		}
 
 		// 处理Client IP聚合
 		if clientIp != "" {
-			clientAllMap[clientIp] = true
+			clientTotalCntMap[clientIp]++
 			if isBadQuality {
-				clientBadMap[clientIp] = true
+				clientLagCntMap[clientIp]++
 			}
 		}
 	}
 
 	// 生成CDN聚合数据
 	var cdnAggregated []AggregatedData
-	for cdnip := range cdnAllMap {
-		badCount := 0
-		if cdnBadMap[cdnip] {
-			badCount = 1
-		}
-		totalCount := 1
-		if cdnLagCnt[cdnip] > 0 || cdnNogLagCnt[cdnip] > 0 {
-			totalCount = cdnLagCnt[cdnip] + cdnNogLagCnt[cdnip]
-		}
-
-		badPercent := 0.0
-		if totalCount > 0 {
-			badPercent = float64(badCount) / float64(totalCount) * 100
-		}
-
+	for cdnip, total := range cdnTotalCntMap {
 		cdnAggregated = append(cdnAggregated, AggregatedData{
-			CDNIP:      cdnip,
-			BadCount:   badCount,
-			TotalCount: totalCount,
-			BadPercent: badPercent,
-			LagCount:   cdnLagCnt[cdnip],
-			NoLagCount: cdnNogLagCnt[cdnip],
+			IP:         cdnip,
+			TotalCount: total,
+			LagCount:   cdnLagCntMap[cdnip],
 		})
 	}
 
@@ -369,30 +335,17 @@ func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]Aggregat
 	})
 
 	// 生成Client聚合数据
-	var clientAggregated []ClientAggregatedData
-	for clientIp := range clientAllMap {
-		badCount := 0
-		if clientBadMap[clientIp] {
-			badCount = 1
-		}
-		totalCount := 1
-
-		badPercent := 0.0
-		if totalCount > 0 {
-			badPercent = float64(badCount) / float64(totalCount) * 100
-		}
-
-		clientAggregated = append(clientAggregated, ClientAggregatedData{
-			ClientIP:   clientIp,
-			BadCount:   badCount,
-			TotalCount: totalCount,
-			BadPercent: badPercent,
+	var clientAggregated []AggregatedData
+	for clientIp, total := range clientTotalCntMap {
+		clientAggregated = append(clientAggregated, AggregatedData{
+			IP:         clientIp,
+			TotalCount: total,
 		})
 	}
 
 	// 按不良质量次数降序排序
 	sort.Slice(clientAggregated, func(i, j int) bool {
-		return clientAggregated[i].BadCount > clientAggregated[j].BadCount
+		return clientAggregated[i].LagCount > clientAggregated[j].LagCount
 	})
 
 	return cdnAggregated, clientAggregated
