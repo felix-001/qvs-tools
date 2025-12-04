@@ -70,7 +70,7 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 	}
 
 	tableData := strings.Join(tableRows, ",\n")
-	log.Println(tableData)
+	//log.Println(tableData)
 
 	// 创建包含AG Grid的HTML页面
 	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
@@ -266,19 +266,13 @@ func (s *QOSServer) getHomePageTemplate() string {
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
-        .datetime-btn {
-            background-color: #6c757d;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 5px;
+        /* 日期时间输入框样式 */
+        #startTime, #endTime {
             cursor: pointer;
-            font-size: 12px;
-            margin-top: 5px;
-            transition: background-color 0.3s;
+            width: calc(100% - 20px);
         }
-        .datetime-btn:hover {
-            background-color: #5a6268;
+        #startTime:hover, #endTime:hover {
+            background-color: #f5f5f5;
         }
         .datetime-modal {
             display: none;
@@ -295,7 +289,7 @@ func (s *QOSServer) getHomePageTemplate() string {
             margin: 10% auto;
             padding: 20px;
             border-radius: 10px;
-            width: 350px;
+            width: 500px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
         .datetime-modal-header {
@@ -306,25 +300,99 @@ func (s *QOSServer) getHomePageTemplate() string {
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
         }
-        .datetime-inputs {
-            display: grid;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .datetime-input-group {
+        
+        /* 日历样式 */
+        .calendar-content {
             display: flex;
+            gap: 20px;
+        }
+        
+        .calendar-main {
+            flex: 2;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 10px;
+            margin-bottom: 15px;
         }
-        .datetime-input-group label {
-            width: 60px;
-            margin: 0;
-        }
-        .datetime-input-group input, .datetime-input-group select {
-            flex: 1;
-            padding: 8px;
-            border: 1px solid #ddd;
+        
+        .month-nav {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px 10px;
             border-radius: 4px;
+        }
+        
+        .month-nav:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .calendar-table th, .calendar-table td {
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .calendar-table th {
+            background-color: #f9f9f9;
+            font-weight: normal;
+        }
+        
+        .calendar-table td {
+            cursor: pointer;
+        }
+        
+        .calendar-table td:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .calendar-table td.today {
+            background-color: #d9edf7;
+        }
+        
+        .calendar-table td.selected {
+            background-color: #337ab7;
+            color: white;
+        }
+        
+        /* 时间选择样式 */
+        .time-selector {
+            flex: 1;
+        }
+        
+        .time-selector table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .time-selector table td {
+            padding: 5px;
+            text-align: center;
+        }
+        
+        .time-selector table td:last-child {
+            width: 30px;
+        }
+        
+        /* 滑块样式 */
+        input[type="range"] {
+            width: 100%;
+        }
+        
+        /* 时间显示样式 */
+        .time-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
         .modal-buttons {
             display: flex;
@@ -386,17 +454,11 @@ func (s *QOSServer) getHomePageTemplate() string {
             <div class="datetime-group">
                 <div class="form-group">
                     <label for="startTime">开始日期时间:</label>
-                    <input type="text" id="startTime" name="startTime" required readonly>
-                    <button type="button" class="datetime-btn" onclick="openDateTimePicker('startTime')">
-                        📅 选择日期
-                    </button>
+                    <input type="datetime-local" id="startTime" name="startTime" required>
                 </div>
                 <div class="form-group">
                     <label for="endTime">结束日期时间:</label>
-                    <input type="text" id="endTime" name="endTime" required readonly>
-                    <button type="button" class="datetime-btn" onclick="openDateTimePicker('endTime')">
-                        📅 选择日期
-                    </button>
+                    <input type="datetime-local" id="endTime" name="endTime" required>
                 </div>
             </div>
 
@@ -453,184 +515,7 @@ func (s *QOSServer) getHomePageTemplate() string {
         <div id="results" class="results"></div>
     </div>
 
-    <!-- 日期时间选择模态框 -->
-    <div id="datetimeModal" class="datetime-modal">
-        <div class="datetime-modal-content">
-            <div class="datetime-modal-header">
-                <h3>选择日期时间</h3>
-                <span class="modal-btn modal-cancel" onclick="closeDateTimePicker()">✕</span>
-            </div>
-            <div class="datetime-inputs">
-                <div class="datetime-input-group">
-                    <label>日期:</label>
-                    <input type="date" id="modalDate">
-                </div>
-                <div class="datetime-input-group">
-                    <label>小时:</label>
-                    <select id="modalHour">
-                        <option value="00">00</option>
-                        <option value="01">01</option>
-                        <option value="02">02</option>
-                        <option value="03">03</option>
-                        <option value="04">04</option>
-                        <option value="05">05</option>
-                        <option value="06">06</option>
-                        <option value="07">07</option>
-                        <option value="08">08</option>
-                        <option value="09">09</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                        <option value="15">15</option>
-                        <option value="16">16</option>
-                        <option value="17">17</option>
-                        <option value="18">18</option>
-                        <option value="19">19</option>
-                        <option value="20">20</option>
-                        <option value="21">21</option>
-                        <option value="22">22</option>
-                        <option value="23">23</option>
-                    </select>
-                </div>
-                <div class="datetime-input-group">
-                    <label>分钟:</label>
-                    <select id="modalMinute">
-                        <option value="00">00</option>
-                        <option value="01">01</option>
-                        <option value="02">02</option>
-                        <option value="03">03</option>
-                        <option value="04">04</option>
-                        <option value="05">05</option>
-                        <option value="06">06</option>
-                        <option value="07">07</option>
-                        <option value="08">08</option>
-                        <option value="09">09</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                        <option value="15">15</option>
-                        <option value="16">16</option>
-                        <option value="17">17</option>
-                        <option value="18">18</option>
-                        <option value="19">19</option>
-                        <option value="20">20</option>
-                        <option value="21">21</option>
-                        <option value="22">22</option>
-                        <option value="23">23</option>
-                        <option value="24">24</option>
-                        <option value="25">25</option>
-                        <option value="26">26</option>
-                        <option value="27">27</option>
-                        <option value="28">28</option>
-                        <option value="29">29</option>
-                        <option value="30">30</option>
-                        <option value="31">31</option>
-                        <option value="32">32</option>
-                        <option value="33">33</option>
-                        <option value="34">34</option>
-                        <option value="35">35</option>
-                        <option value="36">36</option>
-                        <option value="37">37</option>
-                        <option value="38">38</option>
-                        <option value="39">39</option>
-                        <option value="40">40</option>
-                        <option value="41">41</option>
-                        <option value="42">42</option>
-                        <option value="43">43</option>
-                        <option value="44">44</option>
-                        <option value="45">45</option>
-                        <option value="46">46</option>
-                        <option value="47">47</option>
-                        <option value="48">48</option>
-                        <option value="49">49</option>
-                        <option value="50">50</option>
-                        <option value="51">51</option>
-                        <option value="52">52</option>
-                        <option value="53">53</option>
-                        <option value="54">54</option>
-                        <option value="55">55</option>
-                        <option value="56">56</option>
-                        <option value="57">57</option>
-                        <option value="58">58</option>
-                        <option value="59">59</option>
-                    </select>
-                </div>
-                <div class="datetime-input-group">
-                    <label>秒:</label>
-                    <select id="modalSecond">
-                        <option value="00">00</option>
-                        <option value="01">01</option>
-                        <option value="02">02</option>
-                        <option value="03">03</option>
-                        <option value="04">04</option>
-                        <option value="05">05</option>
-                        <option value="06">06</option>
-                        <option value="07">07</option>
-                        <option value="08">08</option>
-                        <option value="09">09</option>
-                        <option value="10">10</option>
-                        <option value="11">11</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                        <option value="15">15</option>
-                        <option value="16">16</option>
-                        <option value="17">17</option>
-                        <option value="18">18</option>
-                        <option value="19">19</option>
-                        <option value="20">20</option>
-                        <option value="21">21</option>
-                        <option value="22">22</option>
-                        <option value="23">23</option>
-                        <option value="24">24</option>
-                        <option value="25">25</option>
-                        <option value="26">26</option>
-                        <option value="27">27</option>
-                        <option value="28">28</option>
-                        <option value="29">29</option>
-                        <option value="30">30</option>
-                        <option value="31">31</option>
-                        <option value="32">32</option>
-                        <option value="33">33</option>
-                        <option value="34">34</option>
-                        <option value="35">35</option>
-                        <option value="36">36</option>
-                        <option value="37">37</option>
-                        <option value="38">38</option>
-                        <option value="39">39</option>
-                        <option value="40">40</option>
-                        <option value="41">41</option>
-                        <option value="42">42</option>
-                        <option value="43">43</option>
-                        <option value="44">44</option>
-                        <option value="45">45</option>
-                        <option value="46">46</option>
-                        <option value="47">47</option>
-                        <option value="48">48</option>
-                        <option value="49">49</option>
-                        <option value="50">50</option>
-                        <option value="51">51</option>
-                        <option value="52">52</option>
-                        <option value="53">53</option>
-                        <option value="54">54</option>
-                        <option value="55">55</option>
-                        <option value="56">56</option>
-                        <option value="57">57</option>
-                        <option value="58">58</option>
-                        <option value="59">59</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn modal-cancel" onclick="closeDateTimePicker()">取消</button>
-                <button class="modal-btn modal-confirm" onclick="confirmDateTimePicker()">确定</button>
-            </div>
-        </div>
-    </div>
+
 
     <script>
         // 页面加载完成后执行
@@ -639,6 +524,8 @@ func (s *QOSServer) getHomePageTemplate() string {
             
             // 设置默认时间（最近24小时）
             setDefaultTimeRange();
+            
+
         });
 
         // 加载AppName列表
@@ -672,86 +559,7 @@ func (s *QOSServer) getHomePageTemplate() string {
             startInput.value = formatDateTimeLocal(yesterday);
         }
         
-        // 全局变量存储当前操作的输入框ID
-        let currentDateTimeInput = null;
-        
-        // 打开日期时间选择器
-        function openDateTimePicker(inputId) {
-            currentDateTimeInput = inputId;
-            const modal = document.getElementById('datetimeModal');
-            const input = document.getElementById(inputId);
-            
-            // 如果输入框已有值，解析并填充到模态框中
-            if (input.value) {
-                const date = new Date(input.value);
-                if (!isNaN(date.getTime())) {
-                    document.getElementById('modalDate').value = formatDateForInput(date);
-                    document.getElementById('modalHour').value = String(date.getHours()).padStart(2, '0');
-                    document.getElementById('modalMinute').value = String(date.getMinutes()).padStart(2, '0');
-                    document.getElementById('modalSecond').value = String(date.getSeconds()).padStart(2, '0');
-                } else {
-                    // 如果解析失败，使用当前时间
-                    setModalCurrentTime();
-                }
-            } else {
-                // 如果没有值，使用当前时间
-                setModalCurrentTime();
-            }
-            
-            modal.style.display = 'block';
-        }
-        
-        // 设置模态框为当前时间
-        function setModalCurrentTime() {
-            const now = new Date();
-            document.getElementById('modalDate').value = formatDateForInput(now);
-            document.getElementById('modalHour').value = String(now.getHours()).padStart(2, '0');
-            document.getElementById('modalMinute').value = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('modalSecond').value = String(now.getSeconds()).padStart(2, '0');
-        }
-        
-        // 格式化日期为input type="date"的格式
-        function formatDateForInput(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return year + '-' + month + '-' + day;
-        }
-        
-        // 确认日期时间选择
-        function confirmDateTimePicker() {
-            if (!currentDateTimeInput) return;
-            
-            const date = document.getElementById('modalDate').value;
-            const hour = document.getElementById('modalHour').value;
-            const minute = document.getElementById('modalMinute').value;
-            const second = document.getElementById('modalSecond').value;
-            
-            if (!date) {
-                alert('请选择日期');
-                return;
-            }
-            
-            const dateTimeString = date + 'T' + hour + ':' + minute + ':' + second;
-            document.getElementById(currentDateTimeInput).value = dateTimeString;
-            closeDateTimePicker();
-        }
-        
-        // 关闭日期时间选择器
-        function closeDateTimePicker() {
-            document.getElementById('datetimeModal').style.display = 'none';
-            currentDateTimeInput = null;
-        }
-        
-        // 点击模态框外部关闭
-        window.onclick = function(event) {
-            const modal = document.getElementById('datetimeModal');
-            if (event.target === modal) {
-                closeDateTimePicker();
-            }
-        }
-
-        // 格式化日期时间为精确到秒的格式
+        // 格式化日期时间为datetime-local格式
         function formatDateTimeLocal(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -762,6 +570,8 @@ func (s *QOSServer) getHomePageTemplate() string {
             
             return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':' + seconds;
         }
+        
+
 
         // 表单提交处理
         document.getElementById('qosForm').addEventListener('submit', async function(e) {
