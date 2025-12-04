@@ -121,7 +121,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
 	minuteAggregated := s.aggregateByMinute(reports)
 
-	cdnAggregated, clientAggregated := s.aggregateReport(reports)
+	cdnAggregated, clientAggregated, cdnAggData := s.aggregateReport(reports)
 
 	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
 	onlineUsersAggregated := s.aggregateOnlineUsers(reports)
@@ -137,15 +137,17 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 生成聚合数据表格HTML
 	tableHTML := s.generateTableHTML(cdnAggregated, clientAggregated)
 
+	// 生成CDN卡顿用户表格HTML
+	cdnLagTableHTML := s.generateCDNLagTableHTML(cdnAggData)
+
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + tableHTML
+	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
 	w.Write([]byte(fullHTML))
 }
 
-// convertToDay 将时间字符串转换为day格式 (YYYYMMDD)
 func (s *QOSServer) convertToDay(timeStr string) string {
 	// 尝试解析不同格式的时间字符串
 	layouts := []string{
@@ -196,6 +198,12 @@ type AggregatedData struct {
 	IP         string `json:"ip"`
 	TotalCount int    `json:"total_count"`
 	LagCount   int    `json:"lag_count"`
+}
+
+type CdnAggregateData struct {
+	IP             string   `json:"ip"`
+	TotalUserCount int      `json:"total_user_count"`
+	LagIps         []string `json:"lag_ips"`
 }
 
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
@@ -261,10 +269,12 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 	return result
 }
 
-func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData) {
+func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData, []CdnAggregateData) {
 	// CDN IP聚合
 	cdnLagCntMap := make(map[string]int)   // cdnip -> 延迟数
 	cdnTotalCntMap := make(map[string]int) // cdnip -> 总数
+	cdnLagClientMap := make(map[string]map[string]bool)
+	cdnAllClientMap := make(map[string]map[string]bool)
 
 	// Client IP聚合
 	clientLagCntMap := make(map[string]int)   // clientIp -> 延迟数
@@ -317,6 +327,17 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 				clientLagCntMap[clientIp]++
 			}
 		}
+
+		if isBadQuality {
+			if _, exists := cdnLagClientMap[cdnip]; !exists {
+				cdnLagClientMap[cdnip] = make(map[string]bool)
+			}
+			cdnLagClientMap[cdnip][clientIp] = true
+		}
+		if _, exists := cdnAllClientMap[cdnip]; !exists {
+			cdnAllClientMap[cdnip] = make(map[string]bool)
+		}
+		cdnAllClientMap[cdnip][clientIp] = true
 	}
 
 	// 生成CDN聚合数据
@@ -348,7 +369,20 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 		return clientAggregated[i].LagCount > clientAggregated[j].LagCount
 	})
 
-	return cdnAggregated, clientAggregated
+	var cdnAggregateData []CdnAggregateData
+	for cdnip, clientsMap := range cdnLagClientMap {
+		var lagIps []string
+		for clientIp := range clientsMap {
+			lagIps = append(lagIps, clientIp)
+		}
+		cdnAggregateData = append(cdnAggregateData, CdnAggregateData{
+			IP:             cdnip,
+			TotalUserCount: len(cdnAllClientMap[cdnip]),
+			LagIps:         lagIps,
+		})
+	}
+
+	return cdnAggregated, clientAggregated, cdnAggregateData
 }
 
 // OnlineUserAggregatedData 在线用户聚合数据结构

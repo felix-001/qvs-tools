@@ -965,3 +965,161 @@ func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineU
 		</div>
 	`, encodedHTML)
 }
+
+// generateCDNLagTableHTML 生成CDN卡顿用户表格
+func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
+	if len(cdnAggDatas) == 0 {
+		return ""
+	}
+
+	// 准备表格数据
+	var tableRows []string
+	for _, data := range cdnAggDatas {
+		lagClientCount := len(data.LagIps)
+		clientList := strings.Join(data.LagIps, ", ")
+		tableRows = append(tableRows, fmt.Sprintf(`{
+			"cdnip": "%s",
+			"count": %d,
+            "total": %d,
+            "percent": %.2f,
+			"clients": "%s"
+		}`, data.IP, lagClientCount, data.TotalUserCount, float32(len(data.LagIps)*100)/float32(data.TotalUserCount), clientList))
+	}
+
+	tableData := strings.Join(tableRows, ",\n")
+
+	// 创建包含AG Grid的HTML页面
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CDN卡顿用户统计</title>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #grid-container {
+            height: 500px;
+            width: 100%%;
+        }
+        .ag-theme-alpine {
+            height: 100%%;
+            width: 100%%;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">CDN卡顿用户统计</h2>
+    <div id="grid-container">
+        <div id="myGrid" class="ag-theme-alpine"></div>
+    </div>
+
+    <script>
+        // 定义表格列配置
+        const columnDefs = [
+            {
+                headerName: "CDN IP",
+                field: "cdnip",
+                sortable: true,
+                filter: true,
+                width: 180,
+                comparator: (valueA, valueB) => {
+                    // IP地址排序比较器
+                    const partsA = valueA.split('.').map(Number);
+                    const partsB = valueB.split('.').map(Number);
+                    
+                    for (let i = 0; i < 4; i++) {
+                        if (partsA[i] !== partsB[i]) {
+                            return partsA[i] - partsB[i];
+                        }
+                    }
+                    return 0;
+                }
+            },
+            {
+                headerName: "卡顿用户个数",
+                field: "count",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 150,
+                comparator: (valueA, valueB) => valueA - valueB,
+                cellStyle: function(params) {
+                    // 根据用户数量设置不同的颜色
+                    if (params.value >= 10) {
+                        return { color: 'red', fontWeight: 'bold' };
+                    } else if (params.value >= 5) {
+                        return { color: 'orange', fontWeight: 'bold' };
+                    } else {
+                        return { color: 'green' };
+                    }
+                }
+            },
+            {
+                headerName: "卡顿用户IP列表",
+                field: "clients",
+                sortable: true,
+                filter: true,
+                flex: 1,
+                cellRenderer: function(params) {
+                    // 将长列表进行格式化显示
+                    const clients = params.value;
+                    if (clients.length > 100) {
+                        return '<span title="' + clients + '">' + clients.substring(0, 100) + '...</span>';
+                    }
+                    return '<span title="' + clients + '">' + clients + '</span>';
+                }
+            }
+        ];
+
+        // 定义表格数据
+        const rowData = [%s];
+
+        // 创建AG Grid实例
+        const gridOptions = {
+            columnDefs: columnDefs,
+            rowData: rowData,
+            defaultColDef: {
+                resizable: true,
+                sortable: true,
+                filter: true
+            },
+            enableRangeSelection: true,
+            enableRangeHandle: true,
+            enableFillHandle: true,
+            pagination: false,
+            rowSelection: 'multiple',
+            animateRows: true,
+            suppressMenuHide: true,
+            onFirstDataRendered: function(params) {
+                params.api.sizeColumnsToFit();
+            }
+        };
+
+        // 等待DOM加载完成后初始化表格
+        document.addEventListener('DOMContentLoaded', function() {
+            const gridDiv = document.querySelector('#myGrid');
+            agGrid.createGrid(gridDiv, gridOptions);
+        });
+    </script>
+</body>
+</html>`, tableData)
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(htmlContent))
+
+	// 返回包含iframe的HTML
+	return fmt.Sprintf(`
+		<div class="chart-box">
+			<div style="margin-bottom: 10px; font-weight: bold; color: #333;">CDN卡顿用户统计</div>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 550px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+}
