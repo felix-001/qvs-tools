@@ -1145,7 +1145,7 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
 			<div style="margin-bottom: 10px; font-weight: bold; color: #333;">CDN卡顿用户统计</div>
 			<iframe 
 				src="data:text/html;base64,%s" 
-				style="width: 100%%; height: 550px; border: 1px solid #ddd; border-radius: 4px;"
+				style="width: 100%%; height: 700px; border: 1px solid #ddd; border-radius: 4px;"
 				sandbox="allow-scripts allow-same-origin"
 				frameborder="0"
 			></iframe>

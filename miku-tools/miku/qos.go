@@ -361,6 +361,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 		clientAggregated = append(clientAggregated, AggregatedData{
 			IP:         clientIp,
 			TotalCount: total,
+			LagCount:   clientLagCntMap[clientIp],
 		})
 	}
 
