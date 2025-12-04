@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"mikutool/public/util"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -838,4 +839,142 @@ func (s *QOSServer) generateMinuteChartHTML(minuteAggregated []MinuteAggregatedD
 	`, encodedHTML)
 
 	return htmlContent
+}
+
+// generateLineChartHTML 生成简单的折线图HTML
+func (s *QOSServer) generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, title string) string {
+	if len(reports) == 0 {
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c}",
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "250px",
+			Theme:  "white",
+		}),
+	)
+
+	// 准备X轴和Y轴数据
+	var xAxisData []string
+	var yAxisData []opts.LineData
+
+	for _, report := range reports {
+		// 根据字段名获取对应的值
+		var xValue, yValue string
+
+		// 获取X轴数据
+		if xField == "Ts_m" && report.Ts_m != nil {
+			xValue = *report.Ts_m
+		}
+
+		// 获取Y轴数据
+		if yField == "用户百秒卡顿率" && report.Ratio_lag_player != nil {
+			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_player)
+		} else if yField == "内部回源百秒卡顿率" && report.Ratio_lag_internal_player != nil {
+			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_internal_player)
+		} else if yField == "内部回源重试率" && report.Retry_ratio_puller != nil {
+			yValue = fmt.Sprintf("%.2f", *report.Retry_ratio_puller)
+		} else if yField == "内部回源重试次数" && report.TotalRetryTimes != nil {
+			yValue = fmt.Sprintf("%d", *report.TotalRetryTimes)
+		} else if yField == "回客户源站百秒卡顿率" && report.Ratio_lag_puller != nil {
+			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_puller)
+		}
+
+		if xValue != "" && yValue != "" {
+			xAxisData = append(xAxisData, xValue)
+			yAxisData = append(yAxisData, opts.LineData{
+				Value: yValue,
+			})
+		}
+	}
+
+	if len(xAxisData) == 0 {
+		return ""
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries(title, yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(false),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#1890ff",
+				Width: 2,
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 返回data URL
+	return fmt.Sprintf("data:text/html;base64,%s", encodedHTML)
+}
+
+func (s *QOSServer) generateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
+	// 生成streamdReports的5个折线图
+	streamdChartsHTML := fmt.Sprintf(`
+	<div style="margin-top: 20px;">
+		<h3 style="text-align: center; color: #333; margin-bottom: 20px;">流媒体延迟分析图表</h3>
+		<div style="margin-bottom: 30px;">
+			<h4>用户百秒卡顿率</h4>
+			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+		</div>
+		<div style="margin-bottom: 30px;">
+			<h4>内部回源百秒卡顿率</h4>
+			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+		</div>
+		<div style="margin-bottom: 30px;">
+			<h4>内部回源重试率</h4>
+			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+		</div>
+		<div style="margin-bottom: 30px;">
+			<h4>内部回源重试次数</h4>
+			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+		</div>
+		<div style="margin-bottom: 30px;">
+			<h4>回客户源站百秒卡顿率</h4>
+			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+		</div>
+	</div>`,
+		s.generateLineChartHTML(streamdReports, "Ts_m", "用户百秒卡顿率", "用户百秒卡顿率"),
+		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源百秒卡顿率", "内部回源百秒卡顿率"),
+		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试率", "内部回源重试率"),
+		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试次数", "内部回源重试次数"),
+		s.generateLineChartHTML(streamdReports, "Ts_m", "回客户源站百秒卡顿率", "回客户源站百秒卡顿率"),
+	)
+	return streamdChartsHTML
 }

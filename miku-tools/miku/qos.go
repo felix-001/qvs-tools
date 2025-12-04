@@ -1,6 +1,8 @@
 package miku
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -15,6 +17,9 @@ import (
 
 	"mikutool/config"
 	"mikutool/public/util"
+
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // QOSRequest 前端查询请求结构
@@ -124,14 +129,22 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 按照TestHy1方式聚合数据
 	cdnAggregated, clientAggregated := s.aggregateByTestHy1(reports)
 
+	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
+	onlineUsersAggregated := s.aggregateOnlineUsers(reports)
+
+	streamdChartsHTML := s.generateStreamdChartsHTML(streamdReports)
+
 	// 生成分钟聚合数据的折线图
 	minuteChartHTML := s.generateMinuteChartHTML(minuteAggregated)
+
+	// 生成在线用户数折线图
+	onlineUsersChartHTML := s.generateOnlineUsersChartHTML(onlineUsersAggregated)
 
 	// 生成聚合数据表格HTML
 	tableHTML := s.generateTableHTML(cdnAggregated, clientAggregated)
 
 	// 合并图表和表格HTML
-	fullHTML := minuteChartHTML + tableHTML
+	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + tableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -160,14 +173,6 @@ func (s *QOSServer) convertToDay(timeStr string) string {
 	return timeStr
 }
 
-// formatTime 格式化时间戳
-func (s *QOSServer) formatTime(t *int64) string {
-	if t == nil {
-		return ""
-	}
-	return time.Unix(*t, 0).Format("2006-01-02 15:04:05")
-}
-
 // getString 安全获取字符串指针值
 func (s *QOSServer) getString(str *string) string {
 	if str == nil {
@@ -182,79 +187,6 @@ func (s *QOSServer) getInt64(i *int64) string {
 		return ""
 	}
 	return strconv.FormatInt(*i, 10)
-}
-
-// calculateAverageBadQuality 计算平均不良质量值
-func (s *QOSServer) calculateAverageBadQuality(reports []util.QualityReport) string {
-	if len(reports) == 0 {
-		return "0"
-	}
-
-	var total int64
-	for _, report := range reports {
-		if report.FieldVideoBadQuality != nil {
-			total += *report.FieldVideoBadQuality
-		}
-	}
-
-	avg := float64(total) / float64(len(reports))
-	return fmt.Sprintf("%.1f", avg)
-}
-
-// getMaxBitrate 获取最高码率
-func (s *QOSServer) getMaxBitrate(reports []util.QualityReport) string {
-	var maxBitrate float64
-	for _, report := range reports {
-		if report.DimCoderatebps != nil {
-			if bitrate, err := strconv.ParseFloat(*report.DimCoderatebps, 64); err == nil {
-				if bitrate > maxBitrate {
-					maxBitrate = bitrate
-				}
-			}
-		}
-	}
-
-	if maxBitrate > 0 {
-		return fmt.Sprintf("%.1fMbps", maxBitrate/1000000)
-	}
-	return "0Mbps"
-}
-
-// getUniqueDomainCount 获取唯一域名数量
-func (s *QOSServer) getUniqueDomainCount(reports []util.QualityReport) string {
-	domainSet := make(map[string]bool)
-	for _, report := range reports {
-		if report.DimCdndomain != nil && *report.DimCdndomain != "" {
-			domainSet[*report.DimCdndomain] = true
-		}
-	}
-	return strconv.Itoa(len(domainSet))
-}
-
-// generateJSReports 生成JavaScript格式的报告数据
-func (s *QOSServer) generateJSReports(reports []util.QualityReport) string {
-	if len(reports) == 0 {
-		return "[]"
-	}
-
-	var jsData []string
-	for _, report := range reports {
-		item := fmt.Sprintf(`{
-			time: "%s",
-			badQuality: %s,
-			domain: "%s",
-			platform: "%s",
-			bitrate: "%s"
-		}`,
-			s.formatTime(report.LogTime),
-			s.getInt64(report.FieldVideoBadQuality),
-			s.getString(report.DimCdndomain),
-			s.getString(report.DimPlatform),
-			s.getString(report.DimCoderatebps))
-		jsData = append(jsData, item)
-	}
-
-	return "[" + strings.Join(jsData, ",") + "]"
 }
 
 // MinuteAggregatedData 按分钟聚合数据结构
@@ -471,42 +403,183 @@ func (s *QOSServer) aggregateByTestHy1(reports []util.QualityReport) ([]Aggregat
 	return cdnAggregated, clientAggregated
 }
 
-// formatArrayToJS 将字符串数组格式化为JavaScript数组
-func formatArrayToJS(arr []string) string {
-	if len(arr) == 0 {
-		return "[]"
-	}
-
-	var jsArray strings.Builder
-	jsArray.WriteString("[")
-	for i, item := range arr {
-		if i > 0 {
-			jsArray.WriteString(",")
-		}
-		jsArray.WriteString(fmt.Sprintf("'%s'", item))
-	}
-	jsArray.WriteString("]")
-
-	return jsArray.String()
+// OnlineUserAggregatedData 在线用户聚合数据结构
+type OnlineUserAggregatedData struct {
+	Timestamp string `json:"timestamp"`
+	OnlineNum int    `json:"online_num"`
 }
 
-// formatFloatArrayToJS 将浮点数数组格式化为JavaScript数组
-func formatFloatArrayToJS(arr []float64) string {
-	if len(arr) == 0 {
-		return "[]"
-	}
+// aggregateOnlineUsers 按分钟聚合在线用户数（模拟指定SQL查询的效果）
+func (s *QOSServer) aggregateOnlineUsers(reports []util.QualityReport) []OnlineUserAggregatedData {
+	// 按分钟分组聚合
+	minuteMap := make(map[string]map[string]bool) // timestamp -> set of distinct IPs
 
-	var jsArray strings.Builder
-	jsArray.WriteString("[")
-	for i, item := range arr {
-		if i > 0 {
-			jsArray.WriteString(",")
+	for _, report := range reports {
+		// 检查是否满足筛选条件
+
+		// 1. 检查日期和小时（从cts时间戳解析）
+		var timestamp time.Time
+		if report.Cts != nil {
+			timestamp = time.Unix(*report.Cts, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
+		} else {
+			continue
 		}
-		jsArray.WriteString(fmt.Sprintf("%.2f", item))
-	}
-	jsArray.WriteString("]")
 
-	return jsArray.String()
+		// 2. 检查流URL条件
+		streamUrl := ""
+		if report.DimStreamUrl != nil {
+			streamUrl = *report.DimStreamUrl
+		}
+		if streamUrl == "" {
+			continue
+		}
+
+		// 4. 检查ISP条件
+		isp := ""
+		if report.DimIsp != nil {
+			isp = *report.DimIsp
+		}
+		if !strings.Contains(strings.ToLower(isp), "china") {
+			continue
+		}
+
+		// 5. 检查IP
+		ip := ""
+		if report.DimIp != nil {
+			ip = *report.DimIp
+		}
+		if ip == "" {
+			continue
+		}
+
+		// 按分钟分组，使用date_trunc('minute')的效果
+		minuteTimestamp := time.Date(
+			timestamp.Year(), timestamp.Month(), timestamp.Day(),
+			timestamp.Hour(), timestamp.Minute(), 0, 0,
+			time.FixedZone("Asia/Shanghai", 8*60*60),
+		).Format("2006-01-02 15:04:05")
+
+		// 初始化分钟IP集合
+		if _, exists := minuteMap[minuteTimestamp]; !exists {
+			minuteMap[minuteTimestamp] = make(map[string]bool)
+		}
+
+		// 添加IP到集合中（去重）
+		minuteMap[minuteTimestamp][ip] = true
+	}
+
+	// 转换为结果数组
+	var result []OnlineUserAggregatedData
+	for timestamp, ipSet := range minuteMap {
+		result = append(result, OnlineUserAggregatedData{
+			Timestamp: timestamp,
+			OnlineNum: len(ipSet), // 去重后的IP数量
+		})
+	}
+
+	// 按时间排序
+	sort.Slice(result, func(i, j int) bool {
+		timeI, _ := time.Parse("2006-01-02 15:04:05", result[i].Timestamp)
+		timeJ, _ := time.Parse("2006-01-02 15:04:05", result[j].Timestamp)
+		return timeI.Before(timeJ)
+	})
+
+	return result
+}
+
+// generateOnlineUsersChartHTML 生成在线用户数折线图HTML
+func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
+	if len(onlineUsersAggregated) == 0 {
+		log.Println("generateOnlineUsersChartHTML: no data")
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "每分钟在线用户数趋势",
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c}",
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value}",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+	)
+
+	// 准备X轴数据（时间戳）
+	var xAxisData []string
+	// 准备Y轴数据（在线用户数）
+	var yAxisData []opts.LineData
+
+	for _, data := range onlineUsersAggregated {
+		xAxisData = append(xAxisData, data.Timestamp)
+		yAxisData = append(yAxisData, opts.LineData{
+			Value: data.OnlineNum,
+		})
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries("在线用户数", yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(false),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#52c41a",
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   "#52c41a",
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成在线用户图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 返回包含iframe的HTML
+	return fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">每分钟在线用户数趋势图</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
 }
 
 // Qos 主函数，启动QOS服务器
