@@ -980,8 +980,8 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
 		tableRows = append(tableRows, fmt.Sprintf(`{
 			"cdnip": "%s",
 			"count": %d,
-            "total": %d,
-            "percent": %.2f,
+			"total": %d,
+			"percent": %.2f,
 			"clients": "%s"
 		}`, data.IP, lagClientCount, data.TotalUserCount, float32(len(data.LagIps)*100)/float32(data.TotalUserCount), clientList))
 	}
@@ -1044,13 +1044,42 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
                 field: "count",
                 sortable: true,
                 filter: 'agNumberColumnFilter',
-                width: 150,
+                width: 120,
                 comparator: (valueA, valueB) => valueA - valueB,
                 cellStyle: function(params) {
                     // 根据用户数量设置不同的颜色
                     if (params.value >= 10) {
                         return { color: 'red', fontWeight: 'bold' };
                     } else if (params.value >= 5) {
+                        return { color: 'orange', fontWeight: 'bold' };
+                    } else {
+                        return { color: 'green' };
+                    }
+                }
+            },
+            {
+                headerName: "总用户数",
+                field: "total",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB
+            },
+            {
+                headerName: "卡顿比例",
+                field: "percent",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB,
+                cellRenderer: function(params) {
+                    return params.value + '%%';
+                },
+                cellStyle: function(params) {
+                    // 根据卡顿比例设置不同的颜色
+                    if (params.value >= 50) {
+                        return { color: 'red', fontWeight: 'bold' };
+                    } else if (params.value >= 20) {
                         return { color: 'orange', fontWeight: 'bold' };
                     } else {
                         return { color: 'green' };
