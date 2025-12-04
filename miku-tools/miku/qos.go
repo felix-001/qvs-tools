@@ -106,7 +106,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("查询结果:", len(reports))
-	s.saveCsv(reports)
+	//s.saveCsv(reports)
 
 	var streamdReports []util.StreamdLagReport
 	sql = s.buildMikuSQLQuery(req)
