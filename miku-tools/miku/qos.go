@@ -1,8 +1,6 @@
 package miku
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -17,9 +15,6 @@ import (
 
 	"mikutool/config"
 	"mikutool/public/util"
-
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // QOSRequest 前端查询请求结构
@@ -485,101 +480,6 @@ func (s *QOSServer) aggregateOnlineUsers(reports []util.QualityReport) []OnlineU
 	})
 
 	return result
-}
-
-// generateOnlineUsersChartHTML 生成在线用户数折线图HTML
-func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
-	if len(onlineUsersAggregated) == 0 {
-		log.Println("generateOnlineUsersChartHTML: no data")
-		return ""
-	}
-
-	// 创建折线图
-	line := charts.NewLine()
-
-	// 设置全局选项
-	line.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{
-			Title: "每分钟在线用户数趋势",
-			Left:  "right",
-		}),
-		charts.WithTooltipOpts(opts.Tooltip{
-			Trigger:   "axis",
-			Formatter: "{a} <br/>{b} : {c}",
-		}),
-		charts.WithXAxisOpts(opts.XAxis{
-			Type: "category",
-			AxisLabel: &opts.AxisLabel{
-				Rotate:   45,
-				Interval: "auto",
-			},
-		}),
-		charts.WithYAxisOpts(opts.YAxis{
-			Type: "value",
-			AxisLabel: &opts.AxisLabel{
-				Formatter: "{value}",
-			},
-		}),
-		charts.WithInitializationOpts(opts.Initialization{
-			Width:  "100%",
-			Height: "400px",
-			Theme:  "white",
-		}),
-	)
-
-	// 准备X轴数据（时间戳）
-	var xAxisData []string
-	// 准备Y轴数据（在线用户数）
-	var yAxisData []opts.LineData
-
-	for _, data := range onlineUsersAggregated {
-		xAxisData = append(xAxisData, data.Timestamp)
-		yAxisData = append(yAxisData, opts.LineData{
-			Value: data.OnlineNum,
-		})
-	}
-
-	// 添加数据系列
-	line.SetXAxis(xAxisData).
-		AddSeries("在线用户数", yAxisData).
-		SetSeriesOptions(
-			charts.WithLineChartOpts(opts.LineChart{
-				Smooth: opts.Bool(false),
-			}),
-			charts.WithLineStyleOpts(opts.LineStyle{
-				Color: "#52c41a",
-				Width: 2,
-			}),
-			charts.WithAreaStyleOpts(opts.AreaStyle{
-				Color:   "#52c41a",
-				Opacity: opts.Float(0.1),
-			}),
-		)
-
-	// 生成完整的图表HTML页面
-	var buf bytes.Buffer
-	err := line.Render(&buf)
-	if err != nil {
-		log.Println("生成在线用户图表HTML失败:", err)
-		return ""
-	}
-	chartHTML := buf.String()
-
-	// 将完整HTML页面编码为Data URL
-	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
-
-	// 返回包含iframe的HTML
-	return fmt.Sprintf(`
-		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
-			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">每分钟在线用户数趋势图</h2>
-			<iframe 
-				src="data:text/html;base64,%s" 
-				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
-				sandbox="allow-scripts allow-same-origin"
-				frameborder="0"
-			></iframe>
-		</div>
-	`, encodedHTML)
 }
 
 // Qos 主函数，启动QOS服务器
