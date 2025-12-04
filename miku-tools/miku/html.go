@@ -491,7 +491,7 @@ func (s *QOSServer) getHomePageTemplate() string {
             <!-- 小时输入 -->
             <div class="form-group">
                 <label for="hour">小时 (0-23):</label>
-                <input type="number" id="hour" name="hour" min="0" max="23" placeholder="请输入小时（可选，如：14）">
+                <input type="number" id="hour" name="hour" min="0" max="23">
             </div>
 
             <!-- 模糊搜索选项 -->
