@@ -454,11 +454,11 @@ func (s *QOSServer) getHomePageTemplate() string {
             <div class="datetime-group">
                 <div class="form-group">
                     <label for="startTime">开始日期时间:</label>
-                    <input type="datetime-local" id="startTime" name="startTime" required>
+                    <input type="datetime-local" step="1" id="startTime" name="startTime" required>
                 </div>
                 <div class="form-group">
                     <label for="endTime">结束日期时间:</label>
-                    <input type="datetime-local" id="endTime" name="endTime" required>
+                    <input type="datetime-local" step="1" id="endTime" name="endTime" required>
                 </div>
             </div>
 
@@ -593,6 +593,7 @@ func (s *QOSServer) getHomePageTemplate() string {
                 hour: formData.get('hour'),
                 fuzzySearch: formData.get('fuzzySearch') === 'on'
             };
+            console.log(data)
             
             // 显示加载状态
             submitBtn.disabled = true;
