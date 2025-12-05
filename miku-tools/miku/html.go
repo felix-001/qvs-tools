@@ -1060,22 +1060,30 @@ func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineU
 // generateAggDataChartsHTML 生成聚合数据的三个饼图
 func (s *QOSServer) generateAggDataChartsHTML(aggData AggData) string {
 	var chartsHTML string
-	
+
 	// 生成国家分布饼图
 	if len(aggData.CountryCntMap) > 0 {
 		chartsHTML += s.generatePieChartHTML(aggData.CountryCntMap, "国家")
 	}
-	
+
 	// 生成区域分布饼图
 	if len(aggData.AreaCntMap) > 0 {
 		chartsHTML += s.generatePieChartHTML(aggData.AreaCntMap, "区域")
 	}
-	
+
 	// 生成省份分布饼图
 	if len(aggData.ProvCntMap) > 0 {
 		chartsHTML += s.generatePieChartHTML(aggData.ProvCntMap, "省份")
 	}
-	
+
+	if len(aggData.AreaLagCntMap) > 0 {
+		chartsHTML += s.generatePieChartHTML(aggData.AreaLagCntMap, "区域延迟分布")
+	}
+
+	if len(aggData.ProvLagCntMap) > 0 {
+		chartsHTML += s.generatePieChartHTML(aggData.ProvLagCntMap, "省份延迟分布")
+	}
+
 	return chartsHTML
 }
 
@@ -1090,12 +1098,12 @@ func (s *QOSServer) generatePieChartHTML(data map[string]int, title string) stri
 		Name  string
 		Value int
 	}
-	
+
 	var sortedData []DataItem
 	for name, value := range data {
 		sortedData = append(sortedData, DataItem{Name: name, Value: value})
 	}
-	
+
 	sort.Slice(sortedData, func(i, j int) bool {
 		return sortedData[i].Value > sortedData[j].Value
 	})
@@ -1430,5 +1438,3 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
 		</div>
 	`, encodedHTML)
 }
-
-

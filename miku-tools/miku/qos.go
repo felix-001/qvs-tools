@@ -223,6 +223,8 @@ type AggData struct {
 	CountryCntMap map[string]int
 	AreaCntMap    map[string]int
 	ProvCntMap    map[string]int
+	AreaLagCntMap map[string]int
+	ProvLagCntMap map[string]int
 }
 
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
@@ -299,6 +301,9 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	clientLagCntMap := make(map[string]int)   // clientIp -> 延迟数
 	clientTotalCntMap := make(map[string]int) // clientIp -> 总数
 
+	areaLagCntMap := make(map[string]int) // area -> 延迟数
+	provLagCntMap := make(map[string]int) // prov -> 延迟数
+
 	for _, report := range reports {
 		// 获取CDN IP
 		var cdnip string
@@ -344,6 +349,10 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			clientTotalCntMap[clientIp]++
 			if isBadQuality {
 				clientLagCntMap[clientIp]++
+				_, _, area, prov := util.GetLocate(clientIp, s.resources.IpParser)
+				areaLagCntMap[area]++
+				provLagCntMap[prov]++
+
 			}
 		}
 
@@ -399,6 +408,8 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	aggData.CountryCntMap = clientCountryCntMap
 	aggData.AreaCntMap = areaCntMap
 	aggData.ProvCntMap = provCntMap
+	aggData.AreaLagCntMap = areaLagCntMap
+	aggData.ProvLagCntMap = provLagCntMap
 
 	// 按不良质量次数降序排序
 	sort.Slice(clientAggregated, func(i, j int) bool {
