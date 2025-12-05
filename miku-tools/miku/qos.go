@@ -98,6 +98,14 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check and adjust time format if needed
+	if strings.Count(req.StartTime, ":") == 1 {
+		req.StartTime = req.StartTime + ":00"
+	}
+	if strings.Count(req.EndTime, ":") == 1 {
+		req.EndTime = req.EndTime + ":00"
+	}
+
 	// 构建SQL查询（获取原始数据）
 	sql := s.buildSQLQuery(req, true)
 	if req.LogLevel == "detail" {

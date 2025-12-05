@@ -84,7 +84,7 @@ func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
 	}
 
 	// 限制结果数量
-	sql += " LIMIT 10000"
+	sql += " LIMIT 50000"
 
 	return sql
 }
