@@ -145,6 +145,11 @@ type StreamdFpsReport struct {
 	SourceType           *string  `db:"source_type"`
 }
 
+type StreamdStreamCntReport struct {
+	Ts_m      *string `db:"ts_m"`
+	StreamCnt *int64  `db:"stream_cnt"`
+}
+
 func TrinoQuery(schema, sql string, dest interface{}) error {
 	dsn := fmt.Sprintf("http://superset@trino.jf-logverse.k8s.qiniu.io?catalog=hive_miku&schema=%s", schema)
 	db, err := sqlx.Open("trino", dsn)

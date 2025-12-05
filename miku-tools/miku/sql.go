@@ -227,3 +227,22 @@ func (s *QOSServer) buildMikuFpsSQLQuery(req QOSRequest) string {
 		req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID)
 	return sql
 }
+
+func (s *QOSServer) buildMikuStreamCntSQLQuery(req QOSRequest) string {
+	// Replace "T" with space in starttime and endtime
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := s.convertToDay(req.StartTime)
+	endDay := s.convertToDay(req.EndTime)
+
+	sql := fmt.Sprintf(`
+		select date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai') as ts_m, count(DISTINCT streamname) as stream_cnt
+		from dwd_flowd_miku_streamd_log 
+		where from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			and AppName = '%s'
+			and day >= '%s' and day <= '%s'
+		group by date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')
+		`, req.StartTime, req.EndTime, req.AppName, startDay, endDay)
+
+	return sql
+}
