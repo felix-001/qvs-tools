@@ -135,6 +135,16 @@ type StreamdLagReport struct {
 	TotalRetryTimes                    *int64   `db:"totalRetryTimes"`
 }
 
+type StreamdFpsReport struct {
+	Ts                   *string  `db:"ts"`
+	NodeId               *string  `db:"NodeID"`
+	StreamName           *string  `db:"StreamName"`
+	AppName              *string  `db:"AppName"`
+	Avg_IncomingVideoFps *float64 `db:"avg_IncomingVideoFps"`
+	Avg_IncomingAudioFps *float64 `db:"avg_IncomingAudioFps"`
+	SourceType           *string  `db:"source_type"`
+}
+
 func TrinoQuery(schema, sql string, dest interface{}) error {
 	dsn := fmt.Sprintf("http://superset@trino.jf-logverse.k8s.qiniu.io?catalog=hive_miku&schema=%s", schema)
 	db, err := sqlx.Open("trino", dsn)

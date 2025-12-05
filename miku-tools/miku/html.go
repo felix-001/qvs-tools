@@ -1040,6 +1040,210 @@ func (s *QOSServer) generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggreg
 	return htmlContent
 }
 
+// generateStreamdVideoFpsChartHTML 生成推流/回源视频帧率折线图HTML
+func (s *QOSServer) generateStreamdVideoFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
+	if len(streamdFpsReports) == 0 {
+		log.Println("视频帧率数据为空")
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "推流/回源视频帧率",
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c} FPS",
+			Show:      opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value} FPS",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// 准备X轴数据（时间戳）和Y轴数据（视频帧率）
+	var xAxisData []string
+	var yAxisData []opts.LineData
+
+	for _, report := range streamdFpsReports {
+		if report.Ts != nil && report.Avg_IncomingVideoFps != nil {
+			xAxisData = append(xAxisData, *report.Ts)
+			yAxisData = append(yAxisData, opts.LineData{
+				Value: *report.Avg_IncomingVideoFps,
+			})
+		}
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries("视频帧率", yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#28a745",
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   "#28a745",
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成视频帧率图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 使用iframe包装图表HTML作为web component
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">推流/回源视频帧率趋势图</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+
+	return htmlContent
+}
+
+// generateStreamdAudioFpsChartHTML 生成推流/回源音频帧率折线图HTML
+func (s *QOSServer) generateStreamdAudioFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
+	if len(streamdFpsReports) == 0 {
+		log.Println("音频帧率数据为空")
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "推流/回源音频帧率",
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c} FPS",
+			Show:      opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value} FPS",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// 准备X轴数据（时间戳）和Y轴数据（音频帧率）
+	var xAxisData []string
+	var yAxisData []opts.LineData
+
+	for _, report := range streamdFpsReports {
+		if report.Ts != nil && report.Avg_IncomingAudioFps != nil {
+			xAxisData = append(xAxisData, *report.Ts)
+			yAxisData = append(yAxisData, opts.LineData{
+				Value: *report.Avg_IncomingAudioFps,
+			})
+		}
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries("音频帧率", yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#ffc107",
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   "#ffc107",
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成音频帧率图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 使用iframe包装图表HTML作为web component
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">推流/回源音频帧率趋势图</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+
+	return htmlContent
+}
+
 // generateLineChartHTML 生成简单的折线图HTML
 func (s *QOSServer) generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, title string) string {
 	if len(reports) == 0 {

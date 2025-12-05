@@ -126,6 +126,20 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("查询结果streamdReports:", len(streamdReports))
 
+	var streamdFpsReports []util.StreamdFpsReport
+	if req.StreamID != "" && !req.FuzzySearch {
+		sql = s.buildMikuFpsSQLQuery(req)
+		if req.LogLevel == "detail" {
+			log.Printf("执行SQL查询: %s", sql)
+		}
+		if err := util.TrinoQuery("miku", sql, &streamdFpsReports); err != nil {
+			log.Printf("Trino查询失败: %v", err)
+			http.Error(w, fmt.Sprintf("查询失败: %v", err), http.StatusInternalServerError)
+			return
+		}
+		log.Println("查询结果streamdFpsReports:", len(streamdFpsReports))
+	}
+
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
 	minuteAggregated := s.aggregateByMinute(reports)
 
@@ -135,6 +149,10 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	onlineUsersAggregated := s.aggregateOnlineUsers(reports)
 
 	streamdChartsHTML := s.generateStreamdChartsHTML(streamdReports)
+
+	// 生成推流/回源帧率折线图
+	streamdVideoFpsChartHTML := s.generateStreamdVideoFpsChartHTML(streamdFpsReports)
+	streamdAudioFpsChartHTML := s.generateStreamdAudioFpsChartHTML(streamdFpsReports)
 
 	// 生成分钟聚合数据的折线图
 	minuteChartHTML := s.generateMinuteChartHTML(minuteAggregated)
@@ -158,7 +176,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	aggDataChartsHTML := s.generateAggDataChartsHTML(aggData)
 
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
+	fullHTML := streamdChartsHTML + streamdVideoFpsChartHTML + streamdAudioFpsChartHTML + minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
