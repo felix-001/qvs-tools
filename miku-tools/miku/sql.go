@@ -28,12 +28,16 @@ func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
 		startDay := s.convertToDay(req.StartTime)
 		log.Printf("StartTime输入: %s, 转换后: %s", req.StartTime, startDay)
 		sql += fmt.Sprintf(" AND day >= '%s'", startDay)
+		startTime := strings.ReplaceAll(req.StartTime, "T", " ")
+		sql += fmt.Sprintf(" AND cts >= to_unixtime(TIMESTAMP '%s+08:00')", startTime)
 	}
 
 	if req.EndTime != "" {
 		endDay := s.convertToDay(req.EndTime)
 		log.Printf("EndTime输入: %s, 转换后: %s", req.EndTime, endDay)
 		sql += fmt.Sprintf(" AND day <= '%s'", endDay)
+		endTime := strings.ReplaceAll(req.EndTime, "T", " ")
+		sql += fmt.Sprintf(" AND cts <= to_unixtime(TIMESTAMP '%s+08:00')", endTime)
 	}
 
 	// 添加流ID过滤
@@ -123,7 +127,7 @@ func (s *QOSServer) buildMikuSQLQuery(req QOSRequest) string {
 		SUM(if(type = 'puller' and customerSource != true, retryTimes, 0)) as totalRetryTimes
 	FROM dwd_flowd_miku_streamd_log
 	WHERE 
-	from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s' AND TIMESTAMP '%s'
+	from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 	and AppName = '%s' 
 	and day >= '%s' and day <= '%s'`, req.StartTime, req.EndTime, req.AppName, startDay, endDay)
 	if req.StreamID != "" {
@@ -133,7 +137,7 @@ func (s *QOSServer) buildMikuSQLQuery(req QOSRequest) string {
 			sql += fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
 		}
 	}
-	sql += "GROUP BY date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')\n"
-	sql += "ORDER BY ts_m"
+	sql += " GROUP BY date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')\n"
+	sql += " ORDER BY ts_m"
 	return sql
 }
