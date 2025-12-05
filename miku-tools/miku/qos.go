@@ -127,6 +127,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("查询结果streamdReports:", len(streamdReports))
 
 	var streamdFpsReports []util.StreamdFpsReport
+	var streamUpstreamBandwidthReports []util.StreamdUpstreamBandWidthReport
 	if req.StreamID != "" && !req.FuzzySearch {
 		sql = s.buildMikuFpsSQLQuery(req)
 		if req.LogLevel == "detail" {
@@ -138,6 +139,17 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println("查询结果streamdFpsReports:", len(streamdFpsReports))
+
+		sql = s.buildMikuUpstreamBandwidthSQLQuery(req)
+		if req.LogLevel == "detail" {
+			log.Printf("执行SQL查询: %s", sql)
+		}
+		if err := util.TrinoQuery("miku", sql, &streamUpstreamBandwidthReports); err != nil {
+			log.Printf("Trino查询失败: %v", err)
+			http.Error(w, fmt.Sprintf("查询失败: %v", err), http.StatusInternalServerError)
+			return
+		}
+		log.Println("查询结果streamUpstreamBandwidthReport:", len(streamUpstreamBandwidthReports))
 	}
 
 	sql = s.buildMikuStreamCntSQLQuery(req)
@@ -169,6 +181,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 生成在线流个数折线图
 	streamCntChartHTML := s.generateStreamCntChartHTML(streamCntReports)
 
+	// 生成推流/回源带宽折线图
+	upstreamBandwidthChartHTML := s.generateUpstreamBandwidthChartHTML(streamUpstreamBandwidthReports)
+
 	// 生成分钟聚合数据的折线图
 	minuteChartHTML := s.generateMinuteChartHTML(minuteAggregated)
 
@@ -191,7 +206,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	aggDataChartsHTML := s.generateAggDataChartsHTML(aggData)
 
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + streamdVideoFpsChartHTML + streamdAudioFpsChartHTML + streamCntChartHTML + minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
+	fullHTML := streamdChartsHTML + streamdVideoFpsChartHTML + streamdAudioFpsChartHTML + upstreamBandwidthChartHTML + streamCntChartHTML + minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")

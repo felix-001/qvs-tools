@@ -246,3 +246,70 @@ func (s *QOSServer) buildMikuStreamCntSQLQuery(req QOSRequest) string {
 
 	return sql
 }
+
+func (s *QOSServer) buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
+	// Replace "T" with space in starttime and endtime
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := s.convertToDay(req.StartTime)
+	endDay := s.convertToDay(req.EndTime)
+
+	sql := fmt.Sprintf(`
+		WITH all_data AS (
+		SELECT 
+			Ts AS ts,
+			StreamName,
+			NodeID,
+			IF(CostTime = 0, 0, RecvBytes * 8 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
+			'publisher' AS source_type,
+			1 AS priority
+		FROM miku.dwd_flowd_miku_streamd_log
+		WHERE             
+			AppName = '%s'
+			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND day >= '%s' AND day <= '%s'
+			AND StreamName = '%s'
+			AND Type = 'publisher'
+		
+		UNION ALL
+		
+		SELECT 
+			Ts AS ts,
+			StreamName,
+			NodeID,
+			IF(CostTime = 0, 0, RecvBytes * 8 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
+			'puller' AS source_type,
+			2 AS priority
+		FROM miku.dwd_flowd_miku_streamd_log
+		WHERE            
+			AppName = '%s'
+			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND day >= '%s' AND day <= '%s'
+			AND StreamName = '%s'
+			AND Type = 'puller'
+			AND CustomerSource = true
+		),
+			
+		real_data AS (
+		SELECT *
+		FROM (
+			SELECT *,
+			row_number() OVER (PARTITION BY ts ORDER BY priority) AS rn
+			FROM all_data
+		)
+		WHERE rn = 1
+		)
+		
+		SELECT 
+		r.ts,
+		r.NodeID,
+		r.StreamName,
+		r.bandwidth,
+		r.source_type
+		FROM real_data r
+		ORDER BY r.ts
+		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID,
+		req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID)
+
+	return sql
+}
