@@ -129,7 +129,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
 	minuteAggregated := s.aggregateByMinute(reports)
 
-	cdnAggregated, clientAggregated, cdnAggData := s.aggregateReport(reports)
+	cdnAggregated, clientAggregated, cdnAggData, aggData := s.aggregateReport(reports)
 
 	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
 	onlineUsersAggregated := s.aggregateOnlineUsers(reports)
@@ -148,8 +148,11 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 生成CDN卡顿用户表格HTML
 	cdnLagTableHTML := s.generateCDNLagTableHTML(cdnAggData)
 
+	// 生成聚合数据饼图HTML
+	aggDataChartsHTML := s.generateAggDataChartsHTML(aggData)
+
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML
+	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -216,6 +219,12 @@ type CdnAggregateData struct {
 	LagIps         []string `json:"lag_ips"`
 }
 
+type AggData struct {
+	CountryCntMap map[string]int
+	AreaCntMap    map[string]int
+	ProvCntMap    map[string]int
+}
+
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
 func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
 	// 按分钟分组聚合
@@ -279,7 +288,7 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 	return result
 }
 
-func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData, []CdnAggregateData) {
+func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData, []CdnAggregateData, AggData) {
 	// CDN IP聚合
 	cdnLagCntMap := make(map[string]int)   // cdnip -> 延迟数
 	cdnTotalCntMap := make(map[string]int) // cdnip -> 总数
@@ -370,8 +379,12 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 
 	// 生成Client聚合数据
 	var clientAggregated []AggregatedData
+	var aggData AggData
+	clientCountryCntMap := make(map[string]int)
+	areaCntMap := make(map[string]int)
+	provCntMap := make(map[string]int)
 	for clientIp, total := range clientTotalCntMap {
-		_, isp, _, prov := util.GetLocate(clientIp, s.resources.IpParser)
+		country, isp, area, prov := util.GetLocate(clientIp, s.resources.IpParser)
 		clientAggregated = append(clientAggregated, AggregatedData{
 			IP:         clientIp,
 			TotalCount: total,
@@ -379,7 +392,13 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			Prov:       prov,
 			Isp:        isp,
 		})
+		clientCountryCntMap[country]++
+		areaCntMap[area]++
+		provCntMap[prov]++
 	}
+	aggData.CountryCntMap = clientCountryCntMap
+	aggData.AreaCntMap = areaCntMap
+	aggData.ProvCntMap = provCntMap
 
 	// 按不良质量次数降序排序
 	sort.Slice(clientAggregated, func(i, j int) bool {
@@ -399,7 +418,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 		})
 	}
 
-	return cdnAggregated, clientAggregated, cdnAggregateData
+	return cdnAggregated, clientAggregated, cdnAggregateData, aggData
 }
 
 // OnlineUserAggregatedData 在线用户聚合数据结构
