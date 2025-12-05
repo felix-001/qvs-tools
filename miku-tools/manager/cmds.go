@@ -410,11 +410,12 @@ func (m *CommandManager) CmdTestHy1() *Command {
 
 func (m *CommandManager) CmdQos() *Command {
 	handler := func() {
-		miku.Qos(m.config)
+		miku.Qos(m.config, &m.resources)
 	}
 	cmd := &Command{
-		Desc:    "miku qos, upstream, 查询ck质量数据，返回html页面， 包含各种图表",
-		Handler: handler,
+		Desc:         "miku qos, upstream, 查询ck质量数据，返回html页面， 包含各种图表",
+		Handler:      handler,
+		NeedIpParser: true,
 	}
 	return cmd
 }

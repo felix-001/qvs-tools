@@ -35,7 +35,7 @@ func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggr
 	htmlContent := fmt.Sprintf(`
 		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
 			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">聚合数据分析</h2>
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+			<div style="display: flex; flex-direction: column; gap: 30px; margin-top: 30px;">
 				%s
 				%s
 			</div>
@@ -65,8 +65,10 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 			"ip": "%s",
 			"lagCount": %d,
 			"totalCount": %d,
-			"lagRatio": "%.2f%%"
-		}`, item.IP, item.LagCount, item.TotalCount, lagRatio))
+			"lagRatio": "%.2f%%",
+            "province": "%s",
+            "isp": "%s"
+		}`, item.IP, item.LagCount, item.TotalCount, lagRatio, item.Prov, item.Isp))
 	}
 
 	tableData := strings.Join(tableRows, ",\n")
@@ -151,6 +153,20 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
                     const numB = parseFloat(valueB.replace('%%', ''));
                     return numA - numB;
                 }
+            },
+            {
+                headerName: "省份",
+                field: "province",
+                sortable: true,
+                filter: true,
+                width: 100
+            },
+            {
+                headerName: "运营商",
+                field: "isp",
+                sortable: true,
+                filter: true,
+                width: 120
             }
         ];
 

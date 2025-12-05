@@ -15,6 +15,7 @@ import (
 
 	"mikutool/config"
 	"mikutool/public/util"
+	"mikutool/resources"
 )
 
 // QOSRequest 前端查询请求结构
@@ -32,13 +33,15 @@ type QOSRequest struct {
 
 // QOSServer HTTP服务器结构
 type QOSServer struct {
-	config *config.Config
+	config    *config.Config
+	resources *resources.Resources
 }
 
 // NewQOSServer 创建新的QOS服务器
-func NewQOSServer(cfg *config.Config) *QOSServer {
+func NewQOSServer(cfg *config.Config, resources *resources.Resources) *QOSServer {
 	return &QOSServer{
-		config: cfg,
+		config:    cfg,
+		resources: resources,
 	}
 }
 
@@ -203,6 +206,8 @@ type AggregatedData struct {
 	IP         string `json:"ip"`
 	TotalCount int    `json:"total_count"`
 	LagCount   int    `json:"lag_count"`
+	Prov       string `json:"prov"`
+	Isp        string `json:"isp"`
 }
 
 type CdnAggregateData struct {
@@ -348,10 +353,13 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	// 生成CDN聚合数据
 	var cdnAggregated []AggregatedData
 	for cdnip, total := range cdnTotalCntMap {
+		_, isp, _, prov := util.GetLocate(cdnip, s.resources.IpParser)
 		cdnAggregated = append(cdnAggregated, AggregatedData{
 			IP:         cdnip,
 			TotalCount: total,
 			LagCount:   cdnLagCntMap[cdnip],
+			Prov:       prov,
+			Isp:        isp,
 		})
 	}
 
@@ -363,10 +371,13 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	// 生成Client聚合数据
 	var clientAggregated []AggregatedData
 	for clientIp, total := range clientTotalCntMap {
+		_, isp, _, prov := util.GetLocate(clientIp, s.resources.IpParser)
 		clientAggregated = append(clientAggregated, AggregatedData{
 			IP:         clientIp,
 			TotalCount: total,
 			LagCount:   clientLagCntMap[clientIp],
+			Prov:       prov,
+			Isp:        isp,
 		})
 	}
 
@@ -476,11 +487,11 @@ func (s *QOSServer) aggregateOnlineUsers(reports []util.QualityReport) []OnlineU
 }
 
 // Qos 主函数，启动QOS服务器
-func Qos(config *config.Config) {
+func Qos(config *config.Config, resources *resources.Resources) {
 	if config == nil {
 		//log.Fatal("配置不能为空")
 	}
 
-	server := NewQOSServer(config)
+	server := NewQOSServer(config, resources)
 	server.StartServer()
 }
