@@ -139,6 +139,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 生成分钟聚合数据的折线图
 	minuteChartHTML := s.generateMinuteChartHTML(minuteAggregated)
 
+	// 生成卡顿用户占比折线图
+	lagUserRatioChartHTML := s.generateLagUserRatioChartHTML(minuteAggregated)
+
 	// 生成在线用户数折线图
 	onlineUsersChartHTML := s.generateOnlineUsersChartHTML(onlineUsersAggregated)
 
@@ -152,7 +155,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	aggDataChartsHTML := s.generateAggDataChartsHTML(aggData)
 
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + minuteChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
+	fullHTML := streamdChartsHTML + minuteChartHTML + lagUserRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -198,10 +201,13 @@ func (s *QOSServer) getInt64(i *int64) string {
 
 // MinuteAggregatedData 按分钟聚合数据结构
 type MinuteAggregatedData struct {
-	Timestamp  string  `json:"timestamp"`
-	Percent    float64 `json:"percent"`
-	LagCount   int     `json:"lag_count"`
-	TotalCount int     `json:"total_count"`
+	Timestamp    string               `json:"timestamp"`
+	Percent      float64              `json:"percent"`
+	LagCount     int                  `json:"lag_count"`
+	TotalCount   int                  `json:"total_count"`
+	LagUserCnt   int                  `json:"lag_user_cnt"`
+	TotalUserCnt int                  `json:"total_user_cnt"`
+	Reports      []util.QualityReport `json:"report"`
 }
 
 // AggregatedData 聚合数据结构
@@ -264,6 +270,7 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 		// 统计数据
 		minuteData := minuteMap[truncatedTime]
 		minuteData.TotalCount++
+		minuteData.Reports = append(minuteData.Reports, report)
 
 		// 检查是否为不良质量
 		if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
@@ -273,10 +280,22 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 
 	// 计算百分比并转换为切片
 	var result []MinuteAggregatedData
+	var lagUserMap = make(map[string]bool)
+	var totalUserMap = make(map[string]bool)
 	for _, data := range minuteMap {
 		if data.TotalCount > 0 {
 			data.Percent = float64(data.LagCount) / float64(data.TotalCount) * 100
 		}
+		for _, report := range data.Reports {
+			if report.DimIp != nil && *report.DimIp != "" {
+				if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
+					lagUserMap[*report.DimIp] = true
+				}
+				totalUserMap[*report.DimIp] = true
+			}
+		}
+		data.LagUserCnt = len(lagUserMap)
+		data.TotalUserCnt = len(totalUserMap)
 		result = append(result, *data)
 	}
 
