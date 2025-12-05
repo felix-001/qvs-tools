@@ -144,15 +144,6 @@ func TrinoQuery(schema, sql string, dest interface{}) error {
 	}
 	defer db.Close()
 
-	/*
-			err = db.Select(&reports, `
-		        select *
-		        from huyabiz_quality_report_log where day='20251203' limit 10`)
-			if err != nil {
-				log.Fatal(err)
-			}
-	*/
-
 	err = db.Select(dest, sql)
 	if err != nil {
 		log.Println(err)
