@@ -502,6 +502,14 @@ func (s *QOSServer) getHomePageTemplate() string {
                 </div>
             </div>
 
+            <!-- 详细日志选项 -->
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="detailLog" name="detailLog">
+                    <label for="detailLog" style="margin: 0; font-weight: normal;">开启详细日志</label>
+                </div>
+            </div>
+
             <!-- 提交按钮 -->
             <button type="submit" class="submit-btn">开始质量分析</button>
         </form>
@@ -591,7 +599,8 @@ func (s *QOSServer) getHomePageTemplate() string {
                 domain: formData.get('domain'),
                 uid: formData.get('uid'),
                 hour: formData.get('hour'),
-                fuzzySearch: formData.get('fuzzySearch') === 'on'
+                fuzzySearch: formData.get('fuzzySearch') === 'on',
+                loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal'
             };
             console.log(data)
             

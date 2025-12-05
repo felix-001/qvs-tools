@@ -27,6 +27,7 @@ type QOSRequest struct {
 	UID         string `json:"uid"`
 	Hour        string `json:"hour"`
 	FuzzySearch bool   `json:"fuzzySearch"`
+	LogLevel    string `json:"logLevel"`
 }
 
 // QOSServer HTTP服务器结构
@@ -96,7 +97,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 构建SQL查询（获取原始数据）
 	sql := s.buildSQLQuery(req, true)
-	log.Printf("执行SQL查询: %s", sql)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
 
 	// 执行查询
 	var reports []util.QualityReport
@@ -110,7 +113,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 	var streamdReports []util.StreamdLagReport
 	sql = s.buildMikuSQLQuery(req)
-	log.Printf("执行SQL查询: %s", sql)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
 	if err := util.TrinoQuery("miku", sql, &streamdReports); err != nil {
 		log.Printf("Trino查询失败: %v", err)
 		http.Error(w, fmt.Sprintf("查询失败: %v", err), http.StatusInternalServerError)
