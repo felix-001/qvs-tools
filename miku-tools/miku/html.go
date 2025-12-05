@@ -100,6 +100,9 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 </head>
 <body>
     <h2 style="text-align: center; color: #333; margin-bottom: 20px;">%s</h2>
+    <div style="margin-bottom: 15px; padding: 10px; background: #f0f8ff; border: 1px solid #b3d9ff; border-radius: 4px; font-size: 12px; color: #666;">
+        <strong>使用提示:</strong> 支持多选行，按 Ctrl+Shift+C 复制选中数据到剪贴板
+    </div>
     <div id="grid-container">
         <div id="myGrid" class="ag-theme-alpine"></div>
     </div>
@@ -186,14 +189,76 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
             enableRangeSelection: true,
             enableRangeHandle: true,
             enableFillHandle: true,
+            enableCellTextSelection: true,
             pagination: false,
-            rowSelection: 'multiple',
+            rowSelection: {
+                mode: 'multiRow',
+                checkboxes: true,
+                headerCheckbox: true,
+                enableClickSelection: true,
+                enableRangeSelection: true
+            },
             animateRows: true,
             suppressMenuHide: true,
             onFirstDataRendered: function(params) {
                 params.api.sizeColumnsToFit();
+            },
+            onGridReady: function(params) {
+                // 添加复制功能
+                params.api.addEventListener('keydown', function(event) {
+                    if (event.ctrlKey && event.key === 'c' && event.shiftKey) {
+                        copySelectedData(params.api);
+                        event.preventDefault();
+                    }
+                });
             }
         };
+
+        // 复制选中数据的功能
+        function copySelectedData(api) {
+            const selectedRows = api.getSelectedRows();
+            if (selectedRows && selectedRows.length > 0) {
+                // 将选中数据转换为制表符分隔的文本
+                const headers = Object.keys(selectedRows[0]);
+                const headerText = headers.join('\\t') + '\\n';
+                
+                const rowsText = selectedRows.map(row => {
+                    return headers.map(header => {
+                        const value = row[header];
+                        // 处理可能的undefined或null值
+                        return value !== undefined && value !== null ? String(value) : '';
+                    }).join('\\t');
+                }).join('\\n');
+                
+                const fullText = headerText + rowsText;
+                
+                // 复制到剪贴板
+                navigator.clipboard.writeText(fullText).then(() => {
+                    // 显示复制成功的提示
+                    showToast('已复制 ' + selectedRows.length + ' 行数据到剪贴板');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showToast('复制失败，请重试');
+                });
+            } else {
+                showToast('请先选择要复制的数据行');
+            }
+        }
+        
+        // 显示提示信息
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; z-index: 1000; font-family: Arial, sans-serif; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
 
         // 等待DOM加载完成后初始化表格
         document.addEventListener('DOMContentLoaded', function() {
@@ -1161,6 +1226,9 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
 </head>
 <body>
     <h2 style="text-align: center; color: #333; margin-bottom: 20px;">CDN卡顿用户统计</h2>
+    <div style="margin-bottom: 15px; padding: 10px; background: #f0f8ff; border: 1px solid #b3d9ff; border-radius: 4px; font-size: 12px; color: #666;">
+        <strong>使用提示:</strong> 支持多选行，按 Ctrl+Shift+C 复制选中数据到剪贴板
+    </div>
     <div id="grid-container">
         <div id="myGrid" class="ag-theme-alpine"></div>
     </div>
@@ -1266,14 +1334,76 @@ func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) stri
             enableRangeSelection: true,
             enableRangeHandle: true,
             enableFillHandle: true,
+            enableCellTextSelection: true,
             pagination: false,
-            rowSelection: 'multiple',
+            rowSelection: {
+                mode: 'multiRow',
+                checkboxes: true,
+                headerCheckbox: true,
+                enableClickSelection: true,
+                enableRangeSelection: true
+            },
             animateRows: true,
             suppressMenuHide: true,
             onFirstDataRendered: function(params) {
                 params.api.sizeColumnsToFit();
+            },
+            onGridReady: function(params) {
+                // 添加复制功能
+                params.api.addEventListener('keydown', function(event) {
+                    if (event.ctrlKey && event.key === 'c' && event.shiftKey) {
+                        copySelectedData(params.api);
+                        event.preventDefault();
+                    }
+                });
             }
         };
+
+        // 复制选中数据的功能
+        function copySelectedData(api) {
+            const selectedRows = api.getSelectedRows();
+            if (selectedRows && selectedRows.length > 0) {
+                // 将选中数据转换为制表符分隔的文本
+                const headers = Object.keys(selectedRows[0]);
+                const headerText = headers.join('\\t') + '\\n';
+                
+                const rowsText = selectedRows.map(row => {
+                    return headers.map(header => {
+                        const value = row[header];
+                        // 处理可能的undefined或null值
+                        return value !== undefined && value !== null ? String(value) : '';
+                    }).join('\\t');
+                }).join('\\n');
+                
+                const fullText = headerText + rowsText;
+                
+                // 复制到剪贴板
+                navigator.clipboard.writeText(fullText).then(() => {
+                    // 显示复制成功的提示
+                    showToast('已复制 ' + selectedRows.length + ' 行数据到剪贴板');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showToast('复制失败，请重试');
+                });
+            } else {
+                showToast('请先选择要复制的数据行');
+            }
+        }
+        
+        // 显示提示信息
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; z-index: 1000; font-family: Arial, sans-serif; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+        }
 
         // 等待DOM加载完成后初始化表格
         document.addEventListener('DOMContentLoaded', function() {
