@@ -875,13 +875,13 @@ func (s *QOSServer) generateLagUserRatioChartHTML(minuteAggregated []MinuteAggre
 
 	for _, data := range minuteAggregated {
 		xAxisData = append(xAxisData, data.Timestamp)
-		
+
 		// 计算卡顿用户占比百分比
 		var ratio float64
 		if data.TotalUserCnt > 0 {
 			ratio = float64(data.LagUserCnt) / float64(data.TotalUserCnt) * 100
 		}
-		
+
 		yAxisData = append(yAxisData, opts.LineData{
 			Value: ratio,
 		})
@@ -920,6 +920,114 @@ func (s *QOSServer) generateLagUserRatioChartHTML(minuteAggregated []MinuteAggre
 	htmlContent := fmt.Sprintf(`
 		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
 			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">卡顿用户占比趋势图</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+
+	return htmlContent
+}
+
+// generateCdnLagRatioChartHTML 生成节点卡顿占比折线图HTML
+func (s *QOSServer) generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
+	if len(minuteAggregated) == 0 {
+		log.Println("分钟聚合数据为空")
+		return ""
+	}
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: "节点卡顿占比",
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c}%",
+			Show:      opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value}%",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// 准备X轴数据（时间戳）
+	var xAxisData []string
+	// 准备Y轴数据（节点卡顿占比百分比）
+	var yAxisData []opts.LineData
+
+	for _, data := range minuteAggregated {
+		xAxisData = append(xAxisData, data.Timestamp)
+		
+		// 计算节点卡顿占比百分比
+		var ratio float64
+		if data.TotalCdnCnt > 0 {
+			ratio = float64(data.LagCdnCnt) / float64(data.TotalCdnCnt) * 100
+		}
+		
+		yAxisData = append(yAxisData, opts.LineData{
+			Value: ratio,
+		})
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries("节点卡顿占比", yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: "#6f42c1",
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   "#6f42c1",
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成节点卡顿占比图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 使用iframe包装图表HTML作为web component
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">节点卡顿占比趋势图</h2>
 			<iframe 
 				src="data:text/html;base64,%s" 
 				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"

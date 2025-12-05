@@ -142,6 +142,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	// 生成卡顿用户占比折线图
 	lagUserRatioChartHTML := s.generateLagUserRatioChartHTML(minuteAggregated)
 
+	// 生成节点卡顿占比折线图
+	cdnLagRatioChartHTML := s.generateCdnLagRatioChartHTML(minuteAggregated)
+
 	// 生成在线用户数折线图
 	onlineUsersChartHTML := s.generateOnlineUsersChartHTML(onlineUsersAggregated)
 
@@ -155,7 +158,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	aggDataChartsHTML := s.generateAggDataChartsHTML(aggData)
 
 	// 合并图表和表格HTML
-	fullHTML := streamdChartsHTML + minuteChartHTML + lagUserRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
+	fullHTML := streamdChartsHTML + minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + aggDataChartsHTML + tableHTML + cdnLagTableHTML
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")
@@ -207,6 +210,8 @@ type MinuteAggregatedData struct {
 	TotalCount   int                  `json:"total_count"`
 	LagUserCnt   int                  `json:"lag_user_cnt"`
 	TotalUserCnt int                  `json:"total_user_cnt"`
+	LagCdnCnt    int                  `json:"lag_cdn_cnt"`
+	TotalCdnCnt  int                  `json:"total_cdn_cnt"`
 	Reports      []util.QualityReport `json:"report"`
 }
 
@@ -282,6 +287,8 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 	var result []MinuteAggregatedData
 	var lagUserMap = make(map[string]bool)
 	var totalUserMap = make(map[string]bool)
+	var LagCdnMap = make(map[string]bool)
+	var TotalCdnMap = make(map[string]bool)
 	for _, data := range minuteMap {
 		if data.TotalCount > 0 {
 			data.Percent = float64(data.LagCount) / float64(data.TotalCount) * 100
@@ -293,9 +300,17 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 				}
 				totalUserMap[*report.DimIp] = true
 			}
+			if report.DimCdnip != nil && *report.DimCdnip != "" {
+				if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
+					LagCdnMap[*report.DimCdnip] = true
+				}
+				TotalCdnMap[*report.DimCdnip] = true
+			}
 		}
 		data.LagUserCnt = len(lagUserMap)
 		data.TotalUserCnt = len(totalUserMap)
+		data.LagCdnCnt = len(LagCdnMap)
+		data.TotalCdnCnt = len(TotalCdnMap)
 		result = append(result, *data)
 	}
 
