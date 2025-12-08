@@ -72,8 +72,9 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 			"lagRatio": "%.2f%%",
             "province": "%s",
             "isp": "%s",
-            "remoteIps": "%s"
-		}`, item.IP, item.LagCount, item.TotalCount, lagRatio, item.Prov, item.Isp, remoteIpsStr))
+            "remoteIps": "%s",
+            "lagRate": "%.1f%%"
+		}`, item.IP, item.LagCount, item.TotalCount, lagRatio, item.Prov, item.Isp, remoteIpsStr, item.LagRate))
 	}
 
 	tableData := strings.Join(tableRows, ",\n")
@@ -182,6 +183,19 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
                 sortable: true,
                 filter: true,
                 width: 200
+            },
+            {
+                headerName: "占总体卡顿比重",
+                field: "lagRate",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 140,
+                comparator: (valueA, valueB) => {
+                    // 百分比排序比较器
+                    const numA = parseFloat(valueA.replace('%%', ''));
+                    const numB = parseFloat(valueB.replace('%%', ''));
+                    return numA - numB;
+                }
             }
         ];
 

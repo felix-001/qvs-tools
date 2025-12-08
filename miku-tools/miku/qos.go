@@ -299,6 +299,7 @@ type AggregatedData struct {
 	Prov       string   `json:"prov"`
 	Isp        string   `json:"isp"`
 	RemoteIps  []string `json:"remote_ips"`
+	LagRate    float64  `json:"lag_rate"`
 }
 
 type CdnAggregateData struct {
@@ -486,7 +487,11 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 
 	// 生成CDN聚合数据
 	var cdnAggregated []AggregatedData
+	totalLagCdnCnt := 0
 	for cdnip, total := range cdnTotalCntMap {
+		if cdnip == "qn.flv.huya.com" {
+			continue
+		}
 		clientIps := make([]string, 0)
 		for clientIp := range cdnAllClientMap[cdnip] {
 			clientIps = append(clientIps, clientIp)
@@ -500,6 +505,10 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			Isp:        isp,
 			RemoteIps:  clientIps,
 		})
+		totalLagCdnCnt += cdnLagCntMap[cdnip]
+	}
+	for i := range cdnAggregated {
+		cdnAggregated[i].LagRate = float64(cdnAggregated[i].LagCount*100) / float64(totalLagCdnCnt)
 	}
 
 	// 按延迟次数降序排序
@@ -513,6 +522,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	clientCountryCntMap := make(map[string]int)
 	areaCntMap := make(map[string]int)
 	provCntMap := make(map[string]int)
+	totalLagCnt := 0
 	for clientIp, total := range clientTotalCntMap {
 		cdnIps := make([]string, 0)
 		for cdnip := range clientCdnIpsMap[clientIp] {
@@ -527,9 +537,13 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			Isp:        isp,
 			RemoteIps:  cdnIps,
 		})
+		totalLagCnt += clientLagCntMap[clientIp]
 		clientCountryCntMap[country]++
 		areaCntMap[area]++
 		provCntMap[prov]++
+	}
+	for i := range clientAggregated {
+		clientAggregated[i].LagRate = float64(clientAggregated[i].LagCount*100) / float64(totalLagCnt)
 	}
 	aggData.CountryCntMap = clientCountryCntMap
 	aggData.AreaCntMap = areaCntMap
