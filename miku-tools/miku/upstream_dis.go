@@ -1,6 +1,6 @@
 package miku
 
-ype UpstreamDistribute struct {
+type UpstreamDistribute struct {
 
 }
 
