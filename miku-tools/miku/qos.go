@@ -293,11 +293,12 @@ type MinuteAggregatedData struct {
 
 // AggregatedData 聚合数据结构
 type AggregatedData struct {
-	IP         string `json:"ip"`
-	TotalCount int    `json:"total_count"`
-	LagCount   int    `json:"lag_count"`
-	Prov       string `json:"prov"`
-	Isp        string `json:"isp"`
+	IP         string   `json:"ip"`
+	TotalCount int      `json:"total_count"`
+	LagCount   int      `json:"lag_count"`
+	Prov       string   `json:"prov"`
+	Isp        string   `json:"isp"`
+	RemoteIps  []string `json:"remote_ips"`
 }
 
 type CdnAggregateData struct {
@@ -410,6 +411,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	// Client IP聚合
 	clientLagCntMap := make(map[string]int)   // clientIp -> 延迟数
 	clientTotalCntMap := make(map[string]int) // clientIp -> 总数
+	clientCdnIpsMap := make(map[string]map[string]bool)
 
 	areaLagCntMap := make(map[string]int) // area -> 延迟数
 	provLagCntMap := make(map[string]int) // prov -> 延迟数
@@ -464,6 +466,10 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 				provLagCntMap[prov]++
 
 			}
+			if _, exists := clientCdnIpsMap[clientIp]; !exists {
+				clientCdnIpsMap[clientIp] = make(map[string]bool)
+			}
+			clientCdnIpsMap[clientIp][cdnip] = true
 		}
 
 		if isBadQuality {
@@ -481,6 +487,10 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	// 生成CDN聚合数据
 	var cdnAggregated []AggregatedData
 	for cdnip, total := range cdnTotalCntMap {
+		clientIps := make([]string, 0)
+		for clientIp := range cdnAllClientMap[cdnip] {
+			clientIps = append(clientIps, clientIp)
+		}
 		_, isp, _, prov := util.GetLocate(cdnip, s.resources.IpParser)
 		cdnAggregated = append(cdnAggregated, AggregatedData{
 			IP:         cdnip,
@@ -488,6 +498,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			LagCount:   cdnLagCntMap[cdnip],
 			Prov:       prov,
 			Isp:        isp,
+			RemoteIps:  clientIps,
 		})
 	}
 
@@ -503,6 +514,10 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 	areaCntMap := make(map[string]int)
 	provCntMap := make(map[string]int)
 	for clientIp, total := range clientTotalCntMap {
+		cdnIps := make([]string, 0)
+		for cdnip := range clientCdnIpsMap[clientIp] {
+			cdnIps = append(cdnIps, cdnip)
+		}
 		country, isp, area, prov := util.GetLocate(clientIp, s.resources.IpParser)
 		clientAggregated = append(clientAggregated, AggregatedData{
 			IP:         clientIp,
@@ -510,6 +525,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			LagCount:   clientLagCntMap[clientIp],
 			Prov:       prov,
 			Isp:        isp,
+			RemoteIps:  cdnIps,
 		})
 		clientCountryCntMap[country]++
 		areaCntMap[area]++

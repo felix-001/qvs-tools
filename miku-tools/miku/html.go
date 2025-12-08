@@ -62,14 +62,18 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 			lagRatio = float64(item.LagCount) * 100.0 / float64(item.TotalCount)
 		}
 
+		// 处理RemoteIps数组，转换为逗号分隔的字符串
+		remoteIpsStr := strings.Join(item.RemoteIps, ", ")
+
 		tableRows = append(tableRows, fmt.Sprintf(`{
 			"ip": "%s",
 			"lagCount": %d,
 			"totalCount": %d,
 			"lagRatio": "%.2f%%",
             "province": "%s",
-            "isp": "%s"
-		}`, item.IP, item.LagCount, item.TotalCount, lagRatio, item.Prov, item.Isp))
+            "isp": "%s",
+            "remoteIps": "%s"
+		}`, item.IP, item.LagCount, item.TotalCount, lagRatio, item.Prov, item.Isp, remoteIpsStr))
 	}
 
 	tableData := strings.Join(tableRows, ",\n")
@@ -171,6 +175,13 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
                 sortable: true,
                 filter: true,
                 width: 120
+            },
+            {
+                headerName: "remote ips",
+                field: "remoteIps",
+                sortable: true,
+                filter: true,
+                width: 200
             }
         ];
 
@@ -992,13 +1003,13 @@ func (s *QOSServer) generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggreg
 
 	for _, data := range minuteAggregated {
 		xAxisData = append(xAxisData, data.Timestamp)
-		
+
 		// 计算节点卡顿占比百分比
 		var ratio float64
 		if data.TotalCdnCnt > 0 {
 			ratio = float64(data.LagCdnCnt) / float64(data.TotalCdnCnt) * 100
 		}
-		
+
 		yAxisData = append(yAxisData, opts.LineData{
 			Value: ratio,
 		})
