@@ -29,6 +29,7 @@ type QOSRequest struct {
 	Hour        string `json:"hour"`
 	FuzzySearch bool   `json:"fuzzySearch"`
 	LogLevel    string `json:"logLevel"`
+	RawData     bool   `json:"rawData"`
 }
 
 // QOSServer HTTP服务器结构
@@ -120,7 +121,9 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println("查询结果:", len(reports))
-	//s.saveCsv(reports)
+	if req.RawData {
+		s.saveCsv(reports)
+	}
 
 	var streamdReports []util.StreamdLagReport
 	sql = s.buildMikuSQLQuery(req)
