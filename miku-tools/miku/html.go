@@ -1820,6 +1820,123 @@ func (s *QOSServer) generatePieChartHTML(data map[string]int, title string) stri
 	`, title, encodedHTML)
 }
 
+// generateUpstreamDistributeChartsHTML 生成源站分布饼图HTML
+func (s *QOSServer) generateUpstreamDistributeChartsHTML(areaCntMap, provCntMap map[string]int) string {
+	var chartsHTML string
+
+	// 生成大区分布饼图
+	if len(areaCntMap) > 0 {
+		chartsHTML += s.generateUpstreamPieChartHTML(areaCntMap, "源站按大区分布")
+	}
+
+	// 生成省份分布饼图
+	if len(provCntMap) > 0 {
+		chartsHTML += s.generateUpstreamPieChartHTML(provCntMap, "源站按省分布")
+	}
+
+	return chartsHTML
+}
+
+// generateUpstreamPieChartHTML 生成源站分布饼图HTML
+func (s *QOSServer) generateUpstreamPieChartHTML(data map[string]int, title string) string {
+	if len(data) == 0 {
+		return ""
+	}
+
+	// 排序数据（按值降序）
+	type DataItem struct {
+		Name  string
+		Value int
+	}
+
+	var sortedData []DataItem
+	for name, value := range data {
+		sortedData = append(sortedData, DataItem{Name: name, Value: value})
+	}
+
+	sort.Slice(sortedData, func(i, j int) bool {
+		return sortedData[i].Value > sortedData[j].Value
+	})
+
+	// 限制最多显示10个
+	if len(sortedData) > 10 {
+		sortedData = sortedData[:10]
+	}
+
+	// 创建饼图
+	pie := charts.NewPie()
+
+	// 设置全局选项
+	pie.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Left:  "center",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "item",
+			Formatter: "{a} <br/>{b}: {c} ({d}%)",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show:   opts.Bool(true),
+			Bottom: "0%",
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+	)
+
+	// 准备数据
+	var pieData []opts.PieData
+	for _, item := range sortedData {
+		if item.Name == "" {
+			item.Name = "未知"
+		}
+		pieData = append(pieData, opts.PieData{
+			Name:  item.Name,
+			Value: item.Value,
+		})
+	}
+
+	// 添加数据系列
+	pie.AddSeries(title, pieData).
+		SetSeriesOptions(
+			charts.WithPieChartOpts(opts.PieChart{
+				Radius:   "60%",
+				RoseType: "radius",
+			}),
+			charts.WithLabelOpts(opts.Label{
+				Show:      opts.Bool(true),
+				Formatter: "{b}: {c} ({d}%)",
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := pie.Render(&buf)
+	if err != nil {
+		log.Printf("生成源站分布饼图HTML失败: %v", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	return fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">%s</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, title, encodedHTML)
+}
+
 // generateCDNLagTableHTML 生成CDN卡顿用户表格
 func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 	if len(cdnAggDatas) == 0 {

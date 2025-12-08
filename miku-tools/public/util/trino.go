@@ -159,6 +159,10 @@ type StreamdUpstreamBandWidthReport struct {
 	SourceType *string  `db:"source_type"`
 }
 
+type UpstreamDistributeReport struct {
+	RemoteAddr *string `db:"RemoteAddr"`
+}
+
 func TrinoQuery(schema, sql string, dest interface{}) error {
 	dsn := fmt.Sprintf("http://superset@trino.jf-logverse.k8s.qiniu.io?catalog=hive_miku&schema=%s", schema)
 	db, err := sqlx.Open("trino", dsn)

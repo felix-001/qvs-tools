@@ -313,3 +313,47 @@ func (s *QOSServer) buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 
 	return sql
 }
+
+func (s *QOSServer) buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order string) string {
+	// Replace "T" with space in starttime and endtime
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := s.convertToDay(req.StartTime)
+	endDay := s.convertToDay(req.EndTime)
+
+	sql := fmt.Sprintf(`
+		SELECT 
+		    %s
+		FROM %s
+		WHERE 1=1 
+			%s
+			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND day >= '%s' AND day <= '%s'
+		`, choose, table, where, req.StartTime, req.EndTime, startDay, endDay)
+	if group != "" {
+		sql += fmt.Sprintf(" GROUP BY %s", group)
+	}
+	if order != "" {
+		sql += fmt.Sprintf(" ORDER BY %s", order)
+	}
+	return sql
+
+}
+
+func (s *QOSServer) buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	return s.buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
+}
+
+func (s *QOSServer) buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	return s.buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
+}
+
+func (s *QOSServer) buidUpstreamDistributeSQLQuery(req QOSRequest) string {
+	choose := `DISTINCT REGEXP_EXTRACT(RemoteAddr, '^(?:\[)?([0-9a-fA-F:.]+)(?:\])?:\d+$', 1) as RemoteAddr`
+	where := fmt.Sprintf(`
+        	AND AppName = '%s'
+  		AND CustomerSource = true
+		AND HTTPResponseCode != 302
+	`, req.AppName)
+	return s.buildMikuCommonSQLQuery(req, choose, where, "", "")
+}
