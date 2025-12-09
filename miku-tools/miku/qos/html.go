@@ -1,4 +1,4 @@
-package miku
+package qos
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 )
 
 // generateTableHTML 生成聚合数据表格HTML
-func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
+func generateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
 	if len(cdnAggregated) == 0 && len(clientAggregated) == 0 {
 		log.Println("generateTableHTML: 聚合数据为空")
 		return ""
@@ -23,13 +23,13 @@ func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggr
 	// 生成CDN IP表格
 	var cdnTableHTML string
 	if len(cdnAggregated) > 0 {
-		cdnTableHTML = s.generateEchartsTable(cdnAggregated, "CDN IP质量分析统计", true)
+		cdnTableHTML = generateEchartsTable(cdnAggregated, "CDN IP质量分析统计", true)
 	}
 
 	// 生成Client IP表格
 	var clientTableHTML string
 	if len(clientAggregated) > 0 {
-		clientTableHTML = s.generateEchartsTable(clientAggregated, "Client IP质量分析统计", false)
+		clientTableHTML = generateEchartsTable(clientAggregated, "Client IP质量分析统计", false)
 	}
 
 	// 合并表格HTML
@@ -47,7 +47,7 @@ func (s *QOSServer) generateTableHTML(cdnAggregated []AggregatedData, clientAggr
 }
 
 // generateEchartsTable 使用AG Grid Community生成表格
-func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ bool) string {
+func generateEchartsTable(data []AggregatedData, title string, _ bool) string {
 	// 限制最多显示30行数据
 	maxRows := 30
 	if len(data) > maxRows {
@@ -312,7 +312,7 @@ func (s *QOSServer) generateEchartsTable(data []AggregatedData, title string, _ 
 }
 
 // getHomePageTemplate 获取主页HTML模板
-func (s *QOSServer) getHomePageTemplate() string {
+func GetHomePageTemplate() string {
 	return `
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -757,7 +757,7 @@ func (s *QOSServer) getHomePageTemplate() string {
 }
 
 // generateMinuteChartHTML 生成分钟聚合数据的折线图HTML
-func (s *QOSServer) generateMinuteChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func generateMinuteChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -859,7 +859,7 @@ func (s *QOSServer) generateMinuteChartHTML(minuteAggregated []MinuteAggregatedD
 }
 
 // generateLagUserRatioChartHTML 生成卡顿用户占比折线图HTML
-func (s *QOSServer) generateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func generateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -967,7 +967,7 @@ func (s *QOSServer) generateLagUserRatioChartHTML(minuteAggregated []MinuteAggre
 }
 
 // generateCdnLagRatioChartHTML 生成节点卡顿占比折线图HTML
-func (s *QOSServer) generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -1075,7 +1075,7 @@ func (s *QOSServer) generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggreg
 }
 
 // generateStreamdVideoFpsChartHTML 生成推流/回源视频帧率折线图HTML
-func (s *QOSServer) generateStreamdVideoFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
+func generateStreamdVideoFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
 	if len(streamdFpsReports) == 0 {
 		log.Println("视频帧率数据为空")
 		return ""
@@ -1177,7 +1177,7 @@ func (s *QOSServer) generateStreamdVideoFpsChartHTML(streamdFpsReports []util.St
 }
 
 // generateStreamdAudioFpsChartHTML 生成推流/回源音频帧率折线图HTML
-func (s *QOSServer) generateStreamdAudioFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
+func generateStreamdAudioFpsChartHTML(streamdFpsReports []util.StreamdFpsReport) string {
 	if len(streamdFpsReports) == 0 {
 		log.Println("音频帧率数据为空")
 		return ""
@@ -1279,7 +1279,7 @@ func (s *QOSServer) generateStreamdAudioFpsChartHTML(streamdFpsReports []util.St
 }
 
 // generateStreamCntChartHTML 生成在线流个数折线图HTML
-func (s *QOSServer) generateStreamCntChartHTML(streamCntReports []util.StreamdStreamCntReport) string {
+func generateStreamCntChartHTML(streamCntReports []util.StreamdStreamCntReport) string {
 	if len(streamCntReports) == 0 {
 		log.Println("在线流个数数据为空")
 		return ""
@@ -1381,7 +1381,7 @@ func (s *QOSServer) generateStreamCntChartHTML(streamCntReports []util.StreamdSt
 }
 
 // generateUpstreamBandwidthChartHTML 生成推流/回源带宽折线图HTML
-func (s *QOSServer) generateUpstreamBandwidthChartHTML(streamUpstreamBandwidthReports []util.StreamdUpstreamBandWidthReport) string {
+func generateUpstreamBandwidthChartHTML(streamUpstreamBandwidthReports []util.StreamdUpstreamBandWidthReport) string {
 	if len(streamUpstreamBandwidthReports) == 0 {
 		log.Println("推流/回源带宽数据为空")
 		return ""
@@ -1483,7 +1483,7 @@ func (s *QOSServer) generateUpstreamBandwidthChartHTML(streamUpstreamBandwidthRe
 }
 
 // generateLineChartHTML 生成简单的折线图HTML
-func (s *QOSServer) generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, title string) string {
+func generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, title string) string {
 	if len(reports) == 0 {
 		return ""
 	}
@@ -1585,7 +1585,7 @@ func (s *QOSServer) generateLineChartHTML(reports []util.StreamdLagReport, xFiel
 	return fmt.Sprintf("data:text/html;base64,%s", encodedHTML)
 }
 
-func (s *QOSServer) generateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
+func generateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
 	// 生成streamdReports的5个折线图
 	streamdChartsHTML := fmt.Sprintf(`
 	<div style="margin-top: 20px;">
@@ -1611,17 +1611,17 @@ func (s *QOSServer) generateStreamdChartsHTML(streamdReports []util.StreamdLagRe
 			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
 		</div>
 	</div>`,
-		s.generateLineChartHTML(streamdReports, "Ts_m", "用户百秒卡顿率", "用户百秒卡顿率"),
-		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源百秒卡顿率", "内部回源百秒卡顿率"),
-		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试率", "内部回源重试率"),
-		s.generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试次数", "内部回源重试次数"),
-		s.generateLineChartHTML(streamdReports, "Ts_m", "回客户源站百秒卡顿率", "回客户源站百秒卡顿率"),
+		generateLineChartHTML(streamdReports, "Ts_m", "用户百秒卡顿率", "用户百秒卡顿率"),
+		generateLineChartHTML(streamdReports, "Ts_m", "内部回源百秒卡顿率", "内部回源百秒卡顿率"),
+		generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试率", "内部回源重试率"),
+		generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试次数", "内部回源重试次数"),
+		generateLineChartHTML(streamdReports, "Ts_m", "回客户源站百秒卡顿率", "回客户源站百秒卡顿率"),
 	)
 	return streamdChartsHTML
 }
 
 // generateOnlineUsersChartHTML 生成在线用户数折线图HTML
-func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
+func generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
 	if len(onlineUsersAggregated) == 0 {
 		log.Println("generateOnlineUsersChartHTML: no data")
 		return ""
@@ -1716,37 +1716,37 @@ func (s *QOSServer) generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineU
 }
 
 // generateAggDataChartsHTML 生成聚合数据的三个饼图
-func (s *QOSServer) generateAggDataChartsHTML(aggData AggData) string {
+func generateAggDataChartsHTML(aggData AggData) string {
 	var chartsHTML string
 
 	// 生成国家分布饼图
 	if len(aggData.CountryCntMap) > 0 {
-		chartsHTML += s.generatePieChartHTML(aggData.CountryCntMap, "国家")
+		chartsHTML += generatePieChartHTML(aggData.CountryCntMap, "国家")
 	}
 
 	// 生成区域分布饼图
 	if len(aggData.AreaCntMap) > 0 {
-		chartsHTML += s.generatePieChartHTML(aggData.AreaCntMap, "区域")
+		chartsHTML += generatePieChartHTML(aggData.AreaCntMap, "区域")
 	}
 
 	// 生成省份分布饼图
 	if len(aggData.ProvCntMap) > 0 {
-		chartsHTML += s.generatePieChartHTML(aggData.ProvCntMap, "省份")
+		chartsHTML += generatePieChartHTML(aggData.ProvCntMap, "省份")
 	}
 
 	if len(aggData.AreaLagCntMap) > 0 {
-		chartsHTML += s.generatePieChartHTML(aggData.AreaLagCntMap, "区域延迟分布")
+		chartsHTML += generatePieChartHTML(aggData.AreaLagCntMap, "区域延迟分布")
 	}
 
 	if len(aggData.ProvLagCntMap) > 0 {
-		chartsHTML += s.generatePieChartHTML(aggData.ProvLagCntMap, "省份延迟分布")
+		chartsHTML += generatePieChartHTML(aggData.ProvLagCntMap, "省份延迟分布")
 	}
 
 	return chartsHTML
 }
 
 // generatePieChartHTML 生成饼图HTML
-func (s *QOSServer) generatePieChartHTML(data map[string]int, title string) string {
+func generatePieChartHTML(data map[string]int, title string) string {
 	if len(data) == 0 {
 		return ""
 	}
@@ -1846,24 +1846,24 @@ func (s *QOSServer) generatePieChartHTML(data map[string]int, title string) stri
 }
 
 // generateUpstreamDistributeChartsHTML 生成源站分布饼图HTML
-func (s *QOSServer) generateUpstreamDistributeChartsHTML(areaCntMap, provCntMap map[string]int) string {
+func generateUpstreamDistributeChartsHTML(areaCntMap, provCntMap map[string]int) string {
 	var chartsHTML string
 
 	// 生成大区分布饼图
 	if len(areaCntMap) > 0 {
-		chartsHTML += s.generateUpstreamPieChartHTML(areaCntMap, "源站按大区分布")
+		chartsHTML += generateUpstreamPieChartHTML(areaCntMap, "源站按大区分布")
 	}
 
 	// 生成省份分布饼图
 	if len(provCntMap) > 0 {
-		chartsHTML += s.generateUpstreamPieChartHTML(provCntMap, "源站按省分布")
+		chartsHTML += generateUpstreamPieChartHTML(provCntMap, "源站按省分布")
 	}
 
 	return chartsHTML
 }
 
 // generateUpstreamPieChartHTML 生成源站分布饼图HTML
-func (s *QOSServer) generateUpstreamPieChartHTML(data map[string]int, title string) string {
+func generateUpstreamPieChartHTML(data map[string]int, title string) string {
 	if len(data) == 0 {
 		return ""
 	}
@@ -1963,7 +1963,7 @@ func (s *QOSServer) generateUpstreamPieChartHTML(data map[string]int, title stri
 }
 
 // generateCDNLagTableHTML 生成CDN卡顿用户表格
-func (s *QOSServer) generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
+func generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 	if len(cdnAggDatas) == 0 {
 		return ""
 	}

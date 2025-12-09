@@ -1,4 +1,10 @@
-package miku
+package qos
+
+import (
+	"mikutool/public/util"
+
+	"github.com/qbox/pili/common/ipdb.v1"
+)
 
 // AggregatedData 聚合数据结构
 type AggregatedData struct {
@@ -40,14 +46,15 @@ type MinuteAggregatedData struct {
 
 // QOSRequest 前端查询请求结构
 type QOSRequest struct {
-	AppName     string `json:"appName"`
-	StartTime   string `json:"startTime"`
-	EndTime     string `json:"endTime"`
-	StreamID    string `json:"streamId"`
-	Domain      string `json:"domain"`
-	UID         string `json:"uid"`
-	Hour        string `json:"hour"`
-	FuzzySearch bool   `json:"fuzzySearch"`
-	LogLevel    string `json:"logLevel"`
-	RawData     bool   `json:"rawData"`
+	AppName     string     `json:"appName"`
+	StartTime   string     `json:"startTime"`
+	EndTime     string     `json:"endTime"`
+	StreamID    string     `json:"streamId"`
+	Domain      string     `json:"domain"`
+	UID         string     `json:"uid"`
+	Hour        string     `json:"hour"`
+	FuzzySearch bool       `json:"fuzzySearch"`
+	LogLevel    string     `json:"logLevel"`
+	RawData     bool       `json:"rawData"`
+	IpParser    *ipdb.City `json:"ipParser"`
 }

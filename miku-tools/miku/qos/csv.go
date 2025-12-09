@@ -1,4 +1,4 @@
-package miku
+package qos
 
 import (
 	"encoding/csv"
@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func (s *QOSServer) saveCsv(reports []util.QualityReport) {
+func saveCsv(reports []util.QualityReport) {
 	// 将reports格式化为CSV并写入文件
 	csvFile, err := os.Create("qos_report.csv")
 	if err != nil {
@@ -33,30 +33,30 @@ func (s *QOSServer) saveCsv(reports []util.QualityReport) {
 		// 写入数据行
 		for _, report := range reports {
 			record := []string{
-				s.getString(report.ClientType),
-				s.getInt64(report.Cts),
-				s.getString(report.DimIp),
-				s.getString(report.DimIsp),
-				s.getString(report.DimCdndomain),
-				s.getString(report.DimCdnip),
-				s.getString(report.DimCoderatebps),
-				s.getString(report.DimHeartType),
-				s.getString(report.DimIsInBackground),
-				s.getString(report.DimLine),
-				s.getString(report.DimNetworktype),
-				s.getString(report.DimPlatform),
-				s.getString(report.DimStream),
-				s.getString(report.DimStreamUrl),
-				s.getString(report.DimVersion),
-				s.getInt64(report.FieldVideoBadQuality),
-				s.getInt64(report.InsertTs),
-				s.getInt64(report.LogTime),
-				s.getInt64(report.Systs),
-				s.getString(report.Minute),
-				s.getInt64(report.Innerreporttime),
-				s.getString(report.Innerfilepath),
-				s.getString(report.Day),
-				s.getString(report.Hour),
+				getString(report.ClientType),
+				getInt64(report.Cts),
+				getString(report.DimIp),
+				getString(report.DimIsp),
+				getString(report.DimCdndomain),
+				getString(report.DimCdnip),
+				getString(report.DimCoderatebps),
+				getString(report.DimHeartType),
+				getString(report.DimIsInBackground),
+				getString(report.DimLine),
+				getString(report.DimNetworktype),
+				getString(report.DimPlatform),
+				getString(report.DimStream),
+				getString(report.DimStreamUrl),
+				getString(report.DimVersion),
+				getInt64(report.FieldVideoBadQuality),
+				getInt64(report.InsertTs),
+				getInt64(report.LogTime),
+				getInt64(report.Systs),
+				getString(report.Minute),
+				getInt64(report.Innerreporttime),
+				getString(report.Innerfilepath),
+				getString(report.Day),
+				getString(report.Hour),
 			}
 			if err := writer.Write(record); err != nil {
 				log.Printf("写入CSV记录失败: %v", err)

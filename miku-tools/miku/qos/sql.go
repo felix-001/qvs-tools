@@ -1,4 +1,4 @@
-package miku
+package qos
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 // buildSQLQuery 构建SQL查询语句
-func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
+func buildSQLQuery(req QOSRequest, raw bool) string {
 
 	streamId := strings.ToLower(req.StreamID)
 	pos := strings.Index(streamId, "_sxrxc")
@@ -29,7 +29,7 @@ func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
 
 	// 添加时间范围过滤（转换为day格式）
 	if req.StartTime != "" {
-		startDay := s.convertToDay(req.StartTime)
+		startDay := convertToDay(req.StartTime)
 		log.Printf("StartTime输入: %s, 转换后: %s", req.StartTime, startDay)
 		sql += fmt.Sprintf(" AND day >= '%s'", startDay)
 		startTime := strings.ReplaceAll(req.StartTime, "T", " ")
@@ -37,7 +37,7 @@ func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
 	}
 
 	if req.EndTime != "" {
-		endDay := s.convertToDay(req.EndTime)
+		endDay := convertToDay(req.EndTime)
 		log.Printf("EndTime输入: %s, 转换后: %s", req.EndTime, endDay)
 		sql += fmt.Sprintf(" AND day <= '%s'", endDay)
 		endTime := strings.ReplaceAll(req.EndTime, "T", " ")
@@ -89,12 +89,12 @@ func (s *QOSServer) buildSQLQuery(req QOSRequest, raw bool) string {
 	return sql
 }
 
-func (s *QOSServer) buildMikuSQLQuery(req QOSRequest) string {
+func buildMikuSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := s.convertToDay(req.StartTime)
-	endDay := s.convertToDay(req.EndTime)
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
 
 	//return "select * from dwd_flowd_miku_streamd_log where day = '20251203' limit 10"
 	sql := fmt.Sprintf(`
@@ -146,12 +146,12 @@ func (s *QOSServer) buildMikuSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func (s *QOSServer) buildMikuFpsSQLQuery(req QOSRequest) string {
+func buildMikuFpsSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := s.convertToDay(req.StartTime)
-	endDay := s.convertToDay(req.EndTime)
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
 
 	sql := fmt.Sprintf(`
 		WITH all_data AS (
@@ -228,12 +228,12 @@ func (s *QOSServer) buildMikuFpsSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func (s *QOSServer) buildMikuStreamCntSQLQuery(req QOSRequest) string {
+func buildMikuStreamCntSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := s.convertToDay(req.StartTime)
-	endDay := s.convertToDay(req.EndTime)
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
 
 	sql := fmt.Sprintf(`
 		select date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai') as ts_m, count(DISTINCT streamname) as stream_cnt
@@ -247,12 +247,12 @@ func (s *QOSServer) buildMikuStreamCntSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func (s *QOSServer) buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
+func buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := s.convertToDay(req.StartTime)
-	endDay := s.convertToDay(req.EndTime)
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
 
 	sql := fmt.Sprintf(`
 		WITH all_data AS (
@@ -314,12 +314,12 @@ func (s *QOSServer) buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func (s *QOSServer) buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order string) string {
+func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order string) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := s.convertToDay(req.StartTime)
-	endDay := s.convertToDay(req.EndTime)
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
 
 	sql := fmt.Sprintf(`
 		SELECT 
@@ -340,20 +340,20 @@ func (s *QOSServer) buildCommonSQLQuery(req QOSRequest, choose, table, where, gr
 
 }
 
-func (s *QOSServer) buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
-	return s.buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
+func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	return buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
 }
 
-func (s *QOSServer) buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
-	return s.buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
+func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	return buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
 }
 
-func (s *QOSServer) buidUpstreamDistributeSQLQuery(req QOSRequest) string {
+func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
 	choose := `DISTINCT REGEXP_EXTRACT(RemoteAddr, '^(?:\[)?([0-9a-fA-F:.]+)(?:\])?:\d+$', 1) as RemoteAddr`
 	where := fmt.Sprintf(`
         	AND AppName = '%s'
   		AND CustomerSource = true
 		AND HTTPResponseCode != 302
 	`, req.AppName)
-	return s.buildMikuCommonSQLQuery(req, choose, where, "", "")
+	return buildMikuCommonSQLQuery(req, choose, where, "", "")
 }

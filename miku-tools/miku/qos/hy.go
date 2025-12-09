@@ -1,7 +1,19 @@
-package miku
+package qos
+
+import (
+	"log"
+	"mikutool/public/util"
+	"net"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/qbox/pili/common/ipdb.v1"
+)
 
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
-func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
+func aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
 	// 按分钟分组聚合
 	minuteMap := make(map[string]*MinuteAggregatedData)
 
@@ -86,7 +98,7 @@ func (s *QOSServer) aggregateByMinute(reports []util.QualityReport) []MinuteAggr
 	return result
 }
 
-func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedData, []AggregatedData, []CdnAggregateData, AggData) {
+func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]AggregatedData, []AggregatedData, []CdnAggregateData, AggData) {
 	// CDN IP聚合
 	cdnLagCntMap := make(map[string]int)   // cdnip -> 延迟数
 	cdnTotalCntMap := make(map[string]int) // cdnip -> 总数
@@ -146,7 +158,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 			clientTotalCntMap[clientIp]++
 			if isBadQuality {
 				clientLagCntMap[clientIp]++
-				_, _, area, prov := util.GetLocate(clientIp, s.resources.IpParser)
+				_, _, area, prov := util.GetLocate(clientIp, ipparser)
 				areaLagCntMap[area]++
 				provLagCntMap[prov]++
 
@@ -180,7 +192,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 		for clientIp := range cdnAllClientMap[cdnip] {
 			clientIps = append(clientIps, clientIp)
 		}
-		_, isp, _, prov := util.GetLocate(cdnip, s.resources.IpParser)
+		_, isp, _, prov := util.GetLocate(cdnip, ipparser)
 		cdnAggregated = append(cdnAggregated, AggregatedData{
 			IP:         cdnip,
 			TotalCount: total,
@@ -212,7 +224,7 @@ func (s *QOSServer) aggregateReport(reports []util.QualityReport) ([]AggregatedD
 		for cdnip := range clientCdnIpsMap[clientIp] {
 			cdnIps = append(cdnIps, cdnip)
 		}
-		country, isp, area, prov := util.GetLocate(clientIp, s.resources.IpParser)
+		country, isp, area, prov := util.GetLocate(clientIp, ipparser)
 		clientAggregated = append(clientAggregated, AggregatedData{
 			IP:         clientIp,
 			TotalCount: total,
@@ -263,7 +275,7 @@ type OnlineUserAggregatedData struct {
 }
 
 // aggregateOnlineUsers 按分钟聚合在线用户数（模拟指定SQL查询的效果）
-func (s *QOSServer) aggregateOnlineUsers(reports []util.QualityReport) []OnlineUserAggregatedData {
+func aggregateOnlineUsers(reports []util.QualityReport) []OnlineUserAggregatedData {
 	// 按分钟分组聚合
 	minuteMap := make(map[string]map[string]bool) // timestamp -> set of distinct IPs
 

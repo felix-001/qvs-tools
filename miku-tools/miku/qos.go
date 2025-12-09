@@ -5,28 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"log"
-	"net"
 	"net/http"
-	"net/url"
-	"sort"
-	"strconv"
 	"strings"
-	"time"
 
 	"mikutool/config"
-	"mikutool/public/util"
+	"mikutool/miku/qos"
 	"mikutool/resources"
 )
-
-type ChartGenerator interface {
-	Generate(req QOSRequest) string
-}
-
-var chartGenerators = map[string]ChartGenerator{
-	"streamd": &Streamd{},
-	"miku": &MikuLagRate{},
-	"hy": &HyLagRate{},
-}
 
 // QOSServer HTTP服务器结构
 type QOSServer struct {
@@ -64,7 +49,7 @@ func (s *QOSServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 返回HTML页面
-	tmpl := template.Must(template.New("home").Parse(s.getHomePageTemplate()))
+	tmpl := template.Must(template.New("home").Parse(qos.GetHomePageTemplate()))
 	tmpl.Execute(w, nil)
 }
 
@@ -89,11 +74,12 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req QOSRequest
+	var req qos.QOSRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
+	req.IpParser = s.resources.IpParser
 
 	// Check and adjust time format if needed
 	if strings.Count(req.StartTime, ":") == 1 {
@@ -104,7 +90,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullHTML := ""
-	for _, chartGenerator := range chartGenerators {
+	for _, chartGenerator := range qos.ChartGenerators {
 		fullHTML += chartGenerator.Generate(req)
 	}
 

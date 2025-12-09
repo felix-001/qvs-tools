@@ -1,6 +1,12 @@
-pakckage miku
+package qos
 
-func (s *QOSServer) convertToDay(timeStr string) string {
+import (
+	"log"
+	"strconv"
+	"time"
+)
+
+func convertToDay(timeStr string) string {
 	// 尝试解析不同格式的时间字符串
 	layouts := []string{
 		"2006-01-02T15:04:05", // datetime-local格式
@@ -22,7 +28,7 @@ func (s *QOSServer) convertToDay(timeStr string) string {
 }
 
 // getString 安全获取字符串指针值
-func (s *QOSServer) getString(str *string) string {
+func getString(str *string) string {
 	if str == nil {
 		return ""
 	}
@@ -30,7 +36,7 @@ func (s *QOSServer) getString(str *string) string {
 }
 
 // getInt64 安全获取int64指针值
-func (s *QOSServer) getInt64(i *int64) string {
+func getInt64(i *int64) string {
 	if i == nil {
 		return ""
 	}
