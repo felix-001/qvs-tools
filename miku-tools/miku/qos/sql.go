@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // buildSQLQuery 构建SQL查询语句
@@ -328,6 +329,8 @@ func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order stri
 		WHERE 1=1 
 			%s
 			AND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND dim_heart_type != '0'
+			AND (client_type = 'sdk_video_bad_quality_ratio' OR client_type = 'web_video_bad_quality_ratio')
 			AND day >= '%s' AND day <= '%s'
 		`, choose, table, where, req.StartTime, req.EndTime, startDay, endDay)
 	if group != "" {
@@ -357,7 +360,16 @@ func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string)
 	return buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
 }
 
-func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+// protocol: "hls" "p2p" "flv"
+func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol string) string {
+	switch protocol {
+	case "hls":
+	case "p2p":
+	case "flv":
+		where += fmt.Sprintf(`
+			AND dim_stream_url like '%%.flv%%'
+		`)
+	}
 	return buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
 }
 
@@ -378,22 +390,46 @@ func buildHyCdnLagSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC")
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", "flv")
 }
 
 func buildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 	choose := `
 		DISTINCT dim_cdnip, dim__ip
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "", "")
+	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv")
+}
+
+func moreThan1day(start, end string) bool {
+	timeLayout := "2006-01-02T15:04:05"
+	startTime, err1 := time.Parse(timeLayout, start)
+	endTime, err2 := time.Parse(timeLayout, end)
+
+	if err1 != nil || err2 != nil {
+		log.Println("时间格式错误:", err1, err2)
+		return false
+	} else {
+		// Check if time difference is at least 1 day (86400 seconds)
+		if endTime.Sub(startTime).Seconds() >= 86400 {
+			return true
+		}
+	}
+	return false
 }
 
 func buildHyLagRateSQLQuery(req QOSRequest) string {
-	choose := `
-		date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')  as ts_m,  
+	ts := "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m,"
+	order := "ts_m"
+	group := "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+	if moreThan1day(req.StartTime, req.EndTime) {
+		ts = "from_unixtime(floor(cts / 600) * 600) at time zone 'Asia/Shanghai' as ts_m,"
+		group = "from_unixtime(floor(cts / 600) * 600) at time zone 'Asia/Shanghai'"
+	}
+
+	choose := ts + `
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')", "ts_m")
+	return buildHyCommonSQLQuery(req, choose, "", group, order, "flv")
 }
