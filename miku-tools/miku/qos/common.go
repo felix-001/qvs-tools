@@ -17,7 +17,7 @@ func convertToDay(timeStr string) string {
 	for _, layout := range layouts {
 		if t, err := time.Parse(layout, timeStr); err == nil {
 			result := t.Format("20060102") // 20251203格式
-			log.Printf("时间转换成功: 输入=%s, 布局=%s, 结果=%s", timeStr, layout, result)
+			//log.Printf("时间转换成功: 输入=%s, 布局=%s, 结果=%s", timeStr, layout, result)
 			return result
 		}
 	}

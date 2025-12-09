@@ -126,10 +126,10 @@ func buildMikuSQLQuery(req QOSRequest) string {
 		ROUND(SUM(IF(type = 'publisher', lagduration, 0)) / NULLIF(SUM(IF(type = 'publisher', costtime, 0)), 0), 4) AS ratio_lag_publisher,
 
 		COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)) AS requests_puller,
-		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true, requestid, NULL)) AS retry_requests_puller,
-		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
+		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and url not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
+		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
 
-		SUM(if(type = 'puller' and customerSource != true, retryTimes, 0)) as totalRetryTimes
+		SUM(if(type = 'puller' and customerSource != true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes
 	FROM dwd_flowd_miku_streamd_log
 	WHERE 
 	from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
