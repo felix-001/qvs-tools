@@ -757,7 +757,7 @@ func GetHomePageTemplate() string {
 }
 
 // generateMinuteChartHTML 生成分钟聚合数据的折线图HTML
-func generateMinuteChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func generateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -806,9 +806,9 @@ func generateMinuteChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	var yAxisData []opts.LineData
 
 	for _, data := range minuteAggregated {
-		xAxisData = append(xAxisData, data.Timestamp)
+		xAxisData = append(xAxisData, *data.Ts_m)
 		yAxisData = append(yAxisData, opts.LineData{
-			Value: data.Percent,
+			Value: *data.Percent,
 		})
 	}
 	//log.Println(xAxisData, yAxisData)

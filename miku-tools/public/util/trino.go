@@ -175,6 +175,13 @@ type UpstreamDistributeReport struct {
 	RemoteAddr *string `db:"RemoteAddr"`
 }
 
+type HyLagReport struct {
+	Ts_m    *string  `db:"ts_m"`
+	Percent *float64 `db:"percent"`
+	LagCnt  *int     `db:"lagCnt"`
+	Total   *int     `db:"total"`
+}
+
 func TrinoQuery(schema, sql string, dest interface{}) error {
 	dsn := fmt.Sprintf("http://superset@trino.jf-logverse.k8s.qiniu.io?catalog=hive_miku&schema=%s", schema)
 	db, err := sqlx.Open("trino", dsn)

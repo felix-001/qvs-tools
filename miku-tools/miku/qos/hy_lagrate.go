@@ -41,7 +41,7 @@ func (h *HyLagRate) Generate(req QOSRequest) string {
 	onlineUsersAggregated := aggregateOnlineUsers(reports)
 
 	// 生成分钟聚合数据的折线图
-	minuteChartHTML := generateMinuteChartHTML(minuteAggregated)
+	//minuteChartHTML := generateMinuteChartHTML(minuteAggregated)
 
 	// 生成卡顿用户占比折线图
 	lagUserRatioChartHTML := generateLagUserRatioChartHTML(minuteAggregated)
@@ -62,7 +62,8 @@ func (h *HyLagRate) Generate(req QOSRequest) string {
 	// 生成聚合数据饼图HTML
 	aggDataChartsHTML := generateAggDataChartsHTML(aggData)
 
-	return minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
+	//return minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
+	return lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
 }
 
 type MikuLagRate struct {

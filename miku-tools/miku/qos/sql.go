@@ -387,3 +387,13 @@ func buildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 		`
 	return buildHyCommonSQLQuery(req, choose, "", "", "")
 }
+
+func buildHyLagRateSQLQuery(req QOSRequest) string {
+	choose := `
+		date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')  as ts_m,  
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
+		COUNT(*) as total	
+		`
+	return buildHyCommonSQLQuery(req, choose, "", "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')", "ts_m")
+}

@@ -52,7 +52,7 @@ func (h *HyCdnLag) getClientIpsOnCdnIp(req QOSRequest) []util.HyClientIpsOnCdnIp
 func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) []AggregatedData {
 	totalLagCnt := 0
 	for _, report := range hyCdnLagReports {
-		if report.LagCnt == nil {
+		if report.LagCnt == nil || report.DimCdnip == nil || report.Total == nil {
 			continue
 		}
 		totalLagCnt += *report.LagCnt
@@ -90,7 +90,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 			Isp:        isp,
 			Prov:       prov,
 			RemoteIps:  clientIps,
-			LagRate:    float64(*report.LagCnt*100) / float64(*report.Total),
+			LagRate:    float64(*report.LagCnt*100) / float64(totalLagCnt),
 		})
 	}
 	return aggCdnLagDatas
