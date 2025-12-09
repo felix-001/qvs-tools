@@ -8,7 +8,6 @@ import (
 )
 
 func init() {
-	log.Println("init hy_lag_rate")
 	qos.RegisterChartGenerator("hy_lag_rate", &HuyaLagRate{})
 }
 
