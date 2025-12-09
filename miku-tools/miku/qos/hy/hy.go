@@ -1,7 +1,8 @@
-package qos
+package hy
 
 import (
 	"log"
+	"mikutool/miku/qos"
 	"mikutool/public/util"
 	"net"
 	"net/url"
@@ -13,9 +14,9 @@ import (
 )
 
 // aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
-func aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
+func aggregateByMinute(reports []util.QualityReport) []qos.MinuteAggregatedData {
 	// 按分钟分组聚合
-	minuteMap := make(map[string]*MinuteAggregatedData)
+	minuteMap := make(map[string]*qos.MinuteAggregatedData)
 
 	for _, report := range reports {
 		// 获取时间戳并按分钟截断
@@ -38,7 +39,7 @@ func aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
 
 		// 初始化分钟数据
 		if _, exists := minuteMap[truncatedTime]; !exists {
-			minuteMap[truncatedTime] = &MinuteAggregatedData{
+			minuteMap[truncatedTime] = &qos.MinuteAggregatedData{
 				Timestamp:  truncatedTime,
 				Percent:    0.0,
 				LagCount:   0,
@@ -58,7 +59,7 @@ func aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
 	}
 
 	// 计算百分比并转换为切片
-	var result []MinuteAggregatedData
+	var result []qos.MinuteAggregatedData
 	var lagUserMap = make(map[string]bool)
 	var totalUserMap = make(map[string]bool)
 	var LagCdnMap = make(map[string]bool)
@@ -98,7 +99,7 @@ func aggregateByMinute(reports []util.QualityReport) []MinuteAggregatedData {
 	return result
 }
 
-func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]AggregatedData, []AggregatedData, []CdnAggregateData, AggData) {
+func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]qos.AggregatedData, []qos.AggregatedData, []qos.CdnAggregateData, qos.AggData) {
 	// CDN IP聚合
 	cdnLagCntMap := make(map[string]int)   // cdnip -> 延迟数
 	cdnTotalCntMap := make(map[string]int) // cdnip -> 总数
@@ -182,7 +183,7 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 	}
 
 	// 生成CDN聚合数据
-	var cdnAggregated []AggregatedData
+	var cdnAggregated []qos.AggregatedData
 	totalLagCdnCnt := 0
 	for cdnip, total := range cdnTotalCntMap {
 		if cdnip == "qn.flv.huya.com" {
@@ -193,7 +194,7 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 			clientIps = append(clientIps, clientIp)
 		}
 		_, isp, _, prov := util.GetLocate(cdnip, ipparser)
-		cdnAggregated = append(cdnAggregated, AggregatedData{
+		cdnAggregated = append(cdnAggregated, qos.AggregatedData{
 			IP:         cdnip,
 			TotalCount: total,
 			LagCount:   cdnLagCntMap[cdnip],
@@ -213,8 +214,8 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 	})
 
 	// 生成Client聚合数据
-	var clientAggregated []AggregatedData
-	var aggData AggData
+	var clientAggregated []qos.AggregatedData
+	var aggData qos.AggData
 	clientCountryCntMap := make(map[string]int)
 	areaCntMap := make(map[string]int)
 	provCntMap := make(map[string]int)
@@ -225,7 +226,7 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 			cdnIps = append(cdnIps, cdnip)
 		}
 		country, isp, area, prov := util.GetLocate(clientIp, ipparser)
-		clientAggregated = append(clientAggregated, AggregatedData{
+		clientAggregated = append(clientAggregated, qos.AggregatedData{
 			IP:         clientIp,
 			TotalCount: total,
 			LagCount:   clientLagCntMap[clientIp],
@@ -252,13 +253,13 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 		return clientAggregated[i].LagCount > clientAggregated[j].LagCount
 	})
 
-	var cdnAggregateData []CdnAggregateData
+	var cdnAggregateData []qos.CdnAggregateData
 	for cdnip, clientsMap := range cdnLagClientMap {
 		var lagIps []string
 		for clientIp := range clientsMap {
 			lagIps = append(lagIps, clientIp)
 		}
-		cdnAggregateData = append(cdnAggregateData, CdnAggregateData{
+		cdnAggregateData = append(cdnAggregateData, qos.CdnAggregateData{
 			IP:             cdnip,
 			TotalUserCount: len(cdnAllClientMap[cdnip]),
 			LagIps:         lagIps,
@@ -268,14 +269,8 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]Aggre
 	return cdnAggregated, clientAggregated, cdnAggregateData, aggData
 }
 
-// OnlineUserAggregatedData 在线用户聚合数据结构
-type OnlineUserAggregatedData struct {
-	Timestamp string `json:"timestamp"`
-	OnlineNum int    `json:"online_num"`
-}
-
 // aggregateOnlineUsers 按分钟聚合在线用户数（模拟指定SQL查询的效果）
-func aggregateOnlineUsers(reports []util.QualityReport) []OnlineUserAggregatedData {
+func aggregateOnlineUsers(reports []util.QualityReport) []qos.OnlineUserAggregatedData {
 	// 按分钟分组聚合
 	minuteMap := make(map[string]map[string]bool) // timestamp -> set of distinct IPs
 
@@ -334,9 +329,9 @@ func aggregateOnlineUsers(reports []util.QualityReport) []OnlineUserAggregatedDa
 	}
 
 	// 转换为结果数组
-	var result []OnlineUserAggregatedData
+	var result []qos.OnlineUserAggregatedData
 	for timestamp, ipSet := range minuteMap {
-		result = append(result, OnlineUserAggregatedData{
+		result = append(result, qos.OnlineUserAggregatedData{
 			Timestamp: timestamp,
 			OnlineNum: len(ipSet), // 去重后的IP数量
 		})

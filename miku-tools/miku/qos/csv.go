@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func saveCsv(reports []util.QualityReport) {
+func SaveCsv(reports []util.QualityReport) {
 	// 将reports格式化为CSV并写入文件
 	csvFile, err := os.Create("qos_report.csv")
 	if err != nil {
@@ -67,7 +67,7 @@ func saveCsv(reports []util.QualityReport) {
 	}
 }
 
-func saveHyCdnLagRawData(reports []util.HyCdnLagReport) {
+func SaveHyCdnLagRawData(reports []util.HyCdnLagReport) {
 	csvFile, err := os.Create("hy_cdn_lag_report.csv")
 	if err != nil {
 		log.Printf("创建CSV文件失败: %v", err)
@@ -126,7 +126,7 @@ func saveHyCdnLagRawData(reports []util.HyCdnLagReport) {
 	}
 }
 
-func saveHyClientIpsOnCdnIpRawData(reports []util.HyClientIpsOnCdnIpReport) {
+func SaveHyClientIpsOnCdnIpRawData(reports []util.HyClientIpsOnCdnIpReport) {
 	csvFile, err := os.Create("hy_client_ips_on_cdn_ip_report.csv")
 	if err != nil {
 		log.Printf("创建CSV文件失败: %v", err)

@@ -1,20 +1,22 @@
-package qos
+package hy
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"mikutool/public/util"
 )
 
 func init() {
-	RegisterChartGenerator("hy_lag_rate", &HuyaLagRate{})
+	log.Println("init hy_lag_rate")
+	qos.RegisterChartGenerator("hy_lag_rate", &HuyaLagRate{})
 }
 
 type HuyaLagRate struct {
 }
 
-func (h *HuyaLagRate) Generate(req QOSRequest) string {
-	sql := buildHyLagRateSQLQuery(req)
+func (h *HuyaLagRate) Generate(req qos.QOSRequest) string {
+	sql := qos.BuildHyLagRateSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
 	}
@@ -24,7 +26,7 @@ func (h *HuyaLagRate) Generate(req QOSRequest) string {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
-	html := generateMinuteLagRateChartHTML(hyLagRateReports)
+	html := qos.GenerateMinuteLagRateChartHTML(hyLagRateReports)
 
 	return html
 }

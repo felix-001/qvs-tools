@@ -1,25 +1,26 @@
-package qos
+package hy
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"mikutool/public/util"
 
 	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 func init() {
-	RegisterChartGenerator("hy_nodeview_lag", &HyNodeViewLag{})
+	qos.RegisterChartGenerator("hy_nodeview_lag", &HyNodeViewLag{})
 }
 
 type HyNodeViewLag struct {
 }
 
-func (h *HyNodeViewLag) Generate(req QOSRequest) string {
+func (h *HyNodeViewLag) Generate(req qos.QOSRequest) string {
 	if req.CdnIp == "" {
 		return ""
 	}
-	sql := buildHyCdnIpLagSQLQuery(req)
+	sql := qos.BuildHyCdnIpLagSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
 	}
@@ -42,6 +43,6 @@ func (h *HyNodeViewLag) Generate(req QOSRequest) string {
 		}
 	}
 
-	html := generateLineChart("CDN IP卡顿率", "CDN IP卡顿率", "", xAxisData, yAxisData)
+	html := qos.GenerateLineChart("CDN IP卡顿率", "CDN IP卡顿率", "", xAxisData, yAxisData)
 	return html
 }

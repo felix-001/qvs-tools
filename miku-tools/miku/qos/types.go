@@ -86,3 +86,9 @@ type ChartOptions struct {
 	VideoFps             bool `json:"videoFps"`
 	AudioFps             bool `json:"audioFps"`
 }
+
+// OnlineUserAggregatedData 在线用户聚合数据结构
+type OnlineUserAggregatedData struct {
+	Timestamp string `json:"timestamp"`
+	OnlineNum int    `json:"online_num"`
+}

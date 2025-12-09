@@ -10,6 +10,7 @@ import (
 
 	"mikutool/config"
 	"mikutool/miku/qos"
+	_ "mikutool/miku/qos/hy"
 	"mikutool/resources"
 )
 

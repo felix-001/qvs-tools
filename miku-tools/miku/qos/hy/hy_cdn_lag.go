@@ -1,22 +1,24 @@
-package qos
+package hy
 
 import (
 	"log"
+	"mikutool/miku/qos"
 	"mikutool/public/util"
 
 	"github.com/qbox/pili/common/ipdb.v1"
 )
 
 func init() {
-	RegisterChartGenerator("hy_cdn_lag", &HyCdnLag{})
+	log.Println("init hy_cdn_lag")
+	qos.RegisterChartGenerator("hy_cdn_lag", &HyCdnLag{})
 }
 
 type HyCdnLag struct {
 	ipparser *ipdb.City
 }
 
-func (h *HyCdnLag) getRawData(req QOSRequest) []util.HyCdnLagReport {
-	sql := buildHyCdnLagSQLQuery(req)
+func (h *HyCdnLag) getRawData(req qos.QOSRequest) []util.HyCdnLagReport {
+	sql := qos.BuildHyCdnLagSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
 	}
@@ -27,13 +29,13 @@ func (h *HyCdnLag) getRawData(req QOSRequest) []util.HyCdnLagReport {
 	}
 	log.Println("查询结果hyCdnLagReports:", len(hyCdnLagReports))
 	if req.RawData {
-		saveHyCdnLagRawData(hyCdnLagReports)
+		qos.SaveHyCdnLagRawData(hyCdnLagReports)
 	}
 	return hyCdnLagReports
 }
 
-func (h *HyCdnLag) getClientIpsOnCdnIp(req QOSRequest) []util.HyClientIpsOnCdnIpReport {
-	sql := buildClientIpsOnCdnIpsSQLQuery(req)
+func (h *HyCdnLag) getClientIpsOnCdnIp(req qos.QOSRequest) []util.HyClientIpsOnCdnIpReport {
+	sql := qos.BuildClientIpsOnCdnIpsSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
 	}
@@ -44,12 +46,12 @@ func (h *HyCdnLag) getClientIpsOnCdnIp(req QOSRequest) []util.HyClientIpsOnCdnIp
 	}
 	log.Println("查询结果hyClientIpsOnCdnIpReports:", len(hyClientIpsOnCdnIpReports))
 	if req.RawData {
-		saveHyClientIpsOnCdnIpRawData(hyClientIpsOnCdnIpReports)
+		qos.SaveHyClientIpsOnCdnIpRawData(hyClientIpsOnCdnIpReports)
 	}
 	return hyClientIpsOnCdnIpReports
 }
 
-func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) []AggregatedData {
+func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) []qos.AggregatedData {
 	totalLagCnt := 0
 	for _, report := range hyCdnLagReports {
 		if report.LagCnt == nil || report.DimCdnip == nil || report.Total == nil {
@@ -70,7 +72,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 		cdnIp2ClientipsMap[*report.DimCdnip][*report.DimIp] = true
 	}
 
-	var aggCdnLagDatas []AggregatedData
+	var aggCdnLagDatas []qos.AggregatedData
 	for _, report := range hyCdnLagReports {
 		if report.LagCnt == nil || report.DimCdnip == nil || report.Total == nil {
 			continue
@@ -83,7 +85,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 			}
 		}
 		_, isp, _, prov := util.GetLocate(cdnIp, h.ipparser)
-		aggCdnLagDatas = append(aggCdnLagDatas, AggregatedData{
+		aggCdnLagDatas = append(aggCdnLagDatas, qos.AggregatedData{
 			IP:         cdnIp,
 			LagCount:   *report.LagCnt,
 			TotalCount: *report.Total,
@@ -96,12 +98,12 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 	return aggCdnLagDatas
 }
 
-func (h *HyCdnLag) Generate(req QOSRequest) string {
+func (h *HyCdnLag) Generate(req qos.QOSRequest) string {
 	h.ipparser = req.IpParser
 	hyCdnLagReports := h.getRawData(req)
 	clientIpsOnCdnIpReports := h.getClientIpsOnCdnIp(req)
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
 	//log.Println("aggCdnLagData:", aggCdnLagData)
-	tableHTML := generateTableHTML(aggCdnLagData, []AggregatedData{})
+	tableHTML := qos.GenerateTableHTML(aggCdnLagData, []qos.AggregatedData{})
 	return tableHTML
 }

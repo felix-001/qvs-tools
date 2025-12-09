@@ -14,7 +14,7 @@ import (
 )
 
 // generateTableHTML 生成聚合数据表格HTML
-func generateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
+func GenerateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
 	if len(cdnAggregated) == 0 && len(clientAggregated) == 0 {
 		log.Println("generateTableHTML: 聚合数据为空")
 		return ""
@@ -901,7 +901,7 @@ func GetHomePageTemplate() string {
 }
 
 // generateMinuteChartHTML 生成分钟聚合数据的折线图HTML
-func generateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string {
+func GenerateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -1003,7 +1003,7 @@ func generateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string 
 }
 
 // generateLagUserRatioChartHTML 生成卡顿用户占比折线图HTML
-func generateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func GenerateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -1111,7 +1111,7 @@ func generateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) stri
 }
 
 // generateCdnLagRatioChartHTML 生成节点卡顿占比折线图HTML
-func generateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
+func GenerateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
@@ -1729,7 +1729,7 @@ func generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, titl
 	return fmt.Sprintf("data:text/html;base64,%s", encodedHTML)
 }
 
-func generateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
+func GenerateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
 	// 生成streamdReports的5个折线图
 	streamdChartsHTML := fmt.Sprintf(`
 	<div style="margin-top: 20px;">
@@ -1765,7 +1765,7 @@ func generateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
 }
 
 // generateOnlineUsersChartHTML 生成在线用户数折线图HTML
-func generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
+func GenerateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
 	if len(onlineUsersAggregated) == 0 {
 		log.Println("generateOnlineUsersChartHTML: no data")
 		return ""
@@ -1860,7 +1860,7 @@ func generateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedDa
 }
 
 // generateAggDataChartsHTML 生成聚合数据的三个饼图
-func generateAggDataChartsHTML(aggData AggData) string {
+func GenerateAggDataChartsHTML(aggData AggData) string {
 	var chartsHTML string
 
 	// 生成国家分布饼图
@@ -2107,7 +2107,7 @@ func generateUpstreamPieChartHTML(data map[string]int, title string) string {
 }
 
 // generateCDNLagTableHTML 生成CDN卡顿用户表格
-func generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
+func GenerateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 	if len(cdnAggDatas) == 0 {
 		return ""
 	}
@@ -2358,7 +2358,7 @@ func generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 	`, encodedHTML)
 }
 
-func generateLineChart(title, seriesName, color string, xAxisData []string, yAxisData []opts.LineData) string {
+func GenerateLineChart(title, seriesName, color string, xAxisData []string, yAxisData []opts.LineData) string {
 
 	// 创建折线图
 	line := charts.NewLine()

@@ -9,7 +9,7 @@ import (
 )
 
 // buildSQLQuery 构建SQL查询语句
-func buildSQLQuery(req QOSRequest, raw bool) string {
+func BuildSQLQuery(req QOSRequest, raw bool) string {
 
 	streamId := strings.ToLower(req.StreamID)
 	pos := strings.Index(streamId, "_sxrxc")
@@ -90,7 +90,7 @@ func buildSQLQuery(req QOSRequest, raw bool) string {
 	return sql
 }
 
-func buildMikuSQLQuery(req QOSRequest) string {
+func BuildMikuSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
@@ -383,7 +383,7 @@ func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
 	return buildMikuCommonSQLQuery(req, choose, where, "", "")
 }
 
-func buildHyCdnLagSQLQuery(req QOSRequest) string {
+func BuildHyCdnLagSQLQuery(req QOSRequest) string {
 	choose := `
 		dim_cdnip,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
@@ -393,7 +393,7 @@ func buildHyCdnLagSQLQuery(req QOSRequest) string {
 	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", "flv")
 }
 
-func buildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
+func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 	choose := `
 		DISTINCT dim_cdnip, dim__ip
 		`
@@ -417,7 +417,7 @@ func moreThan1day(start, end string) bool {
 	return false
 }
 
-func buildHyLagRateSQLQuery(req QOSRequest) string {
+func BuildHyLagRateSQLQuery(req QOSRequest) string {
 	ts := "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m,"
 	order := "ts_m"
 	group := "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
@@ -434,7 +434,7 @@ func buildHyLagRateSQLQuery(req QOSRequest) string {
 	return buildHyCommonSQLQuery(req, choose, "", group, order, "flv")
 }
 
-func buildHyCdnIpLagSQLQuery(req QOSRequest) string {
+func BuildHyCdnIpLagSQLQuery(req QOSRequest) string {
 	choose := `
 		date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
