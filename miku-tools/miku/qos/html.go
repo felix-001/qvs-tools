@@ -328,7 +328,7 @@ func GetHomePageTemplate() string {
             background-color: #f5f5f5;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1500px;
             margin: 0 auto;
             background-color: white;
             padding: 30px;
