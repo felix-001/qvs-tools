@@ -419,14 +419,3 @@ func (m *CommandManager) CmdQos() *Command {
 	}
 	return cmd
 }
-
-func (m *CommandManager) CmdTrino() *Command {
-	handler := func() {
-		miku.TrinoSrv(m.config)
-	}
-	cmd := &Command{
-		Desc:    "trino",
-		Handler: handler,
-	}
-	return cmd
-}
