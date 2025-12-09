@@ -595,6 +595,18 @@ func GetHomePageTemplate() string {
                 <input type="text" id="uid" name="uid" placeholder="请输入UID（可选）">
             </div>
 
+            <!-- 用户IP输入 -->
+            <div class="form-group">
+                <label for="userIp">用户IP:</label>
+                <input type="text" id="userIp" name="userIp" placeholder="请输入用户IP（可选）">
+            </div>
+
+            <!-- CDN IP输入 -->
+            <div class="form-group">
+                <label for="cdnIp">CDN IP:</label>
+                <input type="text" id="cdnIp" name="cdnIp" placeholder="请输入CDN IP（可选）">
+            </div>
+
             <!-- 小时输入 -->
             <div class="form-group">
                 <label for="hour">小时 (0-23):</label>
@@ -713,6 +725,8 @@ func GetHomePageTemplate() string {
                 streamId: formData.get('streamId'),
                 domain: formData.get('domain'),
                 uid: formData.get('uid'),
+                userIp: formData.get('userIp'),
+                cdnIp: formData.get('cdnIp'),
                 hour: formData.get('hour'),
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
@@ -2212,4 +2226,92 @@ func generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 			></iframe>
 		</div>
 	`, encodedHTML)
+}
+
+func generateLineChart(title, seriesName, color, formatter string, xAxisData []string, yAxisData []opts.LineData) string {
+
+	// 创建折线图
+	line := charts.NewLine()
+
+	// 设置全局选项
+	line.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Left:  "right",
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Trigger:   "axis",
+			Formatter: "{a} <br/>{b} : {c}",
+			Show:      opts.Bool(true),
+		}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Type: "category",
+			AxisLabel: &opts.AxisLabel{
+				Rotate:   45,
+				Interval: "auto",
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Type: "value",
+			AxisLabel: &opts.AxisLabel{
+				Formatter: "{value}",
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "100%",
+			Height: "400px",
+			Theme:  "white",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	if color == "" {
+		color = "#28a745"
+	}
+
+	// 添加数据系列
+	line.SetXAxis(xAxisData).
+		AddSeries(seriesName, yAxisData).
+		SetSeriesOptions(
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+			charts.WithLineStyleOpts(opts.LineStyle{
+				Color: color,
+				Width: 2,
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Color:   color,
+				Opacity: opts.Float(0.1),
+			}),
+		)
+
+	// 生成完整的图表HTML页面
+	var buf bytes.Buffer
+	err := line.Render(&buf)
+	if err != nil {
+		log.Println("生成图表HTML失败:", err)
+		return ""
+	}
+	chartHTML := buf.String()
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(chartHTML))
+
+	// 使用iframe包装图表HTML作为web component
+	htmlContent := fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">%s</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 450px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, title, encodedHTML)
+
+	return htmlContent
 }

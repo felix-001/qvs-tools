@@ -52,6 +52,8 @@ type QOSRequest struct {
 	StreamID    string     `json:"streamId"`
 	Domain      string     `json:"domain"`
 	UID         string     `json:"uid"`
+	UserIp      string     `json:"userIp"`
+	CdnIp       string     `json:"cdnIp"`
 	Hour        string     `json:"hour"`
 	FuzzySearch bool       `json:"fuzzySearch"`
 	LogLevel    string     `json:"logLevel"`
