@@ -380,3 +380,10 @@ func buildHyCdnLagSQLQuery(req QOSRequest) string {
 		`
 	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC")
 }
+
+func buildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
+	choose := `
+		DISTINCT dim_cdnip, dim__ip
+		`
+	return buildHyCommonSQLQuery(req, choose, "", "", "")
+}

@@ -34,7 +34,8 @@ func (h *HyLagRate) Generate(req QOSRequest) string {
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
 	minuteAggregated := aggregateByMinute(reports)
 
-	cdnAggregated, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
+	//cdnAggregated, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
+	_, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
 
 	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
 	onlineUsersAggregated := aggregateOnlineUsers(reports)
@@ -52,7 +53,8 @@ func (h *HyLagRate) Generate(req QOSRequest) string {
 	onlineUsersChartHTML := generateOnlineUsersChartHTML(onlineUsersAggregated)
 
 	// 生成聚合数据表格HTML
-	tableHTML := generateTableHTML(cdnAggregated, clientAggregated)
+	//tableHTML := generateTableHTML(cdnAggregated, clientAggregated)
+	tableHTML := generateTableHTML([]AggregatedData{}, clientAggregated)
 
 	// 生成CDN卡顿用户表格HTML
 	cdnLagTableHTML := generateCDNLagTableHTML(cdnAggData)

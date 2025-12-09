@@ -153,8 +153,13 @@ type StreamdStreamCntReport struct {
 type HyCdnLagReport struct {
 	DimCdnip *string  `db:"dim_cdnip"`
 	Percent  *float64 `db:"percent"`
-	LagCnt   *int64   `db:"lagCnt"`
-	Total    *int64   `db:"total"`
+	LagCnt   *int     `db:"lagCnt"`
+	Total    *int     `db:"total"`
+}
+
+type HyClientIpsOnCdnIpReport struct {
+	DimCdnip *string `db:"dim_cdnip"`
+	DimIp    *string `db:"dim__ip"`
 }
 
 type StreamdUpstreamBandWidthReport struct {

@@ -125,3 +125,47 @@ func saveHyCdnLagRawData(reports []util.HyCdnLagReport) {
 		}
 	}
 }
+
+func saveHyClientIpsOnCdnIpRawData(reports []util.HyClientIpsOnCdnIpReport) {
+	csvFile, err := os.Create("hy_client_ips_on_cdn_ip_report.csv")
+	if err != nil {
+		log.Printf("创建CSV文件失败: %v", err)
+	} else {
+		defer csvFile.Close()
+
+		writer := csv.NewWriter(csvFile)
+		defer writer.Flush()
+
+		// 写入CSV头
+		headers := []string{
+			"DimCdnip",
+			"DimClientIp",
+		}
+		if err := writer.Write(headers); err != nil {
+			log.Printf("写入CSV头失败: %v", err)
+		}
+		for _, report := range reports {
+			record := []string{
+				// Convert HyClientIpsOnCdnIpReport fields to string values
+				func() string {
+					if report.DimCdnip != nil {
+						return *report.DimCdnip
+					} else {
+						return ""
+					}
+				}(),
+				func() string {
+					if report.DimIp != nil {
+						return *report.DimIp
+					} else {
+						return ""
+					}
+				}(),
+			}
+			if err := writer.Write(record); err != nil {
+				log.Printf("写入CSV记录失败: %v", err)
+			}
+		}
+	}
+
+}
