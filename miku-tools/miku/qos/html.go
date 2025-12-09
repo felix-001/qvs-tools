@@ -637,6 +637,112 @@ func GetHomePageTemplate() string {
                 </div>
             </div>
 
+            <!-- 图表展示选择 -->
+            <div class="form-group">
+                <label>图表展示选择：</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                    <!-- CDN相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_ip_quality" name="chart_cdn_ip_quality" checked>
+                        <label for="chart_cdn_ip_quality">CDN IP质量分析统计</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_lag_users" name="chart_cdn_lag_users" checked>
+                        <label for="chart_cdn_lag_users">CDN卡顿用户统计</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_lag_rate" name="chart_cdn_lag_rate" checked>
+                        <label for="chart_cdn_lag_rate">CDN IP卡顿率</label>
+                    </div>
+                    
+                    <!-- 用户相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_lag_user_ratio" name="chart_lag_user_ratio" checked>
+                        <label for="chart_lag_user_ratio">卡顿用户占比趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_client_ip_quality" name="chart_client_ip_quality" checked>
+                        <label for="chart_client_ip_quality">Client IP质量分析统计</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_lag_rate_trend" name="chart_lag_rate_trend" checked>
+                        <label for="chart_lag_rate_trend">卡顿率趋势图</label>
+                    </div>
+                    
+                    <!-- 节点相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_node_lag_ratio" name="chart_node_lag_ratio" checked>
+                        <label for="chart_node_lag_ratio">节点卡顿占比趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_retry_rate" name="chart_retry_rate" checked>
+                        <label for="chart_retry_rate">内部回源重试率</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_retry_count" name="chart_retry_count" checked>
+                        <label for="chart_retry_count">内部回源重试次数</label>
+                    </div>
+                    
+                    <!-- 地理分布图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_country_distribution" name="chart_country_distribution" checked>
+                        <label for="chart_country_distribution">国家分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_region_distribution" name="chart_region_distribution" checked>
+                        <label for="chart_region_distribution">区域分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_province_distribution" name="chart_province_distribution" checked>
+                        <label for="chart_province_distribution">省份分布图</label>
+                    </div>
+                    
+                    <!-- 延迟分析图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_region_delay" name="chart_region_delay" checked>
+                        <label for="chart_region_delay">区域延迟分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_province_delay" name="chart_province_delay" checked>
+                        <label for="chart_province_delay">省份延迟分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_stream_delay" name="chart_stream_delay" checked>
+                        <label for="chart_stream_delay">流媒体延迟分析图表</label>
+                    </div>
+                    
+                    <!-- 回源相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_internal_retry_lag" name="chart_internal_retry_lag" checked>
+                        <label for="chart_internal_retry_lag">内部回源百秒卡顿率</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_client_retry_lag" name="chart_client_retry_lag" checked>
+                        <label for="chart_client_retry_lag">回客户源站百秒卡顿率</label>
+                    </div>
+                    
+                    <!-- 在线相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_users" name="chart_online_users" checked>
+                        <label for="chart_online_users">每分钟在线用户数趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_streams" name="chart_online_streams" checked>
+                        <label for="chart_online_streams">在线流个数趋势图</label>
+                    </div>
+                    
+                    <!-- FPS相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_audio_fps" name="chart_audio_fps" checked>
+                        <label for="chart_audio_fps">Audio FPS</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
+                        <label for="chart_video_fps">Video FPS</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- 提交按钮 -->
             <button type="submit" class="submit-btn">开始质量分析</button>
         </form>
@@ -730,7 +836,31 @@ func GetHomePageTemplate() string {
                 hour: formData.get('hour'),
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
-                rawData: formData.get('rawData') === 'on'
+                rawData: formData.get('rawData') === 'on',
+                // 图表展示选项
+                charts: {
+                    cdnIpQuality: formData.get('chart_cdn_ip_quality') === 'on',
+                    cdnLagUsers: formData.get('chart_cdn_lag_users') === 'on',
+                    cdnLagRate: formData.get('chart_cdn_lag_rate') === 'on',
+                    lagUserRatio: formData.get('chart_lag_user_ratio') === 'on',
+                    clientIpQuality: formData.get('chart_client_ip_quality') === 'on',
+                    lagRateTrend: formData.get('chart_lag_rate_trend') === 'on',
+                    nodeLagRatio: formData.get('chart_node_lag_ratio') === 'on',
+                    retryRate: formData.get('chart_retry_rate') === 'on',
+                    retryCount: formData.get('chart_retry_count') === 'on',
+                    countryDistribution: formData.get('chart_country_distribution') === 'on',
+                    regionDistribution: formData.get('chart_region_distribution') === 'on',
+                    provinceDistribution: formData.get('chart_province_distribution') === 'on',
+                    regionDelay: formData.get('chart_region_delay') === 'on',
+                    provinceDelay: formData.get('chart_province_delay') === 'on',
+                    streamDelay: formData.get('chart_stream_delay') === 'on',
+                    internalRetryLag: formData.get('chart_internal_retry_lag') === 'on',
+                    clientRetryLag: formData.get('chart_client_retry_lag') === 'on',
+                    onlineUsers: formData.get('chart_online_users') === 'on',
+                    onlineStreams: formData.get('chart_online_streams') === 'on',
+                    audioFps: formData.get('chart_audio_fps') === 'on',
+                    videoFps: formData.get('chart_video_fps') === 'on'
+                }
             };
             console.log(data)
             
@@ -2228,7 +2358,7 @@ func generateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
 	`, encodedHTML)
 }
 
-func generateLineChart(title, seriesName, color, formatter string, xAxisData []string, yAxisData []opts.LineData) string {
+func generateLineChart(title, seriesName, color string, xAxisData []string, yAxisData []opts.LineData) string {
 
 	// 创建折线图
 	line := charts.NewLine()

@@ -46,17 +46,43 @@ type MinuteAggregatedData struct {
 
 // QOSRequest 前端查询请求结构
 type QOSRequest struct {
-	AppName     string     `json:"appName"`
-	StartTime   string     `json:"startTime"`
-	EndTime     string     `json:"endTime"`
-	StreamID    string     `json:"streamId"`
-	Domain      string     `json:"domain"`
-	UID         string     `json:"uid"`
-	UserIp      string     `json:"userIp"`
-	CdnIp       string     `json:"cdnIp"`
-	Hour        string     `json:"hour"`
-	FuzzySearch bool       `json:"fuzzySearch"`
-	LogLevel    string     `json:"logLevel"`
-	RawData     bool       `json:"rawData"`
-	IpParser    *ipdb.City `json:"ipParser"`
+	AppName     string       `json:"appName"`
+	StartTime   string       `json:"startTime"`
+	EndTime     string       `json:"endTime"`
+	StreamID    string       `json:"streamId"`
+	Domain      string       `json:"domain"`
+	UID         string       `json:"uid"`
+	UserIp      string       `json:"userIp"`
+	CdnIp       string       `json:"cdnIp"`
+	Hour        string       `json:"hour"`
+	FuzzySearch bool         `json:"fuzzySearch"`
+	LogLevel    string       `json:"logLevel"`
+	RawData     bool         `json:"rawData"`
+	Charts      ChartOptions `json:"charts"`
+	IpParser    *ipdb.City   `json:"ipParser"`
+}
+
+// ChartOptions 图表展示选项
+type ChartOptions struct {
+	CdnIpQuality         bool `json:"cdnIpQuality"`
+	CdnLagUsers          bool `json:"cdnLagUsers"`
+	CdnLagRate           bool `json:"cdnLagRate"`
+	LagUserRatio         bool `json:"lagUserRatio"`
+	ClientIpQuality      bool `json:"clientIpQuality"`
+	LagRateTrend         bool `json:"lagRateTrend"`
+	NodeLagRatio         bool `json:"nodeLagRatio"`
+	RetryRate            bool `json:"retryRate"`
+	RetryCount           bool `json:"retryCount"`
+	CountryDistribution  bool `json:"countryDistribution"`
+	RegionDistribution   bool `json:"regionDistribution"`
+	ProvinceDistribution bool `json:"provinceDistribution"`
+	RegionDelay          bool `json:"regionDelay"`
+	ProvinceDelay        bool `json:"provinceDelay"`
+	StreamDelay          bool `json:"streamDelay"`
+	InternalRetryLag     bool `json:"internalRetryLag"`
+	ClientRetryLag       bool `json:"clientRetryLag"`
+	OnlineUsers          bool `json:"onlineUsers"`
+	OnlineStreams        bool `json:"onlineStreams"`
+	VideoFps             bool `json:"videoFps"`
+	AudioFps             bool `json:"audioFps"`
 }

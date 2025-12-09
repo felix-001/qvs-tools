@@ -42,6 +42,6 @@ func (h *HyNodeViewLag) Generate(req QOSRequest) string {
 		}
 	}
 
-	html := generateLineChart("CDN IP卡顿率", "CDN IP卡顿率", "", "cdnIpLag", xAxisData, yAxisData)
+	html := generateLineChart("CDN IP卡顿率", "CDN IP卡顿率", "", xAxisData, yAxisData)
 	return html
 }
