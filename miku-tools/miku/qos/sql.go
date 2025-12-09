@@ -327,7 +327,7 @@ func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order stri
 		FROM %s
 		WHERE 1=1 
 			%s
-			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 			AND day >= '%s' AND day <= '%s'
 		`, choose, table, where, req.StartTime, req.EndTime, startDay, endDay)
 	if group != "" {
@@ -341,6 +341,19 @@ func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order stri
 }
 
 func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	if req.Domain != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf(`
+			AND dim_stream_url like '%%%s%%'
+			AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio')
+		`, req.Domain)
+		} else {
+			where += fmt.Sprintf(`
+			AND dim_stream_url = '%s'
+			AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio')
+	`, req.Domain)
+		}
+	}
 	return buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
 }
 
@@ -356,4 +369,14 @@ func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
 		AND HTTPResponseCode != 302
 	`, req.AppName)
 	return buildMikuCommonSQLQuery(req, choose, where, "", "")
+}
+
+func buildHyCdnLagSQLQuery(req QOSRequest) string {
+	choose := `
+		dim_cdnip,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
+		COUNT(*) as total	
+		`
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC")
 }

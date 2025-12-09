@@ -2,6 +2,7 @@ package qos
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"mikutool/public/util"
 	"os"
@@ -63,5 +64,64 @@ func saveCsv(reports []util.QualityReport) {
 			}
 		}
 		log.Println("CSV报告已保存到 qos_report.csv")
+	}
+}
+
+func saveHyCdnLagRawData(reports []util.HyCdnLagReport) {
+	csvFile, err := os.Create("hy_cdn_lag_report.csv")
+	if err != nil {
+		log.Printf("创建CSV文件失败: %v", err)
+	} else {
+		defer csvFile.Close()
+
+		writer := csv.NewWriter(csvFile)
+		defer writer.Flush()
+
+		// 写入CSV头
+		headers := []string{
+			"DimCdnip",
+			"Percent",
+			"LagCnt",
+			"Total",
+		}
+		if err := writer.Write(headers); err != nil {
+			log.Printf("写入CSV头失败: %v", err)
+		}
+		for _, report := range reports {
+			record := []string{
+				// Convert HyCdnLagReport fields to string values
+				func() string {
+					if report.DimCdnip != nil {
+						return *report.DimCdnip
+					} else {
+						return ""
+					}
+				}(),
+				func() string {
+					if report.Percent != nil {
+						return fmt.Sprintf("%f", *report.Percent)
+					} else {
+						return ""
+					}
+				}(),
+				func() string {
+					if report.LagCnt != nil {
+						return fmt.Sprintf("%d", *report.LagCnt)
+					} else {
+						return ""
+					}
+				}(),
+				func() string {
+					if report.Total != nil {
+						return fmt.Sprintf("%d", *report.Total)
+					} else {
+						return ""
+					}
+				}(),
+			}
+			if err := writer.Write(record); err != nil {
+				log.Printf("写入CSV记录失败: %v", err)
+			}
+		}
 	}
 }

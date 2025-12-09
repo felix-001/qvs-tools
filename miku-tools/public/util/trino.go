@@ -150,6 +150,13 @@ type StreamdStreamCntReport struct {
 	StreamCnt *int64  `db:"stream_cnt"`
 }
 
+type HyCdnLagReport struct {
+	DimCdnip *string  `db:"dim_cdnip"`
+	Percent  *float64 `db:"percent"`
+	LagCnt   *int64   `db:"lagCnt"`
+	Total    *int64   `db:"total"`
+}
+
 type StreamdUpstreamBandWidthReport struct {
 	Ts         *string  `db:"ts"`
 	NodeId     *string  `db:"NodeID"`

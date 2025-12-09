@@ -2,3 +2,4 @@
 .DS_Store
 .codebuddy
 qos_report.csv
+*.csv
