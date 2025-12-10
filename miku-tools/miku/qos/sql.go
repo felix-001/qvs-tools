@@ -504,3 +504,10 @@ ORDER by lagCnt DESC
 
 	return sql
 }
+
+func BuildHyUsrDistributeSQLQuery(req QOSRequest) string {
+	choose := `
+		DISTINCT dim__ip
+		`
+	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv")
+}

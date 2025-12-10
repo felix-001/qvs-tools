@@ -1,102 +1,14 @@
 package hy
 
 import (
-	"log"
 	"mikutool/miku/qos"
 	"mikutool/public/util"
 	"net"
 	"net/url"
 	"sort"
-	"time"
 
 	"github.com/qbox/pili/common/ipdb.v1"
 )
-
-// aggregateByMinute 按分钟聚合数据（模拟第二个SQL查询的效果）
-func aggregateByMinute(reports []util.QualityReport) []qos.MinuteAggregatedData {
-	// 按分钟分组聚合
-	minuteMap := make(map[string]*qos.MinuteAggregatedData)
-
-	for _, report := range reports {
-		// 获取时间戳并按分钟截断
-		var timestamp time.Time
-		if report.Cts != nil {
-			timestamp = time.Unix(*report.Cts, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
-		} else if report.LogTime != nil {
-			timestamp = time.Unix(*report.LogTime, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
-		} else {
-			log.Println("get ts err")
-			continue
-		}
-
-		// 按分钟截断时间
-		truncatedTime := time.Date(
-			timestamp.Year(), timestamp.Month(), timestamp.Day(),
-			timestamp.Hour(), timestamp.Minute(), 0, 0,
-			time.FixedZone("Asia/Shanghai", 8*60*60),
-		).Format("2006-01-02 15:04:05")
-
-		// 初始化分钟数据
-		if _, exists := minuteMap[truncatedTime]; !exists {
-			minuteMap[truncatedTime] = &qos.MinuteAggregatedData{
-				Timestamp:  truncatedTime,
-				Percent:    0.0,
-				LagCount:   0,
-				TotalCount: 0,
-			}
-		}
-
-		// 统计数据
-		minuteData := minuteMap[truncatedTime]
-		minuteData.TotalCount++
-		minuteData.Reports = append(minuteData.Reports, report)
-
-		// 检查是否为不良质量
-		if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
-			minuteData.LagCount++
-		}
-	}
-
-	// 计算百分比并转换为切片
-	var result []qos.MinuteAggregatedData
-	var lagUserMap = make(map[string]bool)
-	var totalUserMap = make(map[string]bool)
-	var LagCdnMap = make(map[string]bool)
-	var TotalCdnMap = make(map[string]bool)
-	for _, data := range minuteMap {
-		if data.TotalCount > 0 {
-			data.Percent = float64(data.LagCount) / float64(data.TotalCount) * 100
-		}
-		for _, report := range data.Reports {
-			if report.DimIp != nil && *report.DimIp != "" {
-				if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
-					lagUserMap[*report.DimIp] = true
-				}
-				totalUserMap[*report.DimIp] = true
-			}
-			if report.DimCdnip != nil && *report.DimCdnip != "" {
-				if report.FieldVideoBadQuality != nil && *report.FieldVideoBadQuality == 100 {
-					LagCdnMap[*report.DimCdnip] = true
-				}
-				TotalCdnMap[*report.DimCdnip] = true
-			}
-		}
-		data.LagUserCnt = len(lagUserMap)
-		data.TotalUserCnt = len(totalUserMap)
-		data.LagCdnCnt = len(LagCdnMap)
-		data.TotalCdnCnt = len(TotalCdnMap)
-		result = append(result, *data)
-	}
-
-	// 按时间排序
-	sort.Slice(result, func(i, j int) bool {
-		timeI, _ := time.Parse("2006-01-02 15:04:05", result[i].Timestamp)
-		timeJ, _ := time.Parse("2006-01-02 15:04:05", result[j].Timestamp)
-		return timeI.Before(timeJ)
-	})
-
-	return result
-}
 
 func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]qos.AggregatedData, []qos.AggregatedData, []qos.CdnAggregateData, qos.AggData) {
 	// CDN IP聚合

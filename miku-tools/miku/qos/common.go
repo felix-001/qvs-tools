@@ -70,3 +70,27 @@ func GetHyLagRateReports(req QOSRequest) ([]util.HyLagReport, error) {
 	//fmt.Printf("HyLagRateReports: %+v\n", string(bytes))
 	return hyLagRateCache.HyLagRateReports, nil
 }
+
+type HyDistinctCdnClientIpsCache struct {
+	HyClientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport
+	Req                       QOSRequest
+}
+
+var hyDistinctCdnClientIpsCache HyDistinctCdnClientIpsCache
+
+func GetHyDistinctCdnClientIps(req QOSRequest) ([]util.HyClientIpsOnCdnIpReport, error) {
+	if req.StartTime == hyDistinctCdnClientIpsCache.Req.StartTime &&
+		req.EndTime == hyDistinctCdnClientIpsCache.Req.EndTime &&
+		len(hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports) > 0 {
+		return hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports, nil
+	}
+	sql := BuildClientIpsOnCdnIpsSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
+	if err := util.TrinoQuery("miku", sql, &hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports); err != nil {
+		log.Printf("Trino查询失败: %v", err)
+		return nil, err
+	}
+	return hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports, nil
+}

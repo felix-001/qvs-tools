@@ -34,21 +34,13 @@ func (h *HyCdnLag) getRawData(req qos.QOSRequest) []util.HyCdnLagReport {
 	return hyCdnLagReports
 }
 
-func (h *HyCdnLag) getClientIpsOnCdnIp(req qos.QOSRequest) []util.HyClientIpsOnCdnIpReport {
-	sql := qos.BuildClientIpsOnCdnIpsSQLQuery(req)
-	if req.LogLevel == "detail" {
-		log.Printf("执行SQL查询: %s", sql)
-	}
-	var hyClientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport
-	if err := util.TrinoQuery("miku", sql, &hyClientIpsOnCdnIpReports); err != nil {
-		log.Printf("Trino查询失败: %v", err)
-		return nil
-	}
+func (h *HyCdnLag) getClientIpsOnCdnIp(req qos.QOSRequest) ([]util.HyClientIpsOnCdnIpReport, error) {
+	hyClientIpsOnCdnIpReports, err := qos.GetHyDistinctCdnClientIps(req)
 	log.Println("查询结果hyClientIpsOnCdnIpReports:", len(hyClientIpsOnCdnIpReports))
 	if req.RawData {
 		qos.SaveHyClientIpsOnCdnIpRawData(hyClientIpsOnCdnIpReports)
 	}
-	return hyClientIpsOnCdnIpReports
+	return hyClientIpsOnCdnIpReports, err
 }
 
 func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) []qos.AggregatedData {
@@ -101,7 +93,11 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 func (h *HyCdnLag) Generate(req qos.QOSRequest) string {
 	h.ipparser = req.IpParser
 	hyCdnLagReports := h.getRawData(req)
-	clientIpsOnCdnIpReports := h.getClientIpsOnCdnIp(req)
+	clientIpsOnCdnIpReports, err := h.getClientIpsOnCdnIp(req)
+	if err != nil {
+		log.Printf("获取客户端IP聚合数据失败: %v", err)
+		return ""
+	}
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
 	//log.Println("aggCdnLagData:", aggCdnLagData)
 	tableHTML := qos.GenerateTableHTML(aggCdnLagData, []qos.AggregatedData{})
