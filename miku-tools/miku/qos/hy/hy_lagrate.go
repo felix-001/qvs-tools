@@ -46,7 +46,7 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	//minuteChartHTML := generateMinuteChartHTML(minuteAggregated)
 
 	// 生成卡顿用户占比折线图
-	lagUserRatioChartHTML := qos.GenerateLagUserRatioChartHTML(minuteAggregated)
+	//lagUserRatioChartHTML := qos.GenerateLagUserRatioChartHTML(minuteAggregated)
 
 	// 生成节点卡顿占比折线图
 	cdnLagRatioChartHTML := qos.GenerateCdnLagRatioChartHTML(minuteAggregated)
@@ -65,7 +65,7 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	aggDataChartsHTML := qos.GenerateAggDataChartsHTML(aggData)
 
 	//return minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
-	return lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
+	return cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
 }
 
 type MikuLagRate struct {

@@ -429,7 +429,10 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 	choose := ts + `
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
-		COUNT(*) as total	
+		COUNT(*) as total,
+		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) AS lag_usr_cnt,	
+		COUNT(DISTINCT dim__ip) AS total_usr_cnt,	
+		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) * 100.0 / COUNT(DISTINCT dim__ip) AS lag_usr_rate
 		`
 	return buildHyCommonSQLQuery(req, choose, "", group, order, "flv")
 }

@@ -1,6 +1,8 @@
 package hy
 
 import (
+	"fmt"
+	"log"
 	"mikutool/miku/qos"
 )
 
@@ -14,9 +16,10 @@ type LagUsrRate struct {
 }
 
 func (l *LagUsrRate) Generate(req qos.QOSRequest) string {
-	// COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)) AS requests_puller,
-	//	COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and url not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
-	//	ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
-	// 跟hy lag rate查询合并到一起，减少查询次数
-	return ""
+	hyLagRateReports, err := qos.GetHyLagRateReports(req)
+	if err != nil {
+		return fmt.Sprintf("查询失败: %v", err)
+	}
+	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
+	return qos.GenerateLagUserRatioChartHTML(hyLagRateReports)
 }

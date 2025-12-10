@@ -1,7 +1,9 @@
 package qos
 
 import (
+	"fmt"
 	"log"
+	"mikutool/public/util"
 	"strconv"
 	"time"
 )
@@ -41,4 +43,30 @@ func getInt64(i *int64) string {
 		return ""
 	}
 	return strconv.FormatInt(*i, 10)
+}
+
+type HyLagRateCache struct {
+	HyLagRateReports []util.HyLagReport
+	Req              QOSRequest
+}
+
+var hyLagRateCache HyLagRateCache
+
+func GetHyLagRateReports(req QOSRequest) ([]util.HyLagReport, error) {
+	if req.StartTime == hyLagRateCache.Req.StartTime && req.EndTime == hyLagRateCache.Req.EndTime &&
+		len(hyLagRateCache.HyLagRateReports) > 0 {
+		return hyLagRateCache.HyLagRateReports, nil
+	}
+	sql := BuildHyLagRateSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
+	if err := util.TrinoQuery("miku", sql, &hyLagRateCache.HyLagRateReports); err != nil {
+		log.Printf("Trino查询失败: %v", err)
+		return nil, fmt.Errorf("查询失败: %v", err)
+	}
+	hyLagRateCache.Req = req
+	//bytes, _ := json.Marshal(hyLagRateCache)
+	//fmt.Printf("HyLagRateReports: %+v\n", string(bytes))
+	return hyLagRateCache.HyLagRateReports, nil
 }

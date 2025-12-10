@@ -1003,8 +1003,8 @@ func GenerateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string 
 }
 
 // generateLagUserRatioChartHTML 生成卡顿用户占比折线图HTML
-func GenerateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
-	if len(minuteAggregated) == 0 {
+func GenerateLagUserRatioChartHTML(hyLagReports []util.HyLagReport) string {
+	if len(hyLagReports) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
 	}
@@ -1051,17 +1051,10 @@ func GenerateLagUserRatioChartHTML(minuteAggregated []MinuteAggregatedData) stri
 	// 准备Y轴数据（卡顿用户占比百分比）
 	var yAxisData []opts.LineData
 
-	for _, data := range minuteAggregated {
-		xAxisData = append(xAxisData, data.Timestamp)
-
-		// 计算卡顿用户占比百分比
-		var ratio float64
-		if data.TotalUserCnt > 0 {
-			ratio = float64(data.LagUserCnt) / float64(data.TotalUserCnt) * 100
-		}
-
+	for _, data := range hyLagReports {
+		xAxisData = append(xAxisData, *data.Ts_m)
 		yAxisData = append(yAxisData, opts.LineData{
-			Value: ratio,
+			Value: data.LagUsrRate,
 		})
 	}
 
