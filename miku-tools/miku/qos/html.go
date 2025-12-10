@@ -1104,8 +1104,8 @@ func GenerateLagUserRatioChartHTML(hyLagReports []util.HyLagReport) string {
 }
 
 // generateCdnLagRatioChartHTML 生成节点卡顿占比折线图HTML
-func GenerateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) string {
-	if len(minuteAggregated) == 0 {
+func GenerateCdnLagRatioChartHTML(reports []util.HyLagReport) string {
+	if len(reports) == 0 {
 		log.Println("分钟聚合数据为空")
 		return ""
 	}
@@ -1152,17 +1152,10 @@ func GenerateCdnLagRatioChartHTML(minuteAggregated []MinuteAggregatedData) strin
 	// 准备Y轴数据（节点卡顿占比百分比）
 	var yAxisData []opts.LineData
 
-	for _, data := range minuteAggregated {
-		xAxisData = append(xAxisData, data.Timestamp)
-
-		// 计算节点卡顿占比百分比
-		var ratio float64
-		if data.TotalCdnCnt > 0 {
-			ratio = float64(data.LagCdnCnt) / float64(data.TotalCdnCnt) * 100
-		}
-
+	for _, data := range reports {
+		xAxisData = append(xAxisData, *data.Ts_m)
 		yAxisData = append(yAxisData, opts.LineData{
-			Value: ratio,
+			Value: *data.LagNodeRate,
 		})
 	}
 

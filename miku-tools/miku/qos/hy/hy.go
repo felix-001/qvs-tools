@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/url"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -267,82 +266,4 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]qos.A
 	}
 
 	return cdnAggregated, clientAggregated, cdnAggregateData, aggData
-}
-
-// aggregateOnlineUsers 按分钟聚合在线用户数（模拟指定SQL查询的效果）
-func aggregateOnlineUsers(reports []util.QualityReport) []qos.OnlineUserAggregatedData {
-	// 按分钟分组聚合
-	minuteMap := make(map[string]map[string]bool) // timestamp -> set of distinct IPs
-
-	for _, report := range reports {
-		// 检查是否满足筛选条件
-
-		// 1. 检查日期和小时（从cts时间戳解析）
-		var timestamp time.Time
-		if report.Cts != nil {
-			timestamp = time.Unix(*report.Cts, 0).In(time.FixedZone("Asia/Shanghai", 8*60*60))
-		} else {
-			continue
-		}
-
-		// 2. 检查流URL条件
-		streamUrl := ""
-		if report.DimStreamUrl != nil {
-			streamUrl = *report.DimStreamUrl
-		}
-		if streamUrl == "" {
-			continue
-		}
-
-		// 4. 检查ISP条件
-		isp := ""
-		if report.DimIsp != nil {
-			isp = *report.DimIsp
-		}
-		if !strings.Contains(strings.ToLower(isp), "china") {
-			continue
-		}
-
-		// 5. 检查IP
-		ip := ""
-		if report.DimIp != nil {
-			ip = *report.DimIp
-		}
-		if ip == "" {
-			continue
-		}
-
-		// 按分钟分组，使用date_trunc('minute')的效果
-		minuteTimestamp := time.Date(
-			timestamp.Year(), timestamp.Month(), timestamp.Day(),
-			timestamp.Hour(), timestamp.Minute(), 0, 0,
-			time.FixedZone("Asia/Shanghai", 8*60*60),
-		).Format("2006-01-02 15:04:05")
-
-		// 初始化分钟IP集合
-		if _, exists := minuteMap[minuteTimestamp]; !exists {
-			minuteMap[minuteTimestamp] = make(map[string]bool)
-		}
-
-		// 添加IP到集合中（去重）
-		minuteMap[minuteTimestamp][ip] = true
-	}
-
-	// 转换为结果数组
-	var result []qos.OnlineUserAggregatedData
-	for timestamp, ipSet := range minuteMap {
-		result = append(result, qos.OnlineUserAggregatedData{
-			Timestamp: timestamp,
-			OnlineNum: len(ipSet), // 去重后的IP数量
-		})
-	}
-
-	// 按时间排序
-	sort.Slice(result, func(i, j int) bool {
-		timeI, _ := time.Parse("2006-01-02 15:04:05", result[i].Timestamp)
-		timeJ, _ := time.Parse("2006-01-02 15:04:05", result[j].Timestamp)
-		return timeI.Before(timeJ)
-	})
-
-	return result
 }

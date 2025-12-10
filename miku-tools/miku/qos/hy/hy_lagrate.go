@@ -34,13 +34,13 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	}
 
 	// 在Go代码中实现按分钟聚合（模拟第二个SQL查询的效果）
-	minuteAggregated := aggregateByMinute(reports)
+	//minuteAggregated := aggregateByMinute(reports)
 
 	//cdnAggregated, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
 	_, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
 
 	// 生成节点卡顿占比折线图
-	cdnLagRatioChartHTML := qos.GenerateCdnLagRatioChartHTML(minuteAggregated)
+	//cdnLagRatioChartHTML := qos.GenerateCdnLagRatioChartHTML(minuteAggregated)
 
 	// 生成聚合数据表格HTML
 	//tableHTML := generateTableHTML(cdnAggregated, clientAggregated)
@@ -53,7 +53,7 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	aggDataChartsHTML := qos.GenerateAggDataChartsHTML(aggData)
 
 	//return minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
-	return cdnLagRatioChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
+	return tableHTML + cdnLagTableHTML + aggDataChartsHTML
 }
 
 type MikuLagRate struct {

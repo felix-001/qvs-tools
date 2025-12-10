@@ -176,13 +176,16 @@ type UpstreamDistributeReport struct {
 }
 
 type HyLagReport struct {
-	Ts_m        *string  `db:"ts_m"`
-	Percent     *float64 `db:"percent"`
-	LagCnt      *int     `db:"lagCnt"`
-	Total       *int     `db:"total"`
-	LagUsrCnt   *int     `db:"lag_usr_cnt"`
-	TotalUsrCnt *int     `db:"total_usr_cnt"`
-	LagUsrRate  *float64 `db:"lag_usr_rate"`
+	Ts_m         *string  `db:"ts_m"`
+	Percent      *float64 `db:"percent"`
+	LagCnt       *int     `db:"lagCnt"`
+	Total        *int     `db:"total"`
+	LagUsrCnt    *int     `db:"lag_usr_cnt"`
+	TotalUsrCnt  *int     `db:"total_usr_cnt"`
+	LagUsrRate   *float64 `db:"lag_usr_rate"`
+	LagNodeCnt   *int     `db:"lag_node_cnt"`
+	TotalNodeCnt *int     `db:"total_node_cnt"`
+	LagNodeRate  *float64 `db:"lag_node_rate"`
 }
 
 type HyLagRateByStreamsReport struct {
