@@ -446,3 +446,53 @@ func BuildHyCdnIpLagSQLQuery(req QOSRequest) string {
 	`, req.CdnIp)
 	return buildHyCommonSQLQuery(req, choose, where, "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')", "ts_m", "flv")
 }
+
+func BuildHyLagRateByStreamsSQLQuery(req QOSRequest) string {
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+
+	sql := fmt.Sprintf(`
+WITH extracted_parts AS (
+  SELECT
+    -- 提取文件名部分
+    regexp_extract(dim_stream_url, '[src|huyalive|huyacdn|huyacdntest]/([^?]+)\.flv', 1) AS streamName,
+    -- 提取ratio参数
+    regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
+    -- 提取codec参数
+    regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
+    *
+  FROM huyabiz_quality_report_log
+)
+
+SELECT
+  CONCAT(
+    streamName,
+    -- 如果有ratio值则添加
+    CASE WHEN ratio_value IS NOT NULL THEN CONCAT('_', ratio_value) ELSE '' END,
+    -- 如果有codec值则添加
+    CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
+  ) AS stream_id,
+  COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
+  COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
+  COUNT(*) as total
+FROM extracted_parts
+WHERE 1=1  
+	AND day >= '%s' AND day <= '%s' 
+	AND cts >= to_unixtime(TIMESTAMP '%s+08:00') AND cts <= to_unixtime(TIMESTAMP '%s+08:00') 
+	AND dim_stream_url like '%%.flv%%'
+	AND dim_heart_type != '0'
+	AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio') 
+group by  CONCAT(
+    streamName,
+    -- 如果有ratio值则添加
+    CASE WHEN ratio_value IS NOT NULL THEN CONCAT('_', ratio_value) ELSE '' END,
+    -- 如果有codec值则添加
+    CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
+  )
+ORDER by lagCnt DESC
+	`, startDay, endDay, req.StartTime, req.EndTime)
+
+	return sql
+}

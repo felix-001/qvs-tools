@@ -2445,3 +2445,166 @@ func GenerateLineChart(title, seriesName, color string, xAxisData []string, yAxi
 
 	return htmlContent
 }
+
+// generateLagRateByStreamsTable 生成卡顿率按流分布表格
+func GenerateLagRateByStreamsTable(data []util.HyLagRateByStreamsReport) string {
+	if len(data) == 0 {
+		return `
+		<div class="chart-container">
+			<h3>卡顿率按流分布</h3>
+			<p>暂无数据</p>
+		</div>`
+	}
+
+	// 准备表格数据
+	var tableRows []string
+	for _, item := range data {
+		streamName := ""
+		if item.StreamName != nil {
+			streamName = *item.StreamName
+		}
+
+		percent := 0.0
+		if item.Percent != nil {
+			percent = *item.Percent
+		}
+
+		lagCount := 0
+		if item.LagCnt != nil {
+			lagCount = *item.LagCnt
+		}
+
+		total := 0
+		if item.Total != nil {
+			total = *item.Total
+		}
+
+		tableRows = append(tableRows, fmt.Sprintf(`{
+			"streamName": "%s",
+			"lagCount": %d,
+			"totalCount": %d,
+			"lagRate": "%.2f%%"
+		}`, streamName, lagCount, total, percent))
+	}
+
+	tableData := strings.Join(tableRows, ",\n")
+
+	// 生成包含AG Grid的HTML页面
+	htmlContent := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>卡顿率按流分布</title>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #grid-container {
+            height: 600px;
+            width: 100%%;
+        }
+        .ag-theme-alpine {
+            height: 100%%;
+            width: 100%%;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">卡顿率按流分布</h2>
+    <div id="grid-container">
+        <div id="myGrid" class="ag-theme-alpine"></div>
+    </div>
+
+    <script>
+        // 定义表格列配置
+        const columnDefs = [
+            {
+                headerName: "流名称",
+                field: "streamName",
+                sortable: true,
+                filter: true,
+                width: 850
+            },
+            {
+                headerName: "卡顿样本数",
+                field: "lagCount",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB
+            },
+            {
+                headerName: "总样本数",
+                field: "totalCount",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => valueA - valueB
+            },
+            {
+                headerName: "卡顿率",
+                field: "lagRate",
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                width: 120,
+                comparator: (valueA, valueB) => {
+                    const numA = parseFloat(valueA.replace('%%', ''));
+                    const numB = parseFloat(valueB.replace('%%', ''));
+                    return numA - numB;
+                }
+            }
+        ];
+
+        // 表格数据
+        const rowData = [
+            %s
+        ];
+
+        // AG Grid 配置
+        const gridOptions = {
+            columnDefs: columnDefs,
+            rowData: rowData,
+            pagination: true,
+            paginationPageSize: 25,
+            domLayout: 'normal',
+            defaultColDef: {
+                resizable: true,
+                sortable: true,
+                filter: true
+            },
+            enableCellTextSelection: true,
+            ensureDomOrder: true
+        };
+
+        // 创建表格
+        const gridDiv = document.querySelector('#myGrid');
+        agGrid.createGrid(gridDiv, gridOptions)
+            .then(gridApi => {
+                console.log('表格创建成功');
+            })
+            .catch(error => {
+                console.error('创建表格失败:', error);
+            });
+    </script>
+</body>
+</html>`, tableData)
+
+	// 将完整HTML页面编码为Data URL
+	encodedHTML := base64.StdEncoding.EncodeToString([]byte(htmlContent))
+
+	// 使用iframe包装图表HTML作为web component
+	return fmt.Sprintf(`
+		<div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+			<h2 style="text-align: center; color: #333; margin-bottom: 30px;">卡顿率按流分布</h2>
+			<iframe 
+				src="data:text/html;base64,%s" 
+				style="width: 100%%; height: 700px; border: 1px solid #ddd; border-radius: 4px;"
+				sandbox="allow-scripts allow-same-origin"
+				frameborder="0"
+			></iframe>
+		</div>
+	`, encodedHTML)
+}
