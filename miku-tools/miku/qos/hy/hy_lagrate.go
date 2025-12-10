@@ -39,20 +39,8 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	//cdnAggregated, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
 	_, clientAggregated, cdnAggData, aggData := aggregateReport(reports, req.IpParser)
 
-	// 聚合在线用户数（使用示例日期和小时，实际应该从请求参数获取）
-	onlineUsersAggregated := aggregateOnlineUsers(reports)
-
-	// 生成分钟聚合数据的折线图
-	//minuteChartHTML := generateMinuteChartHTML(minuteAggregated)
-
-	// 生成卡顿用户占比折线图
-	//lagUserRatioChartHTML := qos.GenerateLagUserRatioChartHTML(minuteAggregated)
-
 	// 生成节点卡顿占比折线图
 	cdnLagRatioChartHTML := qos.GenerateCdnLagRatioChartHTML(minuteAggregated)
-
-	// 生成在线用户数折线图
-	onlineUsersChartHTML := qos.GenerateOnlineUsersChartHTML(onlineUsersAggregated)
 
 	// 生成聚合数据表格HTML
 	//tableHTML := generateTableHTML(cdnAggregated, clientAggregated)
@@ -65,7 +53,7 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	aggDataChartsHTML := qos.GenerateAggDataChartsHTML(aggData)
 
 	//return minuteChartHTML + lagUserRatioChartHTML + cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
-	return cdnLagRatioChartHTML + onlineUsersChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
+	return cdnLagRatioChartHTML + tableHTML + cdnLagTableHTML + aggDataChartsHTML
 }
 
 type MikuLagRate struct {

@@ -10,6 +10,8 @@ func init() {
 	qos.RegisterChartGenerator("hy_lag_rate", &HuyaLagRate{})
 }
 
+// 每分钟卡顿率趋势图
+
 type HuyaLagRate struct {
 }
 

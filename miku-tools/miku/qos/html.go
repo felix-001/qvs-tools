@@ -900,7 +900,7 @@ func GetHomePageTemplate() string {
 `
 }
 
-// generateMinuteChartHTML 生成分钟聚合数据的折线图HTML
+// generateMinuteChartHTML 卡顿率趋势图
 func GenerateMinuteLagRateChartHTML(minuteAggregated []util.HyLagReport) string {
 	if len(minuteAggregated) == 0 {
 		log.Println("分钟聚合数据为空")
@@ -1758,8 +1758,8 @@ func GenerateStreamdChartsHTML(streamdReports []util.StreamdLagReport) string {
 }
 
 // generateOnlineUsersChartHTML 生成在线用户数折线图HTML
-func GenerateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedData) string {
-	if len(onlineUsersAggregated) == 0 {
+func GenerateOnlineUsersChartHTML(reports []util.HyLagReport) string {
+	if len(reports) == 0 {
 		log.Println("generateOnlineUsersChartHTML: no data")
 		return ""
 	}
@@ -1802,10 +1802,10 @@ func GenerateOnlineUsersChartHTML(onlineUsersAggregated []OnlineUserAggregatedDa
 	// 准备Y轴数据（在线用户数）
 	var yAxisData []opts.LineData
 
-	for _, data := range onlineUsersAggregated {
-		xAxisData = append(xAxisData, data.Timestamp)
+	for _, data := range reports {
+		xAxisData = append(xAxisData, *data.Ts_m)
 		yAxisData = append(yAxisData, opts.LineData{
-			Value: data.OnlineNum,
+			Value: data.TotalUsrCnt,
 		})
 	}
 
