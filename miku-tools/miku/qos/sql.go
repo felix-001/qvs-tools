@@ -405,9 +405,10 @@ func BuildHyClientLagSQLQuery(req QOSRequest) string {
 
 func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 	choose := `
-		DISTINCT dim_cdnip, dim__ip
+		dim_cdnip, dim__ip,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv")
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip", "", "flv")
 }
 
 func moreThan1day(start, end string) bool {

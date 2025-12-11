@@ -49,10 +49,12 @@ func GenerateTableHTML(cdnAggregated, clientAggregated []AggregatedData) string 
 // generateEchartsTable 使用AG Grid Community生成表格
 func generateEchartsTable(data []AggregatedData, title string, _ bool) string {
 	// 限制最多显示30行数据
-	maxRows := 30
-	if len(data) > maxRows {
-		data = data[:maxRows]
-	}
+	/*
+		maxRows := 30
+		if len(data) > maxRows {
+			data = data[:maxRows]
+		}
+	*/
 
 	// 准备表格数据
 	var tableRows []string

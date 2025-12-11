@@ -161,6 +161,7 @@ type HyCdnLagReport struct {
 type HyClientIpsOnCdnIpReport struct {
 	DimCdnip *string `db:"dim_cdnip"`
 	DimIp    *string `db:"dim__ip"`
+	LagCnt   *int    `db:"lagCnt"`
 }
 
 type StreamdUpstreamBandWidthReport struct {
