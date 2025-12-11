@@ -65,7 +65,7 @@ func generateEchartsTable(data []AggregatedData, title string, _ bool) string {
 		}
 
 		// 处理RemoteIps数组，转换为逗号分隔的字符串
-		remoteIpsStr := strings.Join(item.RemoteIps, ", ")
+		remoteIpsStr := strings.Join(item.NormalIps, ", ")
 
 		tableRows = append(tableRows, fmt.Sprintf(`{
 			"ip": "%s",

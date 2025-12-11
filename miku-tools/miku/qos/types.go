@@ -8,13 +8,17 @@ import (
 
 // AggregatedData 聚合数据结构
 type AggregatedData struct {
-	IP         string   `json:"ip"`
-	TotalCount int      `json:"total_count"`
-	LagCount   int      `json:"lag_count"`
-	Prov       string   `json:"prov"`
-	Isp        string   `json:"isp"`
-	RemoteIps  []string `json:"remote_ips"`
-	LagRate    float64  `json:"lag_rate"`
+	IP          string   `json:"ip"`
+	TotalCount  int      `json:"total_count"`   // 总样本数
+	LagCount    int      `json:"lag_count"`     // 卡顿样本数
+	LagRate     float64  `json:"lag_rate"`      // 本节点卡顿样本占卡顿样本总数的比例
+	Prov        string   `json:"prov"`          // 节点省份
+	Isp         string   `json:"isp"`           // 节点运营商
+	NormalIps   []string `json:"normal_ips"`    // 不卡顿的ip列表
+	LagUsrCnt   int      `json:"lag_usr_cnt"`   // 卡顿用户个数
+	TotalUsrCnt int      `json:"total_usr_cnt"` // 总用户数
+	LagUsrRate  float64  `json:"lag_usr_rate"`  // 卡顿用户比
+	LagIps      []string `json:"lag_ips"`       // 卡顿的ip列表
 }
 
 type CdnAggregateData struct {

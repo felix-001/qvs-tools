@@ -9,6 +9,8 @@ import (
 	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
+// 指定节点ip，查看节点的每分钟卡顿率趋势
+
 func init() {
 	qos.RegisterChartGenerator("hy_nodeview_lag", &HyNodeViewLag{})
 }

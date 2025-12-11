@@ -85,7 +85,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 			TotalCount: *report.Total,
 			Isp:        isp,
 			Prov:       prov,
-			RemoteIps:  clientIps,
+			NormalIps:  clientIps,
 			LagRate:    float64(*report.LagCnt*100) / float64(totalLagCnt),
 		})
 	}

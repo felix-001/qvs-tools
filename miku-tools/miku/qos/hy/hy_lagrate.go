@@ -10,7 +10,6 @@ import (
 func init() {
 	log.Println("init hy_lagrate")
 	qos.RegisterChartGenerator("hy_lagrate", &HyLagRate{})
-	qos.RegisterChartGenerator("miku_lagrate", &MikuLagRate{})
 }
 
 type HyLagRate struct {
@@ -39,22 +38,4 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 	cdnLagTableHTML := qos.GenerateCDNLagTableHTML(cdnAggData)
 
 	return cdnLagTableHTML
-}
-
-type MikuLagRate struct {
-}
-
-func (m *MikuLagRate) Generate(req qos.QOSRequest) string {
-	var streamdReports []util.StreamdLagReport
-	sql := qos.BuildMikuSQLQuery(req)
-	if req.LogLevel == "detail" {
-		log.Printf("执行SQL查询: %s", sql)
-	}
-	if err := util.TrinoQuery("miku", sql, &streamdReports); err != nil {
-		log.Printf("Trino查询失败: %v", err)
-		return fmt.Sprintf("查询失败: %v", err)
-	}
-	log.Println("查询结果streamdReports:", len(streamdReports))
-	streamdChartsHTML := qos.GenerateStreamdChartsHTML(streamdReports)
-	return streamdChartsHTML
 }

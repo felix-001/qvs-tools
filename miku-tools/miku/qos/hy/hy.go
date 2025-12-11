@@ -111,7 +111,7 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]qos.A
 			LagCount:   cdnLagCntMap[cdnip],
 			Prov:       prov,
 			Isp:        isp,
-			RemoteIps:  clientIps,
+			NormalIps:  clientIps,
 		})
 		totalLagCdnCnt += cdnLagCntMap[cdnip]
 	}
@@ -143,7 +143,7 @@ func aggregateReport(reports []util.QualityReport, ipparser *ipdb.City) ([]qos.A
 			LagCount:   clientLagCntMap[clientIp],
 			Prov:       prov,
 			Isp:        isp,
-			RemoteIps:  cdnIps,
+			NormalIps:  cdnIps,
 		})
 		totalLagCnt += clientLagCntMap[clientIp]
 		clientCountryCntMap[country]++

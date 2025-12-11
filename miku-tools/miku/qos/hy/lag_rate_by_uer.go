@@ -46,7 +46,7 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 			TotalCount: *report.Total,
 			Isp:        isp,
 			Prov:       prov,
-			RemoteIps:  cdnIps,
+			NormalIps:  cdnIps,
 		})
 		totalLagCnt += *report.LagCnt
 	}
