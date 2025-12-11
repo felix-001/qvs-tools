@@ -155,6 +155,7 @@ type HyCdnLagReport struct {
 	Percent  *float64 `db:"percent"`
 	LagCnt   *int     `db:"lagCnt"`
 	Total    *int     `db:"total"`
+	DimIp    *string  `db:"dim__ip"`
 }
 
 type HyClientIpsOnCdnIpReport struct {

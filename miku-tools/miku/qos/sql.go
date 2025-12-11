@@ -393,6 +393,16 @@ func BuildHyCdnLagSQLQuery(req QOSRequest) string {
 	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", "flv")
 }
 
+func BuildHyClientLagSQLQuery(req QOSRequest) string {
+	choose := `
+		dim__ip,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
+		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
+		COUNT(*) as total	
+		`
+	return buildHyCommonSQLQuery(req, choose, "", "dim__ip", "lagCnt DESC", "flv")
+}
+
 func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 	choose := `
 		DISTINCT dim_cdnip, dim__ip

@@ -33,15 +33,12 @@ func (h *HyLagRate) Generate(req qos.QOSRequest) string {
 		qos.SaveCsv(reports)
 	}
 
-	_, clientAggregated, cdnAggData, _ := aggregateReport(reports, req.IpParser)
-
-	// 生成聚合数据表格HTML
-	tableHTML := qos.GenerateTableHTML([]qos.AggregatedData{}, clientAggregated)
+	_, _, cdnAggData, _ := aggregateReport(reports, req.IpParser)
 
 	// 生成CDN卡顿用户表格HTML
 	cdnLagTableHTML := qos.GenerateCDNLagTableHTML(cdnAggData)
 
-	return tableHTML + cdnLagTableHTML
+	return cdnLagTableHTML
 }
 
 type MikuLagRate struct {

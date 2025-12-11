@@ -8,6 +8,8 @@ import (
 	"github.com/qbox/pili/common/ipdb.v1"
 )
 
+// 每个节点的卡顿率
+
 func init() {
 	log.Println("init hy_cdn_lag")
 	qos.RegisterChartGenerator("hy_cdn_lag", &HyCdnLag{})

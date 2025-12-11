@@ -14,7 +14,7 @@ import (
 )
 
 // generateTableHTML 生成聚合数据表格HTML
-func GenerateTableHTML(cdnAggregated []AggregatedData, clientAggregated []AggregatedData) string {
+func GenerateTableHTML(cdnAggregated, clientAggregated []AggregatedData) string {
 	if len(cdnAggregated) == 0 && len(clientAggregated) == 0 {
 		log.Println("generateTableHTML: 聚合数据为空")
 		return ""

@@ -1,0 +1,80 @@
+package hy
+
+import (
+	"fmt"
+	"log"
+	"mikutool/miku/qos"
+	"mikutool/public/util"
+)
+
+func init() {
+	qos.RegisterChartGenerator("lag_rate_by_user", &LagRateByUser{})
+}
+
+// 每个用户的卡顿率
+type LagRateByUser struct {
+}
+
+func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) []qos.AggregatedData {
+	clientCdnsMap := make(map[string]map[string]bool)
+	for _, report := range clientCdnIps {
+		if report.DimCdnip == nil || report.DimIp == nil {
+			continue
+		}
+		if _, ok := clientCdnsMap[*report.DimIp]; !ok {
+			clientCdnsMap[*report.DimIp] = make(map[string]bool)
+		}
+		clientCdnsMap[*report.DimIp][*report.DimCdnip] = true
+	}
+
+	aggData := make([]qos.AggregatedData, 0)
+	totalLagCnt := 0
+	for _, report := range reports {
+		if report.DimIp == nil || report.LagCnt == nil || report.Total == nil {
+			continue
+		}
+		var cdnIps []string
+		if cdnMap, ok := clientCdnsMap[*report.DimIp]; ok {
+			for cdnIp := range cdnMap {
+				cdnIps = append(cdnIps, cdnIp)
+			}
+		}
+		_, isp, _, prov := util.GetLocate(*report.DimIp, req.IpParser)
+		aggData = append(aggData, qos.AggregatedData{
+			IP:         *report.DimIp,
+			LagCount:   *report.LagCnt,
+			TotalCount: *report.Total,
+			Isp:        isp,
+			Prov:       prov,
+			RemoteIps:  cdnIps,
+		})
+		totalLagCnt += *report.LagCnt
+	}
+	for i, data := range aggData {
+		data.LagRate = float64(data.LagCount*100) / float64(totalLagCnt)
+		aggData[i] = data
+	}
+	return aggData
+}
+
+func (l *LagRateByUser) Generate(req qos.QOSRequest) string {
+	sql := qos.BuildHyClientLagSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Println("lag_rate_by_user sql:", sql)
+	}
+
+	var reports []util.HyCdnLagReport
+	if err := util.TrinoQuery("miku", sql, &reports); err != nil {
+		log.Printf("Trino查询失败: %v", err)
+		return fmt.Sprintf("查询失败: %v", err)
+	}
+	log.Println("lag_rate_by_user reports:", len(reports))
+	clientCdnIps, err := qos.GetHyDistinctCdnClientIps(req)
+	if err != nil {
+		log.Printf("获取CDN客户端IP失败: %v", err)
+		return fmt.Sprintf("获取CDN客户端IP失败: %v", err)
+	}
+	aggData := l.getAggData(reports, req, clientCdnIps)
+	tableHTML := qos.GenerateTableHTML([]qos.AggregatedData{}, aggData)
+	return tableHTML
+}
