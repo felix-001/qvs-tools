@@ -90,6 +90,7 @@ type Config struct {
 	Raw                   string
 	Protocol              string
 	Skip                  string
+	Url                   string
 	Redirect              bool
 	Internal              bool
 	Silence               bool
@@ -180,6 +181,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.RawApp, "raw_app", "", "raw_app")
 	flag.StringVar(&c.QnTestUrl, "qn_test_url", "", "qn_test_url")
 	flag.StringVar(&c.Player, "player", "", "player")
+	flag.StringVar(&c.Url, "url", "", "url")
 	flag.IntVar(&c.Port, "port", 0, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")

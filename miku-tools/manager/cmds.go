@@ -419,3 +419,14 @@ func (m *CommandManager) CmdQos() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdHlsPlay() *Command {
+	handler := func() {
+		miku.HlsPlay(m.config)
+	}
+	cmd := &Command{
+		Desc:    "HLS播放",
+		Handler: handler,
+	}
+	return cmd
+}
