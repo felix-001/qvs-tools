@@ -146,6 +146,7 @@ func MockSrv() {
 	go MockHy()
 	go Mockflume()
 	go MockEcho()
+	go MockM3u8()
 	recording = false
 	conn, err := net.Listen("tcp", "127.0.0.1:7275")
 	if err != nil {
@@ -268,5 +269,57 @@ func MockEcho() {
 	err := http.ListenAndServe(":51370", nil)
 	if err != nil {
 		fmt.Printf("Server error: %v\n", err)
+	}
+}
+
+func MockM3u8() {
+	http.HandleFunc("/1016899595/823149915952238849/replay.1744797843.68854862.m3u8", func(w http.ResponseWriter, r *http.Request) {
+		m3u8 := `
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-TARGETDURATION:4
+#EXT-X-DISCONTINUITY
+#EXTINF:3.834,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1785624_3834_0_d1.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.903,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1337996_2903_1_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1284980_2902_2_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1289492_2902_3_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.903,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1270316_2903_4_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1284228_2902_5_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1302840_2902_6_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.903,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1273512_2903_7_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1249072_2902_8_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.926,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1295320_2926_9_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1254524_2902_10_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.903,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1155636_2903_11_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-775688_2902_12_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.902,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1347960_2902_13_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXTINF:2.694,
+https://pull-hs3.vzan.com/1000926916/412514442310537988/112891393043-3-1244560_2694_14_d0.ts?qiniuvodi7kWcaHLk4=1
+#EXT-X-ENDLIST
+		`
+		w.Header().Set("Content-Type", "application/x-mpegURL")
+
+		w.Write([]byte(m3u8))
+	})
+
+	log.Println("Starting M3U8 mock server on port 8086...")
+	if err := http.ListenAndServe(":8086", nil); err != nil {
+		log.Printf("Server error: %v\n", err)
 	}
 }
