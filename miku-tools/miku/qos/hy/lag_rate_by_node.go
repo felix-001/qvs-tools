@@ -3,6 +3,7 @@ package hy
 import (
 	"log"
 	"mikutool/miku/qos"
+	"mikutool/miku/qos/html"
 	"mikutool/public/util"
 	"net/url"
 	"strings"
@@ -216,5 +217,27 @@ func (h *HyCdnLag) Generate(req qos.QOSRequest) string {
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
 	//log.Println("aggCdnLagData:", aggCdnLagData)
 	tableHTML := qos.GenerateTableHTML(aggCdnLagData, []qos.AggregatedData{})
-	return tableHTML
+
+	table := html.NewTable()
+	rowDatas := `
+		[
+			{ make: "Tesla", model: "Model Y", price: 64950, electric: true },
+			{ make: "Ford", model: "F-Series", price: 33850, electric: false },
+			{ make: "Toyota", model: "Corolla", price: 29600, electric: false },
+			{ make: "Mercedes", model: "EQA", price: 48890, electric: true },
+			{ make: "Fiat", model: "500", price: 15774, electric: false },
+			{ make: "Nissan", model: "Juke", price: 20675, electric: false },
+		]
+	`
+	table.SetRowDatas(rowDatas)
+	columns := `
+		[
+			{ field: "make" },
+			{ field: "model" },
+			{ field: "price" },
+			{ field: "electric" },
+		]
+	`
+	table.SetColumns(columns)
+	return tableHTML + table.String()
 }

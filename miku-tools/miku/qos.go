@@ -92,8 +92,14 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 	fullHTML := ""
 	for _, chartGenerator := range qos.ChartGenerators {
-		fullHTML += chartGenerator.Generate(req)
+		//fullHTML += chartGenerator.Generate(req)
+		log.Println(chartGenerator)
 	}
+	fullHTML = `<div>hello world</div><div><script>
+	document.addEventListener('DOMContentLoaded', function() {
+	console.log('full html debug');
+	});
+	</script></div>`
 
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")

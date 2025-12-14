@@ -593,6 +593,7 @@ func generateEchartsTable(data []AggregatedData, title string, _ bool) string {
 	// 返回包含iframe的HTML
 	return fmt.Sprintf(`
 		<div class="chart-box">
+			<script>console.log('chart-box test 123456');</script>
 			<div style="margin-bottom: 10px; font-weight: bold; color: #333;">%s</div>
 			<iframe 
 				src="data:text/html;base64,%s" 

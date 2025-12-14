@@ -430,37 +430,6 @@ func GenerateCDNLagTableHTML(cdnAggDatas []CdnAggregateData) string {
                 createFallbackTable();
             }
         });
-        
-        // 备用表格创建函数
-        function createFallbackTable() {
-            const gridDiv = document.querySelector('#myGrid');
-            const table = document.createElement('table');
-            table.style.cssText = 'width: 100%; border-collapse: collapse;';
-            
-            // 创建表头
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-            headerRow.innerHTML = '<th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">展开</th><th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">IP</th><th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">卡顿样本数</th><th style="border: 1px solid #ddd; padding: 8px; background: #f5f5f5;">总样本数</th>';
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-            
-            // 创建表体
-            const tbody = document.createElement('tbody');
-            rowData.forEach((row, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td style="border: 1px solid #ddd; padding: 8px;">' +
-                    '<button onclick="toggleFallbackDetail(' + index + ')" style="background: none; border: none; cursor: pointer;">▶</button>' +
-                    '</td>' +
-                    '<td style="border: 1px solid #ddd; padding: 8px;">' + row.ip + '</td>' +
-                    '<td style="border: 1px solid #ddd; padding: 8px;">' + row.lagCount + '</td>' +
-                    '<td style="border: 1px solid #ddd; padding: 8px;">' + row.totalCount + '</td>';
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            
-            gridDiv.innerHTML = '';
-            gridDiv.appendChild(table);
-        }
     </script>
 </body>
 </html>`, tableData)
