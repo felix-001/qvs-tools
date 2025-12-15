@@ -8,11 +8,15 @@ import (
 	"net/http"
 	"strings"
 
+	_ "embed"
 	"mikutool/config"
 	"mikutool/miku/qos"
 	_ "mikutool/miku/qos/hy"
 	"mikutool/resources"
 )
+
+//go:embed qos/html/index.html
+var indexHTML string
 
 // QOSServer HTTP服务器结构
 type QOSServer struct {
@@ -50,7 +54,7 @@ func (s *QOSServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 返回HTML页面
-	tmpl := template.Must(template.New("home").Parse(qos.GetHomePageTemplate()))
+	tmpl := template.Must(template.New("home").Parse(indexHTML))
 	tmpl.Execute(w, nil)
 }
 
