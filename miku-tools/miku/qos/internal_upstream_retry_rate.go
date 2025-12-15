@@ -31,6 +31,6 @@ func (i *InternalUpstreamRetryRate) Generate(req QOSRequest) string {
 			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
 		</div>
 	</div>
-`, generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试率趋势图", "内部回源重试率趋势图"))
+`, generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试率", "内部回源重试率"))
 	return html
 }
