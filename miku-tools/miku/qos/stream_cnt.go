@@ -13,7 +13,7 @@ func init() {
 type StreamCnt struct {
 }
 
-func (s *StreamCnt) Generate(req QOSRequest) string {
+func (s *StreamCnt) Generate(req QOSRequest) any {
 	if !req.Charts.OnlineStreams {
 		return ""
 	}

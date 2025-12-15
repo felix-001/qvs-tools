@@ -14,7 +14,7 @@ func init() {
 type InternalUpstreamRetryRate struct {
 }
 
-func (i *InternalUpstreamRetryRate) Generate(req QOSRequest) string {
+func (i *InternalUpstreamRetryRate) Generate(req QOSRequest) any {
 	if !req.Charts.InternalUpstreamRetryRate {
 		return ""
 	}

@@ -11,7 +11,7 @@ func init() {
 type MikuLagRate struct {
 }
 
-func (m *MikuLagRate) Generate(req QOSRequest) string {
+func (m *MikuLagRate) Generate(req QOSRequest) any {
 	return ""
 	streamdReports, err := GetMikuStreamdReportLagDatas(req)
 	if err != nil {

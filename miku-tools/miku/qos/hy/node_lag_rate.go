@@ -18,7 +18,7 @@ func init() {
 type HyNodeViewLag struct {
 }
 
-func (h *HyNodeViewLag) Generate(req qos.QOSRequest) string {
+func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 	if req.CdnIp == "" {
 		return ""
 	}

@@ -99,3 +99,8 @@ type OnlineUserAggregatedData struct {
 	Timestamp string `json:"timestamp"`
 	OnlineNum int    `json:"online_num"`
 }
+
+type LineChartData struct {
+	XAxis []string `json:"xAxis"`
+	YAxis []string `json:"yAxis"`
+}

@@ -80,11 +80,6 @@ var chartsSequence = []string{
 	"hyLagRateByNode",            // 虎牙按节点卡顿率
 }
 
-type LineChartData struct {
-	XAxis []string `json:"xAxis"`
-	YAxis []int    `json:"yAxis"`
-}
-
 type Car struct {
 	Make     string `json:"make"`
 	Model    string `json:"model"`
@@ -118,49 +113,17 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("QOS analysis request: %+v", req)
 	}
 
-	if req.Chart == "customerUpstreamLagRate" {
-		log.Println("customerUpstreamLagRate")
+	if generator, ok := qos.ChartGenerators[req.Chart]; ok {
+		data := generator.Generate(req)
+		bytes, err := json.Marshal(data)
+		if err != nil {
+			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
+			return
+		}
+		log.Println("bytes:", string(bytes))
 		w.Header().Set("Content-Type", "application/json")
-		data := LineChartData{
-			XAxis: []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"},
-			YAxis: []int{10, 20, 15, 30, 25, 40, 35},
-		}
-		bytes, _ := json.Marshal(data)
-		w.Write([]byte(bytes))
-		return
+		w.Write(bytes)
 	}
-
-	if req.Chart == "hyLagRateByNode" {
-		log.Println("hyLagRateByNode")
-		w.Header().Set("Content-Type", "application/json")
-		cars := []Car{
-			{"Toyota", "Camry", 2012, false},
-			{"Ford", "Mustang", 2012, false},
-			{"Nissan", "Sentra", 2012, false},
-			{"Toyota", "Tacoma", 2012, true},
-			{"Honda", "Accord", 2012, false},
-			{"Ford", "F-150", 2012, false},
-			{"Ford", "Expedition", 2012, false},
-			{"Honda", "Pilot", 2012, false},
-			{"Toyota", "Tacoma", 2007, true},
-			{"Toyota", "Corolla", 2007, false},
-			{"Ford", "Focus", 2007, false},
-			{"Chevrolet", "Cruze", 2007, false},
-		}
-		bytes, _ := json.Marshal(cars)
-		w.Write([]byte(bytes))
-		return
-	}
-
-	fullHTML := ""
-	for _, chart := range chartsSequence {
-		if generator, ok := qos.ChartGenerators[chart]; ok {
-			fullHTML += generator.Generate(req)
-		}
-	}
-	// 返回完整的HTML
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(fullHTML))
 }
 
 // Qos 主函数，启动QOS服务器

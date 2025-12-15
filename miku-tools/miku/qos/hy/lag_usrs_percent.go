@@ -15,7 +15,7 @@ func init() {
 type LagUsrRate struct {
 }
 
-func (l *LagUsrRate) Generate(req qos.QOSRequest) string {
+func (l *LagUsrRate) Generate(req qos.QOSRequest) any {
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
 	if err != nil {
 		return fmt.Sprintf("查询失败: %v", err)

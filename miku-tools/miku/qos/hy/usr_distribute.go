@@ -40,7 +40,7 @@ func (u *UsrDistribute) getAggData(req qos.QOSRequest, reports []util.HyClientIp
 	return aggData
 }
 
-func (u *UsrDistribute) Generate(req qos.QOSRequest) string {
+func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
 	cdnClientIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
 		log.Printf("获取CDN客户端IP失败: %v", err)

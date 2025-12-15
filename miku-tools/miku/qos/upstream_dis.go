@@ -15,7 +15,7 @@ func init() {
 type UpstreamDistribute struct {
 }
 
-func (u *UpstreamDistribute) Generate(req QOSRequest) string {
+func (u *UpstreamDistribute) Generate(req QOSRequest) any {
 	sql := buidUpstreamDistributeSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)

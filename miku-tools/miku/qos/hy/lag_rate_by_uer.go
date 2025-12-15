@@ -57,7 +57,7 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 	return aggData
 }
 
-func (l *LagRateByUser) Generate(req qos.QOSRequest) string {
+func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 	sql := qos.BuildHyClientLagSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Println("lag_rate_by_user sql:", sql)

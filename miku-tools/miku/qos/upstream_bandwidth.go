@@ -13,7 +13,7 @@ func init() {
 type UpstreamBandwidth struct {
 }
 
-func (u *UpstreamBandwidth) Generate(req QOSRequest) string {
+func (u *UpstreamBandwidth) Generate(req QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
 		return ""
 	}

@@ -8,13 +8,13 @@ import (
 // 回客户源站白秒卡顿率
 
 func init() {
-	RegisterChartGenerator("CustomerUpstreamLagRate", &UsrUpstreamLagRate{})
+	RegisterChartGenerator("customerUpstreamLagRate", &UsrUpstreamLagRate{})
 }
 
 type UsrUpstreamLagRate struct {
 }
 
-func (m *UsrUpstreamLagRate) Generate(req QOSRequest) string {
+func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
 	if !req.Charts.CustomerUpstreamLagRate {
 		return ""
 	}
@@ -25,6 +25,18 @@ func (m *UsrUpstreamLagRate) Generate(req QOSRequest) string {
 		return ""
 	}
 	log.Println("查询结果streamdReports:", len(streamdReports))
+	data := LineChartData{
+		XAxis: []string{},
+		YAxis: []string{},
+	}
+	for _, report := range streamdReports {
+		if report.Ratio_lag_puller == nil {
+			continue
+		}
+		data.XAxis = append(data.XAxis, *report.Ts_m)
+		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Ratio_lag_puller))
+	}
+	return data
 	html := fmt.Sprintf(`
 	<div style="margin-top: 20px;">
 		<div style="margin-bottom: 30px;">

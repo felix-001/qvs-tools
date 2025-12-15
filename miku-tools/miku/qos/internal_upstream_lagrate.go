@@ -14,7 +14,7 @@ func init() {
 type InternalUpstreamLagRate struct {
 }
 
-func (i *InternalUpstreamLagRate) Generate(req QOSRequest) string {
+func (i *InternalUpstreamLagRate) Generate(req QOSRequest) any {
 	if !req.Charts.InternalUpstreamLagRate {
 		return ""
 	}

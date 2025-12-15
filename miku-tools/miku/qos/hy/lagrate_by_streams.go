@@ -15,7 +15,7 @@ func init() {
 type LagRateByStreams struct {
 }
 
-func (l *LagRateByStreams) Generate(req qos.QOSRequest) string {
+func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 	sql := qos.BuildHyLagRateByStreamsSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)

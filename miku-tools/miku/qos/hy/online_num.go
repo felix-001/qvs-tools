@@ -15,7 +15,7 @@ func init() {
 type OnlineNum struct {
 }
 
-func (o *OnlineNum) Generate(req qos.QOSRequest) string {
+func (o *OnlineNum) Generate(req qos.QOSRequest) any {
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
 	if err != nil {
 		return fmt.Sprintf("查询失败: %v", err)

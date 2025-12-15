@@ -206,7 +206,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 	return aggCdnLagDatas
 }
 
-func (h *HyCdnLag) Generate(req qos.QOSRequest) string {
+func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
 	h.ipparser = req.IpParser
 	hyCdnLagReports := h.getRawData(req)
 	clientIpsOnCdnIpReports, err := h.getClientIpsOnCdnIp(req)

@@ -13,7 +13,7 @@ func init() {
 type Fps struct {
 }
 
-func (f *Fps) Generate(req QOSRequest) string {
+func (f *Fps) Generate(req QOSRequest) any {
 	if !req.Charts.VideoFps {
 		return ""
 	}
