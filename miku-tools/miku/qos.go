@@ -85,6 +85,13 @@ type LineChartData struct {
 	YAxis []int    `json:"yAxis"`
 }
 
+type Car struct {
+	Make     string `json:"make"`
+	Model    string `json:"model"`
+	Price    int    `json:"price"`
+	Electric bool   `json:"electric"`
+}
+
 // qosAnalysisHandler QOS分析处理器
 func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -126,7 +133,21 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Chart == "hyLagRateByNode" {
 		log.Println("hyLagRateByNode")
 		w.Header().Set("Content-Type", "application/json")
-		bytes, _ := json.Marshal(req)
+		cars := []Car{
+			{"Toyota", "Camry", 2012, false},
+			{"Ford", "Mustang", 2012, false},
+			{"Nissan", "Sentra", 2012, false},
+			{"Toyota", "Tacoma", 2012, true},
+			{"Honda", "Accord", 2012, false},
+			{"Ford", "F-150", 2012, false},
+			{"Ford", "Expedition", 2012, false},
+			{"Honda", "Pilot", 2012, false},
+			{"Toyota", "Tacoma", 2007, true},
+			{"Toyota", "Corolla", 2007, false},
+			{"Ford", "Focus", 2007, false},
+			{"Chevrolet", "Cruze", 2007, false},
+		}
+		bytes, _ := json.Marshal(cars)
 		w.Write([]byte(bytes))
 		return
 	}

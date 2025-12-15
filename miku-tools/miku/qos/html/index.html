@@ -649,8 +649,8 @@
 				createLineChart(resp.xAxis, resp.yAxis)
 				break;
             case 'hyLagRateByNode':
-                console.log('hyLagRateByNode')
-                createTable("", "")
+                console.log('hyLagRateByNode', resp)
+                createTable(resp)
                 break
 		}
 	}
@@ -684,8 +684,22 @@
 		document.body.appendChild(dom);
 	}
 
-	function createTable(rowData, columns) {
-    /*
+	function createTable(rowData) {
+        var columns
+        if (rowData.length > 0) {
+            const firstRow = rowData[0];
+            const keys = Object.keys(firstRow);
+            
+            columns = keys.map(key => {
+                return { 
+                    field: key,
+                    headerName: key.toUpperCase(), // 将键名转为大写作为列标题
+                    sortable: true,
+                    filter: true
+                };
+            });
+        }
+
 		var gridOptions = {
 			rowData: rowData, 
 			columnDefs: columns,
@@ -694,8 +708,8 @@
 				filter: true
 			},
 		};
-        */
        console.log('createTable')
+        /*
         const gridOptions = {
         // Data to be displayed
         rowData: [
@@ -711,6 +725,7 @@
             { field: "electric" },
         ],
         };
+        */
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
 		dom.style.width = "1500px"
@@ -720,10 +735,6 @@
 		agGrid.createGrid(dom, gridOptions);
         document.body.appendChild(dom)
 		console.log('当前状态:', document.readyState);
-		//document.addEventListener('DOMContentLoaded', () => {
-			//console.log('DOMContentLoaded event');
-		//agGrid.createGrid(document.querySelector("#myGrid1"), gridOptions);
-		//});
 	}
     </script>
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
