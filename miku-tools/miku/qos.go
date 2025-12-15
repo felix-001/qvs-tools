@@ -126,7 +126,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Chart == "hyLagRateByNode" {
 		log.Println("hyLagRateByNode")
 		w.Header().Set("Content-Type", "application/json")
-		bytes, _ := json.Marshal(data)
+		bytes, _ := json.Marshal(req)
 		w.Write([]byte(bytes))
 		return
 	}

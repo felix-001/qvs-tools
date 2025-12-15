@@ -648,6 +648,10 @@
 				console.log('customerUpstreamLagRate', resp)
 				createLineChart(resp.xAxis, resp.yAxis)
 				break;
+            case 'hyLagRateByNode':
+                console.log('hyLagRateByNode')
+                createTable("", "")
+                break
 		}
 	}
 
@@ -681,6 +685,7 @@
 	}
 
 	function createTable(rowData, columns) {
+    /*
 		var gridOptions = {
 			rowData: rowData, 
 			columnDefs: columns,
@@ -689,6 +694,23 @@
 				filter: true
 			},
 		};
+        */
+       console.log('createTable')
+        const gridOptions = {
+        // Data to be displayed
+        rowData: [
+            { make: "Tesla", model: "Model Y", price: 64950, electric: true },
+            { make: "Ford", model: "F-Series", price: 33850, electric: false },
+            { make: "Toyota", model: "Corolla", price: 29600, electric: false },
+        ],
+        // Columns to be displayed (Should match rowData properties)
+        columnDefs: [
+            { field: "make" },
+            { field: "model" },
+            { field: "price" },
+            { field: "electric" },
+        ],
+        };
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
 		dom.style.width = "1500px"
@@ -696,6 +718,7 @@
 		dom.style.margin = '0';
 		dom.style.padding = '0';
 		agGrid.createGrid(dom, gridOptions);
+        document.body.appendChild(dom)
 		console.log('当前状态:', document.readyState);
 		//document.addEventListener('DOMContentLoaded', () => {
 			//console.log('DOMContentLoaded event');
