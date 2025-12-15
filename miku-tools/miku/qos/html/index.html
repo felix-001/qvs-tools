@@ -590,24 +590,36 @@
             submitBtn.disabled = true;
             loading.style.display = 'block';
             results.innerHTML = '';
-            
+
             try {
-		data.chart = "customerUpstreamLagRate"
-                const response = await fetch('/api/v1/qos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
+                // 创建一个用于存储每个图表结果的容器
+                let chartsHTML = '';
                 
-                if (!response.ok) {
-                    throw new Error('请求失败: ' + response.statusText);
+                // 遍历charts对象，为每个选中的图表发送请求
+                for (const [chartName, isSelected] of Object.entries(data.charts)) {
+		    if (!isSelected) continue; // 跳过未选中的图表
+                    // 为每个图表创建一个临时请求对象
+                    const chartData = {...data, Chart: chartName};
+                    
+                    const response = await fetch('/api/v1/qos', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(chartData)
+                    });
+                    
+                    if (!response.ok) {
+                        console.error(`图表 ${chartName} 请求失败:`, response.statusText);
+                        continue;
+                    }
+                    
+                    const html = await response.text();
+                    chartsHTML += html;
                 }
                 
-                const html = await response.text();
-		console.log("resp html", html)
-                results.innerHTML = html;
+                // 将所有图表结果一次性显示
+                results.innerHTML = chartsHTML;
                 
             } catch (error) {
                 console.error('分析失败:', error);
