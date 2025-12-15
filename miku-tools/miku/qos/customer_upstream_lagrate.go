@@ -15,10 +15,10 @@ type UsrUpstreamLagRate struct {
 }
 
 func (m *UsrUpstreamLagRate) Generate(req QOSRequest) string {
-	log.Println("Generating customer upstream lag rate chart")
 	if !req.Charts.CustomerUpstreamLagRate {
 		return ""
 	}
+	log.Println("Generating customer upstream lag rate chart")
 	streamdReports, err := GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)

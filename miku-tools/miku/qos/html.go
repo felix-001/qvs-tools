@@ -1369,11 +1369,11 @@ func generateLineChartHTML(reports []util.StreamdLagReport, xField, yField, titl
 		// 获取Y轴数据
 		if yField == "用户百秒卡顿率趋势图" && report.Ratio_lag_player != nil {
 			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_player)
-		} else if yField == "内部回源百秒卡顿率趋势图" && report.Ratio_lag_internal_player != nil {
+		} else if yField == "内部回源百秒卡顿率" && report.Ratio_lag_internal_player != nil {
 			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_internal_player)
-		} else if yField == "内部回源重试率趋势图" && report.Retry_ratio_puller != nil {
+		} else if yField == "内部回源重试率" && report.Retry_ratio_puller != nil {
 			yValue = fmt.Sprintf("%.2f", *report.Retry_ratio_puller)
-		} else if yField == "内部回源重试次数趋势图" && report.TotalRetryTimes != nil {
+		} else if yField == "内部回源重试次数" && report.TotalRetryTimes != nil {
 			yValue = fmt.Sprintf("%d", *report.TotalRetryTimes)
 		} else if yField == "回客户源站百秒卡顿率" && report.Ratio_lag_puller != nil {
 			yValue = fmt.Sprintf("%.2f", *report.Ratio_lag_puller)

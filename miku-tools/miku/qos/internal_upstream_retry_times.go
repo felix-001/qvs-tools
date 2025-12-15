@@ -15,7 +15,7 @@ type InternalUpstreamRetryTimes struct {
 }
 
 func (i *InternalUpstreamRetryTimes) Generate(req QOSRequest) string {
-	if !req.Charts.InternalUpstreamLagRate {
+	if !req.Charts.InternalUpstreamRetryTimes {
 		return ""
 	}
 	streamdReports, err := GetMikuStreamdReportLagDatas(req)
@@ -27,11 +27,11 @@ func (i *InternalUpstreamRetryTimes) Generate(req QOSRequest) string {
 	html := fmt.Sprintf(`
 	<div style="margin-top: 20px;">
 		<div style="margin-bottom: 30px;">
-			<h4>内部回源次数趋势图</h4>
+			<h4>内部回源重试次数趋势图</h4>
 			<iframe src="%s" width="100%%" height="300" frameborder="0" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
 		</div>
 	</div>`,
-		generateLineChartHTML(streamdReports, "Ts_m", "内部回源次数趋势图", "内部回源重试次数趋势图"),
+		generateLineChartHTML(streamdReports, "Ts_m", "内部回源重试次数", "内部回源重试次数"),
 	)
 	return html
 }
