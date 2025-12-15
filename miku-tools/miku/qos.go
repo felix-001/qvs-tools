@@ -72,6 +72,13 @@ func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(appNames)
 }
 
+var chartsSequence = []string{
+	"CustomerUpstreamLagRate",    // 回客户源站百秒卡顿率趋势图
+	"InternalUpstreamLagRate",    // 内部源站百秒卡顿率趋势图
+	"InternalUpstreamRetryTimes", // 内部源站重试次数趋势图
+	"InternalUpstreamRetryRate",  // 内部源站重试率趋势图
+}
+
 // qosAnalysisHandler QOS分析处理器
 func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -94,9 +101,15 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		req.EndTime = req.EndTime + ":00"
 	}
 
+	if req.LogLevel == "detail" {
+		log.Printf("QOS analysis request: %+v", req)
+	}
+
 	fullHTML := ""
-	for _, chartGenerator := range qos.ChartGenerators {
-		fullHTML += chartGenerator.Generate(req)
+	for _, chart := range chartsSequence {
+		if generator, ok := qos.ChartGenerators[chart]; ok {
+			fullHTML += generator.Generate(req)
+		}
 	}
 	// 返回完整的HTML
 	w.Header().Set("Content-Type", "text/html")

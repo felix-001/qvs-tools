@@ -70,27 +70,27 @@ type QOSRequest struct {
 
 // ChartOptions 图表展示选项
 type ChartOptions struct {
-	CdnIpQuality         bool `json:"cdnIpQuality"`
-	CdnLagUsers          bool `json:"cdnLagUsers"`
-	CdnLagRate           bool `json:"cdnLagRate"`
-	LagUserRatio         bool `json:"lagUserRatio"`
-	ClientIpQuality      bool `json:"clientIpQuality"`
-	LagRateTrend         bool `json:"lagRateTrend"`
-	NodeLagRatio         bool `json:"nodeLagRatio"`
-	RetryRate            bool `json:"retryRate"`
-	RetryCount           bool `json:"retryCount"`
-	CountryDistribution  bool `json:"countryDistribution"`
-	RegionDistribution   bool `json:"regionDistribution"`
-	ProvinceDistribution bool `json:"provinceDistribution"`
-	RegionDelay          bool `json:"regionDelay"`
-	ProvinceDelay        bool `json:"provinceDelay"`
-	StreamDelay          bool `json:"streamDelay"`
-	InternalRetryLag     bool `json:"internalRetryLag"`
-	ClientRetryLag       bool `json:"clientRetryLag"`
-	OnlineUsers          bool `json:"onlineUsers"`
-	OnlineStreams        bool `json:"onlineStreams"`
-	VideoFps             bool `json:"videoFps"`
-	AudioFps             bool `json:"audioFps"`
+	CustomerUpstreamLagRate    bool `json:"customerUpstreamLagRate"`    // 回客户源站百秒卡顿率趋势图
+	InternalUpstreamLagRate    bool `json:"internalUpstreamLagRate"`    // 内部回源百秒卡顿率趋势图
+	InternalUpstreamRetryTimes bool `json:"internalUpstreamRetryTimes"` // 内部回源重试次数趋势图
+	InternalUpstreamRetryRate  bool `json:"internalUpstreamRetryRate"`  // 内部回源重试率趋势图
+	CdnIpQuality               bool `json:"cdnIpQuality"`
+	CdnLagUsers                bool `json:"cdnLagUsers"`
+	CdnLagRate                 bool `json:"cdnLagRate"`
+	LagUserRatio               bool `json:"lagUserRatio"`
+	ClientIpQuality            bool `json:"clientIpQuality"`
+	LagRateTrend               bool `json:"lagRateTrend"`
+	NodeLagRatio               bool `json:"nodeLagRatio"`
+	CountryDistribution        bool `json:"countryDistribution"`
+	RegionDistribution         bool `json:"regionDistribution"`
+	ProvinceDistribution       bool `json:"provinceDistribution"`
+	RegionDelay                bool `json:"regionDelay"`
+	ProvinceDelay              bool `json:"provinceDelay"`
+	StreamDelay                bool `json:"streamDelay"`
+	OnlineUsers                bool `json:"onlineUsers"`
+	OnlineStreams              bool `json:"onlineStreams"`
+	VideoFps                   bool `json:"videoFps"`
+	AudioFps                   bool `json:"audioFps"`
 }
 
 // OnlineUserAggregatedData 在线用户聚合数据结构

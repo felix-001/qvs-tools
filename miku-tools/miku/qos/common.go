@@ -94,3 +94,25 @@ func GetHyDistinctCdnClientIps(req QOSRequest) ([]util.HyClientIpsOnCdnIpReport,
 	}
 	return hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports, nil
 }
+
+var hyStreamdLagCache struct {
+	StreamdLagReports []util.StreamdLagReport
+	Req               QOSRequest
+}
+
+func GetMikuStreamdReportLagDatas(req QOSRequest) ([]util.StreamdLagReport, error) {
+	if req.StartTime == hyStreamdLagCache.Req.StartTime && req.EndTime == hyStreamdLagCache.Req.EndTime &&
+		len(hyStreamdLagCache.StreamdLagReports) > 0 {
+		return hyStreamdLagCache.StreamdLagReports, nil
+	}
+	sql := BuildMikuSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
+	if err := util.TrinoQuery("miku", sql, &hyStreamdLagCache.StreamdLagReports); err != nil {
+		log.Printf("Trino查询失败: %v", err)
+		return nil, fmt.Errorf("查询失败: %v", err)
+	}
+	hyStreamdLagCache.Req = req
+	return hyStreamdLagCache.StreamdLagReports, nil
+}

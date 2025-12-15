@@ -299,8 +299,36 @@
 
             <!-- 图表展示选择 -->
             <div class="form-group">
-                <h3>图表展示选择：</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">图表展示选择：</h3>
+                    <div class="checkbox-group" style="margin-left: 15px;">
+                        <input type="checkbox" id="selectAllCharts" name="selectAllCharts" checked>
+                        <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选/去全选</label>
+                    </div>
+                </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                    <!-- 回源相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_customer_upstream_lagrate" name="chart_customer_upstream_lagrate" checked>
+                        <label for="chart_customer_upstream_lagrate">回客户源站百秒卡顿率趋势图</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_internal_upstream_lagrate" name="chart_internal_upstream_lagrate" checked>
+                        <label for="chart_internal_upstream_lagrate">内部回源百秒卡顿率趋势图</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_internal_upstream_retry_times" name="chart_internal_upstream_retry_times" checked>
+                        <label for="chart_internal_upstream_retry_times">内部回源重试次数趋势图</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_internal_upstream_retry_rate" name="chart_internal_upstream_retry_rate" checked>
+                        <label for="chart_internal_upstream_retry_rate">内部回源重试率趋势图</label>
+                    </div>
+
+
                     <!-- CDN相关图表 -->
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_cdn_ip_quality" name="chart_cdn_ip_quality" checked>
@@ -334,14 +362,6 @@
                         <input type="checkbox" id="chart_node_lag_ratio" name="chart_node_lag_ratio" checked>
                         <label for="chart_node_lag_ratio">节点卡顿占比趋势图</label>
                     </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_retry_rate" name="chart_retry_rate" checked>
-                        <label for="chart_retry_rate">内部回源重试率趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_retry_count" name="chart_retry_count" checked>
-                        <label for="chart_retry_count">内部回源重试次数趋势图</label>
-                    </div>
                     
                     <!-- 地理分布图表 -->
                     <div class="checkbox-group">
@@ -371,15 +391,6 @@
                         <label for="chart_stream_delay">流媒体延迟分析图表</label>
                     </div>
                     
-                    <!-- 回源相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_internal_retry_lag" name="chart_internal_retry_lag" checked>
-                        <label for="chart_internal_retry_lag">内部回源百秒卡顿率趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_client_retry_lag" name="chart_client_retry_lag" checked>
-                        <label for="chart_client_retry_lag">回源到客户站百秒卡顿率趋势图</label>
-                    </div>
                     
                     <!-- 在线相关图表 -->
                     <div class="checkbox-group">
@@ -450,6 +461,9 @@
             // 设置默认时间（最近24小时）
             setDefaultTimeRange();
             
+            // 设置全选/去全选功能
+            setupSelectAllCharts();
+            
 
         });
 
@@ -496,7 +510,31 @@
             return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes + ':' + seconds;
         }
         
-
+        // 设置全选/去全选功能
+        function setupSelectAllCharts() {
+            const selectAllCheckbox = document.getElementById('selectAllCharts');
+            const chartCheckboxes = document.querySelectorAll('input[name^="chart_"]');
+            
+            // 初始状态：所有图表都默认选中，所以全选框也应该选中
+            selectAllCheckbox.checked = true;
+            
+            // 全选/去全选功能
+            selectAllCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                chartCheckboxes.forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                });
+            });
+            
+            // 当某个图表复选框状态改变时，更新全选框的状态
+            chartCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    // 检查是否所有图表复选框都被选中
+                    const allChecked = Array.from(chartCheckboxes).every(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
+                });
+            });
+        }
 
         // 表单提交处理
         document.getElementById('qosForm').addEventListener('submit', async function(e) {
@@ -523,6 +561,10 @@
                 rawData: formData.get('rawData') === 'on',
                 // 图表展示选项
                 charts: {
+                    customerUpstreamLagRate: formData.get('chart_customer_upstream_lagrate') === 'on', // 回客户源站百秒卡顿率
+                    internalUpstreamLagRate: formData.get('chart_internal_upstream_lagrate') === 'on', // 内部回源百秒卡顿率
+                    internalUpstreamRetryTimes: formData.get('chart_internal_upstream_retry_times') === 'on', // 内部回源次数趋势图
+                    internalUpstreamRetryRate: formData.get('chart_internal_upstream_retry_rate') === 'on', // 内部回源重试率
                     cdnIpQuality: formData.get('chart_cdn_ip_quality') === 'on',
                     cdnLagUsers: formData.get('chart_cdn_lag_users') === 'on',
                     cdnLagRate: formData.get('chart_cdn_lag_rate') === 'on',
@@ -530,16 +572,12 @@
                     clientIpQuality: formData.get('chart_client_ip_quality') === 'on',
                     lagRateTrend: formData.get('chart_lag_rate_trend') === 'on',
                     nodeLagRatio: formData.get('chart_node_lag_ratio') === 'on',
-                    retryRate: formData.get('chart_retry_rate') === 'on',
-                    retryCount: formData.get('chart_retry_count') === 'on',
                     countryDistribution: formData.get('chart_country_distribution') === 'on',
                     regionDistribution: formData.get('chart_region_distribution') === 'on',
                     provinceDistribution: formData.get('chart_province_distribution') === 'on',
                     regionDelay: formData.get('chart_region_delay') === 'on',
                     provinceDelay: formData.get('chart_province_delay') === 'on',
                     streamDelay: formData.get('chart_stream_delay') === 'on',
-                    internalRetryLag: formData.get('chart_internal_retry_lag') === 'on',
-                    clientRetryLag: formData.get('chart_client_retry_lag') === 'on',
                     onlineUsers: formData.get('chart_online_users') === 'on',
                     onlineStreams: formData.get('chart_online_streams') === 'on',
                     audioFps: formData.get('chart_audio_fps') === 'on',
