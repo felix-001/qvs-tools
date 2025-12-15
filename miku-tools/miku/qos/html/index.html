@@ -652,8 +652,11 @@
 
 	function createLineChart(xAxis, yAxis) {
 		var dom = document.createElement('div');
-		dom.style.height = "1000px"
-		dom.style.width = "2000px"
+		dom.style.height = "500px"
+		dom.style.width = "1500px"
+		dom.style.position = 'relative';
+		dom.style.margin = '0';
+		dom.style.padding = '0';
 		var myChart = echarts.init(dom, null, {
 			renderer: 'canvas',
 			useDirtyRect: false
