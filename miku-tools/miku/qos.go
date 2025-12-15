@@ -79,6 +79,11 @@ var chartsSequence = []string{
 	"InternalUpstreamRetryRate",  // 内部源站重试率趋势图
 }
 
+type LineChartData struct {
+	XAxis []string `json:"xAxis"`
+	YAxis []int    `json:"yAxis"`
+}
+
 // qosAnalysisHandler QOS分析处理器
 func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -108,7 +113,11 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Chart == "customerUpstreamLagRate" {
 		log.Println("customerUpstreamLagRate")
 		w.Header().Set("Content-Type", "application/json")
-		bytes, _ := json.Marshal(req)
+		data := LineChartData{
+			XAxis: []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"},
+			YAxis: []int{10, 20, 15, 30, 25, 40, 35},
+		}
+		bytes, _ := json.Marshal(data)
 		w.Write([]byte(bytes))
 		return
 	}

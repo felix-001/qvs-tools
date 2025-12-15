@@ -480,6 +480,14 @@
                     option.textContent = name;
                     select.appendChild(option);
                 });
+                
+                // 默认选择huyacdn
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === 'huyacdn') {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
             } catch (error) {
                 console.error('加载AppName失败:', error);
                 alert('加载应用列表失败，请刷新页面重试');
@@ -634,7 +642,47 @@
 
 	function handleResp(chart, resp) {
 		console.log(chart, resp)	
+		switch(chart) {
+			case 'customerUpstreamLagRate':
+				console.log('customerUpstreamLagRate', resp)
+				createLineChart(resp.xAxis, resp.yAxis)
+				break;
+		}
+	}
+
+	function createLineChart(xAxis, yAxis) {
+		var dom = document.createElement('div');
+		dom.style.height = "1000px"
+		dom.style.width = "2000px"
+		var myChart = echarts.init(dom, null, {
+			renderer: 'canvas',
+			useDirtyRect: false
+		});
+		var option = {
+			xAxis: {
+				type: 'category',
+				//data: xAxis
+				 data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+			},
+			yAxis: {
+				type: 'value'
+			},
+			series: [{
+				//data: yAxis,
+				data: [150, 230, 224, 218, 135, 147, 260],
+				type: 'line'
+			}]
+		};
+		console.log('createLineChart options:', option)
+
+		if (option && typeof option === 'object') {
+			console.log('createLineChart 111 options:', option)
+  myChart.setOption(option);
+}
+		
+		document.body.appendChild(dom);
 	}
     </script>
+    <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
 </body>
 </html>
