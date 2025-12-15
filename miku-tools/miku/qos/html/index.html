@@ -359,8 +359,8 @@
                     
                     <!-- 节点相关图表 -->
                     <div class="checkbox-group">
-                        <input type="checkbox" id="chart_node_lag_ratio" name="chart_node_lag_ratio" checked>
-                        <label for="chart_node_lag_ratio">节点卡顿占比趋势图</label>
+                        <input type="checkbox" id="chart_hy_lag_rate_by_node" name="chart_hy_lag_rate_by_node" checked>
+                        <label for="chart_hy_lag_rate_by_node">虎牙按节点卡顿率表格</label>
                     </div>
                     
                     <!-- 地理分布图表 -->
@@ -573,6 +573,7 @@
                     internalUpstreamLagRate: formData.get('chart_internal_upstream_lagrate') === 'on', // 内部回源百秒卡顿率
                     internalUpstreamRetryTimes: formData.get('chart_internal_upstream_retry_times') === 'on', // 内部回源次数趋势图
                     internalUpstreamRetryRate: formData.get('chart_internal_upstream_retry_rate') === 'on', // 内部回源重试率
+		    hyLagRateByNode: formData.get('chart_hy_lag_rate_by_node') === 'on', // 虎牙按节点卡顿率表格
                     cdnIpQuality: formData.get('chart_cdn_ip_quality') === 'on',
                     cdnLagUsers: formData.get('chart_cdn_lag_users') === 'on',
                     cdnLagRate: formData.get('chart_cdn_lag_rate') === 'on',
@@ -678,7 +679,31 @@
 		myChart.setOption(option);
 		document.body.appendChild(dom);
 	}
+
+	function createTable(rowData, columns) {
+		var gridOptions = {
+			rowData: rowData, 
+			columnDefs: columns,
+			defaultColDef: {
+				sortable: true,
+				filter: true
+			},
+		};
+		var dom = document.createElement('div');
+		dom.style.height = "500px"
+		dom.style.width = "1500px"
+		dom.style.position = 'relative';
+		dom.style.margin = '0';
+		dom.style.padding = '0';
+		agGrid.createGrid(dom, gridOptions);
+		console.log('当前状态:', document.readyState);
+		//document.addEventListener('DOMContentLoaded', () => {
+			//console.log('DOMContentLoaded event');
+		//agGrid.createGrid(document.querySelector("#myGrid1"), gridOptions);
+		//});
+	}
     </script>
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
 </body>
 </html>

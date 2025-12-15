@@ -77,6 +77,7 @@ var chartsSequence = []string{
 	"InternalUpstreamLagRate",    // 内部源站百秒卡顿率趋势图
 	"InternalUpstreamRetryTimes", // 内部源站重试次数趋势图
 	"InternalUpstreamRetryRate",  // 内部源站重试率趋势图
+	"hyLagRateByNode",            // 虎牙按节点卡顿率
 }
 
 type LineChartData struct {
@@ -117,6 +118,14 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 			XAxis: []string{"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"},
 			YAxis: []int{10, 20, 15, 30, 25, 40, 35},
 		}
+		bytes, _ := json.Marshal(data)
+		w.Write([]byte(bytes))
+		return
+	}
+
+	if req.Chart == "hyLagRateByNode" {
+		log.Println("hyLagRateByNode")
+		w.Header().Set("Content-Type", "application/json")
 		bytes, _ := json.Marshal(data)
 		w.Write([]byte(bytes))
 		return

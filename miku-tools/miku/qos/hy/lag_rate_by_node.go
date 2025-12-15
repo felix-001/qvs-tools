@@ -14,7 +14,7 @@ import (
 // 每个节点的卡顿率
 
 func init() {
-	qos.RegisterChartGenerator("hy_cdn_lag", &HyCdnLag{})
+	qos.RegisterChartGenerator("hyLagRateByNode", &HyCdnLag{})
 }
 
 type HyCdnLag struct {
