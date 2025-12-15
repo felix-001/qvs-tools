@@ -105,6 +105,14 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("QOS analysis request: %+v", req)
 	}
 
+	if req.Chart == "customerUpstreamLagRate" {
+		log.Println("customerUpstreamLagRate")
+		w.Header().Set("Content-Type", "application/json")
+		bytes, _ := json.Marshal(req)
+		w.Write([]byte(bytes))
+		return
+	}
+
 	fullHTML := ""
 	for _, chart := range chartsSequence {
 		if generator, ok := qos.ChartGenerators[chart]; ok {

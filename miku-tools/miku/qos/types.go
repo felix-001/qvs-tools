@@ -66,6 +66,7 @@ type QOSRequest struct {
 	RawData     bool         `json:"rawData"`
 	Charts      ChartOptions `json:"charts"`
 	IpParser    *ipdb.City   `json:"ipParser"`
+	Chart       string       `json:"chart"`
 }
 
 // ChartOptions 图表展示选项

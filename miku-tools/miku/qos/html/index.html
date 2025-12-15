@@ -592,6 +592,7 @@
             results.innerHTML = '';
             
             try {
+		data.chart = "customerUpstreamLagRate"
                 const response = await fetch('/api/v1/qos', {
                     method: 'POST',
                     headers: {
@@ -605,6 +606,7 @@
                 }
                 
                 const html = await response.text();
+		console.log("resp html", html)
                 results.innerHTML = html;
                 
             } catch (error) {
