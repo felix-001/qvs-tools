@@ -614,12 +614,13 @@
                         continue;
                     }
                     
-                    const html = await response.text();
-                    chartsHTML += html;
+                    const resp = await response.json();
+		    handleResp(chartName, resp)
+                    //chartsHTML += html;
                 }
                 
                 // 将所有图表结果一次性显示
-                results.innerHTML = chartsHTML;
+                //results.innerHTML = chartsHTML;
                 
             } catch (error) {
                 console.error('分析失败:', error);
@@ -630,6 +631,10 @@
                 loading.style.display = 'none';
             }
         });
+
+	function handleResp(chart, resp) {
+		console.log(chart, resp)	
+	}
     </script>
 </body>
 </html>
