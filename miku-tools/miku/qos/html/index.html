@@ -297,6 +297,112 @@
                 <input type="number" id="hour" name="hour" min="0" max="23">
             </div>
 
+            <!-- 图表展示选择 -->
+            <div class="form-group">
+                <h3>图表展示选择：</h3>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                    <!-- CDN相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_ip_quality" name="chart_cdn_ip_quality" checked>
+                        <label for="chart_cdn_ip_quality">按节点质量分析表格</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_lag_users" name="chart_cdn_lag_users" checked>
+                        <label for="chart_cdn_lag_users">按用户质量分析表格</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_cdn_lag_rate" name="chart_cdn_lag_rate" checked>
+                        <label for="chart_cdn_lag_rate">卡顿节点占比趋势图</label>
+                    </div>
+                    
+                    <!-- 用户相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_lag_user_ratio" name="chart_lag_user_ratio" checked>
+                        <label for="chart_lag_user_ratio">卡顿用户占比趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_client_ip_quality" name="chart_client_ip_quality" checked>
+                        <label for="chart_client_ip_quality">按clientIp质量分析表格</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_lag_rate_trend" name="chart_lag_rate_trend" checked>
+                        <label for="chart_lag_rate_trend">整体卡顿率趋势图</label>
+                    </div>
+                    
+                    <!-- 节点相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_node_lag_ratio" name="chart_node_lag_ratio" checked>
+                        <label for="chart_node_lag_ratio">节点卡顿占比趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_retry_rate" name="chart_retry_rate" checked>
+                        <label for="chart_retry_rate">内部回源重试率趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_retry_count" name="chart_retry_count" checked>
+                        <label for="chart_retry_count">内部回源重试次数趋势图</label>
+                    </div>
+                    
+                    <!-- 地理分布图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_country_distribution" name="chart_country_distribution" checked>
+                        <label for="chart_country_distribution">用户按国家分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_region_distribution" name="chart_region_distribution" checked>
+                        <label for="chart_region_distribution">用户按区域分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_province_distribution" name="chart_province_distribution" checked>
+                        <label for="chart_province_distribution">用户按省份分布图</label>
+                    </div>
+                    
+                    <!-- 延迟分析图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_region_delay" name="chart_region_delay" checked>
+                        <label for="chart_region_delay">卡顿用户按区域分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_province_delay" name="chart_province_delay" checked>
+                        <label for="chart_province_delay">卡顿用户按省份分布图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_stream_delay" name="chart_stream_delay" checked>
+                        <label for="chart_stream_delay">流媒体延迟分析图表</label>
+                    </div>
+                    
+                    <!-- 回源相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_internal_retry_lag" name="chart_internal_retry_lag" checked>
+                        <label for="chart_internal_retry_lag">内部回源百秒卡顿率趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_client_retry_lag" name="chart_client_retry_lag" checked>
+                        <label for="chart_client_retry_lag">回源到客户站百秒卡顿率趋势图</label>
+                    </div>
+                    
+                    <!-- 在线相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_users" name="chart_online_users" checked>
+                        <label for="chart_online_users">每分钟在线用户数趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_streams" name="chart_online_streams" checked>
+                        <label for="chart_online_streams">在线流个数趋势图</label>
+                    </div>
+                    
+                    <!-- FPS相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_audio_fps" name="chart_audio_fps" checked>
+                        <label for="chart_audio_fps">音频帧率趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
+                        <label for="chart_video_fps">视频帧率趋势图</label>
+                    </div>
+                </div>
+            </div>
+
             <!-- 模糊搜索选项 -->
             <div class="form-group">
                 <div class="checkbox-group">
@@ -318,112 +424,6 @@
                 <div class="checkbox-group">
                     <input type="checkbox" id="rawData" name="rawData">
                     <label for="rawData" style="margin: 0; font-weight: normal;">保留原始数据</label>
-                </div>
-            </div>
-
-            <!-- 图表展示选择 -->
-            <div class="form-group">
-                <h3>图表展示选择：</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-                    <!-- CDN相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_ip_quality" name="chart_cdn_ip_quality" checked>
-                        <label for="chart_cdn_ip_quality">CDN IP质量分析统计</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_lag_users" name="chart_cdn_lag_users" checked>
-                        <label for="chart_cdn_lag_users">CDN卡顿用户统计</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_lag_rate" name="chart_cdn_lag_rate" checked>
-                        <label for="chart_cdn_lag_rate">CDN IP卡顿率</label>
-                    </div>
-                    
-                    <!-- 用户相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_lag_user_ratio" name="chart_lag_user_ratio" checked>
-                        <label for="chart_lag_user_ratio">卡顿用户占比趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_client_ip_quality" name="chart_client_ip_quality" checked>
-                        <label for="chart_client_ip_quality">Client IP质量分析统计</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_lag_rate_trend" name="chart_lag_rate_trend" checked>
-                        <label for="chart_lag_rate_trend">卡顿率趋势图</label>
-                    </div>
-                    
-                    <!-- 节点相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_node_lag_ratio" name="chart_node_lag_ratio" checked>
-                        <label for="chart_node_lag_ratio">节点卡顿占比趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_retry_rate" name="chart_retry_rate" checked>
-                        <label for="chart_retry_rate">内部回源重试率</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_retry_count" name="chart_retry_count" checked>
-                        <label for="chart_retry_count">内部回源重试次数</label>
-                    </div>
-                    
-                    <!-- 地理分布图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_country_distribution" name="chart_country_distribution" checked>
-                        <label for="chart_country_distribution">国家分布图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_region_distribution" name="chart_region_distribution" checked>
-                        <label for="chart_region_distribution">区域分布图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_province_distribution" name="chart_province_distribution" checked>
-                        <label for="chart_province_distribution">省份分布图</label>
-                    </div>
-                    
-                    <!-- 延迟分析图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_region_delay" name="chart_region_delay" checked>
-                        <label for="chart_region_delay">区域延迟分布图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_province_delay" name="chart_province_delay" checked>
-                        <label for="chart_province_delay">省份延迟分布图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_stream_delay" name="chart_stream_delay" checked>
-                        <label for="chart_stream_delay">流媒体延迟分析图表</label>
-                    </div>
-                    
-                    <!-- 回源相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_internal_retry_lag" name="chart_internal_retry_lag" checked>
-                        <label for="chart_internal_retry_lag">内部回源百秒卡顿率</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_client_retry_lag" name="chart_client_retry_lag" checked>
-                        <label for="chart_client_retry_lag">回客户源站百秒卡顿率</label>
-                    </div>
-                    
-                    <!-- 在线相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_online_users" name="chart_online_users" checked>
-                        <label for="chart_online_users">每分钟在线用户数趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_online_streams" name="chart_online_streams" checked>
-                        <label for="chart_online_streams">在线流个数趋势图</label>
-                    </div>
-                    
-                    <!-- FPS相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_audio_fps" name="chart_audio_fps" checked>
-                        <label for="chart_audio_fps">Audio FPS</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
-                        <label for="chart_video_fps">Video FPS</label>
-                    </div>
                 </div>
             </div>
 
