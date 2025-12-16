@@ -7,13 +7,13 @@ import (
 )
 
 func init() {
-	RegisterChartGenerator("fps", &Fps{})
+	RegisterChartGenerator("videoFps", &VideoFps{})
 }
 
-type Fps struct {
+type VideoFps struct {
 }
 
-func (f *Fps) Generate(req QOSRequest) any {
+func (f *VideoFps) Generate(req QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
 		return ""
 	}

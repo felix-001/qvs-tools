@@ -328,6 +328,17 @@
                         <label for="chart_internal_upstream_retry_rate">内部回源重试率趋势图</label>
                     </div>
 
+                    <!-- FPS相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
+                        <label for="chart_video_fps">视频帧率趋势图</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_audio_fps" name="chart_audio_fps" checked>
+                        <label for="chart_audio_fps">音频帧率趋势图</label>
+                    </div>
+
 
                     <!-- CDN相关图表 -->
                     <div class="checkbox-group">
@@ -402,15 +413,6 @@
                         <label for="chart_online_streams">在线流个数趋势图</label>
                     </div>
                     
-                    <!-- FPS相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_audio_fps" name="chart_audio_fps" checked>
-                        <label for="chart_audio_fps">音频帧率趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
-                        <label for="chart_video_fps">视频帧率趋势图</label>
-                    </div>
                 </div>
             </div>
 
@@ -573,6 +575,8 @@
                     { name: 'internalUpstreamLagRate', selected: formData.get('chart_internal_upstream_lagrate') === 'on' },
                     { name: 'internalUpstreamRetryTimes', selected: formData.get('chart_internal_upstream_retry_times') === 'on' },
                     { name: 'internalUpstreamRetryRate', selected: formData.get('chart_internal_upstream_retry_rate') === 'on' },
+                    { name: 'videoFps', selected: formData.get('chart_video_fps') === 'on' },
+                    { name: 'audioFps', selected: formData.get('chart_audio_fps') === 'on' },
                     { name: 'hyLagRateByNode', selected: formData.get('chart_hy_lag_rate_by_node') === 'on' },
                     { name: 'cdnIpQuality', selected: formData.get('chart_cdn_ip_quality') === 'on' },
                     { name: 'cdnLagUsers', selected: formData.get('chart_cdn_lag_users') === 'on' },
@@ -588,9 +592,7 @@
                     { name: 'provinceDelay', selected: formData.get('chart_province_delay') === 'on' },
                     { name: 'streamDelay', selected: formData.get('chart_stream_delay') === 'on' },
                     { name: 'onlineUsers', selected: formData.get('chart_online_users') === 'on' },
-                    { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' },
-                    { name: 'audioFps', selected: formData.get('chart_audio_fps') === 'on' },
-                    { name: 'videoFps', selected: formData.get('chart_video_fps') === 'on' }
+                    { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' }
                 ]
             };
             console.log(data)
@@ -645,6 +647,8 @@
             case 'internalUpstreamLagRate':
             case 'internalUpstreamRetryTimes':
             case 'internalUpstreamRetryRate':
+            case 'videoFps':
+            case 'audioFps':
 				//console.log('customerUpstreamLagRate', resp)
 				createLineChart(resp)
 				break;
