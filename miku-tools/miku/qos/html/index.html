@@ -567,31 +567,31 @@
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
                 rawData: formData.get('rawData') === 'on',
-                // 图表展示选项
-                charts: {
-                    customerUpstreamLagRate: formData.get('chart_customer_upstream_lagrate') === 'on', // 回客户源站百秒卡顿率
-                    internalUpstreamLagRate: formData.get('chart_internal_upstream_lagrate') === 'on', // 内部回源百秒卡顿率
-                    internalUpstreamRetryTimes: formData.get('chart_internal_upstream_retry_times') === 'on', // 内部回源次数趋势图
-                    internalUpstreamRetryRate: formData.get('chart_internal_upstream_retry_rate') === 'on', // 内部回源重试率
-		    hyLagRateByNode: formData.get('chart_hy_lag_rate_by_node') === 'on', // 虎牙按节点卡顿率表格
-                    cdnIpQuality: formData.get('chart_cdn_ip_quality') === 'on',
-                    cdnLagUsers: formData.get('chart_cdn_lag_users') === 'on',
-                    cdnLagRate: formData.get('chart_cdn_lag_rate') === 'on',
-                    lagUserRatio: formData.get('chart_lag_user_ratio') === 'on',
-                    clientIpQuality: formData.get('chart_client_ip_quality') === 'on',
-                    lagRateTrend: formData.get('chart_lag_rate_trend') === 'on',
-                    nodeLagRatio: formData.get('chart_node_lag_ratio') === 'on',
-                    countryDistribution: formData.get('chart_country_distribution') === 'on',
-                    regionDistribution: formData.get('chart_region_distribution') === 'on',
-                    provinceDistribution: formData.get('chart_province_distribution') === 'on',
-                    regionDelay: formData.get('chart_region_delay') === 'on',
-                    provinceDelay: formData.get('chart_province_delay') === 'on',
-                    streamDelay: formData.get('chart_stream_delay') === 'on',
-                    onlineUsers: formData.get('chart_online_users') === 'on',
-                    onlineStreams: formData.get('chart_online_streams') === 'on',
-                    audioFps: formData.get('chart_audio_fps') === 'on',
-                    videoFps: formData.get('chart_video_fps') === 'on'
-                }
+                // 图表展示选项 - 改为数组形式
+                charts: [
+                    { name: 'customerUpstreamLagRate', selected: formData.get('chart_customer_upstream_lagrate') === 'on' },
+                    { name: 'internalUpstreamLagRate', selected: formData.get('chart_internal_upstream_lagrate') === 'on' },
+                    { name: 'internalUpstreamRetryTimes', selected: formData.get('chart_internal_upstream_retry_times') === 'on' },
+                    { name: 'internalUpstreamRetryRate', selected: formData.get('chart_internal_upstream_retry_rate') === 'on' },
+                    { name: 'hyLagRateByNode', selected: formData.get('chart_hy_lag_rate_by_node') === 'on' },
+                    { name: 'cdnIpQuality', selected: formData.get('chart_cdn_ip_quality') === 'on' },
+                    { name: 'cdnLagUsers', selected: formData.get('chart_cdn_lag_users') === 'on' },
+                    { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
+                    { name: 'lagUserRatio', selected: formData.get('chart_lag_user_ratio') === 'on' },
+                    { name: 'clientIpQuality', selected: formData.get('chart_client_ip_quality') === 'on' },
+                    { name: 'lagRateTrend', selected: formData.get('chart_lag_rate_trend') === 'on' },
+                    { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
+                    { name: 'countryDistribution', selected: formData.get('chart_country_distribution') === 'on' },
+                    { name: 'regionDistribution', selected: formData.get('chart_region_distribution') === 'on' },
+                    { name: 'provinceDistribution', selected: formData.get('chart_province_distribution') === 'on' },
+                    { name: 'regionDelay', selected: formData.get('chart_region_delay') === 'on' },
+                    { name: 'provinceDelay', selected: formData.get('chart_province_delay') === 'on' },
+                    { name: 'streamDelay', selected: formData.get('chart_stream_delay') === 'on' },
+                    { name: 'onlineUsers', selected: formData.get('chart_online_users') === 'on' },
+                    { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' },
+                    { name: 'audioFps', selected: formData.get('chart_audio_fps') === 'on' },
+                    { name: 'videoFps', selected: formData.get('chart_video_fps') === 'on' }
+                ]
             };
             console.log(data)
             
@@ -604,11 +604,12 @@
                 // 创建一个用于存储每个图表结果的容器
                 let chartsHTML = '';
                 
-                // 遍历charts对象，为每个选中的图表发送请求
-                for (const [chartName, isSelected] of Object.entries(data.charts)) {
-		    if (!isSelected) continue; // 跳过未选中的图表
+                // 遍历charts数组，为每个选中的图表发送请求
+                for (const chart of data.charts) {
+                    if (!chart.selected) continue; // 跳过未选中的图表
+                    
                     // 为每个图表创建一个临时请求对象
-                    const chartData = {...data, Chart: chartName};
+                    const chartData = {...data, Chart: chart.name};
                     
                     const response = await fetch('/api/v1/qos', {
                         method: 'POST',
@@ -619,17 +620,13 @@
                     });
                     
                     if (!response.ok) {
-                        console.error(`图表 ${chartName} 请求失败:`, response.statusText);
+                        console.error(`图表 ${chart.name} 请求失败:`, response.statusText);
                         continue;
                     }
                     
                     const resp = await response.json();
-		    handleResp(chartName, resp)
-                    //chartsHTML += html;
+                    handleResp(chart.name, resp)
                 }
-                
-                // 将所有图表结果一次性显示
-                //results.innerHTML = chartsHTML;
                 
             } catch (error) {
                 console.error('分析失败:', error);
@@ -645,7 +642,10 @@
 		console.log(chart, resp)	
 		switch(chart) {
 			case 'customerUpstreamLagRate':
-				console.log('customerUpstreamLagRate', resp)
+            case 'internalUpstreamLagRate':
+            case 'internalUpstreamRetryTimes':
+            case 'internalUpstreamRetryRate':
+				//console.log('customerUpstreamLagRate', resp)
 				createLineChart(resp)
 				break;
             case 'hyLagRateByNode':

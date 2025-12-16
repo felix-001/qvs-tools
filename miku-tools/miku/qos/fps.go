@@ -14,9 +14,6 @@ type Fps struct {
 }
 
 func (f *Fps) Generate(req QOSRequest) any {
-	if !req.Charts.VideoFps {
-		return ""
-	}
 	if req.StreamID == "" || req.FuzzySearch {
 		return ""
 	}

@@ -81,6 +81,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req qos.QOSRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Println("Error decoding request:", err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
@@ -105,6 +106,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
 			return
 		}
+		//log.Println("data", data)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	}

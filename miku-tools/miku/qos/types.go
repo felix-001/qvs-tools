@@ -52,21 +52,21 @@ type MinuteAggregatedData struct {
 
 // QOSRequest 前端查询请求结构
 type QOSRequest struct {
-	AppName     string       `json:"appName"`
-	StartTime   string       `json:"startTime"`
-	EndTime     string       `json:"endTime"`
-	StreamID    string       `json:"streamId"`
-	Domain      string       `json:"domain"`
-	UID         string       `json:"uid"`
-	UserIp      string       `json:"userIp"`
-	CdnIp       string       `json:"cdnIp"`
-	Hour        string       `json:"hour"`
-	FuzzySearch bool         `json:"fuzzySearch"`
-	LogLevel    string       `json:"logLevel"`
-	RawData     bool         `json:"rawData"`
-	Charts      ChartOptions `json:"charts"`
-	IpParser    *ipdb.City   `json:"ipParser"`
-	Chart       string       `json:"chart"`
+	AppName     string `json:"appName"`
+	StartTime   string `json:"startTime"`
+	EndTime     string `json:"endTime"`
+	StreamID    string `json:"streamId"`
+	Domain      string `json:"domain"`
+	UID         string `json:"uid"`
+	UserIp      string `json:"userIp"`
+	CdnIp       string `json:"cdnIp"`
+	Hour        string `json:"hour"`
+	FuzzySearch bool   `json:"fuzzySearch"`
+	LogLevel    string `json:"logLevel"`
+	RawData     bool   `json:"rawData"`
+	//Charts      ChartOptions `json:"charts"`
+	IpParser *ipdb.City `json:"ipParser"`
+	Chart    string     `json:"chart"`
 }
 
 // ChartOptions 图表展示选项

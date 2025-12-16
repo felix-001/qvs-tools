@@ -14,9 +14,6 @@ type StreamCnt struct {
 }
 
 func (s *StreamCnt) Generate(req QOSRequest) any {
-	if !req.Charts.OnlineStreams {
-		return ""
-	}
 	sql := buildMikuStreamCntSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
