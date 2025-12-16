@@ -690,7 +690,14 @@
                 lineStyle: {
                     color: data.color
                 }
-			}]
+			}],
+            // 实现缩放
+            dataZoom: [{
+                type: 'inside',
+                xAxisIndex: 0,
+                start: 0,  // 百分比
+                end: 50    // 百分比
+            }]
 		};
 		console.log('createLineChart options:', option)
 		myChart.setOption(option);

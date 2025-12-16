@@ -72,21 +72,6 @@ func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(appNames)
 }
 
-var chartsSequence = []string{
-	"CustomerUpstreamLagRate",    // 回客户源站百秒卡顿率趋势图
-	"InternalUpstreamLagRate",    // 内部源站百秒卡顿率趋势图
-	"InternalUpstreamRetryTimes", // 内部源站重试次数趋势图
-	"InternalUpstreamRetryRate",  // 内部源站重试率趋势图
-	"hyLagRateByNode",            // 虎牙按节点卡顿率
-}
-
-type Car struct {
-	Make     string `json:"make"`
-	Model    string `json:"model"`
-	Price    int    `json:"price"`
-	Electric bool   `json:"electric"`
-}
-
 // qosAnalysisHandler QOS分析处理器
 func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

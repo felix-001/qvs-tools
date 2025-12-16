@@ -23,6 +23,16 @@ func (i *InternalUpstreamLagRate) Generate(req QOSRequest) any {
 		log.Println("获取数据失败:", err)
 		return ""
 	}
+	/*
+		data := LineChartData{
+			Title:       "内部回源百秒卡顿率",
+			SeriesTitle: "卡顿率",
+			Color:       "#1890ff",
+			XType:       "category",
+			XAxis:       []string{},
+			YAxis:       []string{},
+		}
+	*/
 	log.Println("查询结果streamdReports:", len(streamdReports))
 	html := fmt.Sprintf(`
 	<div style="margin-top: 20px;">
