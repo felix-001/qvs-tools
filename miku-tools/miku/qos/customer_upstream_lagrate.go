@@ -29,6 +29,7 @@ func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
 	data := LineChartData{
 		Title:       "回客户源站百秒卡顿率",
 		SeriesTitle: "卡顿率",
+		Color:       "#1890ff",
 		XType:       "category",
 		XAxis:       []string{},
 		YAxis:       []string{},

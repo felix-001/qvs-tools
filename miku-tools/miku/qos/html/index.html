@@ -686,7 +686,10 @@
 			series: [{
                 name: data.seriesTitle,
 				data: data.yAxis,
-				type: 'line'
+				type: 'line',
+                lineStyle: {
+                    color: data.color
+                }
 			}]
 		};
 		console.log('createLineChart options:', option)
