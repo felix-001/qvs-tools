@@ -26,6 +26,7 @@ func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
 	}
 	log.Println("查询结果streamdReports:", len(streamdReports))
 	data := LineChartData{
+		Title: "回客户源站百秒卡顿率",
 		XAxis: []string{},
 		YAxis: []string{},
 	}

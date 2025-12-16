@@ -646,7 +646,7 @@
 		switch(chart) {
 			case 'customerUpstreamLagRate':
 				console.log('customerUpstreamLagRate', resp)
-				createLineChart(resp.xAxis, resp.yAxis)
+				createLineChart(resp)
 				break;
             case 'hyLagRateByNode':
                 console.log('hyLagRateByNode', resp)
@@ -655,10 +655,10 @@
 		}
 	}
 
-	function createLineChart(xAxis, yAxis) {
+	function createLineChart(data) {
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
-		dom.style.width = "1500px"
+		dom.style.width = "1200px"
 		dom.style.position = 'relative';
 		dom.style.margin = '0';
 		dom.style.padding = '0';
@@ -667,15 +667,19 @@
 			useDirtyRect: false
 		});
 		var option = {
+            title: {
+                text: data.title,
+                left: 'middle'
+            },
 			xAxis: {
 				type: 'category',
-				data: xAxis
+				data: data.xAxis
 			},
 			yAxis: {
 				type: 'value'
 			},
 			series: [{
-				data: yAxis,
+				data: data.yAxis,
 				type: 'line'
 			}]
 		};

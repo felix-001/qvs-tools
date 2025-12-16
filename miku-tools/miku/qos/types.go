@@ -103,4 +103,5 @@ type OnlineUserAggregatedData struct {
 type LineChartData struct {
 	XAxis []string `json:"xAxis"`
 	YAxis []string `json:"yAxis"`
+	Title string   `json:"title"`
 }

@@ -120,7 +120,6 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
 			return
 		}
-		log.Println("bytes:", string(bytes))
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	}
