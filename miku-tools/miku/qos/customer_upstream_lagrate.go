@@ -3,6 +3,7 @@ package qos
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 // 回客户源站白秒卡顿率
@@ -27,6 +28,7 @@ func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
 	log.Println("查询结果streamdReports:", len(streamdReports))
 	data := LineChartData{
 		Title: "回客户源站百秒卡顿率",
+		XType: "category",
 		XAxis: []string{},
 		YAxis: []string{},
 	}
@@ -34,7 +36,13 @@ func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
 		if report.Ratio_lag_puller == nil {
 			continue
 		}
-		data.XAxis = append(data.XAxis, *report.Ts_m)
+		ts := strings.ReplaceAll(*report.Ts_m, "+08:00", "")
+		// Remove year from timestamp (format: 2025-12-16T12:49:00)
+		if len(ts) >= 10 {
+			ts = ts[5:] // Keep everything after the year
+		}
+
+		data.XAxis = append(data.XAxis, ts)
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Ratio_lag_puller))
 	}
 	return data

@@ -497,7 +497,7 @@
         // 设置默认时间范围（最近24小时）
         function setDefaultTimeRange() {
             const now = new Date();
-            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            const yesterday = new Date(now.getTime() - 3 * 60 * 60 * 1000);
             
             const endInput = document.getElementById('endTime');
             const startInput = document.getElementById('startTime');
@@ -666,13 +666,18 @@
 			renderer: 'canvas',
 			useDirtyRect: false
 		});
+        console.log('xType', data.xType)
 		var option = {
             title: {
                 text: data.title,
                 left: 'middle'
             },
+            tooltip: {
+                trigger: 'axis',
+                formatter: '{a} <br/>{b} : {c}'
+            },
 			xAxis: {
-				type: 'category',
+				type: data.xType,
 				data: data.xAxis
 			},
 			yAxis: {

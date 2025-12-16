@@ -104,4 +104,5 @@ type LineChartData struct {
 	XAxis []string `json:"xAxis"`
 	YAxis []string `json:"yAxis"`
 	Title string   `json:"title"`
+	XType string   `json:"xType"` // 定义 X 轴的数据类型, category 为分类数据，time 为时间型, value为数值数据
 }
