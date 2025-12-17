@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log"
 	"mikutool/public/util"
+	"strings"
 )
 
 func init() {
-	RegisterChartGenerator("stream_cnt", &StreamCnt{})
+	RegisterChartGenerator("onlineStreams", &StreamCnt{})
 }
 
 type StreamCnt struct {
@@ -25,8 +26,25 @@ func (s *StreamCnt) Generate(req QOSRequest) any {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
 	log.Println("查询结果streamCntReports:", len(streamCntReports))
-
-	// 生成在线流个数折线图
-	streamCntChartHTML := generateStreamCntChartHTML(streamCntReports)
-	return streamCntChartHTML
+	data := LineChartData{
+		Title:       "在线流个数趋势图",
+		SeriesTitle: "流个数",
+		Color:       "#1890ff",
+		XType:       "category",
+		XAxis:       []string{},
+		YAxis:       []string{},
+	}
+	for _, report := range streamCntReports {
+		if report.StreamCnt == nil {
+			continue
+		}
+		ts := strings.ReplaceAll(*report.Ts_m, "+08:00", "")
+		// Remove year from timestamp (format: 2025-12-16T12:49:00)
+		if len(ts) >= 10 {
+			ts = ts[5:] // Keep everything after the year
+		}
+		data.XAxis = append(data.XAxis, ts)
+		data.YAxis = append(data.YAxis, fmt.Sprintf("%d", *report.StreamCnt))
+	}
+	return data
 }

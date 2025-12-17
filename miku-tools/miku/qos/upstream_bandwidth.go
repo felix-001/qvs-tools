@@ -6,6 +6,8 @@ import (
 	"mikutool/public/util"
 )
 
+// 推流/回源带宽折线图
+
 func init() {
 	RegisterChartGenerator("upstream_bandwidth", &UpstreamBandwidth{})
 }

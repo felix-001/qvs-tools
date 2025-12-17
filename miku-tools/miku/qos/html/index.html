@@ -307,7 +307,21 @@
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                    <!-- 在线相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_users" name="chart_online_users" checked>
+                        <label for="chart_online_users">每分钟在线用户数趋势图</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_online_streams" name="chart_online_streams" checked>
+                        <label for="chart_online_streams">在线流个数趋势图</label>
+                    </div>
                     <!-- 回源相关图表 -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_lag_rate_trend" name="chart_lag_rate_trend" checked>
+                        <label for="chart_lag_rate_trend">用户整体卡顿率趋势图</label>
+                    </div>
+
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_customer_upstream_lagrate" name="chart_customer_upstream_lagrate" checked>
                         <label for="chart_customer_upstream_lagrate">回客户源站百秒卡顿率趋势图</label>
@@ -363,10 +377,6 @@
                         <input type="checkbox" id="chart_client_ip_quality" name="chart_client_ip_quality" checked>
                         <label for="chart_client_ip_quality">按clientIp质量分析表格</label>
                     </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_lag_rate_trend" name="chart_lag_rate_trend" checked>
-                        <label for="chart_lag_rate_trend">整体卡顿率趋势图</label>
-                    </div>
                     
                     <!-- 节点相关图表 -->
                     <div class="checkbox-group">
@@ -403,15 +413,6 @@
                     </div>
                     
                     
-                    <!-- 在线相关图表 -->
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_online_users" name="chart_online_users" checked>
-                        <label for="chart_online_users">每分钟在线用户数趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_online_streams" name="chart_online_streams" checked>
-                        <label for="chart_online_streams">在线流个数趋势图</label>
-                    </div>
                     
                 </div>
             </div>
@@ -571,6 +572,9 @@
                 rawData: formData.get('rawData') === 'on',
                 // 图表展示选项 - 改为数组形式
                 charts: [
+                    { name: 'onlineUsers', selected: formData.get('chart_online_users') === 'on' },
+                    { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' },
+                    { name: 'usrLagRate', selected: formData.get('chart_lag_rate_trend') === 'on' },
                     { name: 'customerUpstreamLagRate', selected: formData.get('chart_customer_upstream_lagrate') === 'on' },
                     { name: 'internalUpstreamLagRate', selected: formData.get('chart_internal_upstream_lagrate') === 'on' },
                     { name: 'internalUpstreamRetryTimes', selected: formData.get('chart_internal_upstream_retry_times') === 'on' },
@@ -583,16 +587,13 @@
                     { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
                     { name: 'lagUserRatio', selected: formData.get('chart_lag_user_ratio') === 'on' },
                     { name: 'clientIpQuality', selected: formData.get('chart_client_ip_quality') === 'on' },
-                    { name: 'lagRateTrend', selected: formData.get('chart_lag_rate_trend') === 'on' },
                     { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
                     { name: 'countryDistribution', selected: formData.get('chart_country_distribution') === 'on' },
                     { name: 'regionDistribution', selected: formData.get('chart_region_distribution') === 'on' },
                     { name: 'provinceDistribution', selected: formData.get('chart_province_distribution') === 'on' },
                     { name: 'regionDelay', selected: formData.get('chart_region_delay') === 'on' },
                     { name: 'provinceDelay', selected: formData.get('chart_province_delay') === 'on' },
-                    { name: 'streamDelay', selected: formData.get('chart_stream_delay') === 'on' },
-                    { name: 'onlineUsers', selected: formData.get('chart_online_users') === 'on' },
-                    { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' }
+                    { name: 'streamDelay', selected: formData.get('chart_stream_delay') === 'on' }
                 ]
             };
             console.log(data)
@@ -643,6 +644,9 @@
 	function handleResp(chart, resp) {
 		console.log(chart, resp)	
 		switch(chart) {
+            case 'usrLagRate':
+            case 'onlineUsers':
+            case 'onlineStreams':
 			case 'customerUpstreamLagRate':
             case 'internalUpstreamLagRate':
             case 'internalUpstreamRetryTimes':
