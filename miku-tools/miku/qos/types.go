@@ -108,3 +108,12 @@ type LineChartData struct {
 	SeriesTitle string   `json:"seriesTitle"`
 	XType       string   `json:"xType"` // 定义 X 轴的数据类型, category 为分类数据，time 为时间型, value为数值数据
 }
+type PieDataItem struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+type PieChartData struct {
+	Title string        `json:"title"`
+	Data  []PieDataItem `json:"data"`
+}

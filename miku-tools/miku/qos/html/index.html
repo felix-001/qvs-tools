@@ -328,6 +328,11 @@
                     </div>
 
                     <div class="checkbox-group">
+                        <input type="checkbox" id="chart_upstream_area_dis" name="chart_upstream_area_dis" checked>
+                        <label for="chart_upstream_area_dis">源站按大区分布</label>
+                    </div>
+
+                    <div class="checkbox-group">
                         <input type="checkbox" id="chart_internal_upstream_lagrate" name="chart_internal_upstream_lagrate" checked>
                         <label for="chart_internal_upstream_lagrate">内部回源百秒卡顿率趋势图</label>
                     </div>
@@ -576,6 +581,7 @@
                     { name: 'onlineStreams', selected: formData.get('chart_online_streams') === 'on' },
                     { name: 'usrLagRate', selected: formData.get('chart_lag_rate_trend') === 'on' },
                     { name: 'customerUpstreamLagRate', selected: formData.get('chart_customer_upstream_lagrate') === 'on' },
+                    { name: 'upstreamAreaDis', selected: formData.get('chart_upstream_area_dis') === 'on' },
                     { name: 'internalUpstreamLagRate', selected: formData.get('chart_internal_upstream_lagrate') === 'on' },
                     { name: 'internalUpstreamRetryTimes', selected: formData.get('chart_internal_upstream_retry_times') === 'on' },
                     { name: 'internalUpstreamRetryRate', selected: formData.get('chart_internal_upstream_retry_rate') === 'on' },
@@ -656,6 +662,9 @@
 				//console.log('customerUpstreamLagRate', resp)
 				createLineChart(resp)
 				break;
+            case 'upstreamAreaDis':
+                createPie(resp)
+                break;
             case 'hyLagRateByNode':
                 console.log('hyLagRateByNode', resp)
                 createTable(resp)
@@ -711,6 +720,56 @@
 		myChart.setOption(option);
 		document.body.appendChild(dom);
 	}
+
+    function createPie(data) {
+        // 创建饼图实例
+        var dom = document.createElement('div');
+        const chart = echarts.init(dom, 'white', {
+            width: '1200px',
+            height: '400px'
+        });
+
+        // 设置配置项
+        const option = {
+            title: {
+                text: data.title,
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                show: true,
+                bottom: '0%',
+                type: 'scroll'  // 如果数据很多，可以滚动
+            },
+            series: [
+                {
+                    name: data.title,
+                    type: 'pie',
+                    radius: '60%',
+                    roseType: 'radius',
+                    data: data.data,
+                    label: {
+                        show: true,
+                        formatter: '{b}: {c} ({d}%)'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: '16',
+                            fontWeight: 'bold'
+                        }
+                    }
+                }
+            ]
+        };
+
+        // 应用配置
+        chart.setOption(option);
+        document.body.appendChild(dom)
+    }
 
 	function createTable(rowData) {
         var columns

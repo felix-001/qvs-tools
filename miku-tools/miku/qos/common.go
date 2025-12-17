@@ -6,6 +6,8 @@ import (
 	"mikutool/public/util"
 	"strconv"
 	"time"
+
+	"github.com/qbox/pili/common/ipdb.v1"
 )
 
 func convertToDay(timeStr string) string {
@@ -115,4 +117,40 @@ func GetMikuStreamdReportLagDatas(req QOSRequest) ([]util.StreamdLagReport, erro
 	}
 	hyStreamdLagCache.Req = req
 	return hyStreamdLagCache.StreamdLagReports, nil
+}
+
+func AggUpstreamDistributeReports(reports []util.UpstreamDistributeReport, ipparser *ipdb.City) (map[string]int, map[string]int) {
+	areaCntMap := make(map[string]int)
+	provCntMap := make(map[string]int)
+	for _, report := range reports {
+		if report.RemoteAddr == nil {
+			continue
+		}
+		_, _, area, prov := util.GetLocate(*report.RemoteAddr, ipparser)
+		areaCntMap[area]++
+		provCntMap[prov]++
+	}
+	return areaCntMap, provCntMap
+}
+
+var hyUpstreamDistributeCache struct {
+	UpstreamDistributeReports []util.UpstreamDistributeReport
+	Req                       QOSRequest
+}
+
+func GetUpstreamDistributeReport(req QOSRequest) ([]util.UpstreamDistributeReport, error) {
+	if req.StartTime == hyUpstreamDistributeCache.Req.StartTime && req.EndTime == hyUpstreamDistributeCache.Req.EndTime &&
+		len(hyUpstreamDistributeCache.UpstreamDistributeReports) > 0 {
+		return hyUpstreamDistributeCache.UpstreamDistributeReports, nil
+	}
+	sql := buidUpstreamDistributeSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
+	if err := util.TrinoQuery("miku", sql, &hyUpstreamDistributeCache.UpstreamDistributeReports); err != nil {
+		log.Printf("Trino查询失败: %v", err)
+		return nil, fmt.Errorf("查询失败: %v", err)
+	}
+	hyUpstreamDistributeCache.Req = req
+	return hyUpstreamDistributeCache.UpstreamDistributeReports, nil
 }

@@ -344,6 +344,31 @@ func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order stri
 }
 
 func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+
+	sql := fmt.Sprintf(`
+		SELECT 
+		    %s
+		FROM %s
+		WHERE 1=1 
+			%s
+			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND day >= '%s' AND day <= '%s'
+		`, choose, "miku.dwd_flowd_miku_streamd_log", where, req.StartTime, req.EndTime, startDay, endDay)
+	if group != "" {
+		sql += fmt.Sprintf(" GROUP BY %s", group)
+	}
+	if order != "" {
+		sql += fmt.Sprintf(" ORDER BY %s", order)
+	}
+	return sql
+}
+
+// protocol: "hls" "p2p" "flv"
+func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol string) string {
 	if req.Domain != "" {
 		if req.FuzzySearch {
 			where += fmt.Sprintf(`
@@ -357,11 +382,6 @@ func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string)
 	`, req.Domain)
 		}
 	}
-	return buildCommonSQLQuery(req, choose, "miku.dwd_flowd_miku_streamd_log", where, group, order)
-}
-
-// protocol: "hls" "p2p" "flv"
-func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol string) string {
 	switch protocol {
 	case "hls":
 	case "p2p":
