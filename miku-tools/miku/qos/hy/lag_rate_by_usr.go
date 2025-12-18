@@ -8,14 +8,14 @@ import (
 )
 
 func init() {
-	qos.RegisterChartGenerator("lag_rate_by_user", &LagRateByUser{})
+	qos.RegisterChartGenerator("lagrateByUser", &LagRateByUser{})
 }
 
-// 每个用户的卡顿率
+// 每个用户的卡顿率表格
 type LagRateByUser struct {
 }
 
-func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) []qos.AggregatedData {
+func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) []qos.UserAggregatedData {
 	clientCdnsMap := make(map[string]map[string]bool)
 	for _, report := range clientCdnIps {
 		if report.DimCdnip == nil || report.DimIp == nil {
@@ -27,7 +27,7 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 		clientCdnsMap[*report.DimIp][*report.DimCdnip] = true
 	}
 
-	aggData := make([]qos.AggregatedData, 0)
+	aggData := make([]qos.UserAggregatedData, 0)
 	totalLagCnt := 0
 	for _, report := range reports {
 		if report.DimIp == nil || report.LagCnt == nil || report.Total == nil {
@@ -40,8 +40,8 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 			}
 		}
 		_, isp, _, prov := util.GetLocate(*report.DimIp, req.IpParser)
-		aggData = append(aggData, qos.AggregatedData{
-			IP:         *report.DimIp,
+		aggData = append(aggData, qos.UserAggregatedData{
+			ClientIP:   *report.DimIp,
 			LagCount:   *report.LagCnt,
 			TotalCount: *report.Total,
 			Isp:        isp,
@@ -75,6 +75,7 @@ func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 		return fmt.Sprintf("获取CDN客户端IP失败: %v", err)
 	}
 	aggData := l.getAggData(reports, req, clientCdnIps)
-	tableHTML := qos.GenerateTableHTML([]qos.AggregatedData{}, aggData)
-	return tableHTML
+	return aggData
+	//tableHTML := qos.GenerateTableHTML([]qos.AggregatedData{}, aggData)
+	//return tableHTML
 }

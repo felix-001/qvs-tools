@@ -377,26 +377,18 @@
 
                     <!-- CDN相关图表 -->
                     <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_ip_quality" name="chart_cdn_ip_quality" checked>
-                        <label for="chart_cdn_ip_quality">按节点质量分析表格</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_lag_users" name="chart_cdn_lag_users" checked>
-                        <label for="chart_cdn_lag_users">按用户质量分析表格</label>
+                        <input type="checkbox" id="chart_lagrateByUser" name="chart_lagrateByUser" checked>
+                        <label for="chart_lagrateByUser">虎牙按用户卡顿分析表格</label>
                     </div>
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_cdn_lag_rate" name="chart_cdn_lag_rate" checked>
-                        <label for="chart_cdn_lag_rate">卡顿节点占比趋势图</label>
+                        <label for="chart_cdn_lag_rate">虎牙卡顿节点占比趋势图</label>
                     </div>
                     
                     <!-- 用户相关图表 -->
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_lag_user_ratio" name="chart_lag_user_ratio" checked>
-                        <label for="chart_lag_user_ratio">卡顿用户占比趋势图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_client_ip_quality" name="chart_client_ip_quality" checked>
-                        <label for="chart_client_ip_quality">按clientIp质量分析表格</label>
+                        <label for="chart_lag_user_ratio">虎牙卡顿用户占比趋势图</label>
                     </div>
                     
                     <!-- 节点相关图表 -->
@@ -427,10 +419,6 @@
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_lagUsrDistributionProv" name="chart_lagUsrDistributionProv" checked>
                         <label for="chart_lagUsrDistributionProv">虎牙卡顿用户按省份分布图</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="chart_stream_delay" name="chart_stream_delay" checked>
-                        <label for="chart_stream_delay">流媒体延迟分析图表</label>
                     </div>
                     
                     
@@ -608,18 +596,15 @@
                     { name: 'audioFps', selected: formData.get('chart_audio_fps') === 'on' },
                     { name: 'hyLagRateByNode', selected: formData.get('chart_hy_lag_rate_by_node') === 'on' },
                     { name: 'hyLagRateTrend', selected: formData.get('chart_hy_lagrate_trend') === 'on' },
-                    { name: 'cdnIpQuality', selected: formData.get('chart_cdn_ip_quality') === 'on' },
-                    { name: 'cdnLagUsers', selected: formData.get('chart_cdn_lag_users') === 'on' },
+                    { name: 'lagrateByUser', selected: formData.get('chart_lagrateByUser') === 'on' },
                     { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
                     { name: 'lagUserRatio', selected: formData.get('chart_lag_user_ratio') === 'on' },
-                    { name: 'clientIpQuality', selected: formData.get('chart_client_ip_quality') === 'on' },
                     { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
                     { name: 'usrDistributionCountry', selected: formData.get('chart_usr_distribution_country') === 'on' },
                     { name: 'usrDistributionArea', selected: formData.get('chart_region_distribution') === 'on' },
                     { name: 'usrDistributionProv', selected: formData.get('chart_province_distribution') === 'on' },
                     { name: 'lagUsrDistributionArea', selected: formData.get('chart_lagUsrDistributionArea') === 'on' },
-                    { name: 'lagUsrDistributionProv', selected: formData.get('chart_lagUsrDistributionProv') === 'on' },
-                    { name: 'streamDelay', selected: formData.get('chart_stream_delay') === 'on' }
+                    { name: 'lagUsrDistributionProv', selected: formData.get('chart_lagUsrDistributionProv') === 'on' }
                 ]
             };
             console.log(data)
@@ -699,9 +684,10 @@
 			break;
 		case 'hyLagRateByNode':
 		case 'hyLagrateByStreams':
+        case 'lagrateByUser':
 			console.log('hyLagRateByNode', resp)
 			createTable(resp)
-                	break
+            break
 		}
 	}
 
@@ -813,7 +799,7 @@
 		columns = keys.map(key => {
 			return { 
 			field: key,
-			headerName: key.toUpperCase(), // 将键名转为大写作为列标题
+			headerName: key, // 将键名转为大写作为列标题
 			sortable: true,
 			filter: true
 			};
@@ -832,7 +818,7 @@
       
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
-		dom.style.width = "1200px"
+		dom.style.width = "1380px"
 		dom.style.position = 'relative';
 		dom.style.margin = '0';
 		dom.style.padding = '0';
