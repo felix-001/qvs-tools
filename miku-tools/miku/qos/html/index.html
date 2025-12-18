@@ -347,6 +347,16 @@
                         <label for="chart_internal_upstream_retry_rate">内部回源重试率趋势图</label>
                     </div>
 
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_hy_lagrate_by_streams" name="chart_hy_lagrate_by_streams" checked>
+                        <label for="chart_hy_lagrate_by_streams">虎牙按流卡顿率表格</label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_hy_lagrate_trend" name="chart_hy_lagrate_trend" checked>
+                        <label for="chart_hy_lagrate_trend">虎牙卡顿率趋势图</label>
+                    </div>
+
                     <!-- FPS相关图表 -->
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_video_fps" name="chart_video_fps" checked>
@@ -585,9 +595,11 @@
                     { name: 'internalUpstreamLagRate', selected: formData.get('chart_internal_upstream_lagrate') === 'on' },
                     { name: 'internalUpstreamRetryTimes', selected: formData.get('chart_internal_upstream_retry_times') === 'on' },
                     { name: 'internalUpstreamRetryRate', selected: formData.get('chart_internal_upstream_retry_rate') === 'on' },
+                    { name: 'hyLagrateByStreams', selected: formData.get('chart_hy_lagrate_by_streams') === 'on' },
                     { name: 'videoFps', selected: formData.get('chart_video_fps') === 'on' },
                     { name: 'audioFps', selected: formData.get('chart_audio_fps') === 'on' },
                     { name: 'hyLagRateByNode', selected: formData.get('chart_hy_lag_rate_by_node') === 'on' },
+                    { name: 'hyLagRateTrend', selected: formData.get('chart_hy_lagrate_trend') === 'on' },
                     { name: 'cdnIpQuality', selected: formData.get('chart_cdn_ip_quality') === 'on' },
                     { name: 'cdnLagUsers', selected: formData.get('chart_cdn_lag_users') === 'on' },
                     { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
@@ -650,25 +662,27 @@
 	function handleResp(chart, resp) {
 		console.log(chart, resp)	
 		switch(chart) {
-            case 'usrLagRate':
-            case 'onlineUsers':
-            case 'onlineStreams':
-			case 'customerUpstreamLagRate':
-            case 'internalUpstreamLagRate':
-            case 'internalUpstreamRetryTimes':
-            case 'internalUpstreamRetryRate':
-            case 'videoFps':
-            case 'audioFps':
-				//console.log('customerUpstreamLagRate', resp)
-				createLineChart(resp)
-				break;
-            case 'upstreamAreaDis':
-                createPie(resp)
-                break;
-            case 'hyLagRateByNode':
-                console.log('hyLagRateByNode', resp)
-                createTable(resp)
-                break
+		case 'usrLagRate':
+		case 'onlineUsers':
+		case 'onlineStreams':
+		case 'customerUpstreamLagRate':
+		case 'internalUpstreamLagRate':
+		case 'internalUpstreamRetryTimes':
+		case 'internalUpstreamRetryRate':
+		case 'videoFps':
+		case 'audioFps':
+		case 'hyLagRateTrend':
+			//console.log('customerUpstreamLagRate', resp)
+			createLineChart(resp)
+			break;
+		case 'upstreamAreaDis':
+			createPie(resp)
+			break;
+		case 'hyLagRateByNode':
+		case 'hyLagrateByStreams':
+			console.log('hyLagRateByNode', resp)
+			createTable(resp)
+                	break
 		}
 	}
 
@@ -763,29 +777,29 @@
                         }
                     }
                 }
-            ]
-        };
+		]
+	      };
 
-        // 应用配置
-        chart.setOption(option);
-        document.body.appendChild(dom)
-    }
+		// 应用配置
+		chart.setOption(option);
+		document.body.appendChild(dom)
+    	}
 
 	function createTable(rowData) {
-        var columns
-        if (rowData.length > 0) {
-            const firstRow = rowData[0];
-            const keys = Object.keys(firstRow);
-            
-            columns = keys.map(key => {
-                return { 
-                    field: key,
-                    headerName: key.toUpperCase(), // 将键名转为大写作为列标题
-                    sortable: true,
-                    filter: true
-                };
-            });
-        }
+		var columns
+		if (rowData.length > 0) {
+		const firstRow = rowData[0];
+		const keys = Object.keys(firstRow);
+		
+		columns = keys.map(key => {
+			return { 
+			field: key,
+			headerName: key.toUpperCase(), // 将键名转为大写作为列标题
+			sortable: true,
+			filter: true
+			};
+		});
+		}
 
 		var gridOptions = {
 			rowData: rowData, 
@@ -794,18 +808,19 @@
 				sortable: true,
 				filter: true
 			},
+			enableCellTextSelection: true
 		};
       
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
-		dom.style.width = "1500px"
+		dom.style.width = "1200px"
 		dom.style.position = 'relative';
 		dom.style.margin = '0';
 		dom.style.padding = '0';
 		agGrid.createGrid(dom, gridOptions);
-        document.body.appendChild(dom)
-		console.log('当前状态:', document.readyState);
-	}
+		document.body.appendChild(dom)
+			console.log('当前状态:', document.readyState);
+		}
     </script>
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>

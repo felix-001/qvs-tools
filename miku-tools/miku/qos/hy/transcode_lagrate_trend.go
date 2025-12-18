@@ -7,16 +7,15 @@ import (
 	"strings"
 )
 
+// 虎牙转码流每分钟卡顿率趋势图
 func init() {
-	qos.RegisterChartGenerator("hyLagRateTrend", &HuyaLagRate{})
+	qos.RegisterChartGenerator("transcodeHyLagRateTrend", &HuyaLagRate{})
 }
 
-// 虎牙每分钟卡顿率趋势图
-
-type HuyaLagRate struct {
+type HuyaTranscodeLagRate struct {
 }
 
-func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
+func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 	if req.AppName != "huyacdn" {
 		return ""
 	}

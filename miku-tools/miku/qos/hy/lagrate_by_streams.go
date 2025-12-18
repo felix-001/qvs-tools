@@ -9,13 +9,16 @@ import (
 // 卡顿率按流分布
 
 func init() {
-	qos.RegisterChartGenerator("lagrate_by_streams", &LagRateByStreams{})
+	qos.RegisterChartGenerator("hyLagrateByStreams", &LagRateByStreams{})
 }
 
 type LagRateByStreams struct {
 }
 
 func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
+	if req.AppName != "huyacdn" {
+		return ""
+	}
 	sql := qos.BuildHyLagRateByStreamsSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
@@ -25,5 +28,6 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		log.Printf("Trino查询失败: %v", err)
 		return ""
 	}
-	return qos.GenerateLagRateByStreamsTable(hyLagRateByStreamsReports)
+	return hyLagRateByStreamsReports
+	//return qos.GenerateLagRateByStreamsTable(hyLagRateByStreamsReports)
 }

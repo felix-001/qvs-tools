@@ -386,9 +386,12 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 	case "hls":
 	case "p2p":
 	case "flv":
+		/*/
 		where += fmt.Sprintf(`
 			AND dim_stream_url like '%%.flv%%'
 		`)
+		*/
+		where += `AND dim_p2p = '0'`
 	}
 	return buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
 }
@@ -468,7 +471,23 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 
 		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) AS lag_node_cnt,	
 		COUNT(DISTINCT dim_cdnip) AS total_node_cnt,	
-		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) * 100.0 / COUNT(DISTINCT dim_cdnip) AS lag_node_rate
+		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) * 100.0 / COUNT(DISTINCT dim_cdnip) AS lag_node_rate,
+
+		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as transcodeLagCnt,
+		COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as totalTranscodeCnt,
+		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END)*100.0
+		    /COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as trancodeLagRate,
+		
+		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%') THEN 1 END) as notTranscodeLagCnt,
+		COUNT(CASE WHEN (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%') THEN 1 END) as totalNotTranscodeCnt,
+		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%') THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%') THEN 1 END), 0),
+			0
+		) as notTranscodeLagRate,
+		
+		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END)*100.0
+		    / COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as trancodeLagPercent
 		`
 	return buildHyCommonSQLQuery(req, choose, "", group, order, "flv")
 }

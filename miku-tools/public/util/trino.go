@@ -179,20 +179,27 @@ type UpstreamDistributeReport struct {
 }
 
 type HyLagReport struct {
-	Ts_m         *string  `db:"ts_m"`
-	Percent      *float64 `db:"percent"`
-	LagCnt       *int     `db:"lagCnt"`
-	Total        *int     `db:"total"`
-	LagUsrCnt    *int     `db:"lag_usr_cnt"`
-	TotalUsrCnt  *int     `db:"total_usr_cnt"`
-	LagUsrRate   *float64 `db:"lag_usr_rate"`
-	LagNodeCnt   *int     `db:"lag_node_cnt"`
-	TotalNodeCnt *int     `db:"total_node_cnt"`
-	LagNodeRate  *float64 `db:"lag_node_rate"`
+	Ts_m                 *string  `db:"ts_m"`
+	Percent              *float64 `db:"percent"`
+	LagCnt               *int     `db:"lagCnt"`
+	Total                *int     `db:"total"`
+	LagUsrCnt            *int     `db:"lag_usr_cnt"`
+	TotalUsrCnt          *int     `db:"total_usr_cnt"`
+	LagUsrRate           *float64 `db:"lag_usr_rate"`
+	LagNodeCnt           *int     `db:"lag_node_cnt"`
+	TotalNodeCnt         *int     `db:"total_node_cnt"`
+	LagNodeRate          *float64 `db:"lag_node_rate"`
+	TranscodeLagCnt      *int     `db:"transcodeLagCnt"`      // 转码流去掉回源的卡顿样本个数
+	TotalTranscodeCnt    *int     `db:"totalTranscodeCnt"`    // 总转码流样本个数
+	TrancodeLagRate      *float64 `db:"trancodeLagRate"`      // 转码流去掉回源的卡顿样本占总转码流样本的百分比
+	NotTranscodeLagCnt   *int     `db:"notTranscodeLagCnt"`   // 非转码流去掉回源的卡顿样本个数
+	TotalNotTranscodeCnt *int     `db:"totalNotTranscodeCnt"` // 总非转码流样本个数
+	NotTranscodeLagRate  *float64 `db:"notTranscodeLagRate"`  // 非转码流去掉回源的卡顿样本占比
+	TrancodeLagPercent   *float64 `db:"trancodeLagPercent"`   // 转码流卡顿样本占总样本百分比
 }
 
 type HyLagRateByStreamsReport struct {
-	Ts_m       *string  `db:"ts_m"`
+	Ts_m       *string  `db:"ts_m" json:"-"`
 	StreamName *string  `db:"stream_id"`
 	Percent    *float64 `db:"percent"`
 	LagCnt     *int     `db:"lagCnt"`
