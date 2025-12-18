@@ -737,7 +737,7 @@
 		};
 		console.log('createLineChart options:', option)
 		myChart.setOption(option);
-		document.body.appendChild(dom);
+		results.appendChild(dom);
 	}
 
     function createPie(data) {
@@ -787,7 +787,7 @@
 
 		// 应用配置
 		chart.setOption(option);
-		document.body.appendChild(dom)
+        results.appendChild(dom);
     	}
 
 	function createTable(rowData) {
@@ -823,8 +823,8 @@
 		dom.style.margin = '0';
 		dom.style.padding = '0';
 		agGrid.createGrid(dom, gridOptions);
-		document.body.appendChild(dom)
-			console.log('当前状态:', document.readyState);
+		results.appendChild(dom)
+		console.log('当前状态:', document.readyState);
 		}
     </script>
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
