@@ -385,6 +385,7 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 	switch protocol {
 	case "hls":
 	case "p2p":
+		where += `AND dim_p2p = '1'`
 	case "flv":
 		/*/
 		where += fmt.Sprintf(`
