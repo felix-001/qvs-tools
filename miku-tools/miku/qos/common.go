@@ -6,6 +6,7 @@ import (
 	"mikutool/public/util"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -212,4 +213,32 @@ func GetAggData(req QOSRequest, reports []util.HyClientIpsOnCdnIpReport) AggData
 		ProvLagCntMap: provLagMap,
 	}
 	return aggData
+}
+
+type Cb func(ts string, value any)
+
+func GenerateLineChartData(title, seriesTitle string, traverseFn func(cb Cb)) LineChartData {
+	data := LineChartData{
+		Title:       title,       //"虎牙每分钟卡顿率趋势图",
+		SeriesTitle: seriesTitle, //"卡顿率",
+		Color:       "#1890ff",
+		XType:       "category",
+		XAxis:       []string{},
+		YAxis:       []string{},
+	}
+	cb := func(ts string, value any) {
+		ts = strings.ReplaceAll(ts, "+08:00", "")
+		// Remove year from timestamp (format: 2025-12-16T12:49:00)
+		if len(ts) >= 10 {
+			ts = ts[5:] // Keep everything after the year
+		}
+		data.XAxis = append(data.XAxis, ts)
+		if num, ok := value.(float64); ok {
+			data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", num))
+		} else if num, ok := value.(int); ok {
+			data.YAxis = append(data.YAxis, fmt.Sprintf("%d", num))
+		}
+	}
+	traverseFn(cb)
+	return data
 }

@@ -76,6 +76,4 @@ func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 	}
 	aggData := l.getAggData(reports, req, clientCdnIps)
 	return aggData
-	//tableHTML := qos.GenerateTableHTML([]qos.AggregatedData{}, aggData)
-	//return tableHTML
 }

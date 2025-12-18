@@ -598,7 +598,7 @@
                     { name: 'hyLagRateTrend', selected: formData.get('chart_hy_lagrate_trend') === 'on' },
                     { name: 'lagrateByUser', selected: formData.get('chart_lagrateByUser') === 'on' },
                     { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
-                    { name: 'lagUserRatio', selected: formData.get('chart_lag_user_ratio') === 'on' },
+                    { name: 'hyLagUsrPercent', selected: formData.get('chart_lag_user_ratio') === 'on' },
                     { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
                     { name: 'usrDistributionCountry', selected: formData.get('chart_usr_distribution_country') === 'on' },
                     { name: 'usrDistributionArea', selected: formData.get('chart_region_distribution') === 'on' },
@@ -671,6 +671,8 @@
 		case 'videoFps':
 		case 'audioFps':
 		case 'hyLagRateTrend':
+        case 'transcodeHyLagRateTrend':
+        case 'hyLagUsrPercent':
 			//console.log('customerUpstreamLagRate', resp)
 			createLineChart(resp)
 			break;
@@ -694,7 +696,7 @@
 	function createLineChart(data) {
 		var dom = document.createElement('div');
 		dom.style.height = "500px"
-		dom.style.width = "1200px"
+		dom.style.width = "1380px"
 		dom.style.position = 'relative';
 		dom.style.margin = '0';
 		dom.style.padding = '0';
@@ -706,7 +708,7 @@
 		var option = {
             title: {
                 text: data.title,
-                left: 'middle'
+                left: 'center'
             },
             tooltip: {
                 trigger: 'axis',
