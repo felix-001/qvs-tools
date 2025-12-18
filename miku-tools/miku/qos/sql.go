@@ -404,6 +404,13 @@ func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
   		AND CustomerSource = true
 		AND HTTPResponseCode != 302
 	`, req.AppName)
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf(`AND StreamName like '%%%s%%'`, req.StreamID)
+		} else {
+			where += fmt.Sprintf(`AND StreamName = '%s'`, req.StreamID)
+		}
+	}
 	return buildMikuCommonSQLQuery(req, choose, where, "", "")
 }
 
@@ -476,8 +483,11 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 
 		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as transcodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as totalTranscodeCnt,
-		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END)*100.0
-		    /COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as trancodeLagRate,
+		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' THEN 1 END), 0),
+			0
+			) as trancodeLagRate,
 		
 		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%') THEN 1 END) as notTranscodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%') THEN 1 END) as totalNotTranscodeCnt,
@@ -487,10 +497,13 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			0
 		) as notTranscodeLagRate,
 		
-		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END)*100.0
-		    / COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as trancodeLagPercent
+		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END), 0),
+			0
+			) as trancodeLagPercent
 		`
-	return buildHyCommonSQLQuery(req, choose, "", group, order, "flv")
+	return buildHyCommonSQLQuery(req, choose, "", group, order, req.Protocol)
 }
 
 func BuildHyCdnIpLagSQLQuery(req QOSRequest) string {

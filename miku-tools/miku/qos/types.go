@@ -67,6 +67,7 @@ type QOSRequest struct {
 	//Charts      ChartOptions `json:"charts"`
 	IpParser *ipdb.City `json:"ipParser"`
 	Chart    string     `json:"chart"`
+	Protocol string     `json:"protocol"`
 }
 
 // ChartOptions 图表展示选项

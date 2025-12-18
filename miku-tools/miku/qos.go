@@ -63,6 +63,7 @@ func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// 模拟AppName列表，实际应该从数据库获取
 	appNames := []string{
 		"huyacdn",
+		"huyap2p",
 		"livessports",
 		"douyu",
 		"vzan",

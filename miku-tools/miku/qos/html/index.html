@@ -291,6 +291,12 @@
                 <input type="text" id="cdnIp" name="cdnIp" placeholder="请输入CDN IP（可选）">
             </div>
 
+            <!-- Protocol选项 -->
+            <div class="form-group">
+                <label for="protocol">Protocol:</label>
+                <input type="text" id="protocol" name="protocol" placeholder="请输入协议类型（可选）">
+            </div>
+
             <!-- 小时输入 -->
             <div class="form-group">
                 <label for="hour">小时 (0-23):</label>
@@ -456,6 +462,7 @@
                 </div>
             </div>
 
+
             <!-- 提交按钮 -->
             <button type="submit" class="submit-btn">开始质量分析</button>
         </form>
@@ -585,6 +592,7 @@
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
                 rawData: formData.get('rawData') === 'on',
+                protocol: formData.get('protocol'),
                 // 图表展示选项 - 改为数组形式
                 charts: [
                     { name: 'onlineUsers', selected: formData.get('chart_online_users') === 'on' },
@@ -632,7 +640,13 @@
                     // 为每个图表创建一个临时请求对象
                     const chartData = {...data, Chart: chart.name};
                     
-                    const response = await fetch('/api/v1/qos', {
+                    // 构建请求URL，如果有protocol参数则添加query
+                    let requestUrl = '/api/v1/qos';
+                    if (data.protocol && data.protocol.trim() !== '') {
+                        requestUrl += '?protocol=' + encodeURIComponent(data.protocol.trim());
+                    }
+                    
+                    const response = await fetch(requestUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

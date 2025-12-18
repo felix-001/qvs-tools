@@ -17,7 +17,7 @@ type HuyaLagRate struct {
 }
 
 func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
-	if req.AppName != "huyacdn" {
+	if req.AppName != "huyacdn" && req.AppName != "huyap2p" {
 		return ""
 	}
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
