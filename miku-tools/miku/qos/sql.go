@@ -382,17 +382,24 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 	`, req.Domain)
 		}
 	}
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, req.StreamID)
+		} else {
+			where += fmt.Sprintf(`AND dim_stream_url = '%s'`, req.StreamID)
+		}
+	}
 	switch protocol {
 	case "hls":
 	case "p2p":
-		where += `AND dim_p2p = '1'`
+		where += ` AND dim_p2p = '1'`
 	case "flv":
 		/*/
 		where += fmt.Sprintf(`
 			AND dim_stream_url like '%%.flv%%'
 		`)
 		*/
-		where += `AND dim_p2p = '0'`
+		where += ` AND dim_p2p = '0'`
 	}
 	return buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
 }

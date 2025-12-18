@@ -9,7 +9,7 @@ import (
 // 用户按国家、大区、省份分布
 
 func init() {
-	qos.RegisterChartGenerator("usr_distribute", &UsrDistribute{})
+	qos.RegisterChartGenerator("usrDistributionCountry", &UsrDistribute{})
 }
 
 type UsrDistribute struct {
@@ -41,6 +41,7 @@ func (u *UsrDistribute) getAggData(req qos.QOSRequest, reports []util.HyClientIp
 }
 
 func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
+	log.Printf("req: %+v", req)
 	cdnClientIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
 		log.Printf("获取CDN客户端IP失败: %v", err)
@@ -48,5 +49,11 @@ func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("cdnClientIps:", len(cdnClientIps))
 	aggData := u.getAggData(req, cdnClientIps)
-	return qos.GenerateAggDataChartsHTML(aggData)
+	sortedData := qos.SortData(aggData.CountryCntMap)
+	data := qos.PieChartData{
+		Title: "用户按国家分布",
+		Data:  sortedData,
+	}
+	return data
+	//return qos.GenerateAggDataChartsHTML(aggData)
 }

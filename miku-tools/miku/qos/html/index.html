@@ -407,8 +407,8 @@
                     
                     <!-- 地理分布图表 -->
                     <div class="checkbox-group">
-                        <input type="checkbox" id="chart_country_distribution" name="chart_country_distribution" checked>
-                        <label for="chart_country_distribution">用户按国家分布图</label>
+                        <input type="checkbox" id="chart_usr_distribution_country" name="chart_usr_distribution_country" checked>
+                        <label for="chart_usr_distribution_country">用户按国家分布</label>
                     </div>
                     <div class="checkbox-group">
                         <input type="checkbox" id="chart_region_distribution" name="chart_region_distribution" checked>
@@ -614,7 +614,7 @@
                     { name: 'lagUserRatio', selected: formData.get('chart_lag_user_ratio') === 'on' },
                     { name: 'clientIpQuality', selected: formData.get('chart_client_ip_quality') === 'on' },
                     { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
-                    { name: 'countryDistribution', selected: formData.get('chart_country_distribution') === 'on' },
+                    { name: 'usrDistributionCountry', selected: formData.get('chart_usr_distribution_country') === 'on' },
                     { name: 'regionDistribution', selected: formData.get('chart_region_distribution') === 'on' },
                     { name: 'provinceDistribution', selected: formData.get('chart_province_distribution') === 'on' },
                     { name: 'regionDelay', selected: formData.get('chart_region_delay') === 'on' },
@@ -690,6 +690,7 @@
 			createLineChart(resp)
 			break;
 		case 'upstreamAreaDis':
+		case 'usrDistributionCountry':
 			createPie(resp)
 			break;
 		case 'hyLagRateByNode':

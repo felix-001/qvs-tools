@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"mikutool/public/util"
+	"sort"
 	"strconv"
 	"time"
 
@@ -153,4 +154,23 @@ func GetUpstreamDistributeReport(req QOSRequest) ([]util.UpstreamDistributeRepor
 	}
 	hyUpstreamDistributeCache.Req = req
 	return hyUpstreamDistributeCache.UpstreamDistributeReports, nil
+}
+
+func SortData(data map[string]int) []PieDataItem {
+	// 排序数据（按值降序）
+
+	var sortedData []PieDataItem
+	for name, value := range data {
+		sortedData = append(sortedData, PieDataItem{Name: name, Value: value})
+	}
+
+	sort.Slice(sortedData, func(i, j int) bool {
+		return sortedData[i].Value > sortedData[j].Value
+	})
+
+	// 限制最多显示10个
+	if len(sortedData) > 10 {
+		sortedData = sortedData[:10]
+	}
+	return sortedData
 }
