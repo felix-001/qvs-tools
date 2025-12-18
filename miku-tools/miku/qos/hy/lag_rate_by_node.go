@@ -145,7 +145,10 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 		if _, ok := cdnIp2LagStreamsMap[*report.DimCdnip]; !ok {
 			cdnIp2LagStreamsMap[*report.DimCdnip] = make(map[string]bool)
 		}
-		streamid := h.getStreamIdFromUrl(*report.DimStreamUrl)
+		streamid := ""
+		if report.DimStreamUrl != nil {
+			streamid = h.getStreamIdFromUrl(*report.DimStreamUrl)
+		}
 		if *report.LagCnt == 0 {
 			cdnIp2NormalClientipsMap[*report.DimCdnip][*report.DimIp] = true
 			cdnIp2NormalStreamsMap[*report.DimCdnip][streamid] = true
@@ -215,6 +218,7 @@ func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
 		return ""
 	}
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
+	return aggCdnLagData
 	//log.Println("aggCdnLagData:", aggCdnLagData)
 	tableHTML := qos.GenerateTableHTML(aggCdnLagData, []qos.AggregatedData{})
 

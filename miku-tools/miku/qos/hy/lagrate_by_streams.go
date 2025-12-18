@@ -16,7 +16,7 @@ type LagRateByStreams struct {
 }
 
 func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
-	if req.AppName != "huyacdn" {
+	if req.AppName != "huyacdn" && req.AppName != "huyap2p" {
 		return ""
 	}
 	sql := qos.BuildHyLagRateByStreamsSQLQuery(req)
@@ -29,5 +29,4 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		return ""
 	}
 	return hyLagRateByStreamsReports
-	//return qos.GenerateLagRateByStreamsTable(hyLagRateByStreamsReports)
 }

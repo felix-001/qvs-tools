@@ -428,7 +428,7 @@ func BuildHyCdnLagSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", "flv")
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", req.Protocol)
 }
 
 func BuildHyClientLagSQLQuery(req QOSRequest) string {
@@ -438,7 +438,7 @@ func BuildHyClientLagSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim__ip", "lagCnt DESC", "flv")
+	return buildHyCommonSQLQuery(req, choose, "", "dim__ip", "lagCnt DESC", req.Protocol)
 }
 
 func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
@@ -446,7 +446,7 @@ func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 		dim_cdnip, dim__ip, dim_stream_url,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip, dim_stream_url", "", "flv")
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip, dim_stream_url", "", req.Protocol)
 }
 
 func moreThan1day(start, end string) bool {
@@ -532,11 +532,25 @@ func BuildHyLagRateByStreamsSQLQuery(req QOSRequest) string {
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
+	p2p := ""
+	switch req.Protocol {
+	case "hls":
+	case "p2p":
+		p2p = ` AND dim_p2p = '1'`
+	case "flv":
+		/*/
+		where += fmt.Sprintf(`
+			AND dim_stream_url like '%%.flv%%'
+		`)
+		*/
+		p2p = ` AND dim_p2p = '0'`
+	}
+
 	sql := fmt.Sprintf(`
 WITH extracted_parts AS (
   SELECT
     -- 提取文件名部分
-    regexp_extract(dim_stream_url, '[src|huyalive|huyacdn|huyacdntest]/([^?]+)\.flv', 1) AS streamName,
+    regexp_extract(dim_stream_url, '[src|huyap2p|huyalive|huyacdn|huyacdntest]/([^?]+)\.[flv|slice]', 1) AS streamName,
     -- 提取ratio参数
     regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
     -- 提取codec参数
@@ -560,7 +574,8 @@ FROM extracted_parts
 WHERE 1=1  
 	AND day >= '%s' AND day <= '%s' 
 	AND cts >= to_unixtime(TIMESTAMP '%s+08:00') AND cts <= to_unixtime(TIMESTAMP '%s+08:00') 
-	AND dim_stream_url like '%%.flv%%'
+	%s
+	AND dim_stream_url like '%%%s%%'
 	AND dim_heart_type != '0'
 	AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio') 
 group by  CONCAT(
@@ -571,7 +586,7 @@ group by  CONCAT(
     CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
   )
 ORDER by lagCnt DESC
-	`, startDay, endDay, req.StartTime, req.EndTime)
+	`, startDay, endDay, req.StartTime, req.EndTime, p2p, req.StreamID)
 
 	return sql
 }
