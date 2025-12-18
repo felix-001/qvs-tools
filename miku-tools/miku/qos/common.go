@@ -174,3 +174,42 @@ func SortData(data map[string]int) []PieDataItem {
 	}
 	return sortedData
 }
+
+func GetAggData(req QOSRequest, reports []util.HyClientIpsOnCdnIpReport) AggData {
+	clientIpMap := make(map[string]bool)
+	lagIpMap := make(map[string]bool)
+	for _, report := range reports {
+		if report.DimIp == nil {
+			continue
+		}
+		clientIpMap[*report.DimIp] = true
+		if report.LagCnt != nil && *report.LagCnt > 0 {
+			lagIpMap[*report.DimIp] = true
+		}
+	}
+	countryMap := make(map[string]int)
+	areaMap := make(map[string]int)
+	provinceMap := make(map[string]int)
+	areaLagMap := make(map[string]int)
+	provLagMap := make(map[string]int)
+	for clientIp := range clientIpMap {
+		country, _, area, province := util.GetLocate(clientIp, req.IpParser)
+		countryMap[country]++
+		areaMap[area]++
+		provinceMap[province]++
+		if _, ok := lagIpMap[clientIp]; ok {
+			areaLagMap[area]++
+		}
+		if _, ok := lagIpMap[clientIp]; ok {
+			provLagMap[province]++
+		}
+	}
+	aggData := AggData{
+		CountryCntMap: countryMap,
+		AreaCntMap:    areaMap,
+		ProvCntMap:    provinceMap,
+		AreaLagCntMap: areaLagMap,
+		ProvLagCntMap: provLagMap,
+	}
+	return aggData
+}

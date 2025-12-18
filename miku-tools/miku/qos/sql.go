@@ -442,11 +442,18 @@ func BuildHyClientLagSQLQuery(req QOSRequest) string {
 }
 
 func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
+	/*
+		choose := `
+			dim_cdnip, dim__ip, dim_stream_url,
+			COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt
+			`
+	*/
 	choose := `
-		dim_cdnip, dim__ip, dim_stream_url,
+		dim_cdnip, dim__ip,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip, dim_stream_url", "", req.Protocol)
+	//return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip, dim_stream_url", "", req.Protocol)
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip", "", req.Protocol)
 }
 
 func moreThan1day(start, end string) bool {

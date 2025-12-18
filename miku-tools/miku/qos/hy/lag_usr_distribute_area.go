@@ -5,16 +5,16 @@ import (
 	"mikutool/miku/qos"
 )
 
-// 用户按国家、大区、省份分布
+// 卡顿用户按大区分布
 
 func init() {
-	qos.RegisterChartGenerator("usrDistributionCountry", &UsrDistribute{})
+	qos.RegisterChartGenerator("lagUsrDistributionArea", &LagUsrDistributeArea{})
 }
 
-type UsrDistribute struct {
+type LagUsrDistributeArea struct {
 }
 
-func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
+func (u *LagUsrDistributeArea) Generate(req qos.QOSRequest) any {
 	log.Printf("req: %+v", req)
 	cdnClientIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
@@ -23,9 +23,9 @@ func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("cdnClientIps:", len(cdnClientIps))
 	aggData := qos.GetAggData(req, cdnClientIps)
-	sortedData := qos.SortData(aggData.CountryCntMap)
+	sortedData := qos.SortData(aggData.AreaLagCntMap)
 	data := qos.PieChartData{
-		Title: "用户按国家分布",
+		Title: "卡顿用户按大区分布",
 		Data:  sortedData,
 	}
 	return data
