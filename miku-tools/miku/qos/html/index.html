@@ -381,8 +381,8 @@
                         <label for="chart_lagrateByUser">虎牙按用户卡顿分析表格</label>
                     </div>
                     <div class="checkbox-group">
-                        <input type="checkbox" id="chart_cdn_lag_rate" name="chart_cdn_lag_rate" checked>
-                        <label for="chart_cdn_lag_rate">虎牙卡顿节点占比趋势图</label>
+                        <input type="checkbox" id="chart_node_lag_percent" name="chart_node_lag_percent" checked>
+                        <label for="chart_node_lag_percent">虎牙卡顿节点占比趋势图</label>
                     </div>
                     
                     <!-- 用户相关图表 -->
@@ -597,9 +597,8 @@
                     { name: 'hyLagRateByNode', selected: formData.get('chart_hy_lag_rate_by_node') === 'on' },
                     { name: 'hyLagRateTrend', selected: formData.get('chart_hy_lagrate_trend') === 'on' },
                     { name: 'lagrateByUser', selected: formData.get('chart_lagrateByUser') === 'on' },
-                    { name: 'cdnLagRate', selected: formData.get('chart_cdn_lag_rate') === 'on' },
+                    { name: 'lagNodesPercent', selected: formData.get('chart_node_lag_percent') === 'on' },
                     { name: 'hyLagUsrPercent', selected: formData.get('chart_lag_user_ratio') === 'on' },
-                    { name: 'nodeLagRatio', selected: formData.get('chart_node_lag_ratio') === 'on' },
                     { name: 'usrDistributionCountry', selected: formData.get('chart_usr_distribution_country') === 'on' },
                     { name: 'usrDistributionArea', selected: formData.get('chart_region_distribution') === 'on' },
                     { name: 'usrDistributionProv', selected: formData.get('chart_province_distribution') === 'on' },
@@ -671,8 +670,9 @@
 		case 'videoFps':
 		case 'audioFps':
 		case 'hyLagRateTrend':
-        case 'transcodeHyLagRateTrend':
-        case 'hyLagUsrPercent':
+        	case 'transcodeHyLagRateTrend':
+        	case 'hyLagUsrPercent':
+		case 'lagNodesPercent':
 			//console.log('customerUpstreamLagRate', resp)
 			createLineChart(resp)
 			break;

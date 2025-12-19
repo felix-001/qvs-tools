@@ -31,5 +31,4 @@ func (l *LagUsrRate) Generate(req qos.QOSRequest) any {
 	}
 	chartData := qos.GenerateLineChartData("卡顿用户占总用户数的百分比", "占比", fn)
 	return chartData
-	//return qos.GenerateLagUserRatioChartHTML(hyLagRateReports)
 }

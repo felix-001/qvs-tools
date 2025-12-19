@@ -98,7 +98,6 @@ type ChartOptions struct {
 	LagUserRatio               bool `json:"lagUserRatio"`
 	ClientIpQuality            bool `json:"clientIpQuality"`
 	LagRateTrend               bool `json:"lagRateTrend"`
-	NodeLagRatio               bool `json:"nodeLagRatio"`
 	CountryDistribution        bool `json:"countryDistribution"`
 	RegionDistribution         bool `json:"regionDistribution"`
 	ProvinceDistribution       bool `json:"provinceDistribution"`
