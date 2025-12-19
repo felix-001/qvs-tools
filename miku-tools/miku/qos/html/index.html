@@ -374,6 +374,12 @@
                         <label for="chart_audio_fps">音频帧率趋势图</label>
                     </div>
 
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_upstream_bandwidth" name="chart_upstream_bandwidth" checked>
+                        <label for="chart_upstream_bandwidth">推流/回源带宽趋势图</label>
+                    </div>
+
+
 
                     <!-- CDN相关图表 -->
                     <div class="checkbox-group">
@@ -609,6 +615,7 @@
                     { name: 'lagUsrDistributionArea', selected: formData.get('chart_lagUsrDistributionArea') === 'on' },
                     { name: 'lagUsrDistributionProv', selected: formData.get('chart_lagUsrDistributionProv') === 'on' },
                     { name: 'loadRate', selected: formData.get('chart_loadRate') === 'on' },
+                    { name: 'upstreamBandwidth', selected: formData.get('chart_upstream_bandwidth') === 'on' },
                 ]
             };
             console.log(data)
@@ -679,6 +686,7 @@
         	case 'hyLagUsrPercent':
 		case 'lagNodesPercent':
 		case 'loadRate':
+		case 'upstreamBandwidth':
 			//console.log('customerUpstreamLagRate', resp)
 			createLineChart(resp)
 			break;
