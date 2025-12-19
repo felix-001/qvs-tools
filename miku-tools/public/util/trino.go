@@ -133,6 +133,9 @@ type StreamdLagReport struct {
 	Retry_requests_puller              *int64   `db:"retry_requests_puller"`
 	Retry_ratio_puller                 *float64 `db:"retry_ratio_puller"`
 	TotalRetryTimes                    *int64   `db:"totalRetryTimes"`
+	LoadCnt                            *int64   `db:"loadCnt"`
+	Total                              *int64   `db:"total"`
+	LoadRatio                          *float64 `db:"loadRatio"`
 }
 
 type StreamdFpsReport struct {

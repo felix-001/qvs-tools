@@ -129,7 +129,11 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and url not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
 		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
 
-		SUM(if(type = 'puller' and customerSource != true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes
+		SUM(if(type = 'puller' and customerSource != true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes,
+
+		COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
+		COUNT(*) as total,
+		COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as loadRatio
 	FROM dwd_flowd_miku_streamd_log
 	WHERE 
 	from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
@@ -349,6 +353,14 @@ func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string)
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf(`AND StreamName like '%%%s%%'`, req.StreamID)
+		} else {
+			where += fmt.Sprintf(`AND StreamName = '%s'`, req.StreamID)
+		}
+	}
+
 	sql := fmt.Sprintf(`
 		SELECT 
 		    %s
@@ -411,13 +423,7 @@ func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
   		AND CustomerSource = true
 		AND HTTPResponseCode != 302
 	`, req.AppName)
-	if req.StreamID != "" {
-		if req.FuzzySearch {
-			where += fmt.Sprintf(`AND StreamName like '%%%s%%'`, req.StreamID)
-		} else {
-			where += fmt.Sprintf(`AND StreamName = '%s'`, req.StreamID)
-		}
-	}
+
 	return buildMikuCommonSQLQuery(req, choose, where, "", "")
 }
 
@@ -603,4 +609,47 @@ func BuildHyUsrDistributeSQLQuery(req QOSRequest) string {
 		DISTINCT dim__ip
 		`
 	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv")
+}
+
+func buildHyCommonLoadSQLQuery(req QOSRequest, choose, where, group, order string) string {
+	// Replace "T" with space in starttime and endtime
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf(" AND dim_stream_url LIKE '%%%s%%'", req.StreamID)
+		} else {
+			where += fmt.Sprintf(" AND dim_stream_url = '%s'", req.StreamID)
+		}
+	}
+
+	switch req.Protocol {
+	case "hls":
+	case "p2p":
+		where += ` AND dim_p2p = '1'`
+	case "flv":
+		where += ` AND dim_p2p = '0'`
+	}
+
+	sql := fmt.Sprintf(`
+		SELECT 
+		    %s
+		FROM %s
+		WHERE 1=1 
+			%s
+			AND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+			AND (client_type = 'sdk_video_load' OR client_type = 'web_video_load')
+			AND day >= '%s' AND day <= '%s'
+		`, choose, "huyabiz_quality_report_log", where, req.StartTime, req.EndTime, startDay, endDay)
+	if group != "" {
+		sql += fmt.Sprintf(" GROUP BY %s", group)
+	}
+	if order != "" {
+		sql += fmt.Sprintf(" ORDER BY %s", order)
+	}
+	return sql
+
 }

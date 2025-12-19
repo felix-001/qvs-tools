@@ -421,6 +421,10 @@
                         <label for="chart_lagUsrDistributionProv">虎牙卡顿用户按省份分布图</label>
                     </div>
                     
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="chart_loadRate" name="chart_loadRate" checked>
+                        <label for="chart_loadRate">秒开率趋势图</label>
+                    </div>
                     
                     
                 </div>
@@ -603,7 +607,8 @@
                     { name: 'usrDistributionArea', selected: formData.get('chart_region_distribution') === 'on' },
                     { name: 'usrDistributionProv', selected: formData.get('chart_province_distribution') === 'on' },
                     { name: 'lagUsrDistributionArea', selected: formData.get('chart_lagUsrDistributionArea') === 'on' },
-                    { name: 'lagUsrDistributionProv', selected: formData.get('chart_lagUsrDistributionProv') === 'on' }
+                    { name: 'lagUsrDistributionProv', selected: formData.get('chart_lagUsrDistributionProv') === 'on' },
+                    { name: 'loadRate', selected: formData.get('chart_loadRate') === 'on' },
                 ]
             };
             console.log(data)
@@ -673,6 +678,7 @@
         	case 'transcodeHyLagRateTrend':
         	case 'hyLagUsrPercent':
 		case 'lagNodesPercent':
+		case 'loadRate':
 			//console.log('customerUpstreamLagRate', resp)
 			createLineChart(resp)
 			break;
