@@ -3,8 +3,9 @@ package qos
 import (
 	"fmt"
 	"log"
-	"mikutool/public/util"
 )
+
+// 视频帧率趋势图
 
 func init() {
 	RegisterChartGenerator("videoFps", &VideoFps{})
@@ -17,17 +18,27 @@ func (f *VideoFps) Generate(req QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
 		return ""
 	}
-	var fpsReports []util.StreamdFpsReport
-	sql := buildMikuFpsSQLQuery(req)
-	if req.LogLevel == "detail" {
-		log.Printf("执行SQL查询: %s", sql)
-	}
-	if err := util.TrinoQuery("miku", sql, &fpsReports); err != nil {
+	reports, err := GetStreamedFpsReport(req)
+	if err != nil {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
-	log.Println("查询结果fpsReports:", len(fpsReports))
+	log.Println("查询结果fpsReports:", len(reports))
+	fn := func(cb Cb) {
+		for _, report := range reports {
+			if report.Avg_IncomingVideoFps == nil {
+				continue
+			}
+			cb(*report.Ts, *report.Avg_IncomingVideoFps)
+		}
+	}
+	chartData := GenerateLineChartData("视频帧率趋势图", "帧率", fn)
+	return chartData
+}
+
+/*
 	// 生成推流/回源帧率折线图
 	streamdVideoFpsChartHTML := generateStreamdVideoFpsChartHTML(fpsReports)
 	streamdAudioFpsChartHTML := generateStreamdAudioFpsChartHTML(fpsReports)
 	return streamdVideoFpsChartHTML + streamdAudioFpsChartHTML
 }
+*/

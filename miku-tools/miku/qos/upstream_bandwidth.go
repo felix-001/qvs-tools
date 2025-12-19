@@ -39,7 +39,4 @@ func (u *UpstreamBandwidth) Generate(req QOSRequest) any {
 	}
 	chartData := GenerateLineChartData("推流/回源带宽趋势图", "带宽", fn)
 	return chartData
-	// 生成推流/回源带宽折线图
-	upstreamBandwidthChartHTML := generateUpstreamBandwidthChartHTML(upstreamBandwidthReports)
-	return upstreamBandwidthChartHTML
 }

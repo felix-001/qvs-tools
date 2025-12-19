@@ -242,3 +242,27 @@ func GenerateLineChartData(title, seriesTitle string, traverseFn func(cb Cb)) Li
 	traverseFn(cb)
 	return data
 }
+
+var streamedFpsCache struct {
+	StreamedFpsReports []util.StreamdFpsReport
+	Req                QOSRequest
+}
+
+func GetStreamedFpsReport(req QOSRequest) ([]util.StreamdFpsReport, error) {
+	if streamedFpsCache.Req.StartTime == req.StartTime &&
+		streamedFpsCache.Req.EndTime == req.EndTime &&
+		len(streamedFpsCache.StreamedFpsReports) > 0 {
+
+		return streamedFpsCache.StreamedFpsReports, nil
+	}
+	sql := buildMikuFpsSQLQuery(req)
+	if req.LogLevel == "detail" {
+		log.Printf("执行SQL查询: %s", sql)
+	}
+	if err := util.TrinoQuery("miku", sql, &streamedFpsCache.StreamedFpsReports); err != nil {
+		return nil, fmt.Errorf("查询失败: %v", err)
+	}
+	log.Println("查询结果fpsReports:", len(streamedFpsCache.StreamedFpsReports))
+	streamedFpsCache.Req = req
+	return streamedFpsCache.StreamedFpsReports, nil
+}
