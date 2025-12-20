@@ -12,6 +12,7 @@ import (
 	"mikutool/config"
 	"mikutool/miku/qos"
 	_ "mikutool/miku/qos/hy"
+	_ "mikutool/miku/qos/usr"
 	"mikutool/resources"
 )
 
@@ -40,6 +41,7 @@ func (s *QOSServer) StartServer() {
 	// API接口
 	http.HandleFunc("/api/v1/appnames", s.getAppNamesHandler)
 	http.HandleFunc("/api/v1/qos", s.qosAnalysisHandler)
+	http.HandleFunc("/api/v1/charts", s.chartsHandler)
 
 	fmt.Println("QOS排障系统启动成功！")
 	fmt.Println("请访问: http://localhost:8080")
@@ -111,6 +113,40 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	}
+}
+
+var chartsSeq = []string{
+	"chart_usrDistributionAreaMiku",
+}
+
+type ChartDataGetter interface {
+	ChartInfo() qos.ChartInfo
+}
+
+func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("chartsHandler called")
+	var charts []qos.ChartInfo
+	for _, chart := range chartsSeq {
+		log.Println("chart", chart)
+		if generator, ok := qos.ChartGenerators[chart]; ok {
+			log.Println("generator", generator)
+			if getter, ok := generator.(ChartDataGetter); ok {
+				log.Println("getter", getter)
+				chartInfo := getter.ChartInfo()
+				charts = append(charts, chartInfo)
+			}
+		}
+	}
+
+	bytes, err := json.Marshal(charts)
+	if err != nil {
+		http.Error(w, "Error encoding chart data", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("chartsHandler", string(bytes))
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(bytes)
 }
 
 // Qos 主函数，启动QOS服务器

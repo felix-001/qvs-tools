@@ -133,3 +133,8 @@ type PieChartData struct {
 	Title string        `json:"title"`
 	Data  []PieDataItem `json:"data"`
 }
+
+type ChartInfo struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}

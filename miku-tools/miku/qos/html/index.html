@@ -312,7 +312,7 @@
                         <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选/去全选</label>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                <div id="chart-checkbox-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
 
                     <!-- 在线相关图表 -->
                     <div class="checkbox-group">
@@ -846,5 +846,46 @@
     </script>
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <script>
+        fetch("/api/v1/charts", {
+            method: 'GET'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`请求失败: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(charts => {
+            console.log('可用图表:', charts);
+            
+            // 动态创建图表选择框
+            const chartsContainer = document.getElementById('chart-checkbox-group'); //document.querySelector('.form-group[style*="grid-template-columns: repeat(3, 1fr)"]');
+            if (chartsContainer && charts.length > 0) {
+                console.log('图表容器:', chartsContainer)
+                // 清空现有的图表选择项（保留标题和全选按钮）
+                const existingCheckboxes = chartsContainer.querySelectorAll('.checkbox-group');
+                existingCheckboxes.forEach(el => el.remove());
+                
+                // 根据后端返回的图表列表创建选择框
+                charts.forEach(chart => {
+                    const div = document.createElement('div');
+                    div.className = 'checkbox-group';
+                    div.innerHTML = `
+                        <input type="checkbox" id="${chart.id}" name="${chart.id}" checked>
+                        <label for="${chart.id}">${chart.title}</label>
+                    `;
+                    console.log('div', div)
+                    chartsContainer.appendChild(div);
+                });
+                
+                // 重新设置全选功能
+                setupSelectAllCharts();
+            }
+        })
+        .catch(error => {
+            console.error('获取图表列表失败:', error);
+        });
+    </script>
 </body>
 </html>
