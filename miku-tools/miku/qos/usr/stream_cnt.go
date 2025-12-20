@@ -1,21 +1,22 @@
-package qos
+package usr
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"mikutool/public/util"
 	"strings"
 )
 
 func init() {
-	RegisterChartGenerator("onlineStreams", &StreamCnt{})
+	qos.RegisterChartGenerator("onlineStreams", &StreamCnt{})
 }
 
 type StreamCnt struct {
 }
 
-func (s *StreamCnt) Generate(req QOSRequest) any {
-	sql := buildMikuStreamCntSQLQuery(req)
+func (s *StreamCnt) Generate(req qos.QOSRequest) any {
+	sql := qos.BuildMikuStreamCntSQLQuery(req)
 	if req.LogLevel == "detail" {
 		log.Printf("执行SQL查询: %s", sql)
 	}
@@ -26,7 +27,7 @@ func (s *StreamCnt) Generate(req QOSRequest) any {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
 	log.Println("查询结果streamCntReports:", len(streamCntReports))
-	data := LineChartData{
+	data := qos.LineChartData{
 		Title:       "在线流个数趋势图",
 		SeriesTitle: "流个数",
 		Color:       "#1890ff",

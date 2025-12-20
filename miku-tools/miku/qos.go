@@ -122,3 +122,30 @@ func Qos(config *config.Config, resources *resources.Resources) {
 	server := NewQOSServer(config, resources)
 	server.StartServer()
 }
+
+/*
+回客户源站
+    源站按大区分布
+    回源帧率
+    回源带宽
+    回源重试次数
+    回客户源站卡顿率
+中间源
+    内部回源重试次数
+    内部回源重试率
+    内部回源卡顿率
+边缘节点
+    边缘节点卡顿分析表格
+    边缘节点卡顿聚集区域
+    边缘节点卡顿聚集省份
+用户
+    用户卡顿分析表格
+    用户按大区分布
+    用户按省份分布
+    用户卡顿聚集区域
+    用户卡顿聚集省份
+    流维度卡顿率
+    协议维度卡顿率
+
+    权重
+*/

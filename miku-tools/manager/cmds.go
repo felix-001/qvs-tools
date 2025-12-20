@@ -8,6 +8,7 @@ import (
 	"mikutool/public/util"
 	"mikutool/qvs"
 	"mikutool/qvs/mock"
+	qvsStag "mikutool/qvs/staging"
 )
 
 func (m *CommandManager) CmdHttp() *Command {
@@ -426,6 +427,17 @@ func (m *CommandManager) CmdHlsPlay() *Command {
 	}
 	cmd := &Command{
 		Desc:    "HLS播放",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdTestDev() *Command {
+	handler := func() {
+		qvsStag.TestDev(m.config)
+	}
+	cmd := &Command{
+		Desc:    "更新qvs设备alarmTypesForSnap",
 		Handler: handler,
 	}
 	return cmd

@@ -1,37 +1,38 @@
-package qos
+package upstream
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 )
 
-// 视频帧率趋势图
+// 音频帧率趋势图
 
 func init() {
-	RegisterChartGenerator("videoFps", &VideoFps{})
+	qos.RegisterChartGenerator("audioFps", &AudioFps{})
 }
 
-type VideoFps struct {
+type AudioFps struct {
 }
 
-func (f *VideoFps) Generate(req QOSRequest) any {
+func (f *AudioFps) Generate(req qos.QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
 		return ""
 	}
-	reports, err := GetStreamedFpsReport(req)
+	reports, err := qos.GetStreamedFpsReport(req)
 	if err != nil {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
 	log.Println("查询结果fpsReports:", len(reports))
-	fn := func(cb Cb) {
+	fn := func(cb qos.Cb) {
 		for _, report := range reports {
-			if report.Avg_IncomingVideoFps == nil {
+			if report.Avg_IncomingAudioFps == nil {
 				continue
 			}
-			cb(*report.Ts, *report.Avg_IncomingVideoFps)
+			cb(*report.Ts, *report.Avg_IncomingAudioFps)
 		}
 	}
-	chartData := GenerateLineChartData("视频帧率趋势图", "帧率", fn)
+	chartData := qos.GenerateLineChartData("音频帧率趋势图", "帧率", fn)
 	return chartData
 }
 

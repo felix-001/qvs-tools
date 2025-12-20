@@ -1,29 +1,30 @@
-package qos
+package upstream
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"strings"
 )
 
 // 回客户源站白秒卡顿率
 
 func init() {
-	RegisterChartGenerator("customerUpstreamLagRate", &UsrUpstreamLagRate{})
+	qos.RegisterChartGenerator("customerUpstreamLagRate", &UsrUpstreamLagRate{})
 }
 
 type UsrUpstreamLagRate struct {
 }
 
-func (m *UsrUpstreamLagRate) Generate(req QOSRequest) any {
+func (m *UsrUpstreamLagRate) Generate(req qos.QOSRequest) any {
 	log.Println("Generating customer upstream lag rate chart")
-	streamdReports, err := GetMikuStreamdReportLagDatas(req)
+	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
 		return ""
 	}
 	log.Println("查询结果streamdReports:", len(streamdReports))
-	data := LineChartData{
+	data := qos.LineChartData{
 		Title:       "回客户源站百秒卡顿率",
 		SeriesTitle: "卡顿率",
 		Color:       "#1890ff",

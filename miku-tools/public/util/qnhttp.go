@@ -194,7 +194,7 @@ func GetWithBody(addr, body string) (string, error) {
 	return HttpReq("GET", addr, body, nil)
 }
 
-func Http(conf *config.Config) {
+func Http(conf *config.Config) (string, error) {
 	method := "GET"
 	if conf.Method != "" {
 		method = conf.Method
@@ -207,34 +207,36 @@ func Http(conf *config.Config) {
 	}
 	if conf.Addr == "" {
 		log.Println("need -addr <url>")
-		return
+		return "", fmt.Errorf("missing address")
 	}
 	if conf.Ak == "" {
 		log.Println("need -ak <ak>")
-		return
+		return "", fmt.Errorf("missing ak")
 	}
 	if conf.Sk == "" {
 		log.Println("need -sk <sk>")
-		return
+		return "", fmt.Errorf("missing sk")
 	}
 	log.Println("headers:", conf.HeaderMap)
+
 	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
 	if err != nil {
 		log.Println(err)
-		return
+		return "", err
 	}
 	fmt.Println(resp)
 	respMap := make(map[string]any)
 	if err := json.Unmarshal([]byte(resp), &respMap); err != nil {
 		log.Println("err:", err)
-		return
+		return "", err
 	}
 	bytes, err := json.MarshalIndent(respMap, "", "  ")
 	if err != nil {
 		log.Println(err)
-		return
+		return "", err
 	}
 	fmt.Println(string(bytes))
+	return string(bytes), err
 }
 
 func httpReqReturnHdr(method, addr, body string, headers map[string]string) (int, string, http.Header) {
@@ -281,4 +283,37 @@ func QnHttpReqReturnHdr(method, addr, body, ak, sk string) (int, string, http.He
 	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token
 	return httpReqReturnHdr(method, addr, body, headers)
+}
+
+func HttpRequest(conf *config.Config) (string, error) {
+	method := "GET"
+	if conf.Method != "" {
+		method = conf.Method
+	}
+	if conf.Body != "" && conf.Method == "" {
+		method = "POST"
+	}
+	if conf.Uid != "" {
+		conf.Ak, conf.Sk = GetAkSk(conf)
+	}
+	if conf.Addr == "" {
+		log.Println("need -addr <url>")
+		return "", fmt.Errorf("missing address")
+	}
+	if conf.Ak == "" {
+		log.Println("need -ak <ak>")
+		return "", fmt.Errorf("missing ak")
+	}
+	if conf.Sk == "" {
+		log.Println("need -sk <sk>")
+		return "", fmt.Errorf("missing sk")
+	}
+	//log.Println("headers:", conf.HeaderMap)
+
+	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return resp, nil
 }

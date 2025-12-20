@@ -1,27 +1,28 @@
-package qos
+package middle
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"strings"
 )
 
 // 内部回源重试率趋势图
 
 func init() {
-	RegisterChartGenerator("internalUpstreamRetryRate", &InternalUpstreamRetryRate{})
+	qos.RegisterChartGenerator("internalUpstreamRetryRate", &InternalUpstreamRetryRate{})
 }
 
 type InternalUpstreamRetryRate struct {
 }
 
-func (i *InternalUpstreamRetryRate) Generate(req QOSRequest) any {
-	streamdReports, err := GetMikuStreamdReportLagDatas(req)
+func (i *InternalUpstreamRetryRate) Generate(req qos.QOSRequest) any {
+	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
 		return ""
 	}
-	data := LineChartData{
+	data := qos.LineChartData{
 		Title:       "内部回源重试率",
 		SeriesTitle: "重试率",
 		Color:       "#1890ff",

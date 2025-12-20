@@ -1,36 +1,37 @@
-package qos
+package usr
 
 import (
 	"fmt"
 	"log"
+	"mikutool/miku/qos"
 	"strings"
 )
 
-// 内部回源重试次数趋势图
+// 用户百秒卡顿率
 
 func init() {
-	RegisterChartGenerator("internalUpstreamRetryTimes", &InternalUpstreamRetryTimes{})
+	qos.RegisterChartGenerator("usrLagRate", &UsrLagRate{})
 }
 
-type InternalUpstreamRetryTimes struct {
+type UsrLagRate struct {
 }
 
-func (i *InternalUpstreamRetryTimes) Generate(req QOSRequest) any {
-	streamdReports, err := GetMikuStreamdReportLagDatas(req)
+func (u *UsrLagRate) Generate(req qos.QOSRequest) any {
+	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
 		return ""
 	}
-	data := LineChartData{
-		Title:       "内部回源重试次数",
-		SeriesTitle: "重试次数",
+	data := qos.LineChartData{
+		Title:       "用户整体百秒卡顿率",
+		SeriesTitle: "卡顿率",
 		Color:       "#1890ff",
 		XType:       "category",
 		XAxis:       []string{},
 		YAxis:       []string{},
 	}
 	for _, report := range streamdReports {
-		if report.TotalRetryTimes == nil {
+		if report.Ratio_lag_player == nil {
 			continue
 		}
 		ts := strings.ReplaceAll(*report.Ts_m, "+08:00", "")
@@ -39,8 +40,7 @@ func (i *InternalUpstreamRetryTimes) Generate(req QOSRequest) any {
 			ts = ts[5:] // Keep everything after the year
 		}
 		data.XAxis = append(data.XAxis, ts)
-		data.YAxis = append(data.YAxis, fmt.Sprintf("%d", *report.TotalRetryTimes))
+		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Ratio_lag_player))
 	}
 	return data
-
 }
