@@ -5,8 +5,6 @@ import (
 	"log"
 	"mikutool/miku/qos"
 	"mikutool/public/util"
-
-	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 // 指定节点ip，查看节点的每分钟卡顿率趋势
@@ -32,19 +30,15 @@ func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 		return fmt.Sprintf("查询失败: %v", err)
 	}
 	log.Println("查询结果hyCdnIpLagReports:", len(hyCdnIpLagReports))
-	// 使用通用的折线图生成函数来显示CDN IP卡顿数据
-	var xAxisData []string
-	var yAxisData []opts.LineData
 
-	for _, report := range hyCdnIpLagReports {
-		if report.Ts_m != nil && report.Percent != nil {
-			xAxisData = append(xAxisData, *report.Ts_m)
-			yAxisData = append(yAxisData, opts.LineData{
-				Value: *report.Percent,
-			})
+	fn := func(cb qos.Cb) {
+		for _, report := range hyCdnIpLagReports {
+			if report.Percent == nil {
+				continue
+			}
+			cb(*report.Ts_m, *report.Percent)
 		}
 	}
-
-	html := qos.GenerateLineChart("CDN IP卡顿率", "CDN IP卡顿率", "", xAxisData, yAxisData)
-	return html
+	chartData := qos.GenerateLineChartData("节点卡顿率趋势", "卡顿率", fn)
+	return chartData
 }

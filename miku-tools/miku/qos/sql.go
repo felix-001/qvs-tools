@@ -233,7 +233,7 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func buildMikuStreamCntSQLQuery(req QOSRequest) string {
+func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
@@ -252,7 +252,7 @@ func buildMikuStreamCntSQLQuery(req QOSRequest) string {
 	return sql
 }
 
-func buildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
+func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
