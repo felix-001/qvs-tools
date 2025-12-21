@@ -10,10 +10,21 @@ import (
 // 内部回源百秒卡顿率趋势图
 
 func init() {
-	qos.RegisterChartGenerator("internalUpstreamLagRate", &InternalUpstreamLagRate{})
+	qos.RegisterChartGenerator(&InternalUpstreamLagRate{})
 }
 
 type InternalUpstreamLagRate struct {
+}
+
+func (i *InternalUpstreamLagRate) ID() string {
+	return "chart_internalUpstreamLagRate"
+}
+
+func (i *InternalUpstreamLagRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    i.ID(),
+		Title: "内部回源百秒卡顿率",
+	}
 }
 
 func (i *InternalUpstreamLagRate) Generate(req qos.QOSRequest) any {

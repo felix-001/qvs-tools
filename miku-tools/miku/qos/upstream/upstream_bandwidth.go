@@ -10,10 +10,21 @@ import (
 // 推流/回源带宽折线图
 
 func init() {
-	qos.RegisterChartGenerator("upstreamBandwidth", &UpstreamBandwidth{})
+	qos.RegisterChartGenerator(&UpstreamBandwidth{})
 }
 
 type UpstreamBandwidth struct {
+}
+
+func (u *UpstreamBandwidth) ID() string {
+	return "chart_upstreamBandwidth"
+}
+
+func (u *UpstreamBandwidth) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    u.ID(),
+		Title: "推流/回源带宽趋势图",
+	}
 }
 
 func (u *UpstreamBandwidth) Generate(req qos.QOSRequest) any {

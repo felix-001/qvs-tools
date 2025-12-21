@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	qos.RegisterChartGenerator("hyLagRateTrend", &HuyaLagRate{})
+	qos.RegisterChartGenerator(&HuyaLagRate{})
 }
 
 // 虎牙每分钟卡顿率趋势图
@@ -46,4 +46,15 @@ func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Percent))
 	}
 	return data
+}
+
+func (h *HuyaLagRate) ID() string {
+	return "chart_hyLagRateTrend"
+}
+
+func (h *HuyaLagRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    h.ID(),
+		Title: "虎牙卡顿率趋势图",
+	}
 }

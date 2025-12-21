@@ -7,7 +7,7 @@ import (
 
 func init() {
 	log.Println("init usr_dis_area")
-	qos.RegisterChartGenerator2(&UserDistributionArea{
+	qos.RegisterChartGenerator(&UserDistributionArea{
 		Title: "用户分布区域(MIKU)",
 	})
 }
@@ -27,7 +27,7 @@ func (u *UserDistributionArea) Generate(req qos.QOSRequest) any {
 		{"name": "华北", "value": 5},
 		{"name": "其他", "value": 2},
 	}
-	
+
 	return map[string]interface{}{
 		"title": u.Title,
 		"data":  data,

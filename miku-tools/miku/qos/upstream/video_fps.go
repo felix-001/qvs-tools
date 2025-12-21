@@ -9,10 +9,21 @@ import (
 // 视频帧率趋势图
 
 func init() {
-	qos.RegisterChartGenerator("videoFps", &VideoFps{})
+	qos.RegisterChartGenerator(&VideoFps{})
 }
 
 type VideoFps struct {
+}
+
+func (f *VideoFps) ID() string {
+	return "chart_videoFps"
+}
+
+func (f *VideoFps) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    f.ID(),
+		Title: "视频帧率趋势图",
+	}
 }
 
 func (f *VideoFps) Generate(req qos.QOSRequest) any {

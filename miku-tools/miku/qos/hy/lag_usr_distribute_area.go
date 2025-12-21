@@ -8,7 +8,7 @@ import (
 // 卡顿用户按大区分布
 
 func init() {
-	qos.RegisterChartGenerator("lagUsrDistributionArea", &LagUsrDistributeArea{})
+	qos.RegisterChartGenerator(&LagUsrDistributeArea{})
 }
 
 type LagUsrDistributeArea struct {
@@ -29,4 +29,15 @@ func (u *LagUsrDistributeArea) Generate(req qos.QOSRequest) any {
 		Data:  sortedData,
 	}
 	return data
+}
+
+func (u *LagUsrDistributeArea) ID() string {
+	return "chart_lagUsrDistributionArea"
+}
+
+func (u *LagUsrDistributeArea) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    u.ID(),
+		Title: "虎牙卡顿用户按区域分布图",
+	}
 }

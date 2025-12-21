@@ -8,10 +8,21 @@ import (
 // 源站按大区分布饼图
 
 func init() {
-	qos.RegisterChartGenerator("upstreamAreaDis", &UpstreamDistribute{})
+	qos.RegisterChartGenerator(&UpstreamDistribute{})
 }
 
 type UpstreamDistribute struct {
+}
+
+func (u *UpstreamDistribute) ID() string {
+	return "chart_upstreamAreaDis"
+}
+
+func (u *UpstreamDistribute) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    u.ID(),
+		Title: "源站按大区分布",
+	}
 }
 
 func (u *UpstreamDistribute) Generate(req qos.QOSRequest) any {

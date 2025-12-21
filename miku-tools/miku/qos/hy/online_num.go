@@ -9,7 +9,7 @@ import (
 // 在线用户数折线图
 
 func init() {
-	qos.RegisterChartGenerator("onlineUsers", &OnlineNum{})
+	qos.RegisterChartGenerator(&OnlineNum{})
 }
 
 type OnlineNum struct {
@@ -31,4 +31,15 @@ func (o *OnlineNum) Generate(req qos.QOSRequest) any {
 	}
 	chartData := qos.GenerateLineChartData("在线用户数", "人数", fn)
 	return chartData
+}
+
+func (o *OnlineNum) ID() string {
+	return "chart_onlineUsers"
+}
+
+func (o *OnlineNum) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    o.ID(),
+		Title: "每分钟在线用户数趋势图",
+	}
 }

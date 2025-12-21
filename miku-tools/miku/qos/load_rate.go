@@ -7,10 +7,21 @@ import (
 // 秒开率, SendFirstPktTime
 
 func init() {
-	RegisterChartGenerator("loadRate", &LoadRate{})
+	RegisterChartGenerator(&LoadRate{})
 }
 
 type LoadRate struct {
+}
+
+func (l *LoadRate) ID() string {
+	return "chart_loadRate"
+}
+
+func (l *LoadRate) ChartInfo() ChartInfo {
+	return ChartInfo{
+		ID:    l.ID(),
+		Title: "秒开率",
+	}
 }
 
 func (l *LoadRate) Generate(req QOSRequest) any {

@@ -9,10 +9,21 @@ import (
 // 卡顿用户占总用户数的百分比
 
 func init() {
-	qos.RegisterChartGenerator("hyLagUsrPercent", &LagUsrRate{})
+	qos.RegisterChartGenerator(&LagUsrRate{})
 }
 
 type LagUsrRate struct {
+}
+
+func (l *LagUsrRate) ID() string {
+	return "chart_hyLagUsrPercent"
+}
+
+func (l *LagUsrRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    l.ID(),
+		Title: "卡顿用户占总用户数的百分比",
+	}
 }
 
 func (l *LagUsrRate) Generate(req qos.QOSRequest) any {

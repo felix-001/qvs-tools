@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	qos.RegisterChartGenerator("lagrateByUser", &LagRateByUser{})
+	qos.RegisterChartGenerator(&LagRateByUser{})
 }
 
 // 每个用户的卡顿率表格
@@ -76,4 +76,15 @@ func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 	}
 	aggData := l.getAggData(reports, req, clientCdnIps)
 	return aggData
+}
+
+func (l *LagRateByUser) ID() string {
+	return "chart_lagrateByUser"
+}
+
+func (l *LagRateByUser) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    l.ID(),
+		Title: "虎牙按用户卡顿分析表格",
+	}
 }

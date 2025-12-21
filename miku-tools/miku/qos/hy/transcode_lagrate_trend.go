@@ -9,7 +9,7 @@ import (
 
 // 虎牙转码流每分钟卡顿率趋势图
 func init() {
-	qos.RegisterChartGenerator("transcodeHyLagRateTrend", &HuyaLagRate{})
+	qos.RegisterChartGenerator(&HuyaTranscodeLagRate{})
 }
 
 type HuyaTranscodeLagRate struct {
@@ -45,4 +45,15 @@ func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Percent))
 	}
 	return data
+}
+
+func (h *HuyaTranscodeLagRate) ID() string {
+	return "chart_transcodeHyLagRateTrend"
+}
+
+func (h *HuyaTranscodeLagRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    h.ID(),
+		Title: "虎牙转码流卡顿率趋势图",
+	}
 }

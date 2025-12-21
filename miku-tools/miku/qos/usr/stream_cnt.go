@@ -9,10 +9,21 @@ import (
 )
 
 func init() {
-	qos.RegisterChartGenerator("onlineStreams", &StreamCnt{})
+	qos.RegisterChartGenerator(&StreamCnt{})
 }
 
 type StreamCnt struct {
+}
+
+func (s *StreamCnt) ID() string {
+	return "chart_onlineStreams"
+}
+
+func (s *StreamCnt) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    s.ID(),
+		Title: "在线流个数趋势图",
+	}
 }
 
 func (s *StreamCnt) Generate(req qos.QOSRequest) any {

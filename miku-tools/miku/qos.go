@@ -116,11 +116,35 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var chartsSeq = []string{
-	"chart_usrDistributionAreaMiku",
+	"chart_onlineStreams",
+	"chart_onlineUsers",
+	"chart_usrDistributionCountry",
+	"chart_usrDistributionArea",
+	"chart_usrDistributionProv",
+	"chart_lagUsrDistributionArea",
+	"chart_lagUsrDistributionProv",
+	"chart_lagNodesPercent",
+	"chart_hyLagrateByStreams",
+	"chart_hyLagRateByNode",
+	"chart_lagrateByUser",
+	"chart_hyLagRateTrend",
+	"chart_hyLagUsrPercent",
+	"chart_hy_nodeview_lag",
+	"chart_transcodeHyLagRateTrend",
+	"chart_internalUpstreamLagRate",
+	"chart_internalUpstreamRetryTimes",
+	"chart_internalUpstreamRetryRate",
+	"chart_customerUpstreamLagRate",
+	"chart_upstreamAreaDis",
+	"chart_upstreamBandwidth",
+	"chart_usrLagRate",
+	"chart_videoFps",
+	"chart_audioFps",
+	"chart_loadRate",
 }
 
 type ChartDataGetter interface {
-	ChartInfo() qos.ChartInfo
+	GetChartInfo() qos.ChartInfo
 }
 
 func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
@@ -130,11 +154,8 @@ func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("chart", chart)
 		if generator, ok := qos.ChartGenerators[chart]; ok {
 			log.Println("generator", generator)
-			if getter, ok := generator.(ChartDataGetter); ok {
-				log.Println("getter", getter)
-				chartInfo := getter.ChartInfo()
-				charts = append(charts, chartInfo)
-			}
+			chartInfo := generator.ChartInfo()
+			charts = append(charts, chartInfo)
 		}
 	}
 

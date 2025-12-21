@@ -8,7 +8,7 @@ import (
 // 用户按省分布
 
 func init() {
-	qos.RegisterChartGenerator("usrDistributionProv", &UsrDistributeProv{})
+	qos.RegisterChartGenerator(&UsrDistributeProv{})
 }
 
 type UsrDistributeProv struct {
@@ -29,4 +29,15 @@ func (u *UsrDistributeProv) Generate(req qos.QOSRequest) any {
 		Data:  sortedData,
 	}
 	return data
+}
+
+func (u *UsrDistributeProv) ID() string {
+	return "chart_usrDistributionProv"
+}
+
+func (u *UsrDistributeProv) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    u.ID(),
+		Title: "用户按省份分布图",
+	}
 }

@@ -9,10 +9,21 @@ import (
 // 音频帧率趋势图
 
 func init() {
-	qos.RegisterChartGenerator("audioFps", &AudioFps{})
+	qos.RegisterChartGenerator(&AudioFps{})
 }
 
 type AudioFps struct {
+}
+
+func (f *AudioFps) ID() string {
+	return "chart_audioFps"
+}
+
+func (f *AudioFps) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    f.ID(),
+		Title: "音频帧率趋势图",
+	}
 }
 
 func (f *AudioFps) Generate(req qos.QOSRequest) any {

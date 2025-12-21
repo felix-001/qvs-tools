@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	qos.RegisterChartGenerator("lagNodesPercent", &LagNodeRate{})
+	qos.RegisterChartGenerator(&LagNodeRate{})
 }
 
 // 卡顿的节点数占比
@@ -32,4 +32,15 @@ func (l *LagNodeRate) Generate(req qos.QOSRequest) any {
 	chartData := qos.GenerateLineChartData("卡顿节点占总节点数的百分比", "占比", fn)
 	return chartData
 	//return qos.GenerateCdnLagRatioChartHTML(hyLagRateReports)
+}
+
+func (l *LagNodeRate) ID() string {
+	return "chart_lagNodesPercent"
+}
+
+func (l *LagNodeRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    l.ID(),
+		Title: "卡顿节点占总节点数的百分比",
+	}
 }

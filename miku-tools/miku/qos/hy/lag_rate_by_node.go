@@ -13,11 +13,22 @@ import (
 // 每个节点的卡顿率
 
 func init() {
-	qos.RegisterChartGenerator("hyLagRateByNode", &HyCdnLag{})
+	qos.RegisterChartGenerator(&HyCdnLag{})
 }
 
 type HyCdnLag struct {
 	ipparser *ipdb.City
+}
+
+func (h *HyCdnLag) ID() string {
+	return "chart_hyLagRateByNode"
+}
+
+func (h *HyCdnLag) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    h.ID(),
+		Title: "虎牙按节点卡顿率表格",
+	}
 }
 
 func (h *HyCdnLag) getRawData(req qos.QOSRequest) []util.HyCdnLagReport {

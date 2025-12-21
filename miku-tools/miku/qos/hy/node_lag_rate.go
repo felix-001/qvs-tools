@@ -10,7 +10,7 @@ import (
 // 指定节点ip，查看节点的每分钟卡顿率趋势
 
 func init() {
-	qos.RegisterChartGenerator("hy_nodeview_lag", &HyNodeViewLag{})
+	qos.RegisterChartGenerator(&HyNodeViewLag{})
 }
 
 type HyNodeViewLag struct {
@@ -41,4 +41,15 @@ func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 	}
 	chartData := qos.GenerateLineChartData("节点卡顿率趋势", "卡顿率", fn)
 	return chartData
+}
+
+func (h *HyNodeViewLag) ID() string {
+	return "chart_hy_nodeview_lag"
+}
+
+func (h *HyNodeViewLag) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    h.ID(),
+		Title: "虎牙卡顿节点占比趋势图",
+	}
 }

@@ -10,10 +10,21 @@ import (
 // 用户百秒卡顿率
 
 func init() {
-	qos.RegisterChartGenerator("usrLagRate", &UsrLagRate{})
+	qos.RegisterChartGenerator(&UsrLagRate{})
 }
 
 type UsrLagRate struct {
+}
+
+func (u *UsrLagRate) ID() string {
+	return "chart_usrLagRate"
+}
+
+func (u *UsrLagRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    u.ID(),
+		Title: "用户整体百秒卡顿率",
+	}
 }
 
 func (u *UsrLagRate) Generate(req qos.QOSRequest) any {

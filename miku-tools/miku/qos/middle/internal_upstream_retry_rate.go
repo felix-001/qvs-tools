@@ -10,10 +10,21 @@ import (
 // 内部回源重试率趋势图
 
 func init() {
-	qos.RegisterChartGenerator("internalUpstreamRetryRate", &InternalUpstreamRetryRate{})
+	qos.RegisterChartGenerator(&InternalUpstreamRetryRate{})
 }
 
 type InternalUpstreamRetryRate struct {
+}
+
+func (i *InternalUpstreamRetryRate) ID() string {
+	return "chart_internalUpstreamRetryRate"
+}
+
+func (i *InternalUpstreamRetryRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    i.ID(),
+		Title: "内部回源重试率",
+	}
 }
 
 func (i *InternalUpstreamRetryRate) Generate(req qos.QOSRequest) any {

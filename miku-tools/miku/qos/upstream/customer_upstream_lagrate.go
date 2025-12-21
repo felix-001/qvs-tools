@@ -10,10 +10,21 @@ import (
 // 回客户源站白秒卡顿率
 
 func init() {
-	qos.RegisterChartGenerator("customerUpstreamLagRate", &UsrUpstreamLagRate{})
+	qos.RegisterChartGenerator(&UsrUpstreamLagRate{})
 }
 
 type UsrUpstreamLagRate struct {
+}
+
+func (m *UsrUpstreamLagRate) ID() string {
+	return "chart_customerUpstreamLagRate"
+}
+
+func (m *UsrUpstreamLagRate) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    m.ID(),
+		Title: "回客户源站百秒卡顿率",
+	}
 }
 
 func (m *UsrUpstreamLagRate) Generate(req qos.QOSRequest) any {

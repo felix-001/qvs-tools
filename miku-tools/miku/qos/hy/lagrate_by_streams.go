@@ -9,7 +9,7 @@ import (
 // 卡顿率按流分布
 
 func init() {
-	qos.RegisterChartGenerator("hyLagrateByStreams", &LagRateByStreams{})
+	qos.RegisterChartGenerator(&LagRateByStreams{})
 }
 
 type LagRateByStreams struct {
@@ -29,4 +29,15 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		return ""
 	}
 	return hyLagRateByStreamsReports
+}
+
+func (l *LagRateByStreams) ID() string {
+	return "chart_hyLagrateByStreams"
+}
+
+func (l *LagRateByStreams) ChartInfo() qos.ChartInfo {
+	return qos.ChartInfo{
+		ID:    l.ID(),
+		Title: "虎牙按流卡顿率表格",
+	}
 }
