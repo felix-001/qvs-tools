@@ -18,7 +18,7 @@ type LagNodeRate struct {
 func (l *LagNodeRate) Generate(req qos.QOSRequest) any {
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
 	if err != nil {
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	fn := func(cb qos.Cb) {
@@ -30,7 +30,7 @@ func (l *LagNodeRate) Generate(req qos.QOSRequest) any {
 		}
 	}
 	chartData := qos.GenerateLineChartData("卡顿节点占总节点数的百分比", "占比", fn)
-	return chartData
+	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 	//return qos.GenerateCdnLagRatioChartHTML(hyLagRateReports)
 }
 

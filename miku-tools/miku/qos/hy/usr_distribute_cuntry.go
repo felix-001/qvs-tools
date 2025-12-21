@@ -19,7 +19,7 @@ func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
 	cdnClientIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
 		log.Printf("获取CDN客户端IP失败: %v", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	log.Println("cdnClientIps:", len(cdnClientIps))
 	aggData := qos.GetAggData(req, cdnClientIps)
@@ -28,7 +28,7 @@ func (u *UsrDistribute) Generate(req qos.QOSRequest) any {
 		Title: "用户按国家分布",
 		Data:  sortedData,
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypePie}
 }
 
 func (u *UsrDistribute) ID() string {

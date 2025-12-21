@@ -18,11 +18,11 @@ type HuyaLagRate struct {
 
 func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
 	if req.AppName != "huyacdn" && req.AppName != "huyap2p" {
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
 	if err != nil {
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	data := qos.LineChartData{
@@ -45,7 +45,7 @@ func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
 		data.XAxis = append(data.XAxis, ts)
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Percent))
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypeLine}
 }
 
 func (h *HuyaLagRate) ID() string {

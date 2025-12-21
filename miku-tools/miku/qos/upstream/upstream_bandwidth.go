@@ -29,7 +29,7 @@ func (u *UpstreamBandwidth) ChartInfo() qos.ChartInfo {
 
 func (u *UpstreamBandwidth) Generate(req qos.QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	var upstreamBandwidthReports []util.StreamdUpstreamBandWidthReport
 	sql := qos.BuildMikuUpstreamBandwidthSQLQuery(req)
@@ -38,7 +38,7 @@ func (u *UpstreamBandwidth) Generate(req qos.QOSRequest) any {
 	}
 	if err := util.TrinoQuery("miku", sql, &upstreamBandwidthReports); err != nil {
 		log.Printf("Trino查询失败: %v", err)
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果upstreamBandwidthReports:", len(upstreamBandwidthReports))
 	fn := func(cb qos.Cb) {
@@ -50,5 +50,5 @@ func (u *UpstreamBandwidth) Generate(req qos.QOSRequest) any {
 		}
 	}
 	chartData := qos.GenerateLineChartData("推流/回源带宽趋势图", "带宽", fn)
-	return chartData
+	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 }

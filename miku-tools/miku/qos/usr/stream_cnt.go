@@ -35,7 +35,7 @@ func (s *StreamCnt) Generate(req qos.QOSRequest) any {
 	var streamCntReports []util.StreamdStreamCntReport
 	if err := util.TrinoQuery("miku", sql, &streamCntReports); err != nil {
 		log.Printf("Trino查询失败: %v", err)
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果streamCntReports:", len(streamCntReports))
 	data := qos.LineChartData{
@@ -58,5 +58,5 @@ func (s *StreamCnt) Generate(req qos.QOSRequest) any {
 		data.XAxis = append(data.XAxis, ts)
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%d", *report.StreamCnt))
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypeLine}
 }

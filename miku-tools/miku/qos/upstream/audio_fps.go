@@ -28,11 +28,11 @@ func (f *AudioFps) ChartInfo() qos.ChartInfo {
 
 func (f *AudioFps) Generate(req qos.QOSRequest) any {
 	if req.StreamID == "" || req.FuzzySearch {
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	reports, err := qos.GetStreamedFpsReport(req)
 	if err != nil {
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果fpsReports:", len(reports))
 	fn := func(cb qos.Cb) {
@@ -44,7 +44,7 @@ func (f *AudioFps) Generate(req qos.QOSRequest) any {
 		}
 	}
 	chartData := qos.GenerateLineChartData("音频帧率趋势图", "帧率", fn)
-	return chartData
+	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 }
 
 /*

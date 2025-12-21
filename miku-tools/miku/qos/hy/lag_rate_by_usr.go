@@ -15,7 +15,7 @@ func init() {
 type LagRateByUser struct {
 }
 
-func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) []qos.UserAggregatedData {
+func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) qos.ChartData {
 	clientCdnsMap := make(map[string]map[string]bool)
 	for _, report := range clientCdnIps {
 		if report.DimCdnip == nil || report.DimIp == nil {
@@ -54,7 +54,7 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 		data.LagRate = float64(data.LagCount*100) / float64(totalLagCnt)
 		aggData[i] = data
 	}
-	return aggData
+	return qos.ChartData{Data: aggData, Type: qos.ChartTypeTable}
 }
 
 func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
@@ -66,16 +66,16 @@ func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 	var reports []util.HyCdnLagReport
 	if err := util.TrinoQuery("miku", sql, &reports); err != nil {
 		log.Printf("Trino查询失败: %v", err)
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("lag_rate_by_user reports:", len(reports))
 	clientCdnIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
 		log.Printf("获取CDN客户端IP失败: %v", err)
-		return fmt.Sprintf("获取CDN客户端IP失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("获取CDN客户端IP失败: %v", err), Type: "error"}
 	}
 	aggData := l.getAggData(reports, req, clientCdnIps)
-	return aggData
+	return qos.ChartData{Data: aggData, Type: qos.ChartTypeTable}
 }
 
 func (l *LagRateByUser) ID() string {

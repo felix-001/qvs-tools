@@ -19,7 +19,7 @@ func (c *CustomerUpstreamRetryTimes) Generate(req qos.QOSRequest) any {
 	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	log.Println("streamdReports:", len(streamdReports))
 	fn := func(cb qos.Cb) {

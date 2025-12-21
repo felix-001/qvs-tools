@@ -31,7 +31,7 @@ func (i *InternalUpstreamRetryRate) Generate(req qos.QOSRequest) any {
 	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	data := qos.LineChartData{
 		Title:       "内部回源重试率",
@@ -53,5 +53,5 @@ func (i *InternalUpstreamRetryRate) Generate(req qos.QOSRequest) any {
 		data.XAxis = append(data.XAxis, ts)
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Retry_ratio_puller))
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypeLine}
 }

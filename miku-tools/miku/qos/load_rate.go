@@ -39,5 +39,5 @@ func (l *LoadRate) Generate(req QOSRequest) any {
 		}
 	}
 	chartData := GenerateLineChartData("秒开率", "秒开率", fn)
-	return chartData
+	return ChartData{Data: chartData, Type: ChartTypeLine}
 }

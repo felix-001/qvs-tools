@@ -28,10 +28,11 @@ func (u *UserDistributionArea) Generate(req qos.QOSRequest) any {
 		{"name": "其他", "value": 2},
 	}
 
-	return map[string]interface{}{
+	chartData := map[string]interface{}{
 		"title": u.Title,
 		"data":  data,
 	}
+	return qos.ChartData{Data: chartData, Type: qos.ChartTypePie}
 }
 func (u *UserDistributionArea) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{

@@ -17,7 +17,7 @@ type LagRateByStreams struct {
 
 func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 	if req.AppName != "huyacdn" && req.AppName != "huyap2p" {
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	sql := qos.BuildHyLagRateByStreamsSQLQuery(req)
 	if req.LogLevel == "detail" {
@@ -28,7 +28,7 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		log.Printf("Trino查询失败: %v", err)
 		return ""
 	}
-	return hyLagRateByStreamsReports
+	return qos.ChartData{Data: hyLagRateByStreamsReports, Type: qos.ChartTypeTable}
 }
 
 func (l *LagRateByStreams) ID() string {

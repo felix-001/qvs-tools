@@ -19,7 +19,7 @@ func (u *LagUsrDistributeProv) Generate(req qos.QOSRequest) any {
 	cdnClientIps, err := qos.GetHyDistinctCdnClientIps(req)
 	if err != nil {
 		log.Printf("获取CDN客户端IP失败: %v", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	log.Println("cdnClientIps:", len(cdnClientIps))
 	aggData := qos.GetAggData(req, cdnClientIps)
@@ -28,7 +28,7 @@ func (u *LagUsrDistributeProv) Generate(req qos.QOSRequest) any {
 		Title: "卡顿用户按省份分布",
 		Data:  sortedData,
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypePie}
 }
 
 func (u *LagUsrDistributeProv) ID() string {

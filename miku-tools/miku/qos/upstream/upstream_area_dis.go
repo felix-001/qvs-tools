@@ -29,7 +29,7 @@ func (u *UpstreamDistribute) Generate(req qos.QOSRequest) any {
 	upstreamDistributeReports, err := qos.GetUpstreamDistributeReport(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	areaCntMap, _ := qos.AggUpstreamDistributeReports(upstreamDistributeReports, req.IpParser)
 	sortedAreaData := qos.SortData(areaCntMap)
@@ -37,5 +37,5 @@ func (u *UpstreamDistribute) Generate(req qos.QOSRequest) any {
 		Title: "源站按大区分布",
 		Data:  sortedAreaData,
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypePie}
 }

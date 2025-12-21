@@ -32,7 +32,7 @@ func (m *UsrUpstreamLagRate) Generate(req qos.QOSRequest) any {
 	streamdReports, err := qos.GetMikuStreamdReportLagDatas(req)
 	if err != nil {
 		log.Println("获取数据失败:", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	log.Println("查询结果streamdReports:", len(streamdReports))
 	data := qos.LineChartData{
@@ -56,5 +56,5 @@ func (m *UsrUpstreamLagRate) Generate(req qos.QOSRequest) any {
 		data.XAxis = append(data.XAxis, ts)
 		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.Ratio_lag_puller))
 	}
-	return data
+	return qos.ChartData{Data: data, Type: qos.ChartTypeLine}
 }

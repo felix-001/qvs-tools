@@ -125,7 +125,7 @@ func (h *HyCdnLag) getStreamIdFromUrl(addr string) string {
 	return result
 }
 
-func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) []qos.AggregatedData {
+func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIpsOnCdnIpReports []util.HyClientIpsOnCdnIpReport) qos.ChartData {
 	totalLagCnt := 0
 	for _, report := range hyCdnLagReports {
 		if report.LagCnt == nil || report.DimCdnip == nil || report.Total == nil {
@@ -216,7 +216,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 		})
 	}
 
-	return aggCdnLagDatas
+	return qos.ChartData{Data: aggCdnLagDatas, Type: qos.ChartTypeTable}
 }
 
 func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
@@ -225,8 +225,8 @@ func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
 	clientIpsOnCdnIpReports, err := h.getClientIpsOnCdnIp(req)
 	if err != nil {
 		log.Printf("获取客户端IP聚合数据失败: %v", err)
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
-	return aggCdnLagData
+	return qos.ChartData{Data: aggCdnLagData, Type: qos.ChartTypeTable}
 }

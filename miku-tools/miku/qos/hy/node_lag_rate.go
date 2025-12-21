@@ -18,7 +18,7 @@ type HyNodeViewLag struct {
 
 func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 	if req.CdnIp == "" {
-		return ""
+		return qos.ChartData{Data: "", Type: "error"}
 	}
 	sql := qos.BuildHyCdnIpLagSQLQuery(req)
 	if req.LogLevel == "detail" {
@@ -27,7 +27,7 @@ func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 	var hyCdnIpLagReports []util.HyLagReport
 	if err := util.TrinoQuery("miku", sql, &hyCdnIpLagReports); err != nil {
 		log.Printf("Trino查询失败: %v", err)
-		return fmt.Sprintf("查询失败: %v", err)
+		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
 	}
 	log.Println("查询结果hyCdnIpLagReports:", len(hyCdnIpLagReports))
 
@@ -40,7 +40,7 @@ func (h *HyNodeViewLag) Generate(req qos.QOSRequest) any {
 		}
 	}
 	chartData := qos.GenerateLineChartData("节点卡顿率趋势", "卡顿率", fn)
-	return chartData
+	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 }
 
 func (h *HyNodeViewLag) ID() string {
