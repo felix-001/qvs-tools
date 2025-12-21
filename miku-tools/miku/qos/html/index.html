@@ -546,6 +546,17 @@
 
 	function handleResp(chart, resp) {
 		console.log(chart, resp)	
+        switch (resp.type) {
+            case 'line':
+                createLineChart(resp.data);
+                break;
+            case 'pie':
+                createPie(resp.data);
+                break;
+            case 'table':
+                createTable(resp.data);
+                break;
+        }
 		switch(chart) {
 		case 'usrLagRate':
 		case 'onlineUsers':

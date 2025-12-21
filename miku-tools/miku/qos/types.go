@@ -138,3 +138,14 @@ type ChartInfo struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 }
+
+type ChartData struct {
+	Type string `json:"type"`
+	Data any    `json:"data"`
+}
+
+const (
+	ChartTypeLine  = "line"
+	ChartTypePie   = "pie"
+	ChartTypeTable = "table"
+)

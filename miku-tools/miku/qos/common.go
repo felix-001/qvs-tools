@@ -237,7 +237,10 @@ func GenerateLineChartData(title, seriesTitle string, traverseFn func(cb Cb)) Li
 			data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", num))
 		} else if num, ok := value.(int); ok {
 			data.YAxis = append(data.YAxis, fmt.Sprintf("%d", num))
+		} else if num, ok := value.(int64); ok {
+			data.YAxis = append(data.YAxis, fmt.Sprintf("%d", num))
 		}
+
 	}
 	traverseFn(cb)
 	return data

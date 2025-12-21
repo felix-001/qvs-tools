@@ -12,6 +12,8 @@ import (
 	"mikutool/config"
 	"mikutool/miku/qos"
 	_ "mikutool/miku/qos/hy"
+	_ "mikutool/miku/qos/middle"
+	_ "mikutool/miku/qos/upstream"
 	_ "mikutool/miku/qos/usr"
 	"mikutool/resources"
 )
@@ -109,13 +111,14 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
 			return
 		}
-		//log.Println("data", data)
+		log.Println("data", data)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	}
 }
 
 var chartsSeq = []string{
+	// 用户
 	"chart_onlineStreams",
 	"chart_onlineUsers",
 	"chart_usrDistributionCountry",
@@ -123,23 +126,28 @@ var chartsSeq = []string{
 	"chart_usrDistributionProv",
 	"chart_lagUsrDistributionArea",
 	"chart_lagUsrDistributionProv",
+	"chart_lagrateByUser",
+	"chart_hyLagUsrPercent",
+	"chart_transcodeHyLagRateTrend",
+	"chart_usrLagRate",
+	// 边缘节点
 	"chart_lagNodesPercent",
 	"chart_hyLagrateByStreams",
 	"chart_hyLagRateByNode",
-	"chart_lagrateByUser",
 	"chart_hyLagRateTrend",
-	"chart_hyLagUsrPercent",
 	"chart_hy_nodeview_lag",
-	"chart_transcodeHyLagRateTrend",
+	// 中间源
 	"chart_internalUpstreamLagRate",
 	"chart_internalUpstreamRetryTimes",
 	"chart_internalUpstreamRetryRate",
+	// 源站
 	"chart_customerUpstreamLagRate",
+	"chart_customerUpstreamRetryTimes",
 	"chart_upstreamAreaDis",
 	"chart_upstreamBandwidth",
-	"chart_usrLagRate",
 	"chart_videoFps",
 	"chart_audioFps",
+	// 其他
 	"chart_loadRate",
 }
 
@@ -185,7 +193,7 @@ func Qos(config *config.Config, resources *resources.Resources) {
     源站按大区分布
     回源帧率
     回源带宽
-    回源重试次数
+    回源重试次数 --
     回客户源站卡顿率
 中间源
     内部回源重试次数
@@ -205,4 +213,5 @@ func Qos(config *config.Config, resources *resources.Resources) {
     协议维度卡顿率
 
     权重
+    虎牙数据miku平替
 */

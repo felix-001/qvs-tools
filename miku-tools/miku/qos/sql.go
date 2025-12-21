@@ -131,6 +131,9 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 
 		SUM(if(type = 'puller' and customerSource != true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes,
 
+		SUM(if(type = 'puller' and customerSource = true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as upstreamRetryTimes,
+		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource = true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource = true, requestid, NULL)), 0), 1) AS retry_ratio_upstream,
+
 		COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
 		COUNT(*) as total,
 		COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as loadRatio
