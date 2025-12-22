@@ -1,0 +1,27 @@
+{
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "your-email@example.com",
+    "password": "your-password",
+    "from": "your-email@example.com",
+    "useTLS": true
+  },
+  "processes": [
+    {
+      "name": "nginx",
+      "recipients": ["admin@example.com"],
+      "checkInterval": "10s"
+    },
+    {
+      "name": "mysql",
+      "recipients": ["dba@example.com", "admin@example.com"],
+      "checkInterval": "30s"
+    },
+    {
+      "name": "redis-server",
+      "recipients": ["admin@example.com"],
+      "checkInterval": "15s"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/config"
 	"mikutool/public/util"
+	"time"
 )
 
 type MikuStagMgr struct {
@@ -27,10 +28,14 @@ type Devices struct {
 
 func TestDev(config *config.Config) {
 	processed := 0
-	for i := 1; i < 1000; i++ {
+	line := 1000
+	start := config.Startid
+	retryCnt := 0
+	for i := start; i < 1000; i++ {
 		config.Method = "GET"
-		config.Addr = fmt.Sprintf("http://qvs.qiniuapi.com/v1/namespaces/%s/devices?line=500&offset=%d",
-			config.App, (i-1)*500)
+		config.Addr = fmt.Sprintf("http://qvs.qiniuapi.com/v1/namespaces/%s/devices?line=%d&offset=%d",
+			config.App, line, (i-1)*line)
+		log.Println("Request URL:", config.Addr)
 		config.Body = ""
 		resp, err := util.HttpRequest(config)
 		if err != nil {
@@ -44,7 +49,14 @@ func TestDev(config *config.Config) {
 			return
 		}
 
-		fmt.Println("Response:", len(devices.Items))
+		log.Println("Response:", len(devices.Items))
+		if len(devices.Items) != line {
+			i = i - 1
+			time.Sleep(time.Duration(retryCnt) * 10 * time.Second)
+			retryCnt++
+			log.Println("Retry count:", retryCnt)
+			continue
+		}
 		for _, device := range devices.Items {
 			if device.AlarmTypesForSnap != "" {
 				fmt.Println(device)
@@ -63,16 +75,18 @@ func TestDev(config *config.Config) {
 				}
 				processed++
 				log.Println("Processed:", processed)
+				time.Sleep(10 * time.Millisecond)
 				//return
 				//if processed >= 10 {
 				//	return
 				//}
 			}
 		}
-		log.Println("Processing batch:", i, devices.Total/500)
+		log.Println("Processing batch:", i, devices.Total/line, devices.Total)
 		//log.Println("total:", devices.Total)
-		if (i-1)*500 >= devices.Total {
+		if (i-1)*line >= devices.Total {
 			break
 		}
+		time.Sleep(time.Second * 10)
 	}
 }

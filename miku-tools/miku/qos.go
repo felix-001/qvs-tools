@@ -214,4 +214,6 @@ func Qos(config *config.Config, resources *resources.Resources) {
 
     权重
     虎牙数据miku平替
+    rtt
+    重传率
 */

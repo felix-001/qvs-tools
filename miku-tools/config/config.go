@@ -108,11 +108,19 @@ type Config struct {
 	MongoConf             *dal.MongoCfg         `json:"mongo_config"`
 	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config"`
 	DnsPod                config.DnspodConfig   `json:"dnspod"`
+	SMTPHost              string                `json:"smtp_host"`
+	SMTPPort              int                   `json:"smtp_port"`
+	SMTPUser              string                `json:"smtp_user"`
+	SMTPPass              string                `json:"smtp_pass"`
+	MailFrom              string                `json:"mail_from"`
+	SMTPUseTLS            bool                  `json:"smtp_use_tls"`
+	Args                  []string              `json:"-"` // 命令行参数，不进行JSON序列化
 }
 
 func Load() *Config {
 	var conf Config
 	conf.HeaderMap = make(map[string]string)
+	conf.Args = os.Args[1:] // 保存命令行参数（排除程序名）
 	_, err := os.Stat("/usr/local/etc/mikutool.json")
 	if !os.IsNotExist(err) {
 		if err = qconfig.LoadFile(&conf, "/usr/local/etc/mikutool.json"); err != nil {
@@ -198,6 +206,12 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Random, "random", false, "随机")
 	flag.IntVar(&c.N, "n", 100, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
+	flag.StringVar(&c.SMTPHost, "smtp_host", "", "SMTP服务器地址")
+	flag.IntVar(&c.SMTPPort, "smtp_port", 587, "SMTP服务器端口")
+	flag.StringVar(&c.SMTPUser, "smtp_user", "", "SMTP用户名")
+	flag.StringVar(&c.SMTPPass, "smtp_pass", "", "SMTP密码")
+	flag.StringVar(&c.MailFrom, "mail_from", "", "发件人邮箱")
+	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
 
 	flag.Parse()
 }
