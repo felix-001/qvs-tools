@@ -89,41 +89,27 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 }
 
 func HttpReq(method, addr, body string, headers map[string]string) (string, error) {
-	/*
-		dailCtx := func(ctx context.Context, network, addr string) (net.Conn, error) {
-			dialer := net.Dialer{Timeout: 120 * time.Second}
-			conn, err := dialer.DialContext(ctx, network, addr)
-			if err != nil {
-				return nil, err
-			}
-
-			// 获取并打印服务端地址
-			/*
-				if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
-					fmt.Printf("Connected to server IP: %s\n", tcpAddr.IP.String())
-				} else {
-					fmt.Printf("Connected to server: %s\n", conn.RemoteAddr().String())
-				}
-
-			return conn, nil
+	dailCtx := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := net.Dialer{Timeout: 120 * time.Second}
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
 		}
-		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DialContext: dailCtx, DisableKeepAlives: true}
-	*/
-	transport := &http.Transport{
-		DisableKeepAlives: true, // 关键：禁用连接复用
 
-		// 可选：配置连接池
-		MaxIdleConns:        0, // 最大空闲连接数
-		MaxIdleConnsPerHost: 0, // 每个主机的最大空闲连接数
-		IdleConnTimeout:     0, // 空闲连接超时时间
+		// 获取并打印服务端地址
+		/*
+			if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+				fmt.Printf("Connected to server IP: %s\n", tcpAddr.IP.String())
+			} else {
+				fmt.Printf("Connected to server: %s\n", conn.RemoteAddr().String())
+			}
+		*/
 
-		// 其他配置
-		DialContext: (&net.Dialer{
-			Timeout:   120 * time.Second, // 连接超时
-			KeepAlive: 0,                 // 禁用 TCP KeepAlive
-		}).DialContext,
+		return conn, nil
 	}
-	client := &http.Client{Transport: transport, Timeout: 120 * time.Second}
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, DialContext: dailCtx}
+
+	client := &http.Client{Transport: tr, Timeout: 120 * time.Second}
 	req, _ := http.NewRequest(method, addr, bytes.NewBuffer([]byte(body)))
 	for key, value := range headers {
 		if key == "Host" {
@@ -132,8 +118,8 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		}
 		req.Header.Add(key, value)
 	}
-	req.Header.Set("Connection", "close")
-	req.Header.Set("X-Provider", "portal")
+	//req.Header.Set("Connection", "close")
+	//req.Header.Set("X-Provider", "portal")
 	if method == "PATCH" {
 		req.Header.Set("Content-Type", "application/json")
 

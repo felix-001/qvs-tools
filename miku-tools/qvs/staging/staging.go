@@ -28,7 +28,7 @@ type Devices struct {
 
 func TestDev(config *config.Config) {
 	processed := 0
-	line := 1000
+	line := 10000
 	start := config.Startid
 	retryCnt := 0
 	for i := start; i < 1000; i++ {
@@ -78,7 +78,7 @@ func TestDev(config *config.Config) {
 				}
 				processed++
 				log.Println("Processed:", processed)
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(30 * time.Millisecond)
 				//return
 				//if processed >= 10 {
 				//	return
