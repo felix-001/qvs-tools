@@ -119,8 +119,8 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 
 		// 其他配置
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second, // 连接超时
-			KeepAlive: 0,                // 禁用 TCP KeepAlive
+			Timeout:   120 * time.Second, // 连接超时
+			KeepAlive: 0,                 // 禁用 TCP KeepAlive
 		}).DialContext,
 	}
 	client := &http.Client{Transport: transport, Timeout: 120 * time.Second}
@@ -133,6 +133,11 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		req.Header.Add(key, value)
 	}
 	req.Header.Set("Connection", "close")
+	req.Header.Set("X-Provider", "portal")
+	if method == "PATCH" {
+		req.Header.Set("Content-Type", "application/json")
+
+	}
 	//log.Printf("%+v\n", req)
 	resp, err := client.Do(req)
 	if err != nil {

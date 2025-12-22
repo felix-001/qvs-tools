@@ -32,16 +32,17 @@ func TestDev(config *config.Config) {
 	start := config.Startid
 	retryCnt := 0
 	for i := start; i < 1000; i++ {
-		config.Method = "GET"
-		config.Addr = fmt.Sprintf("http://qvs.qiniuapi.com/v1/namespaces/%s/devices?line=%d&offset=%d",
+		start := time.Now()
+		addr := fmt.Sprintf("http://127.0.0.1:7275/v1/namespaces/%s/devices?line=%d&offset=%d&state=online",
 			config.App, line, (i-1)*line)
-		log.Println("Request URL:", config.Addr)
+		log.Println("Request URL:", addr)
 		config.Body = ""
-		resp, err := util.HttpRequest(config)
+		resp, err := util.HttpReq("GET", addr, "", config.HeaderMap)
 		if err != nil {
 			log.Println("http request failed:", err)
 			return
 		}
+		log.Println("Request took:", time.Since(start))
 
 		var devices Devices
 		if err := json.Unmarshal([]byte(resp), &devices); err != nil {
@@ -60,15 +61,17 @@ func TestDev(config *config.Config) {
 		for _, device := range devices.Items {
 			if device.AlarmTypesForSnap != "" {
 				fmt.Println(device)
-				config.Method = "PATCH"
-				config.Addr = fmt.Sprintf("http://qvs.qiniuapi.com/v1/namespaces/%s/devices/%s",
+				//config.Method = "PATCH"
+				addr := fmt.Sprintf("http://127.0.0.1:7275/v1/namespaces/%s/devices/%s",
 					config.App, device.Gbid)
-				config.Body = `{"operations":[{
+				body := `{"operations":[{
 							"key":"alarmTypesForSnap",
 							"op":"replace",
 							"value":"" 
 						}]}`
-				_, err := util.HttpRequest(config)
+				headerMap := config.HeaderMap
+				//headerMap["Content-Type"] = "application/json"
+				_, err := util.HttpReq("PATCH", addr, body, headerMap)
 				if err != nil {
 					log.Println("http request failed:", err)
 					return
@@ -87,6 +90,6 @@ func TestDev(config *config.Config) {
 		if (i-1)*line >= devices.Total {
 			break
 		}
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 3)
 	}
 }
