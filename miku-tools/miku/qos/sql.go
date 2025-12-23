@@ -417,7 +417,7 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 		)
 		
 		SELECT 
-		r.ts,
+		from_unixtime(r.ts/1000000000) as ts,
 		r.NodeID,
 		r.StreamName,
 		r.bandwidth,
@@ -521,11 +521,7 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 	}
 	if req.StreamID != "" {
 		streamID := strings.ToLower(req.StreamID)
-		if req.FuzzySearch {
-			where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, streamID)
-		} else {
-			where += fmt.Sprintf(`AND dim_stream_url = '%s'`, streamID)
-		}
+		where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, streamID)
 	}
 
 	// 添加剔除流ID过滤
