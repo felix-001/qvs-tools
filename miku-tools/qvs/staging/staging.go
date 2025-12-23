@@ -33,11 +33,14 @@ func TestDev(config *config.Config) {
 	retryCnt := 0
 	for i := start; i < 1000; i++ {
 		start := time.Now()
-		addr := fmt.Sprintf("http://127.0.0.1:7275/v1/namespaces/%s/devices?line=%d&offset=%d&state=online",
-			config.App, line, (i-1)*line)
+		addr := fmt.Sprintf("http://%s/v1/namespaces/%s/devices?line=%d&offset=%d&state=online",
+			config.Domain, config.App, line, (i-1)*line)
 		log.Println("Request URL:", addr)
 		config.Body = ""
-		resp, err := util.HttpReq("GET", addr, "", config.HeaderMap)
+		config.Addr = addr
+		config.Method = "GET"
+		//resp, err := util.HttpReq("GET", addr, "", config.HeaderMap)
+		resp, err := util.HttpRequest(config)
 		if err != nil {
 			log.Println("http request failed:", err)
 			return
@@ -61,24 +64,27 @@ func TestDev(config *config.Config) {
 		for _, device := range devices.Items {
 			if device.AlarmTypesForSnap != "" {
 				fmt.Println(device)
-				//config.Method = "PATCH"
-				addr := fmt.Sprintf("http://127.0.0.1:7275/v1/namespaces/%s/devices/%s",
-					config.App, device.Gbid)
+				config.Method = "PATCH"
+				addr := fmt.Sprintf("http://%s/v1/namespaces/%s/devices/%s",
+					config.Domain, config.App, device.Gbid)
 				body := `{"operations":[{
 							"key":"alarmTypesForSnap",
 							"op":"replace",
 							"value":"" 
 						}]}`
-				headerMap := config.HeaderMap
+				//headerMap := config.HeaderMap
+				config.Body = body
+				config.Addr = addr
 				//headerMap["Content-Type"] = "application/json"
-				_, err := util.HttpReq("PATCH", addr, body, headerMap)
+				//_, err := util.HttpReq("PATCH", addr, body, headerMap)
+				_, err := util.HttpRequest(config)
 				if err != nil {
 					log.Println("http request failed:", err)
 					return
 				}
 				processed++
-				log.Println("Processed:", processed)
-				time.Sleep(30 * time.Millisecond)
+				log.Println("Processed:", processed, "i:", i)
+				time.Sleep(100 * time.Millisecond)
 				//return
 				//if processed >= 10 {
 				//	return

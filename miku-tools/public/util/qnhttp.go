@@ -71,6 +71,9 @@ func hmacSha1(key, data string) string {
 func signToken(ak, sk, method, path, host, body string, headers map[string]string) string {
 	data := method + " " + path + "\n"
 	data += "Host: " + host
+	if body != "" {
+		data += "\n" + "Content-Type" + ": " + "application/json"
+	}
 	for key, value := range headers {
 		if key != "Content-Type" {
 			continue
@@ -156,9 +159,11 @@ func QnHttpReq(method, addr, body, ak, sk string, headerMap map[string]string) (
 	u.Host = ""
 	u.Scheme = ""
 	headers := headerMap
-	if body != "" || method == "PUT" {
-		headers["Content-Type"] = "application/json"
-	}
+	/*
+		if body != "" || method == "PUT" {
+			headers["Content-Type"] = "application/json"
+		}
+	*/
 	//token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
 	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token

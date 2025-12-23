@@ -209,6 +209,7 @@ type HyLagRateByStreamsReport struct {
 	Percent    *float64 `db:"percent"`
 	LagCnt     *int     `db:"lagCnt"`
 	Total      *int     `db:"total"`
+	Weight     *float64 `db:"weight"`
 }
 
 func TrinoQuery(schema, sql string, dest interface{}) error {

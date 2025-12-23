@@ -27,7 +27,8 @@ type UserAggregatedData struct {
 	ClientIP      string   `json:"client_ip"`
 	TotalCount    int      `json:"total_count"`    // 总样本数
 	LagCount      int      `json:"lag_count"`      // 卡顿样本数
-	LagRate       float64  `json:"lag_rate"`       // 本用户卡顿样本占卡顿样本总数的比例
+	Percent       float64  `json:"percent"`        // 卡顿率
+	Weight        float64  `json:"weight"`         // 本用户卡顿样本占卡顿样本总数的比例
 	Prov          string   `json:"prov"`           // 用户省份
 	Isp           string   `json:"isp"`            // 用户运营商
 	NormalIps     []string `json:"normal_ips"`     // 不卡顿的节点ip列表

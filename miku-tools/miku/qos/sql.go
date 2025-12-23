@@ -243,14 +243,24 @@ func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
+	where := ""
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where = fmt.Sprintf(" AND StreamName like '%%%s%%'\n", req.StreamID)
+		} else {
+			where = fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+
 	sql := fmt.Sprintf(`
 		select date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai') as ts_m, count(DISTINCT streamname) as stream_cnt
 		from dwd_flowd_miku_streamd_log 
 		where from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 			and AppName = '%s'
+			%s
 			and day >= '%s' and day <= '%s'
 		group by date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')
-		`, req.StartTime, req.EndTime, req.AppName, startDay, endDay)
+		`, req.StartTime, req.EndTime, req.AppName, where, startDay, endDay)
 
 	return sql
 }
@@ -398,10 +408,11 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 		}
 	}
 	if req.StreamID != "" {
+		streamID := strings.ToLower(req.StreamID)
 		if req.FuzzySearch {
-			where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, req.StreamID)
+			where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, streamID)
 		} else {
-			where += fmt.Sprintf(`AND dim_stream_url = '%s'`, req.StreamID)
+			where += fmt.Sprintf(`AND dim_stream_url = '%s'`, streamID)
 		}
 	}
 	switch protocol {
@@ -548,6 +559,8 @@ func BuildHyLagRateByStreamsSQLQuery(req QOSRequest) string {
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
+	streamID := strings.ToLower(req.StreamID)
+
 	p2p := ""
 	switch req.Protocol {
 	case "hls":
@@ -602,7 +615,7 @@ group by  CONCAT(
     CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
   )
 ORDER by lagCnt DESC
-	`, startDay, endDay, req.StartTime, req.EndTime, p2p, req.StreamID)
+	`, startDay, endDay, req.StartTime, req.EndTime, p2p, streamID)
 
 	return sql
 }

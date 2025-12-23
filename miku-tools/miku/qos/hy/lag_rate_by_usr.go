@@ -44,16 +44,26 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 			ClientIP:   *report.DimIp,
 			LagCount:   *report.LagCnt,
 			TotalCount: *report.Total,
+			Percent:    float64(*report.LagCnt) * 100 / float64(*report.Total),
 			Isp:        isp,
 			Prov:       prov,
 			NormalIps:  cdnIps,
 		})
 		totalLagCnt += *report.LagCnt
 	}
+	var totalWight float64
+	cnt := 0
+	total := 0
 	for i, data := range aggData {
-		data.LagRate = float64(data.LagCount*100) / float64(totalLagCnt)
+		data.Weight = float64(data.LagCount*100) / float64(totalLagCnt)
 		aggData[i] = data
+		totalWight += data.Weight
+		if data.Weight > 0 {
+			cnt++
+		}
+		total++
 	}
+	log.Println("totalWight:", totalWight, "cnt:", cnt, "total:", total)
 	return qos.ChartData{Data: aggData, Type: qos.ChartTypeTable}
 }
 
@@ -75,7 +85,7 @@ func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
 		return qos.ChartData{Data: fmt.Sprintf("获取CDN客户端IP失败: %v", err), Type: "error"}
 	}
 	aggData := l.getAggData(reports, req, clientCdnIps)
-	return qos.ChartData{Data: aggData, Type: qos.ChartTypeTable}
+	return aggData
 }
 
 func (l *LagRateByUser) ID() string {

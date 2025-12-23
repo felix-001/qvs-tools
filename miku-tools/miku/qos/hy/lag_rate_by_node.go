@@ -169,6 +169,8 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 	}
 
 	var aggCdnLagDatas []qos.AggregatedData
+	totalNodes := 0
+	lagNodes := 0
 	for _, report := range hyCdnLagReports {
 		if report.LagCnt == nil || report.DimCdnip == nil || report.Total == nil {
 			continue
@@ -199,6 +201,10 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 			}
 		}
 		_, isp, _, prov := util.GetLocate(cdnIp, h.ipparser)
+		totalNodes++
+		if *report.LagCnt > 0 {
+			lagNodes++
+		}
 		aggCdnLagDatas = append(aggCdnLagDatas, qos.AggregatedData{
 			IP:            cdnIp,
 			LagCount:      *report.LagCnt,
@@ -216,6 +222,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 		})
 	}
 
+	log.Println("totalNodes:", totalNodes, "lagNodes:", lagNodes, "lagRate:", float64(lagNodes*100)/float64(totalNodes))
 	return qos.ChartData{Data: aggCdnLagDatas, Type: qos.ChartTypeTable}
 }
 
@@ -228,5 +235,5 @@ func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
 		return qos.ChartData{Data: "", Type: "error"}
 	}
 	aggCdnLagData := h.aggCdnLagData(hyCdnLagReports, clientIpsOnCdnIpReports)
-	return qos.ChartData{Data: aggCdnLagData, Type: qos.ChartTypeTable}
+	return aggCdnLagData
 }

@@ -28,6 +28,18 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		log.Printf("Trino查询失败: %v", err)
 		return ""
 	}
+	log.Println("len hyLagRateByStreamsReports", len(hyLagRateByStreamsReports))
+	var lagTotal int
+	for _, report := range hyLagRateByStreamsReports {
+		lagTotal += *report.LagCnt
+	}
+	for i, report := range hyLagRateByStreamsReports {
+		if report.LagCnt == nil {
+			continue
+		}
+		weight := float64(*report.LagCnt) * 100.0 / float64(lagTotal)
+		hyLagRateByStreamsReports[i].Weight = &weight
+	}
 	return qos.ChartData{Data: hyLagRateByStreamsReports, Type: qos.ChartTypeTable}
 }
 
