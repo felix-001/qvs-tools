@@ -297,6 +297,12 @@
                 <input type="text" id="protocol" name="protocol" placeholder="请输入协议类型（可选）">
             </div>
 
+            <!-- 剔除流ID列表 -->
+            <div class="form-group">
+                <label for="excludeStreams">剔除流ID列表:</label>
+                <input type="text" id="excludeStreams" name="excludeStreams" placeholder="请输入要剔除的流ID，多个用逗号分隔（可选）">
+            </div>
+
             <!-- 小时输入 -->
             <div class="form-group">
                 <label for="hour">小时 (0-23):</label>
@@ -458,6 +464,7 @@
             
             // 获取表单数据
             const formData = new FormData(e.target);
+            const excludeStreams = formData.get('excludeStreams');
             const data = {
                 appName: formData.get('appName'),
                 startTime: formData.get('startTime'),
@@ -471,7 +478,8 @@
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
                 rawData: formData.get('rawData') === 'on',
-                protocol: formData.get('protocol')
+                protocol: formData.get('protocol'),
+                excludeStreams: excludeStreams || "" // 将剔除流ID列表通过excludeStreams字段传递
             };
             console.log(data)
             

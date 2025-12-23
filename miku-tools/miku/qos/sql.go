@@ -54,6 +54,21 @@ func BuildSQLQuery(req QOSRequest, raw bool) string {
 		}
 	}
 
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			stream = strings.ToLower(stream)
+			if req.FuzzySearch {
+				sql += fmt.Sprintf(" AND dim_stream_url not like '%%%s%%'\n", stream)
+			} else {
+				sql += fmt.Sprintf(" AND dim_stream != '%s'\n", stream)
+			}
+		}
+	}
+
 	// 添加域名过滤
 	if req.Domain != "" {
 		if req.FuzzySearch {
@@ -149,6 +164,21 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 			sql += fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
 		}
 	}
+
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				sql += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				sql += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
+		}
+	}
+
 	sql += " GROUP BY date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')\n"
 	sql += " ORDER BY ts_m"
 	return sql
@@ -160,6 +190,31 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
+
+	// 构建流名过滤条件
+	streamCondition := ""
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			streamCondition = fmt.Sprintf(" AND StreamName like '%%%s%%'\n", req.StreamID)
+		} else {
+			streamCondition = fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+
+	// 构建剔除流ID过滤条件
+	excludeStreamCondition := ""
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
+		}
+	}
 
 	sql := fmt.Sprintf(`
 		WITH all_data AS (
@@ -183,7 +238,8 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 				AppName = '%s'
 				AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 				AND day >= '%s' AND day <= '%s'
-				AND StreamName = '%s'
+				%s
+				%s
 				AND Type = 'publisher'
 
 			UNION ALL
@@ -207,7 +263,8 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 				AppName = '%s'
 				AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 				AND day >= '%s' AND day <= '%s'
-				AND StreamName = '%s'
+				%s
+				%s
 				AND Type = 'puller'
 				AND CustomerSource = true
 			),
@@ -231,8 +288,8 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 			r.source_type
 			FROM real_data r
 			ORDER BY r.ts
-		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID,
-		req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID)
+		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition,
+		req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition)
 	return sql
 }
 
@@ -249,6 +306,20 @@ func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 			where = fmt.Sprintf(" AND StreamName like '%%%s%%'\n", req.StreamID)
 		} else {
 			where = fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				where += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				where += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
 		}
 	}
 
@@ -272,6 +343,31 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
+	// 构建流名过滤条件
+	streamCondition := ""
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			streamCondition = fmt.Sprintf(" AND StreamName like '%%%s%%'\n", req.StreamID)
+		} else {
+			streamCondition = fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+
+	// 构建剔除流ID过滤条件
+	excludeStreamCondition := ""
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
+		}
+	}
+
 	sql := fmt.Sprintf(`
 		WITH all_data AS (
 		SELECT 
@@ -286,7 +382,8 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 			AppName = '%s'
 			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 			AND day >= '%s' AND day <= '%s'
-			AND StreamName = '%s'
+			%s
+			%s
 			AND Type = 'publisher'
 		
 		UNION ALL
@@ -303,7 +400,8 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 			AppName = '%s'
 			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 			AND day >= '%s' AND day <= '%s'
-			AND StreamName = '%s'
+			%s
+			%s
 			AND Type = 'puller'
 			AND CustomerSource = true
 		),
@@ -326,8 +424,8 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 		r.source_type
 		FROM real_data r
 		ORDER BY r.ts
-		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID,
-		req.AppName, req.StartTime, req.EndTime, startDay, endDay, req.StreamID)
+		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition,
+		req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition)
 
 	return sql
 }
@@ -374,6 +472,20 @@ func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string)
 		}
 	}
 
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				where += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				where += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
+		}
+	}
+
 	sql := fmt.Sprintf(`
 		SELECT 
 		    %s
@@ -413,6 +525,21 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 			where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, streamID)
 		} else {
 			where += fmt.Sprintf(`AND dim_stream_url = '%s'`, streamID)
+		}
+	}
+
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			stream = strings.ToLower(stream)
+			if req.FuzzySearch {
+				where += fmt.Sprintf(` AND dim_stream_url not like '%%%s%%'`, stream)
+			} else {
+				where += fmt.Sprintf(` AND dim_stream_url != '%s'`, stream)
+			}
 		}
 	}
 	switch protocol {

@@ -82,9 +82,10 @@ type QOSRequest struct {
 	LogLevel    string `json:"logLevel"`
 	RawData     bool   `json:"rawData"`
 	//Charts      ChartOptions `json:"charts"`
-	IpParser *ipdb.City `json:"ipParser"`
-	Chart    string     `json:"chart"`
-	Protocol string     `json:"protocol"`
+	IpParser       *ipdb.City `json:"ipParser"`
+	Chart          string     `json:"chart"`
+	Protocol       string     `json:"protocol"`
+	ExcludeStreams string     `json:"excludeStreams"` // 剔除流ID列表，多个用逗号分隔
 }
 
 // ChartOptions 图表展示选项
