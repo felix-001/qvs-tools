@@ -76,6 +76,7 @@ type Config struct {
 	Host                  string
 	QnTestUrl             string
 	Player                string
+	Process               int
 	Basesub               int
 	SubStream             int
 	Startid               int
@@ -114,6 +115,7 @@ type Config struct {
 	SMTPPass              string                `json:"smtp_pass"`
 	MailFrom              string                `json:"mail_from"`
 	SMTPUseTLS            bool                  `json:"smtp_use_tls"`
+	MailTo                string                `json:"mail_to"`
 	Args                  []string              `json:"-"` // 命令行参数，不进行JSON序列化
 }
 
@@ -190,6 +192,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.QnTestUrl, "qn_test_url", "", "qn_test_url")
 	flag.StringVar(&c.Player, "player", "", "player")
 	flag.StringVar(&c.Url, "url", "", "url")
+	flag.StringVar(&c.MailTo, "mail_to", "", "mail_to")
 	flag.IntVar(&c.Port, "port", 0, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
@@ -211,6 +214,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.SMTPUser, "smtp_user", "", "SMTP用户名")
 	flag.StringVar(&c.SMTPPass, "smtp_pass", "", "SMTP密码")
 	flag.StringVar(&c.MailFrom, "mail_from", "", "发件人邮箱")
+	flag.IntVar(&c.Process, "process", 0, "进程id")
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
 
 	flag.Parse()

@@ -4,18 +4,19 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"mikutool/config"
 	"net/smtp"
 	"strings"
 	"time"
 )
 
 type MailConfig struct {
-	SMTPHost     string `json:"smtp_host"`
-	SMTPPort     int    `json:"smtp_port"`
-	Username     string `json:"username"`
-	Password     string `json:"password"`
-	From         string `json:"from"`
-	UseTLS       bool   `json:"use_tls"`
+	SMTPHost string `json:"smtp_host"`
+	SMTPPort int    `json:"smtp_port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+	UseTLS   bool   `json:"use_tls"`
 }
 
 type MailMessage struct {
@@ -67,27 +68,27 @@ func SendMail(mailConfig *MailConfig, message *MailMessage) error {
 			InsecureSkipVerify: true,
 			ServerName:         mailConfig.SMTPHost,
 		}
-		
+
 		conn, err := tls.Dial("tcp", addr, tlsConfig)
 		if err != nil {
 			return fmt.Errorf("TLS连接失败: %v", err)
 		}
 		defer conn.Close()
-		
+
 		client, err := smtp.NewClient(conn, mailConfig.SMTPHost)
 		if err != nil {
 			return fmt.Errorf("创建SMTP客户端失败: %v", err)
 		}
 		defer client.Quit()
-		
+
 		if err = client.Auth(auth); err != nil {
 			return fmt.Errorf("SMTP认证失败: %v", err)
 		}
-		
+
 		if err = client.Mail(mailConfig.From); err != nil {
 			return fmt.Errorf("设置发件人失败: %v", err)
 		}
-		
+
 		// 添加所有收件人（To、CC、BCC）
 		recipients := append(message.To, message.CC...)
 		recipients = append(recipients, message.BCC...)
@@ -96,28 +97,28 @@ func SendMail(mailConfig *MailConfig, message *MailMessage) error {
 				return fmt.Errorf("添加收件人失败: %v", err)
 			}
 		}
-		
+
 		w, err := client.Data()
 		if err != nil {
 			return fmt.Errorf("获取数据写入器失败: %v", err)
 		}
 		defer w.Close()
-		
+
 		_, err = w.Write([]byte(content.String()))
 		if err != nil {
 			return fmt.Errorf("写入邮件内容失败: %v", err)
 		}
 	} else {
 		// 普通连接
-		err = smtp.SendMail(addr, auth, mailConfig.From, 
-			append(append(message.To, message.CC...), message.BCC...), 
+		err = smtp.SendMail(addr, auth, mailConfig.From,
+			append(append(message.To, message.CC...), message.BCC...),
 			[]byte(content.String()))
 	}
-	
+
 	if err != nil {
 		return fmt.Errorf("发送邮件失败: %v", err)
 	}
-	
+
 	log.Printf("邮件已成功发送至: %s", strings.Join(message.To, ","))
 	return nil
 }
@@ -130,16 +131,16 @@ func SendReportMail(mailConfig *MailConfig, reportType, content string, recipien
 	if len(recipients) == 0 {
 		return fmt.Errorf("收件人不能为空")
 	}
-	
+
 	subject := fmt.Sprintf("【%s】质量报告 - %s", reportType, getCurrentTime())
-	
+
 	message := &MailMessage{
 		To:      recipients,
 		Subject: subject,
 		Body:    content,
 		IsHTML:  true,
 	}
-	
+
 	return SendMail(mailConfig, message)
 }
 
@@ -151,9 +152,9 @@ func SendAlertMail(mailConfig *MailConfig, alertType, message string, recipients
 	if len(recipients) == 0 {
 		return fmt.Errorf("收件人不能为空")
 	}
-	
+
 	subject := fmt.Sprintf("【%s】告警通知 - %s", alertType, getCurrentTime())
-	
+
 	alertContent := fmt.Sprintf(`
 	<html>
 	<head>
@@ -177,18 +178,95 @@ func SendAlertMail(mailConfig *MailConfig, alertType, message string, recipients
 	</body>
 	</html>
 	`, alertType, message)
-	
+
 	alertMessage := &MailMessage{
 		To:      recipients,
 		Subject: subject,
 		Body:    alertContent,
 		IsHTML:  true,
 	}
-	
+
 	return SendMail(mailConfig, alertMessage)
 }
 
 // getCurrentTime 获取当前时间字符串
 func getCurrentTime() string {
 	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+// SendMailWithConfig 根据配置发送邮件
+func SendMailWithConfig(config *config.Config, msg string) {
+	// 检查必要的配置项
+	if config.SMTPHost == "" {
+		log.Println("SMTP服务器地址不能为空，请使用 -smtp_host 参数指定")
+		return
+	}
+	if config.SMTPUser == "" {
+		log.Println("SMTP用户名不能为空，请使用 -smtp_user 参数指定")
+		return
+	}
+	if config.SMTPPass == "" {
+		log.Println("SMTP密码不能为空，请使用 -smtp_pass 参数指定")
+		return
+	}
+	if config.MailFrom == "" {
+		log.Println("发件人邮箱不能为空，请使用 -mail_from 参数指定")
+		return
+	}
+
+	// 获取命令行参数
+	to := config.MailTo
+	body := msg
+	mailType := "alert"
+
+	if to == "" {
+		log.Println("收件人邮箱不能为空，请使用 -to 参数指定")
+		return
+	}
+
+	// 构建邮件配置
+	mailConfig := &MailConfig{
+		SMTPHost: config.SMTPHost,
+		SMTPPort: config.SMTPPort,
+		Username: config.SMTPUser,
+		Password: config.SMTPPass,
+		From:     config.MailFrom,
+		UseTLS:   config.SMTPUseTLS,
+	}
+
+	// 分割收件人列表
+	recipients := strings.Split(to, ",")
+
+	// 根据类型发送邮件
+	var err error
+	if mailType == "alert" {
+		err = SendAlertMail(mailConfig, "告警", body, recipients)
+	} else {
+		// 默认为报告类型
+		htmlContent := fmt.Sprintf(`
+		<html>
+		<head>
+			<style>
+				body { font-family: Arial, sans-serif; }
+				.header { color: #333; font-size: 18px; font-weight: bold; }
+				.content { margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 4px; }
+			</style>
+		</head>
+		<body>
+			<div class="header">测试报告</div>
+			<div class="content">
+				<p>%s</p>
+			</div>
+		</body>
+		</html>
+		`, body)
+
+		err = SendReportMail(mailConfig, "测试", htmlContent, recipients)
+	}
+
+	if err != nil {
+		log.Printf("发送邮件失败: %v", err)
+	} else {
+		log.Println("邮件发送成功")
+	}
 }

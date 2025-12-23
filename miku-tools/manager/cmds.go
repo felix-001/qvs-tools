@@ -1,9 +1,6 @@
 package manager
 
 import (
-	"fmt"
-	"log"
-	"mikutool/config"
 	"mikutool/miku"
 	mikumock "mikutool/miku/mock"
 	"mikutool/miku/staging"
@@ -12,7 +9,6 @@ import (
 	"mikutool/qvs"
 	"mikutool/qvs/mock"
 	qvsStag "mikutool/qvs/staging"
-	"strings"
 )
 
 func (m *CommandManager) CmdHttp() *Command {
@@ -447,104 +443,13 @@ func (m *CommandManager) CmdTestDev() *Command {
 	return cmd
 }
 
-func (m *CommandManager) CmdMail() *Command {
+func (m *CommandManager) CmdProcMonitor() *Command {
 	handler := func() {
-		SendMailWithConfig(m.config)
+		qvs.ProcMonitor(m.config)
 	}
 	cmd := &Command{
-		Desc:    "发送邮件，-smtp_host <SMTP服务器地址> -smtp_port <SMTP端口，默认587> -smtp_user <SMTP用户名> -smtp_pass <SMTP密码> -mail_from <发件人邮箱> -smtp_use_tls <是否使用TLS，默认true> -to <收件人邮箱，多个用逗号分隔> -subject <邮件主题> -body <邮件内容> -type <邮件类型：report/alert，默认report>",
+		Desc:    "监控到进程重启发送邮件，-process=<进程名> -smtp_host <SMTP服务器地址> -smtp_port <SMTP端口，默认587> -smtp_user <SMTP用户名> -smtp_pass <SMTP密码> -mail_from <发件人邮箱> -smtp_use_tls <是否使用TLS，默认true> -to <收件人邮箱，多个用逗号分隔> -subject <邮件主题> -body <邮件内容> -type <邮件类型：report/alert，默认report>",
 		Handler: handler,
 	}
 	return cmd
-}
-
-// SendMailWithConfig 根据配置发送邮件
-func SendMailWithConfig(config *config.Config) {
-	// 检查必要的配置项
-	if config.SMTPHost == "" {
-		log.Println("SMTP服务器地址不能为空，请使用 -smtp_host 参数指定")
-		return
-	}
-	if config.SMTPUser == "" {
-		log.Println("SMTP用户名不能为空，请使用 -smtp_user 参数指定")
-		return
-	}
-	if config.SMTPPass == "" {
-		log.Println("SMTP密码不能为空，请使用 -smtp_pass 参数指定")
-		return
-	}
-	if config.MailFrom == "" {
-		log.Println("发件人邮箱不能为空，请使用 -mail_from 参数指定")
-		return
-	}
-
-	// 获取命令行参数
-	to := getStringParam("to", "")
-	body := getStringParam("body", "这是一封测试邮件")
-	mailType := getStringParam("type", "report")
-
-	if to == "" {
-		log.Println("收件人邮箱不能为空，请使用 -to 参数指定")
-		return
-	}
-
-	// 构建邮件配置
-	mailConfig := &qvs.MailConfig{
-		SMTPHost: config.SMTPHost,
-		SMTPPort: config.SMTPPort,
-		Username: config.SMTPUser,
-		Password: config.SMTPPass,
-		From:     config.MailFrom,
-		UseTLS:   config.SMTPUseTLS,
-	}
-
-	// 分割收件人列表
-	recipients := strings.Split(to, ",")
-
-	// 根据类型发送邮件
-	var err error
-	if mailType == "alert" {
-		err = qvs.SendAlertMail(mailConfig, "测试告警", body, recipients)
-	} else {
-		// 默认为报告类型
-		htmlContent := fmt.Sprintf(`
-		<html>
-		<head>
-			<style>
-				body { font-family: Arial, sans-serif; }
-				.header { color: #333; font-size: 18px; font-weight: bold; }
-				.content { margin-top: 15px; padding: 10px; background-color: #f9f9f9; border-radius: 4px; }
-			</style>
-		</head>
-		<body>
-			<div class="header">测试报告</div>
-			<div class="content">
-				<p>%s</p>
-			</div>
-		</body>
-		</html>
-		`, body)
-		
-		err = qvs.SendReportMail(mailConfig, "测试", htmlContent, recipients)
-	}
-
-	if err != nil {
-		log.Printf("发送邮件失败: %v", err)
-	} else {
-		log.Println("邮件发送成功")
-	}
-}
-
-// getStringParam 从命令行参数获取字符串值
-func getStringParam(name, defaultValue string) string {
-	// 创建一个临时的config对象来获取Args
-	tempConfig := config.Load()
-	args := tempConfig.Args
-	
-	for i, arg := range args {
-		if arg == "-"+name && i+1 < len(args) {
-			return args[i+1]
-		}
-	}
-	return defaultValue
 }
