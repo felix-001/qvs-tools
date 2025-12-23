@@ -640,7 +640,11 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 
 		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) AS lag_node_cnt,	
 		COUNT(DISTINCT dim_cdnip) AS total_node_cnt,	
-		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) * 100.0 / COUNT(DISTINCT dim_cdnip) AS lag_node_rate,
+		COALESCE(
+			COUNT(DISTINCT IF(field_video_bad_quality = 100, dim_cdnip, NULL)) * 100.0 / 
+			NULLIF(COUNT(DISTINCT dim_cdnip), 0),
+			0
+			) AS lag_node_rate,
 
 		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as transcodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as totalTranscodeCnt,
