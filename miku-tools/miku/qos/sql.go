@@ -375,7 +375,7 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 			Ts AS ts,
 			StreamName,
 			NodeID,
-			IF(CostTime = 0, 0, RecvBytes * 8 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
+			IF(CostTime = 0, 0, CAST(RecvBytes AS double) * 8.0 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
 			'publisher' AS source_type,
 			1 AS priority
 		FROM miku.dwd_flowd_miku_streamd_log
@@ -393,7 +393,7 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 			Ts AS ts,
 			StreamName,
 			NodeID,
-			IF(CostTime = 0, 0, RecvBytes * 8 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
+			IF(CostTime = 0, 0, CAST(RecvBytes AS double) * 8.0 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
 			'puller' AS source_type,
 			2 AS priority
 		FROM miku.dwd_flowd_miku_streamd_log
@@ -418,13 +418,13 @@ func BuildMikuUpstreamBandwidthSQLQuery(req QOSRequest) string {
 		)
 		
 		SELECT 
-		from_unixtime(r.ts/1000000000) as ts,
+		from_unixtime(r.ts/1000000000) at time zone 'Asia/Shanghai' as ts,
 		r.NodeID,
 		r.StreamName,
 		r.bandwidth,
 		r.source_type
 		FROM real_data r
-		ORDER BY r.ts
+		ORDER BY ts
 		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition,
 		req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition)
 
