@@ -9,13 +9,13 @@ import (
 
 // 虎牙转码流每分钟卡顿率趋势图
 func init() {
-	qos.RegisterChartGenerator(&HuyaTranscodeLagRate{})
+	qos.RegisterChartGenerator(&HuyaSrcLagRate{})
 }
 
-type HuyaTranscodeLagRate struct {
+type HuyaSrcLagRate struct {
 }
 
-func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
+func (h *HuyaSrcLagRate) Generate(req qos.QOSRequest) any {
 	if req.AppName != "huyacdn" {
 		return qos.ChartData{Data: "", Type: "error"}
 	}
@@ -25,7 +25,7 @@ func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	data := qos.LineChartData{
-		Title:       "虎牙转码流每分钟卡顿率趋势图",
+		Title:       "虎牙回源流每分钟卡顿率趋势图",
 		SeriesTitle: "卡顿率",
 		Color:       "#1890ff",
 		XType:       "category",
@@ -42,18 +42,18 @@ func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 			ts = ts[5:] // Keep everything after the year
 		}
 		data.XAxis = append(data.XAxis, ts)
-		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.TrancodeLagRate))
+		data.YAxis = append(data.YAxis, fmt.Sprintf("%.2f", *report.SrcLagRate))
 	}
 	return qos.ChartData{Data: data, Type: qos.ChartTypeLine}
 }
 
-func (h *HuyaTranscodeLagRate) ID() string {
-	return "chart_transcodeHyLagRateTrend"
+func (h *HuyaSrcLagRate) ID() string {
+	return "chart_HySrcLagRateTrend"
 }
 
-func (h *HuyaTranscodeLagRate) ChartInfo() qos.ChartInfo {
+func (h *HuyaSrcLagRate) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    h.ID(),
-		Title: "虎牙转码流卡顿率趋势图",
+		Title: "虎牙回源流卡顿率趋势图",
 	}
 }

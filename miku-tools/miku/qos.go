@@ -147,6 +147,7 @@ var chartsSeq = []string{
 	"chart_upstreamBandwidth",
 	"chart_videoFps",
 	"chart_audioFps",
+	"chart_HySrcLagRateTrend",
 	// 其他
 	"chart_loadRate",
 }

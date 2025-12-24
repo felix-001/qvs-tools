@@ -201,6 +201,7 @@ type HyLagReport struct {
 	TotalNotTranscodeCnt *int     `db:"totalNotTranscodeCnt"` // 总非转码流样本个数
 	NotTranscodeLagRate  *float64 `db:"notTranscodeLagRate"`  // 非转码流去掉回源的卡顿样本占比
 	TrancodeLagPercent   *float64 `db:"trancodeLagPercent"`   // 转码流卡顿样本占总样本百分比
+	SrcLagRate           *float64 `db:"srcLagRate"`           // 回源客户卡顿率
 }
 
 type HyLagRateByStreamsReport struct {

@@ -54,7 +54,7 @@ func TestDev(config *config.Config) {
 		}
 
 		log.Println("Response:", len(devices.Items))
-		if len(devices.Items) != line {
+		if len(devices.Items) == 20 {
 			i = i - 1
 			time.Sleep(time.Duration(retryCnt) * 10 * time.Second)
 			retryCnt++

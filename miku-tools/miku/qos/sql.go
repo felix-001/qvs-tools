@@ -525,6 +525,10 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 		where += fmt.Sprintf(`AND dim_stream_url like '%%%s%%'`, streamID)
 	}
 
+	if req.UserIp != "" {
+		where += fmt.Sprintf(` AND dim__ip = '%s'`, req.UserIp)
+	}
+
 	// 添加剔除流ID过滤
 	if req.ExcludeStreams != "" {
 		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
@@ -658,6 +662,12 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			NULLIF(COUNT(CASE WHEN (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%') THEN 1 END), 0),
 			0
 		) as notTranscodeLagRate,
+
+		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%' THEN 1 END), 0),
+			0
+			) as srcLagRate,
 		
 		COALESCE(
 			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' THEN 1 END) * 100.0 /
