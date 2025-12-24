@@ -106,8 +106,10 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 	if generator, ok := qos.ChartGenerators[req.Chart]; ok {
 		data := generator.Generate(req)
+		//log.Printf("data: %+v", data)
 		bytes, err := json.Marshal(data)
 		if err != nil {
+			log.Println("Error marshalling chart data:", err)
 			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
 			return
 		}

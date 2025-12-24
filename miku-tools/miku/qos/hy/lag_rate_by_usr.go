@@ -33,21 +33,35 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 		if report.DimIp == nil || report.LagCnt == nil || report.Total == nil {
 			continue
 		}
-		var cdnIps []string
+		var normalCdnIps []string
+		var lagCdnIps []string
 		if cdnMap, ok := clientCdnsMap[*report.DimIp]; ok {
 			for cdnIp := range cdnMap {
-				cdnIps = append(cdnIps, cdnIp)
+				if *report.LagCnt > 0 {
+					lagCdnIps = append(lagCdnIps, cdnIp)
+				} else {
+					normalCdnIps = append(normalCdnIps, cdnIp)
+				}
 			}
 		}
 		_, isp, _, prov := util.GetLocate(*report.DimIp, req.IpParser)
+		totalNodeCnt := len(normalCdnIps) + len(lagCdnIps)
+		lagNodeRate := 0.0
+		if totalNodeCnt > 0 {
+			lagNodeRate = float64(len(lagCdnIps)) * 100.0 / float64(totalNodeCnt)
+		}
 		aggData = append(aggData, qos.UserAggregatedData{
-			ClientIP:   *report.DimIp,
-			LagCount:   *report.LagCnt,
-			TotalCount: *report.Total,
-			Percent:    float64(*report.LagCnt) * 100 / float64(*report.Total),
-			Isp:        isp,
-			Prov:       prov,
-			NormalIps:  cdnIps,
+			ClientIP:     *report.DimIp,
+			LagCount:     *report.LagCnt,
+			TotalCount:   *report.Total,
+			Percent:      float64(*report.LagCnt) * 100 / float64(*report.Total),
+			Isp:          isp,
+			Prov:         prov,
+			NormalIps:    normalCdnIps,
+			LagNodeIps:   lagCdnIps,
+			LagNodeCnt:   len(lagCdnIps),
+			TotalNodeCnt: totalNodeCnt,
+			LagNodeRate:  lagNodeRate,
 		})
 		totalLagCnt += *report.LagCnt
 	}
