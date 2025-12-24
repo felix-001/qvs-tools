@@ -148,6 +148,7 @@ var chartsSeq = []string{
 	"chart_videoFps",
 	"chart_audioFps",
 	"chart_HySrcLagRateTrend",
+	"chart_HySrcRateTrend",
 	// 其他
 	"chart_loadRate",
 }
