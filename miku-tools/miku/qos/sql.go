@@ -331,6 +331,7 @@ func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 			%s
 			and day >= '%s' and day <= '%s'
 		group by date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')
+		order by ts_m
 		`, req.StartTime, req.EndTime, req.AppName, where, startDay, endDay)
 
 	return sql
