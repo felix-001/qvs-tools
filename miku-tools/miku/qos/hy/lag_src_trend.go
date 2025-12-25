@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// 虎牙转码流每分钟卡顿率趋势图
+// 虎牙回源流卡顿率趋势图
 func init() {
 	qos.RegisterChartGenerator(&HuyaSrcLagRate{})
 }

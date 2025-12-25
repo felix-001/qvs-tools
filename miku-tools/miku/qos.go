@@ -132,6 +132,8 @@ var chartsSeq = []string{
 	"chart_hyLagUsrPercent",
 	"chart_transcodeHyLagRateTrend",
 	"chart_usrLagRate",
+	"chart_HyTranscodeRateTrend",
+	"chart_HyNormalRateTrend",
 	// 边缘节点
 	"chart_lagNodesPercent",
 	"chart_hyLagrateByStreams",
@@ -160,10 +162,10 @@ type ChartDataGetter interface {
 }
 
 func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("chartsHandler called")
+	//log.Println("chartsHandler called")
 	var charts []qos.ChartInfo
 	for _, chart := range chartsSeq {
-		log.Println("chart", chart)
+		//log.Println("chart", chart)
 		if generator, ok := qos.ChartGenerators[chart]; ok {
 			//log.Println("generator", generator)
 			chartInfo := generator.ChartInfo()

@@ -26,7 +26,7 @@ func (h *HuyaLagRate) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	data := qos.LineChartData{
-		Title:       "虎牙每分钟卡顿率趋势图",
+		Title:       "虎牙整体每分钟卡顿率趋势图",
 		SeriesTitle: "卡顿率",
 		Color:       "#1890ff",
 		XType:       "category",
@@ -55,6 +55,6 @@ func (h *HuyaLagRate) ID() string {
 func (h *HuyaLagRate) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    h.ID(),
-		Title: "虎牙卡顿率趋势图",
+		Title: "虎牙整体卡顿率趋势图",
 	}
 }

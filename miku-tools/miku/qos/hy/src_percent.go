@@ -25,7 +25,7 @@ func (h *HuyaSrcRate) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	data := qos.LineChartData{
-		Title:       "虎牙回源样本数占总样本数的比例",
+		Title:       "虎牙回客户源样本数占总样本数的比例",
 		SeriesTitle: "比例",
 		Color:       "#1890ff",
 		XType:       "category",
@@ -54,6 +54,6 @@ func (h *HuyaSrcRate) ID() string {
 func (h *HuyaSrcRate) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    h.ID(),
-		Title: "虎牙回源样本数占总样本数的比例",
+		Title: "虎牙回客户源样本数占总样本数的比例",
 	}
 }
