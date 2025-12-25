@@ -15,7 +15,7 @@ func init() {
 type LagRateByUser struct {
 }
 
-func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) qos.ChartData {
+func (l *LagRateByUser) getclientCdnIpsMap(clientCdnIps []util.HyClientIpsOnCdnIpReport) map[string]map[string]bool {
 	clientCdnsMap := make(map[string]map[string]bool)
 	for _, report := range clientCdnIps {
 		if report.DimCdnip == nil || report.DimIp == nil {
@@ -26,24 +26,34 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 		}
 		clientCdnsMap[*report.DimIp][*report.DimCdnip] = true
 	}
+	return clientCdnsMap
+}
+
+func (l *LagRateByUser) splitCdnIps(clientCdnsMap map[string]map[string]bool, report util.HyCdnLagReport) ([]string, []string) {
+	var normalCdnIps []string
+	var lagCdnIps []string
+	if cdnMap, ok := clientCdnsMap[*report.DimIp]; ok {
+		for cdnIp := range cdnMap {
+			if *report.LagCnt > 0 {
+				lagCdnIps = append(lagCdnIps, cdnIp)
+			} else {
+				normalCdnIps = append(normalCdnIps, cdnIp)
+			}
+		}
+	}
+	return normalCdnIps, lagCdnIps
+}
+
+func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSRequest, clientCdnIps []util.HyClientIpsOnCdnIpReport) qos.ChartData {
 
 	aggData := make([]qos.UserAggregatedData, 0)
 	totalLagCnt := 0
+	clientCdnIpsMap := l.getclientCdnIpsMap(clientCdnIps)
 	for _, report := range reports {
 		if report.DimIp == nil || report.LagCnt == nil || report.Total == nil {
 			continue
 		}
-		var normalCdnIps []string
-		var lagCdnIps []string
-		if cdnMap, ok := clientCdnsMap[*report.DimIp]; ok {
-			for cdnIp := range cdnMap {
-				if *report.LagCnt > 0 {
-					lagCdnIps = append(lagCdnIps, cdnIp)
-				} else {
-					normalCdnIps = append(normalCdnIps, cdnIp)
-				}
-			}
-		}
+		normalCdnIps, lagCdnIps := l.splitCdnIps(clientCdnIpsMap, report)
 		_, isp, _, prov := util.GetLocate(*report.DimIp, req.IpParser)
 		totalNodeCnt := len(normalCdnIps) + len(lagCdnIps)
 		lagNodeRate := 0.0
