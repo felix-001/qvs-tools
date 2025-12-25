@@ -40,7 +40,11 @@ func (l *LagRateByStreams) Generate(req qos.QOSRequest) any {
 		weight := float64(*report.LagCnt) * 100.0 / float64(lagTotal)
 		hyLagRateByStreamsReports[i].Weight = &weight
 	}
-	return qos.ChartData{Data: hyLagRateByStreamsReports, Type: qos.ChartTypeTable}
+	tableData := map[string]any{
+		"title": "虎牙按流卡顿率",
+		"data":  hyLagRateByStreamsReports,
+	}
+	return qos.ChartData{Data: tableData, Type: qos.ChartTypeTable}
 }
 
 func (l *LagRateByStreams) ID() string {

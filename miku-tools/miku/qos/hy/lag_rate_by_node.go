@@ -223,7 +223,11 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 	}
 
 	log.Println("totalNodes:", totalNodes, "lagNodes:", lagNodes, "lagRate:", float64(lagNodes*100)/float64(totalNodes))
-	return qos.ChartData{Data: aggCdnLagDatas, Type: qos.ChartTypeTable}
+	tableData := map[string]any{
+		"title": "虎牙按节点卡顿率表格",
+		"data":  aggCdnLagDatas,
+	}
+	return qos.ChartData{Data: tableData, Type: qos.ChartTypeTable}
 }
 
 func (h *HyCdnLag) Generate(req qos.QOSRequest) any {
