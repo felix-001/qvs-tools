@@ -617,7 +617,7 @@ func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 				CASE 
 					WHEN ratio_value IS NOT NULL OR codec_value IS NOT NULL THEN
 					CONCAT(
-					'_cxdexxtpl_huyaxsrc_', 
+					'_cxdexxtpl_huyaxsrcx_', 
 					COALESCE(codec_value, 'null'), 
 					'_', 
 					COALESCE(ratio_value, 'null')

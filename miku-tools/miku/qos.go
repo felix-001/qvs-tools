@@ -165,7 +165,7 @@ func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, chart := range chartsSeq {
 		log.Println("chart", chart)
 		if generator, ok := qos.ChartGenerators[chart]; ok {
-			log.Println("generator", generator)
+			//log.Println("generator", generator)
 			chartInfo := generator.ChartInfo()
 			charts = append(charts, chartInfo)
 		}

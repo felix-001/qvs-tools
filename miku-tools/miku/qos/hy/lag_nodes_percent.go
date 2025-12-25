@@ -31,7 +31,6 @@ func (l *LagNodeRate) Generate(req qos.QOSRequest) any {
 	}
 	chartData := qos.GenerateLineChartData("卡顿节点占总节点数的百分比", "占比", fn)
 	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
-	//return qos.GenerateCdnLagRatioChartHTML(hyLagRateReports)
 }
 
 func (l *LagNodeRate) ID() string {

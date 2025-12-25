@@ -561,8 +561,8 @@
             }
         });
 
-	function handleResp(chart, resp) {
-		console.log(chart, resp)	
+    function handleResp(chart, resp) {
+        console.log(chart, resp)
         switch (resp.type) {
             case 'line':
                 createLineChart(resp.data);
@@ -574,41 +574,7 @@
                 createTable(resp.data);
                 break;
         }
-		switch(chart) {
-		case 'usrLagRate':
-		case 'onlineUsers':
-		case 'onlineStreams':
-		case 'customerUpstreamLagRate':
-		case 'internalUpstreamLagRate':
-		case 'internalUpstreamRetryTimes':
-		case 'internalUpstreamRetryRate':
-		case 'videoFps':
-		case 'audioFps':
-		case 'hyLagRateTrend':
-        	case 'transcodeHyLagRateTrend':
-        	case 'hyLagUsrPercent':
-		case 'lagNodesPercent':
-		case 'loadRate':
-		case 'upstreamBandwidth':
-			//console.log('customerUpstreamLagRate', resp)
-			createLineChart(resp)
-			break;
-		case 'upstreamAreaDis':
-		case 'usrDistributionCountry':
-		case 'usrDistributionArea':
-        case 'usrDistributionProv':
-        case 'lagUsrDistributionArea':
-        case 'lagUsrDistributionProv':
-			createPie(resp)
-			break;
-		case 'hyLagRateByNode':
-		case 'hyLagrateByStreams':
-        case 'lagrateByUser':
-			console.log('hyLagRateByNode', resp)
-			createTable(resp)
-            break
-		}
-	}
+    }
 
 	function createLineChart(data) {
 		var dom = document.createElement('div');
@@ -711,8 +677,8 @@
 
 	function createTable(rowData) {
 		var columns
-		if (rowData.length > 0) {
-		const firstRow = rowData[0];
+		if (rowData.data.length > 0) {
+		const firstRow = rowData.data[0];
 		const keys = Object.keys(firstRow);
 		
 		columns = keys.map(key => {
@@ -726,7 +692,7 @@
 		}
 
 		var gridOptions = {
-			rowData: rowData, 
+			rowData: rowData.data, 
 			columnDefs: columns,
 			defaultColDef: {
 				sortable: true,
@@ -741,6 +707,11 @@
 		dom.style.position = 'relative';
 		dom.style.margin = '0';
 		dom.style.padding = '0';
+        var h2 = document.createElement('h2')
+        h2.textContent = rowData.title
+        h2.style.textAlign = 'center'
+        h2.style.marginBottom = '10px'
+        results.appendChild(h2)
 		agGrid.createGrid(dom, gridOptions);
 		results.appendChild(dom)
 		console.log('当前状态:', document.readyState);

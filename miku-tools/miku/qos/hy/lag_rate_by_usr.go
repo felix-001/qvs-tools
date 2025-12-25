@@ -128,8 +128,12 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 		}
 		total++
 	}
+	tableData := map[string]any{
+		"title": "虎牙按用户卡顿分析表格",
+		"data":  aggData,
+	}
 	log.Println("totalWight:", totalWight, "cnt:", cnt, "total:", total)
-	return qos.ChartData{Data: aggData, Type: qos.ChartTypeTable}
+	return qos.ChartData{Data: tableData, Type: qos.ChartTypeTable}
 }
 
 func (l *LagRateByUser) Generate(req qos.QOSRequest) any {
