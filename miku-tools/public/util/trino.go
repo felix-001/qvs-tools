@@ -207,12 +207,15 @@ type HyLagReport struct {
 }
 
 type HyLagRateByStreamsReport struct {
-	Ts_m       *string  `db:"ts_m" json:"-"`
-	StreamName *string  `db:"stream_id"`
-	Percent    *float64 `db:"percent"`
-	LagCnt     *int     `db:"lagCnt"`
-	Total      *int     `db:"total"`
-	Weight     *float64 `db:"weight"`
+	Ts_m            *string  `db:"ts_m" json:"-"`
+	StreamName      *string  `db:"stream_id"`
+	Percent         *float64 `db:"percent"`
+	LagCnt          *int     `db:"lagCnt"`
+	Total           *int     `db:"total"`
+	Weight          *float64 `db:"weight"`
+	LagClientIps    []string `db:"lag_client_ips"`
+	NormalClientIps []string `db:"normal_client_ips"`
+	LagClientRate   float64  `db:"lag_client_rate"`
 }
 
 func TrinoQuery(schema, sql string, dest interface{}) error {
