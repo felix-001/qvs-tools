@@ -29,6 +29,44 @@ func (l *LagRateByUser) getclientCdnIpsMap(clientCdnIps []util.HyClientIpsOnCdnI
 	return clientCdnsMap
 }
 
+func (l *LagRateByUser) getStreams(clientCdnIps []util.HyClientIpsOnCdnIpReport) (map[string][]string, map[string][]string) {
+	normalStreamMap := make(map[string]map[string]bool)
+	lagStreamMap := make(map[string]map[string]bool)
+
+	// 去重
+	for _, report := range clientCdnIps {
+		if report.DimIp == nil || report.StreamName == nil || report.LagCnt == nil {
+			continue
+		}
+		if *report.LagCnt > 0 {
+			if _, ok := lagStreamMap[*report.DimIp]; !ok {
+				lagStreamMap[*report.DimIp] = make(map[string]bool)
+			}
+			lagStreamMap[*report.DimIp][*report.StreamName] = true
+		} else {
+			if _, ok := normalStreamMap[*report.DimIp]; !ok {
+				normalStreamMap[*report.DimIp] = make(map[string]bool)
+			}
+			normalStreamMap[*report.DimIp][*report.StreamName] = true
+		}
+	}
+
+	normalStreamsMap := make(map[string][]string)
+	lagStreamsMap := make(map[string][]string)
+	for clientIp, streamMap := range normalStreamMap {
+		normalStreamsMap[clientIp] = make([]string, 0)
+		for stream := range streamMap {
+			normalStreamsMap[clientIp] = append(normalStreamsMap[clientIp], stream)
+		}
+	}
+	for clientIp, streamMap := range lagStreamMap {
+		lagStreamsMap[clientIp] = make([]string, 0)
+		for stream := range streamMap {
+			lagStreamsMap[clientIp] = append(lagStreamsMap[clientIp], stream)
+		}
+	}
+	return normalStreamsMap, lagStreamsMap
+}
 func (l *LagRateByUser) splitCdnIps(clientCdnsMap map[string]map[string]bool, report util.HyCdnLagReport) ([]string, []string) {
 	var normalCdnIps []string
 	var lagCdnIps []string
@@ -49,6 +87,7 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 	aggData := make([]qos.UserAggregatedData, 0)
 	totalLagCnt := 0
 	clientCdnIpsMap := l.getclientCdnIpsMap(clientCdnIps)
+	normalStreamsMap, lagStreamsMap := l.getStreams(clientCdnIps)
 	for _, report := range reports {
 		if report.DimIp == nil || report.LagCnt == nil || report.Total == nil {
 			continue
@@ -61,17 +100,19 @@ func (l *LagRateByUser) getAggData(reports []util.HyCdnLagReport, req qos.QOSReq
 			lagNodeRate = float64(len(lagCdnIps)) * 100.0 / float64(totalNodeCnt)
 		}
 		aggData = append(aggData, qos.UserAggregatedData{
-			ClientIP:     *report.DimIp,
-			LagCount:     *report.LagCnt,
-			TotalCount:   *report.Total,
-			Percent:      float64(*report.LagCnt) * 100 / float64(*report.Total),
-			Isp:          isp,
-			Prov:         prov,
-			NormalIps:    normalCdnIps,
-			LagNodeIps:   lagCdnIps,
-			LagNodeCnt:   len(lagCdnIps),
-			TotalNodeCnt: totalNodeCnt,
-			LagNodeRate:  lagNodeRate,
+			ClientIP:      *report.DimIp,
+			LagCount:      *report.LagCnt,
+			TotalCount:    *report.Total,
+			Percent:       float64(*report.LagCnt) * 100 / float64(*report.Total),
+			Isp:           isp,
+			Prov:          prov,
+			NormalIps:     normalCdnIps,
+			LagNodeIps:    lagCdnIps,
+			LagNodeCnt:    len(lagCdnIps),
+			TotalNodeCnt:  totalNodeCnt,
+			LagNodeRate:   lagNodeRate,
+			NormalStreams: normalStreamsMap[*report.DimIp],
+			LagStreams:    lagStreamsMap[*report.DimIp],
 		})
 		totalLagCnt += *report.LagCnt
 	}

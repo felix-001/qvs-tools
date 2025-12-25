@@ -347,6 +347,14 @@
                 </div>
             </div>
 
+            <!-- 按用户分析表格展示流列表信息 -->
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="userAnalysisStreams" name="userAnalysisStreams">
+                    <label for="userAnalysisStreams" style="margin: 0; font-weight: normal;">按用户分析表格展示流列表信息</label>
+                </div>
+            </div>
+
 
             <!-- 提交按钮 -->
             <button type="submit" class="submit-btn">开始质量分析</button>
@@ -478,6 +486,7 @@
                 fuzzySearch: formData.get('fuzzySearch') === 'on',
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
                 rawData: formData.get('rawData') === 'on',
+                userAnalysisStreams: formData.get('userAnalysisStreams') === 'on',
                 protocol: formData.get('protocol'),
                 excludeStreams: excludeStreams || "" // 将剔除流ID列表通过excludeStreams字段传递
             };

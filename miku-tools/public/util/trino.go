@@ -168,6 +168,7 @@ type HyClientIpsOnCdnIpReport struct {
 	DimIp        *string `db:"dim__ip"`
 	DimStreamUrl *string `db:"dim_stream_url"` // 从url解析出streamName再做聚合，一个cdnip跑了哪些流
 	LagCnt       *int    `db:"lagCnt"`
+	StreamName   *string `db:"streamName"`
 }
 
 type StreamdUpstreamBandWidthReport struct {

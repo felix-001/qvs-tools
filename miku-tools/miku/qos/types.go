@@ -25,19 +25,19 @@ type AggregatedData struct {
 
 type UserAggregatedData struct {
 	ClientIP      string   `json:"client_ip"`
-	TotalCount    int      `json:"total_count"`    // 总样本数
-	LagCount      int      `json:"lag_count"`      // 卡顿样本数
-	Percent       float64  `json:"percent"`        // 卡顿率
-	Weight        float64  `json:"weight"`         // 本用户卡顿样本占卡顿样本总数的比例
-	Prov          string   `json:"prov"`           // 用户省份
-	Isp           string   `json:"isp"`            // 用户运营商
-	NormalIps     []string `json:"normal_ips"`     // 不卡顿的节点ip列表
-	LagNodeCnt    int      `json:"lag_node_cnt"`   // 卡顿节点个数
-	TotalNodeCnt  int      `json:"total_node_cnt"` // 总用户数
-	LagNodeRate   float64  `json:"lag_node_rate"`  // 卡顿节点比
-	LagNodeIps    []string `json:"lag_node_ips"`   // 卡顿的节点ip列表
-	NormalStreams []string `json:"normal_streams"` // 流列表
-	LagStreams    []string `json:"lag_streams"`    // 卡顿的流列表
+	TotalCount    int      `json:"total_count"`     // 总样本数
+	LagCount      int      `json:"lag_count"`       // 卡顿样本数
+	Percent       float64  `json:"percent"`         // 卡顿率
+	Weight        float64  `json:"weight"`          // 本用户卡顿样本占卡顿样本总数的比例
+	Prov          string   `json:"prov"`            // 用户省份
+	Isp           string   `json:"isp"`             // 用户运营商
+	NormalIps     []string `json:"normal_node_ips"` // 不卡顿的节点ip列表
+	LagNodeCnt    int      `json:"lag_node_cnt"`    // 卡顿节点个数
+	TotalNodeCnt  int      `json:"total_node_cnt"`  // 总用户数
+	LagNodeRate   float64  `json:"lag_node_rate"`   // 卡顿节点比
+	LagNodeIps    []string `json:"lag_node_ips"`    // 卡顿的节点ip列表
+	NormalStreams []string `json:"normal_streams"`  // 流列表
+	LagStreams    []string `json:"lag_streams"`     // 卡顿的流列表
 }
 
 type CdnAggregateData struct {
@@ -82,10 +82,11 @@ type QOSRequest struct {
 	LogLevel    string `json:"logLevel"`
 	RawData     bool   `json:"rawData"`
 	//Charts      ChartOptions `json:"charts"`
-	IpParser       *ipdb.City `json:"ipParser"`
-	Chart          string     `json:"chart"`
-	Protocol       string     `json:"protocol"`
-	ExcludeStreams string     `json:"excludeStreams"` // 剔除流ID列表，多个用逗号分隔
+	IpParser            *ipdb.City `json:"ipParser"`
+	Chart               string     `json:"chart"`
+	Protocol            string     `json:"protocol"`
+	ExcludeStreams      string     `json:"excludeStreams"` // 剔除流ID列表，多个用逗号分隔
+	UserAnalysisStreams bool       `json:"userAnalysisStreams"`
 }
 
 // ChartOptions 图表展示选项

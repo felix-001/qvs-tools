@@ -506,7 +506,7 @@ func buildMikuCommonSQLQuery(req QOSRequest, choose, where, group, order string)
 }
 
 // protocol: "hls" "p2p" "flv"
-func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol string) string {
+func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol, table string) string {
 	if req.Domain != "" {
 		if req.FuzzySearch {
 			where += fmt.Sprintf(`
@@ -555,7 +555,7 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 		*/
 		where += ` AND dim_p2p = '0'`
 	}
-	return buildCommonSQLQuery(req, choose, "miku.huyabiz_quality_report_log", where, group, order)
+	return buildCommonSQLQuery(req, choose, table, where, group, order)
 }
 
 func buidUpstreamDistributeSQLQuery(req QOSRequest) string {
@@ -576,7 +576,7 @@ func BuildHyCdnLagSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", req.Protocol)
+	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip", "lagCnt DESC", req.Protocol, "miku.huyabiz_quality_report_log")
 }
 
 func BuildHyClientLagSQLQuery(req QOSRequest) string {
@@ -586,7 +586,7 @@ func BuildHyClientLagSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total	
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "dim__ip", "lagCnt DESC", req.Protocol)
+	return buildHyCommonSQLQuery(req, choose, "", "dim__ip", "lagCnt DESC", req.Protocol, "miku.huyabiz_quality_report_log")
 }
 
 func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
@@ -600,8 +600,60 @@ func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 		dim_cdnip, dim__ip,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt
 		`
+	streamId := `
+		 -- 构造最终流ID
+			CASE
+			-- 如果streamName已经包含cxdexxtpl，则直接使用streamName
+			WHEN streamName LIKE '%cxdexxtpl%' THEN streamName
+			-- 否则，构造新的流ID
+			ELSE 
+			-- 基础部分：streamName + 如果包含/src/则加_cxdexxtpl_huyaxsrcx
+			CONCAT(
+				streamName,
+				CASE WHEN dim_stream_url LIKE '%/src/%' THEN '_sxrxc' ELSE '' END
+			) ||
+			-- 参数部分：只有当至少有一个参数不为空时才添加
+
+				CASE 
+					WHEN ratio_value IS NOT NULL OR codec_value IS NOT NULL THEN
+					CONCAT(
+					'_cxdexxtpl_huyaxsrc_', 
+					COALESCE(codec_value, 'null'), 
+					'_', 
+					COALESCE(ratio_value, 'null')
+					)
+					ELSE ''  -- 两个参数都为空，什么都不加
+				END
+			END
+	`
+	if req.UserAnalysisStreams {
+		choose += "," + streamId + " as streamName"
+	}
+	table := "miku.huyabiz_quality_report_log"
+	group := "dim_cdnip, dim__ip"
+	if req.UserAnalysisStreams {
+		table = "extracted_parts"
+		group += ", " + streamId
+	}
 	//return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip, dim_stream_url", "", req.Protocol)
-	return buildHyCommonSQLQuery(req, choose, "", "dim_cdnip, dim__ip", "", req.Protocol)
+	sql := buildHyCommonSQLQuery(req, choose, "", group, "", req.Protocol, table)
+
+	if req.UserAnalysisStreams {
+		sql = `
+			WITH extracted_parts AS (
+			SELECT
+			-- 提取文件名部分
+			regexp_extract(dim_stream_url, '(?:src|huyap2p|huyalive|huyacdn|huyacdntest)/([^?]+)\.(?:flv|slice)', 1) AS streamName,
+			-- 提取ratio参数
+			regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
+			-- 提取codec参数
+			regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
+			*
+			FROM huyabiz_quality_report_log
+			)
+		` + sql
+	}
+	return sql
 }
 
 func moreThan1day(start, end string) bool {
@@ -681,7 +733,7 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			0
 			) as trancodeLagPercent
 		`
-	return buildHyCommonSQLQuery(req, choose, "", group, order, req.Protocol)
+	return buildHyCommonSQLQuery(req, choose, "", group, order, req.Protocol, "miku.huyabiz_quality_report_log")
 }
 
 func BuildHyCdnIpLagSQLQuery(req QOSRequest) string {
@@ -694,7 +746,7 @@ func BuildHyCdnIpLagSQLQuery(req QOSRequest) string {
 	where := fmt.Sprintf(`
 		AND dim_cdnip = '%s'
 	`, req.CdnIp)
-	return buildHyCommonSQLQuery(req, choose, where, "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')", "ts_m", "flv")
+	return buildHyCommonSQLQuery(req, choose, where, "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')", "ts_m", "flv", "miku.huyabiz_quality_report_log")
 }
 
 func BuildHyLagRateByStreamsSQLQuery(req QOSRequest) string {
@@ -768,7 +820,7 @@ func BuildHyUsrDistributeSQLQuery(req QOSRequest) string {
 	choose := `
 		DISTINCT dim__ip
 		`
-	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv")
+	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv", "miku.huyabiz_quality_report_log")
 }
 
 func buildHyCommonLoadSQLQuery(req QOSRequest, choose, where, group, order string) string {
