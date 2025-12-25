@@ -203,6 +203,7 @@ type HyLagReport struct {
 	NotTranscodeLagRate  *float64 `db:"notTranscodeLagRate"`  // 非转码流去掉回源的卡顿样本占比
 	TrancodeLagPercent   *float64 `db:"trancodeLagPercent"`   // 转码流卡顿样本占总样本百分比
 	SrcLagRate           *float64 `db:"srcLagRate"`           // 回源客户卡顿率
+	SrcTranscodeLagRate  *float64 `db:"srcTranscodeLagRate"`  // 回客户源转码流卡顿率
 	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
 	TranscodeRate        *float64 `db:"transcodeRate"`        // 推流MIKU转码流样本占总样本的百分比
 	NormalRate           *float64 `db:"normalRate"`           // 推流MIKU非转码流样本占总样本的百分比

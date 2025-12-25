@@ -153,6 +153,7 @@ var chartsSeq = []string{
 	"chart_audioFps",
 	"chart_HySrcLagRateTrend",
 	"chart_HySrcRateTrend",
+	"chart_lagSrcTranscodePercent",
 	// 其他
 	"chart_loadRate",
 }

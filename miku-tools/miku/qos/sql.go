@@ -722,6 +722,12 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			) as srcLagRate,
 
 		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') THEN 1 END), 0),
+			0
+			) as srcTranscodeLagRate,
+
+		COALESCE(
 			COUNT(CASE WHEN dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%' THEN 1 END) * 100.0 /
 			count(*),
 			0
