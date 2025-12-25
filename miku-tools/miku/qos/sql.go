@@ -608,10 +608,10 @@ func BuildClientIpsOnCdnIpsSQLQuery(req QOSRequest) string {
 			-- 否则，构造新的流ID
 			ELSE 
 			-- 基础部分：streamName + 如果包含/src/则加_cxdexxtpl_huyaxsrcx
-			CONCAT(
-				streamName,
-				CASE WHEN dim_stream_url LIKE '%/src/%' THEN '_sxrxc' ELSE '' END
-			) ||
+CONCAT(
+	streamName,
+	CASE WHEN dim_stream_url LIKE '%%/src/%%' THEN '_sxrxc' ELSE '' END
+) ||
 			-- 参数部分：只有当至少有一个参数不为空时才添加
 
 				CASE 
@@ -785,13 +785,29 @@ WITH extracted_parts AS (
 )
 
 SELECT
-  CONCAT(
-    streamName,
-    -- 如果有ratio值则添加
-    CASE WHEN ratio_value IS NOT NULL THEN CONCAT('_', ratio_value) ELSE '' END,
-    -- 如果有codec值则添加
-    CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
-  ) AS stream_id,
+  CASE
+-- 如果streamName已经包含cxdexxtpl，则直接使用streamName
+WHEN streamName LIKE '%%cxdexxtpl%%' THEN streamName
+-- 否则，构造新的流ID
+ELSE
+-- 基础部分：streamName + 如果包含/src/则加_cxdexxtpl_huyaxsrcx
+CONCAT(
+	streamName,
+	CASE WHEN dim_stream_url LIKE '%%/src/%%' THEN '_sxrxc' ELSE '' END
+) ||
+-- 参数部分：只有当至少有一个参数不为空时才添加
+
+	CASE
+		WHEN ratio_value IS NOT NULL OR codec_value IS NOT NULL THEN
+		CONCAT(
+		'_cxdexxtpl_huyaxsrcx_',
+		COALESCE(codec_value, 'null'),
+		'_',
+		COALESCE(ratio_value, 'null')
+		)
+		ELSE ''  -- 两个参数都为空，什么都不加
+	END
+END AS stream_id,
   COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
   COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
   COUNT(*) as total
@@ -803,13 +819,29 @@ WHERE 1=1
 	AND dim_stream_url like '%%%s%%'
 	AND dim_heart_type != '0'
 	AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio') 
-group by  CONCAT(
-    streamName,
-    -- 如果有ratio值则添加
-    CASE WHEN ratio_value IS NOT NULL THEN CONCAT('_', ratio_value) ELSE '' END,
-    -- 如果有codec值则添加
-    CASE WHEN codec_value IS NOT NULL THEN CONCAT('_', codec_value) ELSE '' END
-  )
+group by  CASE
+-- 如果streamName已经包含cxdexxtpl，则直接使用streamName
+WHEN streamName LIKE '%%cxdexxtpl%%' THEN streamName
+-- 否则，构造新的流ID
+ELSE
+-- 基础部分：streamName + 如果包含/src/则加_cxdexxtpl_huyaxsrcx
+CONCAT(
+	streamName,
+	CASE WHEN dim_stream_url LIKE '%%/src/%%' THEN '_sxrxc' ELSE '' END
+) ||
+-- 参数部分：只有当至少有一个参数不为空时才添加
+
+	CASE
+		WHEN ratio_value IS NOT NULL OR codec_value IS NOT NULL THEN
+		CONCAT(
+		'_cxdexxtpl_huyaxsrcx_',
+		COALESCE(codec_value, 'null'),
+		'_',
+		COALESCE(ratio_value, 'null')
+		)
+		ELSE ''  -- 两个参数都为空，什么都不加
+	END
+END
 ORDER by lagCnt DESC
 	`, startDay, endDay, req.StartTime, req.EndTime, p2p, streamID)
 
