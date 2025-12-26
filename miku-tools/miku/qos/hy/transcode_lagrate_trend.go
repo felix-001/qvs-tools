@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// 虎牙转码流每分钟卡顿率趋势图
+// 虎牙推流MIKU转码流每分钟卡顿率趋势图
 func init() {
 	qos.RegisterChartGenerator(&HuyaTranscodeLagRate{})
 }
@@ -25,7 +25,7 @@ func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 	}
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	data := qos.LineChartData{
-		Title:       "虎牙转码流每分钟卡顿率趋势图",
+		Title:       "虎牙推流MIKU转码流每分钟卡顿率趋势图",
 		SeriesTitle: "卡顿率",
 		Color:       "#1890ff",
 		XType:       "category",
@@ -54,6 +54,6 @@ func (h *HuyaTranscodeLagRate) ID() string {
 func (h *HuyaTranscodeLagRate) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    h.ID(),
-		Title: "虎牙转码流卡顿率趋势图",
+		Title: "虎牙推流MIKU转码流卡顿率趋势图",
 	}
 }

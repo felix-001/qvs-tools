@@ -223,4 +223,6 @@ func Qos(config *config.Config, resources *resources.Resources) {
     虎牙数据miku平替
     rtt
     重传率
+    秒开率
+    模块在json配置文件配置，解析
 */
