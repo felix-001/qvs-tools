@@ -154,6 +154,7 @@ var chartsSeq = []string{
 	"chart_HySrcLagRateTrend",
 	"chart_HySrcRateTrend",
 	"chart_lagSrcTranscodePercent",
+	"chart_HySrcNoramalPercent",
 	// 其他
 	"chart_loadRate",
 }
