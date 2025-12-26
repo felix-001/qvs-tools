@@ -207,6 +207,7 @@ type HyLagReport struct {
 	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
 	TranscodeRate        *float64 `db:"transcodeRate"`        // 推流MIKU转码流样本占总样本的百分比
 	NormalRate           *float64 `db:"normalRate"`           // 推流MIKU非转码流样本占总样本的百分比
+	SrcNormalPercent     *float64 `db:"srcNormalPercent"`     // 回源客户源非转码流样本占总样本的百分比
 }
 
 type HyLagRateByStreamsReport struct {

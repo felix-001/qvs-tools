@@ -6,7 +6,7 @@ import (
 	"mikutool/miku/qos"
 )
 
-// 虎牙回源MIKU转码流占总样本数的比例
+// 虎牙推流MIKU转码流占总样本数的比例
 func init() {
 	qos.RegisterChartGenerator(&HuyaTranscodeRate{})
 }

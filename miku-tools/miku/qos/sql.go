@@ -743,6 +743,12 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			count(*),
 			0
 			) as normalRate,
+
+		COALESCE(
+			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
+			count(*),
+			0
+			) as srcNormalPercent,
 		
 		COALESCE(
 			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%/src/%' AND dim_stream_url not like '%sxrxc%' THEN 1 END) * 100.0 /
