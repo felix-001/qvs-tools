@@ -699,13 +699,13 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			0
 			) AS lag_node_rate,
 
-		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as transcodeLagCnt,
+		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%/src/%' THEN 1 END) as transcodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%') and dim_stream_url not like '%src%' THEN 1 END) as totalTranscodeCnt,
 		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' and dim_stream_url not like '%sxrxc%' THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%src%' and dim_stream_url not like '%sxrxc%' THEN 1 END), 0),
+			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%' OR dim_stream_url like '%cxdexxtp%') AND dim_stream_url NOT LIKE '%/src/%' and dim_stream_url not like '%sxrxc%' THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%' OR dim_stream_url LIKE '%cxdexxtp%') AND dim_stream_url NOT LIKE '%/src/%' and dim_stream_url not like '%sxrxc%' THEN 1 END), 0),
 			0
-			) as trancodeLagRate,
+			) as mikuTrancodeLagRate,
 		
 		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%') THEN 1 END) as notTranscodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%') THEN 1 END) as totalNotTranscodeCnt,
@@ -716,51 +716,51 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 		) as mikuNormalLagRate,
 
 		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%' THEN 1 END), 0),
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%' THEN 1 END), 0),
 			0
 			) as srcLagRate,
 
 		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') THEN 1 END), 0),
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') THEN 1 END), 0),
 			0
 			) as srcTranscodeLagRate,
 
 		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%') THEN 1 END), 0),
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%') THEN 1 END), 0),
 			0
 			) as srcNormalLagRate,
 
 		COALESCE(
-			COUNT(CASE WHEN dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%' THEN 1 END) * 100.0 /
+			COUNT(CASE WHEN dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%' THEN 1 END) * 100.0 /
 			count(*),
 			0
 			) as srcRate,
 		COALESCE(
-			COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') and (dim_stream_url not LIKE '%src%' and dim_stream_url not like '%sxrxc%') THEN 1 END) * 100.0 /
+			COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') and (dim_stream_url not LIKE '%/src/%' and dim_stream_url not like '%sxrxc%') THEN 1 END) * 100.0 /
 			count(*),
 			0
-			) as transcodeRate,
+			) as mikuTranscodePercent,
 
 		COALESCE(
-			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url not LIKE '%src%' and dim_stream_url not like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
+			COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') THEN 1 END) * 100.0 /
+			count(*),
+			0
+			) as srcTranscodePercent,
+
+		COALESCE(
+			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url not LIKE '%/src/%' and dim_stream_url not like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
 			count(*),
 			0
 			) as normalRate,
 
 		COALESCE(
-			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
+			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
 			count(*),
 			0
-			) as srcNormalPercent,
-		
-		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url LIKE '%ratio%' OR dim_stream_url LIKE '%codec%') AND dim_stream_url NOT LIKE '%/src/%' AND dim_stream_url not like '%sxrxc%' THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END), 0),
-			0
-			) as trancodeLagPercent
+			) as srcNormalPercent
 		`
 	return buildHyCommonSQLQuery(req, choose, "", group, order, req.Protocol, "miku.huyabiz_quality_report_log")
 }

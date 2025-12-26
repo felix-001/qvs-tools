@@ -25,10 +25,10 @@ func (h *HuyaTranscodeLagRate) Generate(req qos.QOSRequest) any {
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	fn := func(cb qos.Cb) {
 		for _, report := range hyLagRateReports {
-			if report.TrancodeLagRate == nil {
+			if report.MikuTrancodeLagRate == nil {
 				continue
 			}
-			cb(*report.Ts_m, *report.TrancodeLagRate)
+			cb(*report.Ts_m, *report.MikuTrancodeLagRate)
 		}
 	}
 	chartData := qos.GenerateLineChartData("虎牙推流MIKU转码流每分钟卡顿率趋势图", "卡顿率", fn)

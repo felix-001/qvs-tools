@@ -25,10 +25,10 @@ func (h *HuyaTranscodeRate) Generate(req qos.QOSRequest) any {
 	log.Println("查询结果hyLagRateReports:", len(hyLagRateReports))
 	fn := func(cb qos.Cb) {
 		for _, report := range hyLagRateReports {
-			if report.TranscodeRate == nil {
+			if report.MikuTranscodePercent == nil {
 				continue
 			}
-			cb(*report.Ts_m, *report.TranscodeRate)
+			cb(*report.Ts_m, *report.MikuTranscodePercent)
 		}
 	}
 	chartData := qos.GenerateLineChartData("虎牙推流MIKU转码流占总样本数的比例", "占比", fn)

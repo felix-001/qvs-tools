@@ -197,18 +197,18 @@ type HyLagReport struct {
 	LagNodeRate          *float64 `db:"lag_node_rate"`
 	TranscodeLagCnt      *int     `db:"transcodeLagCnt"`      // 推流MIKU转码流卡顿样本个数
 	TotalTranscodeCnt    *int     `db:"totalTranscodeCnt"`    // 总转码流样本个数
-	TrancodeLagRate      *float64 `db:"trancodeLagRate"`      // 转码流去掉回源的卡顿样本占总转码流样本的百分比
 	NotTranscodeLagCnt   *int     `db:"notTranscodeLagCnt"`   // 推流MIKU非转码流卡顿样本个数
 	TotalNotTranscodeCnt *int     `db:"totalNotTranscodeCnt"` // 总非转码流样本个数
 	MikuNormalLagRate    *float64 `db:"mikuNormalLagRate"`    // 推流MIKU非转码流卡顿率
-	TrancodeLagPercent   *float64 `db:"trancodeLagPercent"`   // 转码流卡顿样本占总样本百分比
-	SrcLagRate           *float64 `db:"srcLagRate"`           // 回源客户卡顿率
+	MikuTrancodeLagRate  *float64 `db:"mikuTrancodeLagRate"`  // 推流MIKU转码流卡顿率
 	SrcTranscodeLagRate  *float64 `db:"srcTranscodeLagRate"`  // 回客户源转码流卡顿率
-	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
-	TranscodeRate        *float64 `db:"transcodeRate"`        // 推流MIKU转码流样本占总样本的百分比
+	SrcNormalLagRate     *float64 `db:"srcNormalLagRate"`     // 回源客户源非转码流卡顿率
+	SrcLagRate           *float64 `db:"srcLagRate"`           // 回源客户整体卡顿率
+	MikuTranscodePercent *float64 `db:"mikuTranscodePercent"` // 推流MIKU转码流样本占总样本的百分比
 	NormalRate           *float64 `db:"normalRate"`           // 推流MIKU非转码流样本占总样本的百分比
 	SrcNormalPercent     *float64 `db:"srcNormalPercent"`     // 回源客户源非转码流样本占总样本的百分比
-	SrcNormalLagRate     *float64 `db:"srcNormalLagRate"`     // 回源客户源非转码流卡顿率
+	SrcTranscodePercent  *float64 `db:"srcTranscodePercent"`  // 回源客户源转码流样本占总样本的百分比
+	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
 }
 
 type HyLagRateByStreamsReport struct {

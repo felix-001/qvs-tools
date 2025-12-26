@@ -8,10 +8,11 @@ import (
 
 // AggregatedData 聚合数据结构
 type AggregatedData struct {
-	IP            string   `json:"ip"`
+	IP            string   `json:"cdn_ip"`
 	TotalCount    int      `json:"total_count"`    // 总样本数
 	LagCount      int      `json:"lag_count"`      // 卡顿样本数
-	LagRate       float64  `json:"lag_rate"`       // 本节点卡顿样本占卡顿样本总数的比例
+	Percent       float64  `json:"percent"`        // 卡顿率
+	LagRate       float64  `json:"weight"`         // 本节点卡顿样本占卡顿样本总数的比例
 	Prov          string   `json:"prov"`           // 节点省份
 	Isp           string   `json:"isp"`            // 节点运营商
 	NormalIps     []string `json:"normal_ips"`     // 不卡顿的ip列表

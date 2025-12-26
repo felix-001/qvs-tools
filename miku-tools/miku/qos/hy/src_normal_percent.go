@@ -6,7 +6,7 @@ import (
 	"mikutool/miku/qos"
 )
 
-// 虎牙回客户源站非转码流整体样本数占总样本数的比例
+// 虎牙回客户源站非转码流样本数占总样本数的比例
 func init() {
 	qos.RegisterChartGenerator(&HuyaSrcNormalRate{})
 }
@@ -31,7 +31,7 @@ func (h *HuyaSrcNormalRate) Generate(req qos.QOSRequest) any {
 			cb(*report.Ts_m, *report.SrcNormalPercent)
 		}
 	}
-	chartData := qos.GenerateLineChartData("虎牙回客户源站非转码流整体样本数占总样本数的比例", "比例", fn)
+	chartData := qos.GenerateLineChartData("虎牙回客户源站非转码流样本数占总样本数的比例", "比例", fn)
 	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 }
 
@@ -42,6 +42,6 @@ func (h *HuyaSrcNormalRate) ID() string {
 func (h *HuyaSrcNormalRate) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    h.ID(),
-		Title: "虎牙回客户源站非转码流整体样本数占总样本数的比例",
+		Title: "虎牙回客户源站非转码流样本数占总样本数的比例",
 	}
 }

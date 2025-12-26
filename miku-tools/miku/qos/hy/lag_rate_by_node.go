@@ -214,6 +214,7 @@ func (h *HyCdnLag) aggCdnLagData(hyCdnLagReports []util.HyCdnLagReport, clientIp
 			NormalIps:     normalClientIps,
 			LagIps:        lagClientIps,
 			LagRate:       float64(*report.LagCnt*100) / float64(totalLagCnt),
+			Percent:       float64(*report.LagCnt*100) / float64(*report.Total),
 			LagUsrCnt:     len(lagClientIps),
 			TotalUsrCnt:   len(lagClientIps) + len(normalClientIps),
 			LagUsrRate:    float64(len(lagClientIps)*100) / float64(len(lagClientIps)+len(normalClientIps)),

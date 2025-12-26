@@ -130,10 +130,17 @@ var chartsSeq = []string{
 	"chart_lagUsrDistributionProv",
 	"chart_lagrateByUser",
 	"chart_hyLagUsrPercent",
-	"chart_transcodeHyLagRateTrend",
 	"chart_usrLagRate",
+	"chart_transcodeHyLagRateTrend", // 推流miku转码流卡顿率
+	"chart_MikuNormalLagRate",       // 推流miku非转码流卡顿率
+	"chart_lagSrcTranscodePercent",  // 回客户源转码流卡顿率
+	"chart_lagSrcNormalRate",        // 回客户源非转码流卡顿率
+	"chart_HySrcLagRateTrend",       // 回空户源整体卡顿率
 	"chart_HyTranscodeRateTrend",
 	"chart_HyNormalRateTrend",
+	"chart_HySrcNoramalPercent",
+	"chart_HySrcTranscodePercent",
+	"chart_HySrcRateTrend",
 	// 边缘节点
 	"chart_lagNodesPercent",
 	"chart_hyLagrateByStreams",
@@ -151,11 +158,6 @@ var chartsSeq = []string{
 	"chart_upstreamBandwidth",
 	"chart_videoFps",
 	"chart_audioFps",
-	"chart_HySrcLagRateTrend",
-	"chart_HySrcRateTrend",
-	"chart_lagSrcTranscodePercent",
-	"chart_HySrcNoramalPercent",
-	"chart_MikuNormalLagRate",
 	// 其他
 	"chart_loadRate",
 }
