@@ -195,12 +195,12 @@ type HyLagReport struct {
 	LagNodeCnt           *int     `db:"lag_node_cnt"`
 	TotalNodeCnt         *int     `db:"total_node_cnt"`
 	LagNodeRate          *float64 `db:"lag_node_rate"`
-	TranscodeLagCnt      *int     `db:"transcodeLagCnt"`      // 转码流去掉回源的卡顿样本个数
+	TranscodeLagCnt      *int     `db:"transcodeLagCnt"`      // 推流MIKU转码流卡顿样本个数
 	TotalTranscodeCnt    *int     `db:"totalTranscodeCnt"`    // 总转码流样本个数
 	TrancodeLagRate      *float64 `db:"trancodeLagRate"`      // 转码流去掉回源的卡顿样本占总转码流样本的百分比
-	NotTranscodeLagCnt   *int     `db:"notTranscodeLagCnt"`   // 非转码流去掉回源的卡顿样本个数
+	NotTranscodeLagCnt   *int     `db:"notTranscodeLagCnt"`   // 推流MIKU非转码流卡顿样本个数
 	TotalNotTranscodeCnt *int     `db:"totalNotTranscodeCnt"` // 总非转码流样本个数
-	NotTranscodeLagRate  *float64 `db:"notTranscodeLagRate"`  // 非转码流去掉回源的卡顿样本占比
+	MikuNormalLagRate    *float64 `db:"mikuNormalLagRate"`    // 推流MIKU非转码流卡顿率
 	TrancodeLagPercent   *float64 `db:"trancodeLagPercent"`   // 转码流卡顿样本占总样本百分比
 	SrcLagRate           *float64 `db:"srcLagRate"`           // 回源客户卡顿率
 	SrcTranscodeLagRate  *float64 `db:"srcTranscodeLagRate"`  // 回客户源转码流卡顿率
@@ -208,6 +208,7 @@ type HyLagReport struct {
 	TranscodeRate        *float64 `db:"transcodeRate"`        // 推流MIKU转码流样本占总样本的百分比
 	NormalRate           *float64 `db:"normalRate"`           // 推流MIKU非转码流样本占总样本的百分比
 	SrcNormalPercent     *float64 `db:"srcNormalPercent"`     // 回源客户源非转码流样本占总样本的百分比
+	SrcNormalLagRate     *float64 `db:"srcNormalLagRate"`     // 回源客户源非转码流卡顿率
 }
 
 type HyLagRateByStreamsReport struct {

@@ -710,10 +710,10 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%') THEN 1 END) as notTranscodeLagCnt,
 		COUNT(CASE WHEN (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%') THEN 1 END) as totalNotTranscodeCnt,
 		COALESCE(
-			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%') THEN 1 END) * 100.0 /
-			NULLIF(COUNT(CASE WHEN (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%') THEN 1 END), 0),
+			COUNT(CASE WHEN field_video_bad_quality = 100 AND (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%' AND dim_stream_url NOT LIKE '%cxdexxtpl%') THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url NOT LIKE '%ratio%' AND dim_stream_url NOT LIKE '%codec%' AND dim_stream_url NOT LIKE '%cxdexxtpl%') THEN 1 END), 0),
 			0
-		) as notTranscodeLagRate,
+		) as mikuNormalLagRate,
 
 		COALESCE(
 			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') THEN 1 END) * 100.0 /
@@ -726,6 +726,12 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') THEN 1 END), 0),
 			0
 			) as srcTranscodeLagRate,
+
+		COALESCE(
+			COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%') and (dim_stream_url not like '%ratio%' or dim_stream_url not like '%codec%' or dim_stream_url not like '%cxdexxtpl%') THEN 1 END), 0),
+			0
+			) as srcNormalLagRate,
 
 		COALESCE(
 			COUNT(CASE WHEN dim_stream_url LIKE '%src%' or dim_stream_url like '%sxrxc%' THEN 1 END) * 100.0 /
