@@ -138,6 +138,7 @@ type StreamdLagReport struct {
 	LoadRatio                          *float64 `db:"loadRatio"`
 	RetryRatioUpstream                 *float64 `db:"retry_ratio_upstream"`
 	UpstreamRetryTimes                 *int64   `db:"upstreamRetryTimes"`
+	UsrCnt                             *int64   `db:"usr_cnt"`
 }
 
 type StreamdFpsReport struct {
