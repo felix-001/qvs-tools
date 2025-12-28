@@ -136,6 +136,8 @@ var chartsSeq = []string{
 	"chart_lagSrcTranscodePercent",  // 回客户源转码流卡顿率
 	"chart_lagSrcNormalRate",        // 回客户源非转码流卡顿率
 	"chart_HySrcLagRateTrend",       // 回空户源整体卡顿率
+	"chart_hyLagCntTrend",
+	"chart_hyTotalCntTrend",
 	"chart_HyTranscodeRateTrend",
 	"chart_HyNormalRateTrend",
 	"chart_HySrcNoramalPercent",

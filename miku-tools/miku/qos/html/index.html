@@ -488,7 +488,8 @@
                 rawData: formData.get('rawData') === 'on',
                 userAnalysisStreams: formData.get('userAnalysisStreams') === 'on',
                 protocol: formData.get('protocol'),
-                excludeStreams: excludeStreams || "" // 将剔除流ID列表通过excludeStreams字段传递
+                excludeStreams: excludeStreams || "", // 将剔除流ID列表通过excludeStreams字段传递
+                requestId: Math.random().toString(36).substring(2, 12) // 生成10位随机字符串
             };
             console.log(data)
             
@@ -748,7 +749,7 @@
                         <input type="checkbox" id="${chart.id}" name="${chart.id}" checked>
                         <label for="${chart.id}">${chart.title}</label>
                     `;
-                    console.log('div', div)
+                    //console.log('div', div)
                     chartsContainer.appendChild(div);
                 });
                 

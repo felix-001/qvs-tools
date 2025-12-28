@@ -3,107 +3,9 @@ package qos
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 )
-
-// buildSQLQuery 构建SQL查询语句
-func BuildSQLQuery(req QOSRequest, raw bool) string {
-
-	streamId := strings.ToLower(req.StreamID)
-	pos := strings.Index(streamId, "_sxrxc")
-	if pos > 0 {
-		streamId = streamId[:pos]
-	}
-	// 基础查询
-	sql := "SELECT " //"* FROM huyabiz_quality_report_log WHERE 1=1 "
-	if raw {
-		sql += "*"
-	} else {
-		sql += "date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')  as ts, " +
-			"COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent," +
-			"COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt," +
-			"COUNT(*) as total"
-	}
-	sql += " FROM huyabiz_quality_report_log WHERE 1=1 "
-
-	// 添加时间范围过滤（转换为day格式）
-	if req.StartTime != "" {
-		startDay := convertToDay(req.StartTime)
-		log.Printf("StartTime输入: %s, 转换后: %s", req.StartTime, startDay)
-		sql += fmt.Sprintf(" AND day >= '%s'", startDay)
-		startTime := strings.ReplaceAll(req.StartTime, "T", " ")
-		sql += fmt.Sprintf(" AND cts >= to_unixtime(TIMESTAMP '%s+08:00')", startTime)
-	}
-
-	if req.EndTime != "" {
-		endDay := convertToDay(req.EndTime)
-		log.Printf("EndTime输入: %s, 转换后: %s", req.EndTime, endDay)
-		sql += fmt.Sprintf(" AND day <= '%s'", endDay)
-		endTime := strings.ReplaceAll(req.EndTime, "T", " ")
-		sql += fmt.Sprintf(" AND cts <= to_unixtime(TIMESTAMP '%s+08:00')", endTime)
-	}
-
-	// 添加流ID过滤
-	if req.StreamID != "" {
-		if req.FuzzySearch {
-			sql += fmt.Sprintf(" AND dim_stream_url LIKE '%%%s%%'", streamId)
-		} else {
-			sql += fmt.Sprintf(" AND dim_stream = '%s'", streamId)
-		}
-	}
-
-	// 添加剔除流ID过滤
-	if req.ExcludeStreams != "" {
-		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
-		excludeStreams := strings.Split(req.ExcludeStreams, ",")
-		for _, stream := range excludeStreams {
-			stream = strings.TrimSpace(stream)
-			stream = strings.ToLower(stream)
-			if req.FuzzySearch {
-				sql += fmt.Sprintf(" AND dim_stream_url not like '%%%s%%'\n", stream)
-			} else {
-				sql += fmt.Sprintf(" AND dim_stream != '%s'\n", stream)
-			}
-		}
-	}
-
-	// 添加域名过滤
-	if req.Domain != "" {
-		if req.FuzzySearch {
-			sql += fmt.Sprintf(" AND dim_stream_url LIKE '%%%s%%'", req.Domain)
-		} else {
-			sql += fmt.Sprintf(" AND dim_cdndomain = '%s'", req.Domain)
-		}
-	}
-
-	// 添加UID过滤（假设UID在stream_url中，如果没有相应字段可以注释掉）
-	if req.UID != "" {
-		sql += fmt.Sprintf(" AND dim_stream_url LIKE '%%%s%%'", req.UID)
-	}
-
-	// 添加小时过滤
-	if req.Hour != "" {
-		// 验证小时格式
-		if hour, err := strconv.Atoi(req.Hour); err == nil && hour >= 0 && hour <= 23 {
-			sql += fmt.Sprintf(" AND hour = '%d'", hour)
-		} else {
-			log.Printf("无效的小时格式: %s，已忽略小时过滤", req.Hour)
-		}
-	}
-
-	sql += " AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio')"
-	if !raw {
-		sql += " GROUP BY date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')" +
-			" ORDER BY ts"
-	}
-
-	// 限制结果数量
-	sql += " LIMIT 50000"
-
-	return sql
-}
 
 func BuildMikuSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
@@ -323,6 +225,14 @@ func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 		}
 	}
 
+	if req.CdnIp != "" {
+		where += fmt.Sprintf(" AND localaddr like '%%%s%%'\n", req.CdnIp)
+	}
+
+	if req.UserIp != "" {
+		where += fmt.Sprintf(" AND remoteaddr like '%%%s%%'\n", req.UserIp)
+	}
+
 	sql := fmt.Sprintf(`
 		select date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai') as ts_m, count(DISTINCT streamname) as stream_cnt
 		from dwd_flowd_miku_streamd_log 
@@ -446,6 +356,7 @@ func buildCommonSQLQuery(req QOSRequest, choose, table, where, group, order stri
 			%s
 			AND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
 			AND dim_heart_type != '0'
+			and dim_stream_url not like '%%.pstream%%'
 			AND (client_type = 'sdk_video_bad_quality_ratio' OR client_type = 'web_video_bad_quality_ratio')
 			AND day >= '%s' AND day <= '%s'
 		`, choose, table, where, req.StartTime, req.EndTime, startDay, endDay)
@@ -527,6 +438,10 @@ func buildHyCommonSQLQuery(req QOSRequest, choose, where, group, order, protocol
 
 	if req.UserIp != "" {
 		where += fmt.Sprintf(` AND dim__ip = '%s'`, req.UserIp)
+	}
+
+	if req.CdnIp != "" {
+		where += fmt.Sprintf(` AND dim_cdnip = '%s'`, req.CdnIp)
 	}
 
 	// 添加剔除流ID过滤
@@ -786,18 +701,25 @@ func BuildHyLagRateByStreamsSQLQuery(req QOSRequest) string {
 
 	streamID := strings.ToLower(req.StreamID)
 
-	p2p := ""
+	where := ""
 	switch req.Protocol {
 	case "hls":
 	case "p2p":
-		p2p = ` AND dim_p2p = '1'`
+		where += ` AND dim_p2p = '1'`
 	case "flv":
 		/*/
 		where += fmt.Sprintf(`
 			AND dim_stream_url like '%%.flv%%'
 		`)
 		*/
-		p2p = ` AND dim_p2p = '0'`
+		where += ` AND dim_p2p = '0'`
+	}
+
+	if req.UserIp != "" {
+		where += fmt.Sprintf(` AND dim__ip = '%s'`, req.UserIp)
+	}
+	if req.CdnIp != "" {
+		where += fmt.Sprintf(` AND dim_cdnip = '%s'`, req.CdnIp)
 	}
 
 	sql := fmt.Sprintf(`
@@ -846,6 +768,7 @@ WHERE 1=1
 	AND cts >= to_unixtime(TIMESTAMP '%s+08:00') AND cts <= to_unixtime(TIMESTAMP '%s+08:00') 
 	%s
 	AND dim_stream_url like '%%%s%%'
+	AND dim_stream_url not like '%%.pstream%%'
 	AND dim_heart_type != '0'
 	AND (client_type = 'sdk_video_bad_quality_ratio' or client_type = 'web_video_bad_quality_ratio') 
 group by  CASE
@@ -872,7 +795,7 @@ CONCAT(
 	END
 END
 ORDER by lagCnt DESC
-	`, startDay, endDay, req.StartTime, req.EndTime, p2p, streamID)
+	`, startDay, endDay, req.StartTime, req.EndTime, where, streamID)
 
 	return sql
 }
@@ -882,47 +805,4 @@ func BuildHyUsrDistributeSQLQuery(req QOSRequest) string {
 		DISTINCT dim__ip
 		`
 	return buildHyCommonSQLQuery(req, choose, "", "", "", "flv", "miku.huyabiz_quality_report_log")
-}
-
-func buildHyCommonLoadSQLQuery(req QOSRequest, choose, where, group, order string) string {
-	// Replace "T" with space in starttime and endtime
-	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
-	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
-	startDay := convertToDay(req.StartTime)
-	endDay := convertToDay(req.EndTime)
-
-	if req.StreamID != "" {
-		if req.FuzzySearch {
-			where += fmt.Sprintf(" AND dim_stream_url LIKE '%%%s%%'", req.StreamID)
-		} else {
-			where += fmt.Sprintf(" AND dim_stream_url = '%s'", req.StreamID)
-		}
-	}
-
-	switch req.Protocol {
-	case "hls":
-	case "p2p":
-		where += ` AND dim_p2p = '1'`
-	case "flv":
-		where += ` AND dim_p2p = '0'`
-	}
-
-	sql := fmt.Sprintf(`
-		SELECT 
-		    %s
-		FROM %s
-		WHERE 1=1 
-			%s
-			AND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
-			AND (client_type = 'sdk_video_load' OR client_type = 'web_video_load')
-			AND day >= '%s' AND day <= '%s'
-		`, choose, "huyabiz_quality_report_log", where, req.StartTime, req.EndTime, startDay, endDay)
-	if group != "" {
-		sql += fmt.Sprintf(" GROUP BY %s", group)
-	}
-	if order != "" {
-		sql += fmt.Sprintf(" ORDER BY %s", order)
-	}
-	return sql
-
 }

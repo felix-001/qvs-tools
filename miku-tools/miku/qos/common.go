@@ -57,7 +57,9 @@ type HyLagRateCache struct {
 var hyLagRateCache HyLagRateCache
 
 func GetHyLagRateReports(req QOSRequest) ([]util.HyLagReport, error) {
-	if req.StartTime == hyLagRateCache.Req.StartTime && req.EndTime == hyLagRateCache.Req.EndTime &&
+	if req.StartTime == hyLagRateCache.Req.StartTime &&
+		req.EndTime == hyLagRateCache.Req.EndTime &&
+		req.RequestId == hyLagRateCache.Req.RequestId &&
 		len(hyLagRateCache.HyLagRateReports) > 0 {
 		return hyLagRateCache.HyLagRateReports, nil
 	}
@@ -85,6 +87,7 @@ var hyDistinctCdnClientIpsCache HyDistinctCdnClientIpsCache
 func GetHyDistinctCdnClientIps(req QOSRequest) ([]util.HyClientIpsOnCdnIpReport, error) {
 	if req.StartTime == hyDistinctCdnClientIpsCache.Req.StartTime &&
 		req.EndTime == hyDistinctCdnClientIpsCache.Req.EndTime &&
+		req.RequestId == hyDistinctCdnClientIpsCache.Req.RequestId &&
 		len(hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports) > 0 {
 		return hyDistinctCdnClientIpsCache.HyClientIpsOnCdnIpReports, nil
 	}
@@ -141,7 +144,9 @@ var hyUpstreamDistributeCache struct {
 }
 
 func GetUpstreamDistributeReport(req QOSRequest) ([]util.UpstreamDistributeReport, error) {
-	if req.StartTime == hyUpstreamDistributeCache.Req.StartTime && req.EndTime == hyUpstreamDistributeCache.Req.EndTime &&
+	if req.StartTime == hyUpstreamDistributeCache.Req.StartTime &&
+		req.EndTime == hyUpstreamDistributeCache.Req.EndTime &&
+		req.RequestId == hyUpstreamDistributeCache.Req.RequestId &&
 		len(hyUpstreamDistributeCache.UpstreamDistributeReports) > 0 {
 		return hyUpstreamDistributeCache.UpstreamDistributeReports, nil
 	}
@@ -254,6 +259,7 @@ var streamedFpsCache struct {
 func GetStreamedFpsReport(req QOSRequest) ([]util.StreamdFpsReport, error) {
 	if streamedFpsCache.Req.StartTime == req.StartTime &&
 		streamedFpsCache.Req.EndTime == req.EndTime &&
+		req.RequestId == streamedFpsCache.Req.RequestId &&
 		len(streamedFpsCache.StreamedFpsReports) > 0 {
 
 		return streamedFpsCache.StreamedFpsReports, nil

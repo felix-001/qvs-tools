@@ -88,6 +88,7 @@ type QOSRequest struct {
 	Protocol            string     `json:"protocol"`
 	ExcludeStreams      string     `json:"excludeStreams"` // 剔除流ID列表，多个用逗号分隔
 	UserAnalysisStreams bool       `json:"userAnalysisStreams"`
+	RequestId           string     `json:"requestId"`
 }
 
 // ChartOptions 图表展示选项
