@@ -61,6 +61,7 @@ func GetHyLagRateReports(req QOSRequest) ([]util.HyLagReport, error) {
 		req.EndTime == hyLagRateCache.Req.EndTime &&
 		req.RequestId == hyLagRateCache.Req.RequestId &&
 		len(hyLagRateCache.HyLagRateReports) > 0 {
+		log.Println("使用缓存的HyLagRateReports")
 		return hyLagRateCache.HyLagRateReports, nil
 	}
 	sql := BuildHyLagRateSQLQuery(req)
@@ -108,7 +109,9 @@ var hyStreamdLagCache struct {
 }
 
 func GetMikuStreamdReportLagDatas(req QOSRequest) ([]util.StreamdLagReport, error) {
-	if req.StartTime == hyStreamdLagCache.Req.StartTime && req.EndTime == hyStreamdLagCache.Req.EndTime &&
+	if req.StartTime == hyStreamdLagCache.Req.StartTime &&
+		req.EndTime == hyStreamdLagCache.Req.EndTime &&
+		req.RequestId == hyStreamdLagCache.Req.RequestId &&
 		len(hyStreamdLagCache.StreamdLagReports) > 0 {
 		return hyStreamdLagCache.StreamdLagReports, nil
 	}

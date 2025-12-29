@@ -16,6 +16,7 @@ type OnlineNum struct {
 }
 
 func (o *OnlineNum) Generate(req qos.QOSRequest) any {
+	log.Println("OnlineNum, req:", req)
 	hyLagRateReports, err := qos.GetHyLagRateReports(req)
 	if err != nil {
 		return qos.ChartData{Data: fmt.Sprintf("查询失败: %v", err), Type: "error"}
@@ -29,7 +30,7 @@ func (o *OnlineNum) Generate(req qos.QOSRequest) any {
 			cb(*report.Ts_m, *report.TotalUsrCnt)
 		}
 	}
-	chartData := qos.GenerateLineChartData("在线用户数", "人数", fn)
+	chartData := qos.GenerateLineChartData("虎牙每分钟在线用户数趋势图", "人数", fn)
 	return qos.ChartData{Data: chartData, Type: qos.ChartTypeLine}
 }
 

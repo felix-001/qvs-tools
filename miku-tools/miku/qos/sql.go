@@ -43,15 +43,15 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 		ROUND(SUM(IF(type = 'publisher', lagduration, 0)) / NULLIF(SUM(IF(type = 'publisher', costtime, 0)), 0), 4) AS ratio_lag_publisher,
 
 		COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)) AS requests_puller,
-		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and url not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
-		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
+		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and request not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
+		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and request not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
 
-		SUM(if(type = 'puller' and customerSource != true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes,
+		SUM(if(type = 'puller' and customerSource != true and request not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes,
 
-		SUM(if(type = 'puller' and customerSource = true and url not like '%%ffmpegplayer%%', retryTimes, 0)) as upstreamRetryTimes,
-		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and url not like '%%ffmpegplayer%%' and customerSource = true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource = true, requestid, NULL)), 0), 1) AS retry_ratio_upstream,
+		SUM(if(type = 'puller' and customerSource = true and request not like '%%ffmpegplayer%%', retryTimes, 0)) as upstreamRetryTimes,
+		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and request not like '%%ffmpegplayer%%' and customerSource = true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource = true, requestid, NULL)), 0), 1) AS retry_ratio_upstream,
 
-		COUNT(DISTINCT regexp_replace(localaddr, '^(?:\\[)?([0-9a-fA-F:.]+)(?:\\])?:\\d+$', '$1')) AS usr_cnt,
+		COUNT(DISTINCT IF(request not like '%%.pstream%%', regexp_replace(localaddr, '^(?:\\[)?([0-9a-fA-F:.]+)(?:\\])?:\\d+$', '$1'), NULL)) AS usr_cnt,
 
 		COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
 		COUNT(*) as total,
@@ -67,6 +67,10 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 		} else {
 			sql += fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
 		}
+	}
+
+	if req.CdnIp != "" {
+		sql += fmt.Sprintf(" AND remoteaddr like '%%%s%%'\n", req.CdnIp)
 	}
 
 	// 添加剔除流ID过滤
