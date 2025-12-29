@@ -122,7 +122,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 var chartsSeq = []string{
 	// 用户
 	"chart_onlineStreams",
-	"chart_onlineUsers",
+	"chart_hyOnlineUsers",
 	"chart_usrDistributionCountry",
 	"chart_usrDistributionArea",
 	"chart_usrDistributionProv",

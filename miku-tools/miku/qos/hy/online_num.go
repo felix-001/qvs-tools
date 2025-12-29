@@ -34,12 +34,12 @@ func (o *OnlineNum) Generate(req qos.QOSRequest) any {
 }
 
 func (o *OnlineNum) ID() string {
-	return "chart_onlineUsers"
+	return "chart_hyOnlineUsers"
 }
 
 func (o *OnlineNum) ChartInfo() qos.ChartInfo {
 	return qos.ChartInfo{
 		ID:    o.ID(),
-		Title: "每分钟在线用户数趋势图",
+		Title: "虎牙每分钟在线用户数趋势图",
 	}
 }
