@@ -123,6 +123,7 @@ var chartsSeq = []string{
 	// 用户
 	"chart_onlineStreams",
 	"chart_hyOnlineUsers",
+	"chart_onlineNum",
 	"chart_usrDistributionCountry",
 	"chart_usrDistributionArea",
 	"chart_usrDistributionProv",

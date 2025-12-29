@@ -6,7 +6,7 @@ import (
 	"mikutool/miku/qos"
 )
 
-// 在线用户数折线图
+// 虎牙在线用户数折线图
 
 func init() {
 	qos.RegisterChartGenerator(&OnlineNum{})
