@@ -139,6 +139,7 @@ type StreamdLagReport struct {
 	RetryRatioUpstream                 *float64 `db:"retry_ratio_upstream"`
 	UpstreamRetryTimes                 *int64   `db:"upstreamRetryTimes"`
 	UsrCnt                             *int64   `db:"usr_cnt"`
+	Patch_fail_percent                 *float64 `db:"patch_fail_percent"`
 }
 
 type StreamdFpsReport struct {
@@ -210,6 +211,7 @@ type HyLagReport struct {
 	SrcNormalPercent     *float64 `db:"srcNormalPercent"`     // 回源客户源非转码流样本占总样本的百分比
 	SrcTranscodePercent  *float64 `db:"srcTranscodePercent"`  // 回源客户源转码流样本占总样本的百分比
 	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
+	P2pPercent           *float64 `db:"p2p_percent"`          // p2p样本占总样本的比重
 }
 
 type HyLagRateByStreamsReport struct {

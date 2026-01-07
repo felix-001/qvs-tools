@@ -42,6 +42,9 @@ func BuildMikuSQLQuery(req QOSRequest) string {
 		SUM(IF(type = 'publisher', costtime, 0)) AS total_cost_time_publisher,
 		ROUND(SUM(IF(type = 'publisher', lagduration, 0)) / NULLIF(SUM(IF(type = 'publisher', costtime, 0)), 0), 4) AS ratio_lag_publisher,
 
+		COUNT(CASE WHEN type = 'player' and HTTPResponseCode != 200 and request like '%%wsRange%%' THEN 1 END) * 100.0 /
+			NULLIF(COUNT(CASE WHEN type = 'player' and request like '%%wsRange%%' THEN 1 END), 0) as patch_fail_percent,
+
 		COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)) AS requests_puller,
 		COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and request not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
 		ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and request not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
@@ -607,6 +610,8 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
 		COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
 		COUNT(*) as total,
+
+		COUNT(CASE WHEN dim_p2p = '1' THEN 1 END) * 100.0 / COUNT(*) as p2p_percent,
 
 		COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) AS lag_usr_cnt,	
 		COUNT(DISTINCT dim__ip) AS total_usr_cnt,	

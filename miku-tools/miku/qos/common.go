@@ -60,6 +60,7 @@ func GetHyLagRateReports(req QOSRequest) ([]util.HyLagReport, error) {
 	if req.StartTime == hyLagRateCache.Req.StartTime &&
 		req.EndTime == hyLagRateCache.Req.EndTime &&
 		req.RequestId == hyLagRateCache.Req.RequestId &&
+		req.Protocol == hyLagRateCache.Req.Protocol &&
 		len(hyLagRateCache.HyLagRateReports) > 0 {
 		log.Println("使用缓存的HyLagRateReports")
 		return hyLagRateCache.HyLagRateReports, nil
