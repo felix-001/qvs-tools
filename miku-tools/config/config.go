@@ -84,6 +84,7 @@ type Config struct {
 	OnlineNum             int
 	N                     int
 	Loop                  int
+	Bw                    int
 	F                     string
 	T                     string
 	Pattern               string
@@ -96,6 +97,7 @@ type Config struct {
 	Internal              bool
 	Silence               bool
 	Random                bool
+	HeadReq               bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck"`
 	Ak                    string                `json:"ak"`
@@ -198,6 +200,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
 	flag.IntVar(&c.Startid, "startid", 0, "startid")
 	flag.IntVar(&c.OnlineNum, "online_num", 10, "online_num")
+	flag.IntVar(&c.Bw, "bw", 0, "bw")
 	flag.BoolVar(&c.H, "h", false, "简版帮助信息, 如果需要详细的帮助信息, 请使用 -help")
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
@@ -205,6 +208,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Redirect, "redirect", false, "是否开启302")
 	flag.BoolVar(&c.Internal, "internal", false, "是否是内部的")
 	flag.BoolVar(&c.Silence, "silence", false, "是否发送静音的语音数据")
+	flag.BoolVar(&c.HeadReq, "head_req", false, "是否发送HEAD请求")
 	flag.Var(&c.HeaderMap, "header", "header")
 	flag.BoolVar(&c.Random, "random", false, "随机")
 	flag.IntVar(&c.N, "n", 100, "n")

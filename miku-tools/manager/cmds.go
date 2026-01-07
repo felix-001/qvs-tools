@@ -63,7 +63,7 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 		Desc: "请求playcheck 302接口, -https <true/false> \n-domain <domain> \n-app <app, 默认live> \n-protocol <protocol, 默认flv> \n" +
 			"-bucket <bucket, 默认live> \n-stream <stream> \n-format <format, 默认flv> \n-sched_ip <sched_ip, 默认xs3427> \n" +
 			"-user <user, 默认iqiyi> \n-node <node, 默认vdn-jsyz1-dls-1-9> \n-conn_id <conn_id, 默认12345678abcdef> \n-ip <clientIp> \n" +
-			"-qn_test_url <streamd向lived请求playcheck的domain>",
+			"-qn_test_url <streamd向lived请求playcheck的domain>\n-head_req",
 		Handler: handler,
 	}
 	return cmd
@@ -248,7 +248,7 @@ func (m *CommandManager) CmdReport() *Command {
 	cmd := &Command{
 		Desc: "上报节点流信息, -node <node, default: 1-9> -online_num <online_num, default: 10> " +
 			"-domain <domain, default> -app <app, default> -bucket <bucket, default> -stream <stream, default> " +
-			"-ip <ip, default>",
+			"-ip <ip, default> -bw <bandwidth>",
 		Handler: handler,
 	}
 	return cmd

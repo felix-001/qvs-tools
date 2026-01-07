@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/config"
 	"mikutool/public/util"
+	"time"
 
 	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
 	commonModel "github.com/qbox/mikud-live/common/model"
@@ -40,43 +41,51 @@ func (s *StreamMgr) SetConf(conf *config.Config) {
 }
 
 func (s *StreamMgr) NodeStreamReport() {
-	req := commonModel.StreamReportRequest{
-		NodeId:    s.conf.Node,
-		ConnectId: s.conf.ConnId,
-		Streams: []*commonModel.StreamInfoRT{
-			{
-				Domain:     s.conf.Domain,
-				AppName:    s.conf.App,
-				StreamName: s.conf.Bucket + ":" + s.conf.Stream,
-				Bucket:     s.conf.Bucket,
-				Key:        s.conf.Stream,
-				ConnectId:  s.conf.ConnId,
-				Players: []*commonModel.PlayerInfo{
-					{
-						Protocol: s.conf.Protocol,
-						Ips: []*commonModel.IpInfo{
-							{
-								Ip:        s.conf.Ip,
-								OnlineNum: uint32(s.conf.OnlineNum),
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		req := commonModel.StreamReportRequest{
+			NodeId:    s.conf.Node,
+			ConnectId: s.conf.ConnId,
+			Streams: []*commonModel.StreamInfoRT{
+				{
+					Domain:         s.conf.Domain,
+					AppName:        s.conf.App,
+					StreamName:     s.conf.Bucket + ":" + s.conf.Stream,
+					Bucket:         s.conf.Bucket,
+					Key:            s.conf.Stream,
+					ConnectId:      s.conf.ConnId,
+					RelayType:      1,
+					RelayBandwidth: uint64(s.conf.Bw),
+					Players: []*commonModel.PlayerInfo{
+						{
+							Protocol: s.conf.Protocol,
+							Ips: []*commonModel.IpInfo{
+								{
+									Ip:        s.conf.Ip,
+									OnlineNum: uint32(s.conf.OnlineNum),
+								},
 							},
 						},
 					},
 				},
 			},
-		},
+		}
+
+		bytes, err := json.Marshal(&req)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("req: %s\n", string(bytes))
+		var resp commonModel.StreamReportResponse
+		addr := fmt.Sprintf("http://%s:6060/api/v1/streamreport", s.conf.SchedIp)
+		if err := util.Post(addr, string(bytes), &resp); err != nil {
+			log.Println(err)
+			return
+		}
+		fmt.Printf("resp: %+v\n", resp)
 	}
 
-	bytes, err := json.Marshal(&req)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	fmt.Printf("req: %s\n", string(bytes))
-	var resp commonModel.StreamReportResponse
-	addr := fmt.Sprintf("http://%s:6060/api/v1/streamreport", s.conf.SchedIp)
-	if err := util.Post(addr, string(bytes), &resp); err != nil {
-		log.Println(err)
-		return
-	}
-	fmt.Printf("resp: %+v\n", resp)
 }

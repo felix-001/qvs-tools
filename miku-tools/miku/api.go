@@ -21,17 +21,18 @@ import (
 )
 
 type PlaycheckReq struct {
-	Bucket   string            `json:"bucket"`
-	Key      string            `json:"key"`
-	Url      string            `json:"url"`
-	Remote   string            `json:"remoteAddr"`
-	Local    string            `json:"localAddr"`
-	Node     string            `json:"nodeId"`
-	ConnId   string            `json:"connectId"`
-	Master   string            `json:"master"`
-	Protocol string            `json:"protocol"` // 协议类型，非必填，目前仅hls协议传递
-	Headers  map[string]string `json:"headers"`
-	User     string            `json:"user"`
+	Bucket     string            `json:"bucket"`
+	Key        string            `json:"key"`
+	Url        string            `json:"url"`
+	Remote     string            `json:"remoteAddr"`
+	Local      string            `json:"localAddr"`
+	Node       string            `json:"nodeId"`
+	ConnId     string            `json:"connectId"`
+	Master     string            `json:"master"`
+	Protocol   string            `json:"protocol"` // 协议类型，非必填，目前仅hls协议传递
+	Headers    map[string]string `json:"headers"`
+	User       string            `json:"user"`
+	HttpMethod string            `json:"httpMethod"`
 }
 
 type PlayCheckResp struct {
@@ -82,15 +83,19 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 	conf.ConnId = hex.EncodeToString(b)
 
 	req := PlaycheckReq{
-		Bucket:   conf.Bucket,
-		Key:      conf.Stream,
-		Url:      playUrl,
-		Node:     node,
-		Remote:   ip,
-		ConnId:   conf.ConnId,
-		User:     conf.User,
-		Protocol: conf.Protocol,
-		Local:    "127.0.0.1:1234",
+		Bucket:     conf.Bucket,
+		Key:        conf.Stream,
+		Url:        playUrl,
+		Node:       node,
+		Remote:     ip,
+		ConnId:     conf.ConnId,
+		User:       conf.User,
+		Protocol:   conf.Protocol,
+		Local:      "127.0.0.1:1234",
+		HttpMethod: "GET",
+	}
+	if conf.HeadReq {
+		req.HttpMethod = "HEAD"
 	}
 	fmt.Printf("req: %+v\n", req)
 	bytes, err := json.Marshal(&req)
