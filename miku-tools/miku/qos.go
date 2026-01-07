@@ -145,6 +145,7 @@ var chartsSeq = []string{
 	"chart_HySrcTranscodePercent",
 	"chart_HySrcRateTrend",
 	"chart_patchFailPercent",
+	"chart_hyPatchLagPercent",
 	// 边缘节点
 	"chart_lagNodesPercent",
 	"chart_hyLagrateByStreams",

@@ -204,6 +204,115 @@ func buildMikuFpsSQLQuery(req QOSRequest) string {
 	return sql
 }
 
+func buildMikuFpsSQLQuery2(req QOSRequest) string {
+	// Replace "T" with space in starttime and endtime
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+
+	// 构建流名过滤条件
+	streamCondition := ""
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			streamCondition = fmt.Sprintf(" AND StreamName like '%%%s%%'\n", req.StreamID)
+		} else {
+			streamCondition = fmt.Sprintf(" AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+
+	// 构建剔除流ID过滤条件
+	excludeStreamCondition := ""
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				excludeStreamCondition += fmt.Sprintf(" AND StreamName != '%s'\n", stream)
+			}
+		}
+	}
+
+	sql := fmt.Sprintf(`
+		WITH all_data AS (
+			SELECT 
+				from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
+				StreamName,
+				NodeID,
+				-- 使用 reduce 函数计算数组平均值
+				CASE 
+				WHEN cardinality(Fps) = 0 THEN 0
+				ELSE reduce(Fps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(Fps)
+				END AS avg_IncomingVideoFps,
+				CASE 
+				WHEN cardinality(AudioFps) = 0 THEN 0
+				ELSE reduce(AudioFps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(AudioFps)
+				END AS avg_IncomingAudioFps,
+				'publisher' AS source_type,
+				1 AS priority
+			FROM miku.dwd_flowd_miku_streamd_log
+			WHERE             
+				AppName = '%s'
+				AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+				AND day >= '%s' AND day <= '%s'
+				%s
+				%s
+				AND Type = 'publisher'
+
+			UNION ALL
+
+			SELECT 
+				from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
+				StreamName,
+				NodeID,
+				CASE 
+				WHEN cardinality(Fps) = 0 THEN 0
+				ELSE reduce(Fps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(Fps)
+				END AS avg_IncomingVideoFps,
+				CASE 
+				WHEN cardinality(AudioFps) = 0 THEN 0
+				ELSE reduce(AudioFps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(AudioFps)
+				END AS avg_IncomingAudioFps,
+				'puller' AS source_type,
+				2 AS priority
+			FROM miku.dwd_flowd_miku_streamd_log
+			WHERE            
+				AppName = '%s'
+				AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'
+				AND day >= '%s' AND day <= '%s'
+				%s
+				%s
+				AND Type = 'puller'
+				AND CustomerSource = true
+			),
+				
+			real_data AS (
+			SELECT *
+			FROM (
+				SELECT *,
+				row_number() OVER (PARTITION BY ts ORDER BY priority) AS rn
+				FROM all_data
+			)
+			WHERE rn = 1
+			)
+
+			SELECT 
+			r.ts,
+			r.NodeID,
+			r.StreamName,
+			COALESCE(r.avg_IncomingVideoFps, 0) AS avg_IncomingVideoFps,
+			COALESCE(r.avg_IncomingAudioFps, 0) AS avg_IncomingAudioFps,
+			r.source_type
+			FROM real_data r
+			ORDER BY r.ts
+		`, req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition,
+		req.AppName, req.StartTime, req.EndTime, startDay, endDay, streamCondition, excludeStreamCondition)
+	return sql
+}
+
 func BuildMikuStreamCntSQLQuery(req QOSRequest) string {
 	// Replace "T" with space in starttime and endtime
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
@@ -686,7 +795,13 @@ func BuildHyLagRateSQLQuery(req QOSRequest) string {
 			COUNT(CASE WHEN dim_stream_url not like '%ratio%' and dim_stream_url not like '%codec%' and  dim_stream_url not like '%cxdexxtpl%' and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and dim_p2p != '1' THEN 1 END) * 100.0 /
 			count(*),
 			0
-			) as srcNormalPercent
+			) as srcNormalPercent,
+
+		COALESCE(
+			COUNT(CASE WHEN dim_stream_url like '%wsRange%' THEN 1 END) * 100.0 /
+			count(*),
+			0
+			) as patch_lag_percent
 		`
 	return buildHyCommonSQLQuery(req, choose, "", group, order, req.Protocol, "miku.huyabiz_quality_report_log")
 }

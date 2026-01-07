@@ -212,6 +212,7 @@ type HyLagReport struct {
 	SrcTranscodePercent  *float64 `db:"srcTranscodePercent"`  // 回源客户源转码流样本占总样本的百分比
 	SrcRate              *float64 `db:"srcRate"`              // 回客户源站样本占总样本的百分比
 	P2pPercent           *float64 `db:"p2p_percent"`          // p2p样本占总样本的比重
+	PatchLagPercent      *float64 `db:"patch_lag_percent"`    // 虎牙补片卡顿样本占总p2p卡顿样本的比例
 }
 
 type HyLagRateByStreamsReport struct {
