@@ -160,13 +160,14 @@ type ChartConf struct {
 	Title       string    `json:"title"`
 	SeriesTitle string    `json:"seriesTitle"`
 	Type        string    `json:"type"`
-	Table       string    `json:"table"`
 	SQL         SQLConfig `json:"sql"`
+	Table       string    `json:"table"`
 }
 
 type SQLConfig struct {
 	With      string   `json:"with"`
 	Select    string   `json:"select"`
+	From      string   `json:"from"`
 	Where     string   `json:"where"`
 	GroupBy   string   `json:"group_by"`
 	OrderBy   string   `json:"order_by"`

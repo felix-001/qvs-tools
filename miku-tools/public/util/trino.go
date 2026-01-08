@@ -243,3 +243,66 @@ func TrinoQuery(schema, sql string, dest interface{}) error {
 	}
 	return nil
 }
+
+func TrinoQueryMap(schema, sql string, dest interface{}) error {
+	dsn := fmt.Sprintf("http://superset@trino.jf-logverse.k8s.qiniu.io?catalog=hive_miku&schema=%s", schema)
+	db, err := sqlx.Open("trino", dsn)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer db.Close()
+
+	// 检查 dest 类型
+	switch d := dest.(type) {
+	case *[]map[string]any:
+		// 对于 map 切片，使用特殊的处理方式
+		rows, err := db.Query(sql)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			return err
+		}
+
+		*d = []map[string]any{}
+		for rows.Next() {
+			// 为每列创建值的切片
+			values := make([]any, len(columns))
+			valuePtrs := make([]any, len(columns))
+			for i := range values {
+				valuePtrs[i] = &values[i]
+			}
+
+			if err := rows.Scan(valuePtrs...); err != nil {
+				return err
+			}
+
+			// 创建 map
+			rowMap := make(map[string]any)
+			for i, col := range columns {
+				val := values[i]
+
+				// 处理 byte 数组（通常是字符串）
+				if b, ok := val.([]byte); ok {
+					rowMap[col] = string(b)
+				} else {
+					rowMap[col] = val
+				}
+			}
+			*d = append(*d, rowMap)
+		}
+		return rows.Err()
+	default:
+		// 其他类型（如结构体切片）使用原有的 Select
+		err = db.Select(dest, sql)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		return nil
+	}
+}

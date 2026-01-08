@@ -2,37 +2,214 @@ package qos
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"mikutool/public/util"
+	"strings"
 )
 
 type ChartMgr struct {
-	charts []ChartConf
+	charts   []ChartConf
+	chartMap map[string]ChartConf
 }
 
 func NewChartMgr() *ChartMgr {
 	return &ChartMgr{
-		charts: []ChartConf{},
+		chartMap: make(map[string]ChartConf),
 	}
 }
 
 func (c *ChartMgr) Parse() error {
-	if err := json.Unmarshal([]byte(Charts_conf_json), &c.charts); err != nil {
-		log.Printf("解析Charts_conf_json失败: %v\n", err)
+	charts := make([]ChartConf, 0)
+	if err := json.Unmarshal([]byte(Charts_conf_json), &charts); err != nil {
+		log.Printf("parse json fail: %v\n", err)
 		return err
 	}
-	/*
-		for _, chart := range c.charts {
-			sql, err := chart.buildSql()
-			if err != nil {
-				log.Printf("构建SQL失败: %v\n", err)
-				return err
-			}
-			result, err := c.query(sql)
-			if err != nil {
-				log.Printf("查询失败: %v\n", err)
-				return err
+	log.Printf("charts: %+v\n", charts)
+	c.charts = charts
+	for _, chart := range charts {
+		c.chartMap[chart.Name] = chart
+	}
+	log.Printf("chart map loaded: %+v\n", c.chartMap)
+	return nil
+}
+
+func (c *ChartConf) buildMikuWhere(req QOSRequest) (string, error) {
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+	where := c.SQL.Where
+	where += fmt.Sprintf("AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
+	where += fmt.Sprintf("AND day >= '%s' and day <= '%s'\n", startDay, endDay)
+	if req.StreamID != "" {
+		if req.FuzzySearch {
+			where += fmt.Sprintf("AND StreamName LIKE '%%%s%%'\n", req.StreamID)
+		} else {
+			where += fmt.Sprintf("AND StreamName = '%s'\n", req.StreamID)
+		}
+	}
+	if req.AppName != "" {
+		where += fmt.Sprintf("AND AppName = '%s'\n", req.AppName)
+	}
+	if req.CdnIp != "" {
+		where += fmt.Sprintf("AND remoteaddr like '%%%s%%'\n", req.CdnIp)
+	}
+	if req.Domain != "" {
+		where += fmt.Sprintf("AND Domain = '%s'\n", req.Domain)
+	}
+	if req.Protocol != "" {
+		where += fmt.Sprintf("AND Protocol = '%s'\n", req.Protocol)
+	}
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			if req.FuzzySearch {
+				where += fmt.Sprintf("AND StreamName not like '%%%s%%'\n", stream)
+			} else {
+				where += fmt.Sprintf("AND StreamName != '%s'\n", stream)
 			}
 		}
-	*/
-	return nil
+	}
+	return where, nil
+}
+
+func (c *ChartConf) buildHyWhereCommonPart(req QOSRequest) string {
+	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
+	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
+	startDay := convertToDay(req.StartTime)
+	endDay := convertToDay(req.EndTime)
+
+	where := "\tAND " + c.SQL.Where
+	where += fmt.Sprintf("\tAND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
+	where += fmt.Sprintf("\tAND day >= '%s' and day <= '%s'\n", startDay, endDay)
+	where += "\tAND dim_heart_type != '0'\n"
+	where += "\tAND dim_stream_url not like '%.pstream%'\n"
+	where += "\tAND (client_type = 'sdk_video_bad_quality_ratio' OR client_type = 'web_video_bad_quality_ratio')\n"
+	return where
+}
+
+func (c *ChartConf) buildHyWhere(req QOSRequest) (string, error) {
+	where := c.buildHyWhereCommonPart(req)
+	if req.StreamID != "" {
+		streamID := strings.ToLower(req.StreamID)
+		where += fmt.Sprintf(`\tAND dim_stream_url like '%%%s%%'\n`, streamID)
+	}
+
+	if req.Domain != "" {
+		where += fmt.Sprintf("\tAND dim_stream_url like '%%%s%%'\n", req.Domain)
+	}
+
+	if req.UserIp != "" {
+		where += fmt.Sprintf(`\tAND dim__ip = '%s'\n`, req.UserIp)
+	}
+
+	if req.CdnIp != "" {
+		where += fmt.Sprintf(`\tAND dim_cdnip = '%s'\n`, req.CdnIp)
+	}
+
+	// 添加剔除流ID过滤
+	if req.ExcludeStreams != "" {
+		// 将逗号分隔的流ID列表转换为SQL NOT IN条件
+		excludeStreams := strings.Split(req.ExcludeStreams, ",")
+		for _, stream := range excludeStreams {
+			stream = strings.TrimSpace(stream)
+			stream = strings.ToLower(stream)
+			where += fmt.Sprintf(`\tAND dim_stream_url not like '%%%s%%'`, stream)
+		}
+	}
+
+	switch req.Protocol {
+	case "hls":
+	case "p2p":
+		where += `\tAND dim_p2p = '1'\n`
+	case "flv":
+		where += `\tAND dim_p2p = '0'\n`
+	}
+	return where, nil
+}
+
+func (c *ChartConf) buildWhere(req QOSRequest) (string, error) {
+	switch c.Table {
+	case "hy":
+		return c.buildHyWhere(req)
+	case "miku":
+		return c.buildMikuWhere(req)
+	default:
+		return "", fmt.Errorf("不支持的表: %s", c.SQL.From)
+	}
+}
+
+func (c *ChartConf) buildSql(req QOSRequest) (string, error) {
+	var sql string
+	if c.SQL.With != "" {
+		sql = fmt.Sprintf("WITH\n\t%s\n", c.SQL.With)
+	}
+
+	where, err := c.buildWhere(req)
+	if err != nil {
+		return "", err
+	}
+
+	sql += fmt.Sprintf(`
+SELECT 
+	%s 
+FROM 
+	%s
+WHERE 1=1
+	%s
+`,
+		c.SQL.Select, c.SQL.From, where)
+
+	if c.SQL.GroupBy != "" {
+		sql += fmt.Sprintf("GROUP BY\n\t%s\n", c.SQL.GroupBy)
+	}
+	if c.SQL.OrderBy != "" {
+		sql += fmt.Sprintf("ORDER BY\n\t%s\n", c.SQL.OrderBy)
+	}
+	if req.LogLevel == "detail" {
+		log.Println("sql:\n", sql)
+	}
+	return sql, nil
+}
+
+func (c *ChartConf) Query(req QOSRequest) (any, error) {
+	sql, err := c.buildSql(req)
+	if err != nil {
+		log.Println("build sql error:", err)
+		return "", err
+	}
+	var results []map[string]any
+	if err := util.TrinoQueryMap("miku", sql, &results); err != nil {
+		return nil, fmt.Errorf("query err: %v", err)
+	}
+	log.Printf("results: %+v\n", results)
+	return results, nil
+}
+
+func (c *ChartConf) GetChartInfo() ChartInfo {
+	return ChartInfo{
+		ID:    c.Name,
+		Title: c.Title,
+	}
+}
+
+func (c *ChartMgr) GetChartInfos() []ChartInfo {
+	infos := make([]ChartInfo, 0, len(c.charts))
+	for _, chart := range c.charts {
+		infos = append(infos, chart.GetChartInfo())
+	}
+	return infos
+}
+
+func (c *ChartMgr) Query(req QOSRequest) (any, error) {
+	log.Println("Query chart:", req.Chart)
+	chart, ok := c.chartMap[req.Chart]
+	if !ok {
+		return nil, fmt.Errorf("chart not found: %s", req.Chart)
+	}
+	return chart.Query(req)
 }

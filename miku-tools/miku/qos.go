@@ -25,6 +25,7 @@ var indexHTML string
 type QOSServer struct {
 	config    *config.Config
 	resources *resources.Resources
+	chartMgr  *qos.ChartMgr
 }
 
 // NewQOSServer 创建新的QOS服务器
@@ -32,11 +33,13 @@ func NewQOSServer(cfg *config.Config, resources *resources.Resources) *QOSServer
 	return &QOSServer{
 		config:    cfg,
 		resources: resources,
+		chartMgr:  qos.NewChartMgr(),
 	}
 }
 
 // StartServer 启动HTTP服务器
 func (s *QOSServer) StartServer() {
+	s.chartMgr.Parse()
 	// 静态文件服务
 	http.HandleFunc("/", s.homeHandler)
 
@@ -117,6 +120,21 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	}
+
+	results, err := s.chartMgr.Query(req)
+	if err != nil {
+		log.Println("Error querying chart data:", err)
+		http.Error(w, "Error querying chart data", http.StatusInternalServerError)
+		return
+	}
+	bytes, err := json.Marshal(results)
+	if err != nil {
+		log.Println("Error marshalling chart data:", err)
+		http.Error(w, "Error generating chart data", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(bytes)
 }
 
 var chartsSeq = []string{
@@ -185,6 +203,10 @@ func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 			charts = append(charts, chartInfo)
 		}
 	}
+
+	infos := s.chartMgr.GetChartInfos()
+	charts = append(charts, infos...)
+	log.Println("infos:", infos)
 
 	bytes, err := json.Marshal(charts)
 	if err != nil {
