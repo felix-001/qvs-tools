@@ -143,12 +143,30 @@ func (c *ChartConf) buildWhere(req QOSRequest) (string, error) {
 	}
 }
 
+func (c *ChartConf) buildSelect(req QOSRequest) (string, error) {
+	choose := c.SQL.Select
+	switch c.Table {
+	case "hy":
+		if c.SQL.GroupByMinute {
+			choose += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m"
+		}
+	case "miku":
+	default:
+		return "", fmt.Errorf("不支持的表: %s", c.Table)
+	}
+	return choose, nil
+}
+
 func (c *ChartConf) buildSql(req QOSRequest) (string, error) {
 	var sql string
 	if c.SQL.With != "" {
 		sql = fmt.Sprintf("WITH\n\t%s\n", c.SQL.With)
 	}
 
+	choose, err := c.buildSelect(req)
+	if err != nil {
+		return "", err
+	}
 	where, err := c.buildWhere(req)
 	if err != nil {
 		return "", err
@@ -162,18 +180,48 @@ FROM
 WHERE 1=1
 	%s
 `,
-		c.SQL.Select, c.SQL.From, where)
+		choose, c.SQL.From, where)
 
 	if c.SQL.GroupBy != "" {
 		sql += fmt.Sprintf("GROUP BY\n\t%s\n", c.SQL.GroupBy)
+		if c.SQL.GroupByMinute {
+			sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+		}
 	}
 	if c.SQL.OrderBy != "" {
-		sql += fmt.Sprintf("ORDER BY\n\t%s\n", c.SQL.OrderBy)
+		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", c.SQL.OrderBy)
 	}
 	if req.LogLevel == "detail" {
 		log.Println("sql:\n", sql)
 	}
 	return sql, nil
+}
+
+type LineData struct {
+	XAxis []any
+	YAxis []any
+}
+
+func (c *ChartConf) getLineData(results []map[string]any) any {
+	if c.SQL.Dimension != "" {
+		datas := make(map[string]*LineData)
+		for _, result := range results {
+			dimensionValue := result[c.SQL.Dimension].(string)
+			if _, ok := datas[dimensionValue]; !ok {
+				datas[dimensionValue] = &LineData{}
+			}
+			datas[dimensionValue].YAxis = append(datas[dimensionValue].YAxis, result[c.SQL.Field])
+			datas[dimensionValue].XAxis = append(datas[dimensionValue].XAxis, result["ts_m"])
+		}
+		return datas
+	} else {
+		data := &LineData{}
+		for _, result := range results {
+			data.YAxis = append(data.YAxis, result[c.SQL.Field])
+			data.XAxis = append(data.XAxis, result["ts_m"])
+		}
+		return data
+	}
 }
 
 func (c *ChartConf) Query(req QOSRequest) (any, error) {
@@ -186,8 +234,14 @@ func (c *ChartConf) Query(req QOSRequest) (any, error) {
 	if err := util.TrinoQueryMap("miku", sql, &results); err != nil {
 		return nil, fmt.Errorf("query err: %v", err)
 	}
-	log.Printf("results: %+v\n", results)
-	return results, nil
+	//log.Printf("results: %+v\n", results)
+	switch c.Type {
+	case "line":
+		return c.getLineData(results), nil
+	case "table":
+	case "pie":
+	}
+
 }
 
 func (c *ChartConf) GetChartInfo() ChartInfo {

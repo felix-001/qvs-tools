@@ -165,12 +165,13 @@ type ChartConf struct {
 }
 
 type SQLConfig struct {
-	With      string   `json:"with"`
-	Select    string   `json:"select"`
-	From      string   `json:"from"`
-	Where     string   `json:"where"`
-	GroupBy   string   `json:"group_by"`
-	OrderBy   string   `json:"order_by"`
-	Fields    []string `json:"fields"`
-	Dimension string   `json:"dimension"`
+	With          string `json:"with"`
+	Select        string `json:"select"`
+	From          string `json:"from"`
+	Where         string `json:"where"`
+	GroupBy       string `json:"group_by"`
+	OrderBy       string `json:"order_by"`
+	Field         string `json:"field"`
+	Dimension     string `json:"dimension"`
+	GroupByMinute bool   `json:"group_by_minute"`
 }
