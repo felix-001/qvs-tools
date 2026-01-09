@@ -144,9 +144,21 @@ type ChartInfo struct {
 	Title string `json:"title"`
 }
 
+type SeriesData struct {
+	YAxis []string `json:"yAxis"`
+	Color string   `json:"color"`
+}
+
+type LineChartData2 struct {
+	XAxis      []string               `json:"xAxis"`
+	XType      string                 `json:"xType"` // 定义 X 轴的数据类型, category 为分类数据，time 为时间型, value为数值数据
+	SeriesData map[string]*SeriesData `json:"seriesData"`
+}
+
 type ChartData struct {
-	Type string `json:"type"`
-	Data any    `json:"data"`
+	Type  string `json:"type"`
+	Data  any    `json:"data"`
+	Title string `json:"title"`
 }
 
 const (

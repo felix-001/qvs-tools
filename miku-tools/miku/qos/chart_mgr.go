@@ -6,6 +6,7 @@ import (
 	"log"
 	"mikutool/public/util"
 	"strings"
+	"time"
 )
 
 type ChartMgr struct {
@@ -197,31 +198,44 @@ WHERE 1=1
 	return sql, nil
 }
 
-type LineData struct {
-	XAxis []any
-	YAxis []any
-}
-
 func (c *ChartConf) getLineData(results []map[string]any) any {
-	if c.SQL.Dimension != "" {
-		datas := make(map[string]*LineData)
-		for _, result := range results {
-			dimensionValue := result[c.SQL.Dimension].(string)
-			if _, ok := datas[dimensionValue]; !ok {
-				datas[dimensionValue] = &LineData{}
-			}
-			datas[dimensionValue].YAxis = append(datas[dimensionValue].YAxis, result[c.SQL.Field])
-			datas[dimensionValue].XAxis = append(datas[dimensionValue].XAxis, result["ts_m"])
-		}
-		return datas
-	} else {
-		data := &LineData{}
-		for _, result := range results {
-			data.YAxis = append(data.YAxis, result[c.SQL.Field])
-			data.XAxis = append(data.XAxis, result["ts_m"])
-		}
-		return data
+	seriesData := map[string]*SeriesData{}
+	data := LineChartData2{
+		XAxis:      []string{},
+		XType:      "category",
+		SeriesData: seriesData,
 	}
+	lastTs := ""
+	for _, result := range results {
+		dimensionValue := c.SeriesTitle
+		if c.SQL.Dimension != "" {
+			if _, ok := result[c.SQL.Dimension]; !ok {
+				log.Printf("err, dimension nil, result: %+v\n", result)
+				continue
+			}
+			if result[c.SQL.Dimension] == nil {
+				log.Printf("err, dimension nil, result: %+v\n", result)
+				continue
+			}
+			dimensionValue = result[c.SQL.Dimension].(string)
+		}
+		if _, ok := seriesData[dimensionValue]; !ok {
+			seriesData[dimensionValue] = &SeriesData{}
+		}
+		seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[c.SQL.Field].(string))
+		t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
+		if lastTs == "" || t != lastTs {
+			data.XAxis = append(data.XAxis, t)
+			lastTs = t
+		}
+
+	}
+	chartData := ChartData{
+		Type:  c.Type,
+		Data:  data,
+		Title: c.Title,
+	}
+	return chartData
 }
 
 func (c *ChartConf) Query(req QOSRequest) (any, error) {
@@ -240,8 +254,9 @@ func (c *ChartConf) Query(req QOSRequest) (any, error) {
 		return c.getLineData(results), nil
 	case "table":
 	case "pie":
+		//return c.getPieData(results), nil
 	}
-
+	return "", nil
 }
 
 func (c *ChartConf) GetChartInfo() ChartInfo {

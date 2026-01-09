@@ -119,6 +119,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		//log.Println("data", data)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
+		return
 	}
 
 	results, err := s.chartMgr.Query(req)

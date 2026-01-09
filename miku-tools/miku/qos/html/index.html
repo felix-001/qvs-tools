@@ -255,9 +255,9 @@
 
             <!-- AppName选择 -->
             <div class="form-group">
-                <label for="appName">应用名称:</label>
+                <label for="appName">BUCKET:</label>
                 <select id="appName" name="appName" required>
-                    <option value="">请选择应用</option>
+                    <option value="">请选择BUCKET</option>
                 </select>
             </div>
 
@@ -274,10 +274,10 @@
             </div>
 
             <!-- UID输入 -->
-            <div class="form-group">
+            <!--div class="form-group">
                 <label for="uid">UID:</label>
                 <input type="text" id="uid" name="uid" placeholder="请输入UID（可选）">
-            </div>
+            </div-->
 
             <!-- 用户IP输入 -->
             <div class="form-group">
@@ -304,26 +304,12 @@
             </div>
 
             <!-- 小时输入 -->
-            <div class="form-group">
+            <!--div class="form-group">
                 <label for="hour">小时 (0-23):</label>
                 <input type="number" id="hour" name="hour" min="0" max="23">
-            </div>
+            </div-->
 
-            <!-- 图表展示选择 -->
-            <div class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">图表展示选择：</h3>
-                    <div class="checkbox-group" style="margin-left: 15px;">
-                        <input type="checkbox" id="selectAllCharts" name="selectAllCharts" checked>
-                        <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选/去全选</label>
-                    </div>
-                </div>
-                <div id="chart-checkbox-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-
-                </div>
-            </div>
-
-            <!-- 模糊搜索选项 -->
+              <!-- 模糊搜索选项 -->
             <div class="form-group">
                 <div class="checkbox-group">
                     <input type="checkbox" id="fuzzySearch" name="fuzzySearch">
@@ -355,6 +341,19 @@
                 </div>
             </div>
 
+            <!-- 图表展示选择 -->
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0;">图表展示选择：</h3>
+                    <div class="checkbox-group" style="margin-left: 15px;">
+                        <input type="checkbox" id="selectAllCharts" name="selectAllCharts" checked>
+                        <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选/去全选</label>
+                    </div>
+                </div>
+                <div id="chart-checkbox-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+
+                </div>
+            </div>
 
             <!-- 提交按钮 -->
             <button type="submit" class="submit-btn">开始质量分析</button>
@@ -566,6 +565,10 @@
         console.log(chart, resp)
         switch (resp.type) {
             case 'line':
+                if (chart == 'chart_hyStreamsLagRateTrend') {
+                    createLineChart2(resp);
+                    break;
+                }
                 createLineChart(resp.data);
                 break;
             case 'pie':
@@ -606,13 +609,62 @@
 				type: 'value'
 			},
 			series: [{
-                name: data.seriesTitle,
+				name: data.seriesTitle,
 				data: data.yAxis,
 				type: 'line',
-                lineStyle: {
-                    color: data.color
-                }
+				lineStyle: {
+					color: data.color 
+				}
 			}],
+            // 实现缩放
+            dataZoom: [{
+                type: 'inside',
+                xAxisIndex: 0,
+                start: 0,  // 百分比
+                end: 100    // 百分比
+            }]
+		};
+		console.log('createLineChart options:', option)
+		myChart.setOption(option);
+		results.appendChild(dom);
+	}
+
+    function createLineChart2(resp) {
+		var dom = document.createElement('div');
+		dom.style.height = "500px"
+		dom.style.width = "1380px"
+		dom.style.position = 'relative';
+		dom.style.margin = '0';
+		dom.style.padding = '0';
+		var myChart = echarts.init(dom, null, {
+			renderer: 'canvas',
+			useDirtyRect: false
+		});
+        //console.log('xType', data.xType)
+		var option = {
+            title: {
+                text: resp.title,
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: '{a} <br/>{b} : {c}'
+            },
+			xAxis: {
+				type: resp.data.xType,
+				data: resp.data.xAxis
+			},
+			yAxis: {
+				type: 'value'
+			},
+			series: Object.keys(resp.data.seriesData).map(key => ({
+				name: key,
+				data: resp.data.seriesData[key].yAxis,
+				type: 'line'//,
+				//lineStyle: {
+				//	color: resp.data.seriesData[key].color
+				//}
+			})),
             // 实现缩放
             dataZoom: [{
                 type: 'inside',
