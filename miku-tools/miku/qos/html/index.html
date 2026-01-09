@@ -342,12 +342,28 @@
             </div>
 
             <!-- 图表展示选择 -->
+            <h3 style="margin: 0 0 20px 0;">图表展示选择：</h3>
             <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0;">图表展示选择：</h3>
+                    <h4 style="margin: 0;">数据源虎牙：</h4>
+
+                    <div class="checkbox-group" style="margin-left: 15px;">
+                        <input type="checkbox" id="selectHyAllCharts" name="selectHyAllCharts" checked>
+                        <label for="selectHyAllCharts" style="margin: 0; font-weight: normal;">全选</label>
+                    </div>
+                </div>
+                <div id="chart-checkbox-group-hy" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="margin: 0;">数据源MIKU：</h4>
+
                     <div class="checkbox-group" style="margin-left: 15px;">
                         <input type="checkbox" id="selectAllCharts" name="selectAllCharts" checked>
-                        <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选/去全选</label>
+                        <label for="selectAllCharts" style="margin: 0; font-weight: normal;">全选</label>
                     </div>
                 </div>
                 <div id="chart-checkbox-group" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
@@ -379,7 +395,8 @@
             setDefaultTimeRange();
             
             // 设置全选/去全选功能
-            setupSelectAllCharts();
+            setupSelectAllCharts('hy');
+            setupSelectAllCharts('miku');
             
 
         });
@@ -436,9 +453,15 @@
         }
         
         // 设置全选/去全选功能
-        function setupSelectAllCharts() {
-            const selectAllCheckbox = document.getElementById('selectAllCharts');
-            const chartCheckboxes = document.querySelectorAll('input[name^="chart_"]');
+        function setupSelectAllCharts(db) {
+            var id = 'selectAllCharts';
+            var reg = 'input[name^="chart_miku"]'
+            if (db == 'hy') {
+                id = 'selectHyAllCharts';
+                reg = 'input[name^="chart_hy"]'
+            }
+            const selectAllCheckbox = document.getElementById(id);
+            const chartCheckboxes = document.querySelectorAll(reg);
             
             // 初始状态：所有图表都默认选中，所以全选框也应该选中
             selectAllCheckbox.checked = true;
@@ -773,45 +796,57 @@
     <script src="https://echarts.apache.org/en/js/vendors/echarts/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <script>
-        fetch("/api/v1/charts", {
-            method: 'GET'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`请求失败: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(charts => {
-            console.log('可用图表:', charts);
-            
-            // 动态创建图表选择框
-            const chartsContainer = document.getElementById('chart-checkbox-group'); //document.querySelector('.form-group[style*="grid-template-columns: repeat(3, 1fr)"]');
-            if (chartsContainer && charts.length > 0) {
-                console.log('图表容器:', chartsContainer)
-                // 清空现有的图表选择项（保留标题和全选按钮）
-                const existingCheckboxes = chartsContainer.querySelectorAll('.checkbox-group');
-                existingCheckboxes.forEach(el => el.remove());
+        loadCharts('hy')
+        loadCharts('miku')
+
+        function loadCharts(db) {
+            var url = `/api/v1/charts?db=${db}`
+            fetch(url, {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`请求失败: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(charts => {
+                console.log('可用图表:', charts);
                 
-                // 根据后端返回的图表列表创建选择框
-                charts.forEach(chart => {
-                    const div = document.createElement('div');
-                    div.className = 'checkbox-group';
-                    div.innerHTML = `
-                        <input type="checkbox" id="${chart.id}" name="${chart.id}" checked>
-                        <label for="${chart.id}">${chart.title}</label>
-                    `;
-                    //console.log('div', div)
-                    chartsContainer.appendChild(div);
-                });
-                
-                // 重新设置全选功能
-                setupSelectAllCharts();
-            }
-        })
-        .catch(error => {
-            console.error('获取图表列表失败:', error);
-        });
+                // 动态创建图表选择框
+                var id = 'chart-checkbox-group'
+                if (db == 'hy') {
+                    id = 'chart-checkbox-group-hy'
+                }
+                const chartsContainer = document.getElementById(id); //document.querySelector('.form-group[style*="grid-template-columns: repeat(3, 1fr)"]');
+                if (chartsContainer && charts.length > 0) {
+                    console.log('图表容器:', chartsContainer)
+                    // 清空现有的图表选择项（保留标题和全选按钮）
+                    const existingCheckboxes = chartsContainer.querySelectorAll('.checkbox-group');
+                    existingCheckboxes.forEach(el => el.remove());
+                    
+                    // 根据后端返回的图表列表创建选择框
+                    charts.forEach(chart => {
+                        const div = document.createElement('div');
+                        div.className = 'checkbox-group';
+                        div.innerHTML = `
+                            <input type="checkbox" id="${chart.id}" name="${chart.id}" checked>
+                            <label for="${chart.id}">${chart.title}</label>
+                        `;
+                        //console.log('div', div)
+                        chartsContainer.appendChild(div);
+                    });
+                    
+                    // 重新设置全选功能
+                    setupSelectAllCharts('hy');
+                    setupSelectAllCharts('miku');
+                }
+            })
+            .catch(error => {
+                console.error('获取图表列表失败:', error);
+            });
+        }
+
     </script>
 </body>
 </html>

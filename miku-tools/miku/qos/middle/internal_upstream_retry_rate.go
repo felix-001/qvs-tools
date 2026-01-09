@@ -17,7 +17,7 @@ type InternalUpstreamRetryRate struct {
 }
 
 func (i *InternalUpstreamRetryRate) ID() string {
-	return "chart_internalUpstreamRetryRate"
+	return "chart_mikuInternalUpstreamRetryRate"
 }
 
 func (i *InternalUpstreamRetryRate) ChartInfo() qos.ChartInfo {

@@ -17,7 +17,7 @@ type InternalUpstreamLagRate struct {
 }
 
 func (i *InternalUpstreamLagRate) ID() string {
-	return "chart_internalUpstreamLagRate"
+	return "chart_mikuInternalUpstreamLagRate"
 }
 
 func (i *InternalUpstreamLagRate) ChartInfo() qos.ChartInfo {

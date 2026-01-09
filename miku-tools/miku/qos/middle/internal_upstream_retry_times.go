@@ -17,7 +17,7 @@ type InternalUpstreamRetryTimes struct {
 }
 
 func (i *InternalUpstreamRetryTimes) ID() string {
-	return "chart_internalUpstreamRetryTimes"
+	return "chart_mikuInternalUpstreamRetryTimes"
 }
 
 func (i *InternalUpstreamRetryTimes) ChartInfo() qos.ChartInfo {

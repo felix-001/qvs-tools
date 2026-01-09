@@ -138,55 +138,58 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-var chartsSeq = []string{
-	// 用户
-	"chart_onlineStreams",
+var hyChartSeq = []string{
 	"chart_hyOnlineUsers",
-	"chart_onlineNum",
-	"chart_usrDistributionCountry",
-	"chart_usrDistributionArea",
-	"chart_usrDistributionProv",
-	"chart_lagUsrDistributionArea",
-	"chart_lagUsrDistributionProv",
-	"chart_lagrateByUser",
 	"chart_hyLagUsrPercent",
-	"chart_usrLagRate",
-	"chart_transcodeHyLagRateTrend", // 推流miku转码流卡顿率
-	"chart_MikuNormalLagRate",       // 推流miku非转码流卡顿率
-	"chart_lagSrcTranscodePercent",  // 回客户源转码流卡顿率
-	"chart_lagSrcNormalRate",        // 回客户源非转码流卡顿率
-	"chart_HySrcLagRateTrend",       // 回空户源整体卡顿率
+	"chart_hySrcLagRateTrend", // 回空户源整体卡顿率
 	"chart_hyLagCntTrend",
 	"chart_hyTotalCntTrend",
-	"chart_HyTranscodeRateTrend",
-	"chart_HyNormalRateTrend",
-	"chart_HySrcNoramalPercent",
-	"chart_HySrcTranscodePercent",
-	"chart_HySrcRateTrend",
-	"chart_patchFailPercent",
+	"chart_hyTranscodeRateTrend",
+	"chart_hyNormalRateTrend",
+	"chart_hySrcNoramalPercent",
+	"chart_hySrcTranscodePercent",
+	"chart_hySrcRateTrend",
 	"chart_hyPatchLagPercent",
-	// 边缘节点
-	"chart_lagNodesPercent",
+	"chart_hyp2pLagRateTrend",
 	"chart_hyLagrateByStreams",
 	"chart_hyLagRateByNode",
 	"chart_hyLagRateTrend",
-	"chart_hyflvLagRateTrend",
-	"chart_hyp2pLagRateTrend",
-	"chart_p2p_percent",
 	"chart_hy_nodeview_lag",
+	"chart_hyTranscodeHyLagRateTrend", // 推流miku转码流卡顿率
+	"chart_hyMikuNormalLagRate",       // 推流miku非转码流卡顿率
+	"chart_hyLagSrcTranscodePercent",  // 回客户源转码流卡顿率
+	"chart_hyLagSrcNormalRate",        // 回客户源非转码流卡顿率
+	"chart_hyflvLagRateTrend",
+	"chart_hyP2p_percent",
+}
+
+var chartsSeq = []string{
+	// 用户
+	"chart_mikuOnlineStreams",
+	"chart_mikuOnlineNum",
+	"chart_mikuUsrDistributionCountry",
+	"chart_mikuUsrDistributionArea",
+	"chart_mikuUsrDistributionProv",
+	"chart_mikuLagUsrDistributionArea",
+	"chart_mikuLagUsrDistributionProv",
+	"chart_mikuLagrateByUser",
+	"chart_mikuUsrLagRate",
+	"chart_mikuPatchFailPercent",
+	// 边缘节点
+	"chart_mikuLagNodesPercent",
 	// 中间源
-	"chart_internalUpstreamLagRate",
-	"chart_internalUpstreamRetryTimes",
-	"chart_internalUpstreamRetryRate",
+	"chart_mikuInternalUpstreamLagRate",
+	"chart_mikuInternalUpstreamRetryTimes",
+	"chart_mikuInternalUpstreamRetryRate",
 	// 源站
-	"chart_customerUpstreamLagRate",
-	"chart_customerUpstreamRetryTimes",
-	"chart_upstreamAreaDis",
-	"chart_upstreamBandwidth",
-	"chart_videoFps",
-	"chart_audioFps",
+	"chart_mikuCustomerUpstreamLagRate",
+	"chart_mikuCustomerUpstreamRetryTimes",
+	"chart_mikuUpstreamAreaDis",
+	"chart_mikuUpstreamBandwidth",
+	"chart_mikuVideoFps",
+	"chart_mikuAudioFps",
 	// 其他
-	"chart_loadRate",
+	"chart_mikuLoadRate",
 }
 
 type ChartDataGetter interface {
@@ -196,7 +199,11 @@ type ChartDataGetter interface {
 func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 	//log.Println("chartsHandler called")
 	var charts []qos.ChartInfo
-	for _, chart := range chartsSeq {
+	seqs := chartsSeq
+	if r.URL.Query().Get("db") == "hy" {
+		seqs = hyChartSeq
+	}
+	for _, chart := range seqs {
 		//log.Println("chart", chart)
 		if generator, ok := qos.ChartGenerators[chart]; ok {
 			//log.Println("generator", generator)
