@@ -6,30 +6,45 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	qnconfig "github.com/qbox/bo-sdk/sdk/qconf/qconfapi/config"
 	"github.com/qbox/mikud-live/cmd/dnspod/config"
 	"github.com/qbox/mikud-live/common/dal"
 	"github.com/qbox/pili/common/ipdb.v1"
-	qconfig "github.com/qiniu/x/config"
+	"gopkg.in/yaml.v3"
 )
 
 type CkConfig struct {
-	Host   []string `json:"host"`
-	DB     string   `json:"db"`
-	User   string   `json:"user"`
-	Passwd string   `json:"passwd"`
-	Table  string   `json:"table"`
+	Host   []string `json:"host" yaml:"host"`
+	DB     string   `json:"db" yaml:"db"`
+	User   string   `json:"user" yaml:"user"`
+	Passwd string   `json:"passwd" yaml:"passwd"`
+	Table  string   `json:"table" yaml:"table"`
 }
 
 type TCPRetranFilterConfig struct {
-	Enable                 bool    `json:"enable"`                    // 是否开启
-	TCPRetranRateThreshold float64 `json:"tcp_retran_rate_threshold"` // TCP 重传率阈值
-	MaxFilterNodes         int     `json:"max_filter_nodes"`          // TCP 重传率过滤最大节点数量
-	MaxFilterIPs           int     `json:"max_filter_ips"`            // TCP 重传率过滤最大IP数量
-	EnableUnicomFilter     bool    `json:"enable_unicom_filter"`      // 是否过滤联通IP
-	EnableTelecomFilter    bool    `json:"enable_telecom_filter"`     // 是否过滤电信IP
-	EnableMobileFilter     bool    `json:"enable_mobile_filter"`      // 是否过滤移动IP
+	Enable                 bool    `json:"enable" yaml:"enable"`                                       // 是否开启
+	TCPRetranRateThreshold float64 `json:"tcp_retran_rate_threshold" yaml:"tcp_retran_rate_threshold"` // TCP 重传率阈值
+	MaxFilterNodes         int     `json:"max_filter_nodes" yaml:"max_filter_nodes"`                   // TCP 重传率过滤最大节点数量
+	MaxFilterIPs           int     `json:"max_filter_ips" yaml:"max_filter_ips"`                       // TCP 重传率过滤最大IP数量
+	EnableUnicomFilter     bool    `json:"enable_unicom_filter" yaml:"enable_unicom_filter"`           // 是否过滤联通IP
+	EnableTelecomFilter    bool    `json:"enable_telecom_filter" yaml:"enable_telecom_filter"`         // 是否过滤电信IP
+	EnableMobileFilter     bool    `json:"enable_mobile_filter" yaml:"enable_mobile_filter"`           // 是否过滤移动IP
+}
+
+type IPSourceReqParam struct {
+	AK              string        `json:"ak" yaml:"ak"`
+	SK              string        `json:"sk" yaml:"sk"`
+	LocalUrl        string        `json:"local_url" yaml:"local_url"`
+	RemoteUrl       string        `json:"remote_url" yaml:"remote_url"`
+	RemoteRetry     uint          `json:"retry_count" yaml:"retry_count"`
+	RemoteExpireMS  uint          `json:"expire" yaml:"expire"`
+	ReloadIntervalS time.Duration `json:"reload_interval_s" yaml:"reload_interval_s"`
+}
+
+type IpdbConfig struct {
+	IP map[string]*IPSourceReqParam `json:"ips_source_param" yaml:"ips_source_param"` //key: ipv4, ipv6
 }
 
 type Config struct {
@@ -99,50 +114,81 @@ type Config struct {
 	Random                bool
 	HeadReq               bool
 	HeaderMap             HeaderMap
-	CK                    CkConfig              `json:"ck"`
-	Ak                    string                `json:"ak"`
-	Sk                    string                `json:"sk"`
-	Secret                string                `json:"secret"`
-	IPDB                  ipdb.Config           `json:"ipdb"`
-	RedisAddrs            []string              `json:"redis_addrs"`
-	AccountCfg            qnconfig.Config       `json:"acc"`
-	DyApiSecret           string                `json:"dy_api_secret"`
-	DyApiDomain           string                `json:"dy_api_domain"`
-	MongoConf             *dal.MongoCfg         `json:"mongo_config"`
-	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config"`
-	DnsPod                config.DnspodConfig   `json:"dnspod"`
-	SMTPHost              string                `json:"smtp_host"`
-	SMTPPort              int                   `json:"smtp_port"`
-	SMTPUser              string                `json:"smtp_user"`
-	SMTPPass              string                `json:"smtp_pass"`
-	MailFrom              string                `json:"mail_from"`
-	SMTPUseTLS            bool                  `json:"smtp_use_tls"`
-	MailTo                string                `json:"mail_to"`
-	Args                  []string              `json:"-"` // 命令行参数，不进行JSON序列化
+	CK                    CkConfig              `json:"ck" yaml:"ck"`
+	Ak                    string                `json:"ak" yaml:"ak"`
+	Sk                    string                `json:"sk" yaml:"sk"`
+	Secret                string                `json:"secret" yaml:"secret"`
+	IPDB                  ipdb.Config           `json:"ipdb" yaml:"ipdb_raw"`
+	IpdbRaw               IpdbConfig            `json:"ipdb_raw" yaml:"ipdb"`
+	RedisAddrs            []string              `json:"redis_addrs" yaml:"redis_addrs"`
+	AccountCfg            qnconfig.Config       `json:"acc" yaml:"acc"`
+	DyApiSecret           string                `json:"dy_api_secret" yaml:"dy_api_secret"`
+	DyApiDomain           string                `json:"dy_api_domain" yaml:"dy_api_domain"`
+	MongoConf             *dal.MongoCfg         `json:"mongo_config" yaml:"mongo_config"`
+	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config" yaml:"tcp_retran_filter_config"`
+	DnsPod                config.DnspodConfig   `json:"dnspod" yaml:"dnspod"`
+	SMTPHost              string                `json:"smtp_host" yaml:"smtp_host"`
+	SMTPPort              int                   `json:"smtp_port" yaml:"smtp_port"`
+	SMTPUser              string                `json:"smtp_user" yaml:"smtp_user"`
+	SMTPPass              string                `json:"smtp_pass" yaml:"smtp_pass"`
+	MailFrom              string                `json:"mail_from" yaml:"mail_from"`
+	SMTPUseTLS            bool                  `json:"smtp_use_tls" yaml:"smtp_use_tls"`
+	MailTo                string                `json:"mail_to" yaml:"mail_to"`
+	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
+}
+
+func (c *Config) initIpdbConfig() {
+	for k, v := range c.IpdbRaw.IP {
+		c.IPDB.IP[k] = &ipdb.IPSourceReqParam{
+			AK:              v.AK,
+			SK:              v.SK,
+			LocalUrl:        v.LocalUrl,
+			RemoteUrl:       v.RemoteUrl,
+			RemoteRetry:     v.RemoteRetry,
+			RemoteExpireMS:  v.RemoteExpireMS,
+			ReloadIntervalS: v.ReloadIntervalS,
+		}
+
+	}
 }
 
 func Load() *Config {
 	var conf Config
 	conf.HeaderMap = make(map[string]string)
 	conf.Args = os.Args[1:] // 保存命令行参数（排除程序名）
-	_, err := os.Stat("/usr/local/etc/mikutool.json")
+	_, err := os.Stat("/usr/local/etc/mikutool.yaml")
 	if !os.IsNotExist(err) {
-		if err = qconfig.LoadFile(&conf, "/usr/local/etc/mikutool.json"); err != nil {
-			log.Fatalf("load config failed, err: %v", err)
+		data, err := os.ReadFile("/usr/local/etc/mikutool.yaml")
+		if err != nil {
+			log.Fatalf("读取文件失败: %v", err)
 		}
+		err = yaml.Unmarshal(data, &conf)
+		log.Printf("conf: %+v\n", conf)
+		if err != nil {
+			log.Fatalf("解析 YAML 失败: %v", err)
+		}
+
+		conf.initIpdbConfig()
 		return &conf
 	}
-	_, err = os.Stat("/tmp/mikutool.json")
+	_, err = os.Stat("/tmp/mikutool.yaml")
 	if os.IsNotExist(err) {
 		log.Fatalf("load config failed, err: %v", err)
 		return nil
 	}
-	if err = qconfig.LoadFile(&conf, "/tmp/mikutool.json"); err != nil {
-		log.Fatalf("load config failed, err: %v", err)
+	data, err := os.ReadFile("/usr/local/etc/mikutool.yaml")
+	if err != nil {
+		log.Fatalf("读取文件失败: %v", err)
 	}
+	err = yaml.Unmarshal(data, &conf)
+	log.Printf("conf: %+v\n", conf)
+	if err != nil {
+		log.Fatalf("解析 YAML 失败: %v", err)
+	}
+
+	conf.initIpdbConfig()
 	return &conf
 }
-
 func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Help, "help", false, "help")
 	flag.StringVar(&c.Cmd, "cmd", "", "需要执行的命令")

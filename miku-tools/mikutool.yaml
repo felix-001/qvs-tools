@@ -1,0 +1,76 @@
+acc:
+  lc_chan_bufsize: 16000
+  lc_duration_ms: 5000
+  lc_expires_ms: 600000
+  master:
+    default:
+      fail_retry_interval_s: 10
+      hosts:
+      - https://confg.qbox.me
+  mc_rw_timeout_ms: 100
+bw_ratio_config:
+  东北:
+    total: 0.08
+  华东:
+    total: 0.2
+  华中:
+    total: 0.15
+  华北:
+    total: 0.12
+  华南:
+    total: 0.18
+  西北:
+    total: 0.06
+  西南:
+    total: 0.05
+dnspod:
+  domains: []
+  skip_record_type:
+  - A
+  - CNAME
+  task_pool_size: 50
+idc_bw_config:
+  vdn-gdfsh:
+    电信: 40
+    移动: 10
+    联通: 10
+  vdn-hblf:
+    电信: 30
+    移动: 10
+    联通: 10
+  vdn-hljheb:
+    电信: 10
+    移动: 10
+    联通: 10
+  vdn-jscz:
+    电信: 20
+    移动: 20
+    联通: 10
+  vdn-jsyz1:
+    电信: 80
+    移动: 40
+    联通: 10
+  vdn-zjwz:
+    电信: 100
+    移动: 60
+    联通: 40
+  zz:
+    电信: 30
+    移动: 10
+    联通: 10
+ipdb:
+  ips_source_param:
+    ipv4:
+      expire: 20000
+      local_url: /usr/local/etc/neo.ipv4.ipdb
+      reload_interval_s: 86400
+      remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv4.ipdb
+      retry_count: 3
+    ipv6:
+      expire: 20000
+      local_url: /usr/local/etc/neo.ipv6.ipdb
+      reload_interval_s: 86400
+      remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv6.ipdb
+      retry_count: 3
+redis_addrs:
+- 127.0.0.1:6380
