@@ -34,17 +34,38 @@ type TCPRetranFilterConfig struct {
 }
 
 type IPSourceReqParam struct {
-	AK              string        `json:"ak" yaml:"ak"`
-	SK              string        `json:"sk" yaml:"sk"`
-	LocalUrl        string        `json:"local_url" yaml:"local_url"`
-	RemoteUrl       string        `json:"remote_url" yaml:"remote_url"`
-	RemoteRetry     uint          `json:"retry_count" yaml:"retry_count"`
-	RemoteExpireMS  uint          `json:"expire" yaml:"expire"`
-	ReloadIntervalS time.Duration `json:"reload_interval_s" yaml:"reload_interval_s"`
+	AK              string `json:"ak" yaml:"ak"`
+	SK              string `json:"sk" yaml:"sk"`
+	LocalUrl        string `json:"local_url" yaml:"local_url"`
+	RemoteUrl       string `json:"remote_url" yaml:"remote_url"`
+	RemoteRetry     uint   `json:"retry_count" yaml:"retry_count"`
+	RemoteExpireMS  uint   `json:"expire" yaml:"expire"`
+	ReloadIntervalS int    `json:"reload_interval_s" yaml:"reload_interval_s"`
 }
 
 type IpdbConfig struct {
 	IP map[string]*IPSourceReqParam `json:"ips_source_param" yaml:"ips_source_param"` //key: ipv4, ipv6
+}
+
+type ChartConf struct {
+	Name        string    `json:"name" yaml:"name"`
+	Title       string    `json:"title" yaml:"title"`
+	SeriesTitle string    `json:"seriesTitle" yaml:"seriesTitle"`
+	Type        string    `json:"type" yaml:"type"`
+	SQL         SQLConfig `json:"sql" yaml:"sql"`
+	Table       string    `json:"table" yaml:"table"`
+}
+
+type SQLConfig struct {
+	With          string `json:"with" yaml:"with"`
+	Select        string `json:"select" yaml:"select"`
+	From          string `json:"from" yaml:"from"`
+	Where         string `json:"where" yaml:"where"`
+	GroupBy       string `json:"group_by" yaml:"group_by"`
+	OrderBy       string `json:"order_by" yaml:"order_by"`
+	Field         string `json:"field" yaml:"field"`
+	Dimension     string `json:"dimension" yaml:"dimension"`
+	GroupByMinute bool   `json:"group_by_minute" yaml:"group_by_minute"`
 }
 
 type Config struct {
@@ -135,9 +156,11 @@ type Config struct {
 	SMTPUseTLS            bool                  `json:"smtp_use_tls" yaml:"smtp_use_tls"`
 	MailTo                string                `json:"mail_to" yaml:"mail_to"`
 	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
+	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
 }
 
 func (c *Config) initIpdbConfig() {
+	c.IPDB = ipdb.Config{IP: make(map[string]*ipdb.IPSourceReqParam)}
 	for k, v := range c.IpdbRaw.IP {
 		c.IPDB.IP[k] = &ipdb.IPSourceReqParam{
 			AK:              v.AK,
@@ -146,7 +169,7 @@ func (c *Config) initIpdbConfig() {
 			RemoteUrl:       v.RemoteUrl,
 			RemoteRetry:     v.RemoteRetry,
 			RemoteExpireMS:  v.RemoteExpireMS,
-			ReloadIntervalS: v.ReloadIntervalS,
+			ReloadIntervalS: time.Duration(v.ReloadIntervalS),
 		}
 
 	}

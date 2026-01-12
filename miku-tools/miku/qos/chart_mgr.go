@@ -1,46 +1,48 @@
 package qos
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
+	"mikutool/config"
 	"mikutool/public/util"
 	"strings"
 	"time"
 )
 
 type ChartMgr struct {
-	charts   []ChartConf
-	chartMap map[string]ChartConf
+	charts   []config.ChartConf
+	chartMap map[string]config.ChartConf
 }
 
 func NewChartMgr() *ChartMgr {
 	return &ChartMgr{
-		chartMap: make(map[string]ChartConf),
+		chartMap: make(map[string]config.ChartConf),
 	}
 }
 
-func (c *ChartMgr) Parse() error {
-	charts := make([]ChartConf, 0)
-	if err := json.Unmarshal([]byte(Charts_conf_json), &charts); err != nil {
-		log.Printf("parse json fail: %v\n", err)
-		return err
-	}
-	log.Printf("charts: %+v\n", charts)
-	c.charts = charts
-	for _, chart := range charts {
+func (c *ChartMgr) Parse(conf *config.Config) error {
+	/*
+		charts := make([]config.ChartConf, 0)
+		if err := json.Unmarshal([]byte(Charts_conf_json), &charts); err != nil {
+			log.Printf("parse json fail: %v\n", err)
+			return err
+		}
+		log.Printf("charts: %+v\n", charts)
+	*/
+	c.charts = conf.ChartConfigs
+	for _, chart := range conf.ChartConfigs {
 		c.chartMap[chart.Name] = chart
 	}
 	log.Printf("chart map loaded: %+v\n", c.chartMap)
 	return nil
 }
 
-func (c *ChartConf) buildMikuWhere(req QOSRequest) (string, error) {
+func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
-	where := c.SQL.Where
+	where := chartConf.SQL.Where
 	where += fmt.Sprintf("AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("AND day >= '%s' and day <= '%s'\n", startDay, endDay)
 	if req.StreamID != "" {
@@ -78,13 +80,13 @@ func (c *ChartConf) buildMikuWhere(req QOSRequest) (string, error) {
 	return where, nil
 }
 
-func (c *ChartConf) buildHyWhereCommonPart(req QOSRequest) string {
+func (c *ChartMgr) buildHyWhereCommonPart(req QOSRequest, chartConf *config.ChartConf) string {
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
-	where := "\tAND " + c.SQL.Where
+	where := "\tAND " + chartConf.SQL.Where
 	where += fmt.Sprintf("\tAND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("\tAND day >= '%s' and day <= '%s'\n", startDay, endDay)
 	where += "\tAND dim_heart_type != '0'\n"
@@ -93,8 +95,8 @@ func (c *ChartConf) buildHyWhereCommonPart(req QOSRequest) string {
 	return where
 }
 
-func (c *ChartConf) buildHyWhere(req QOSRequest) (string, error) {
-	where := c.buildHyWhereCommonPart(req)
+func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+	where := c.buildHyWhereCommonPart(req, chartConf)
 	if req.StreamID != "" {
 		streamID := strings.ToLower(req.StreamID)
 		where += fmt.Sprintf(`\tAND dim_stream_url like '%%%s%%'\n`, streamID)
@@ -133,42 +135,42 @@ func (c *ChartConf) buildHyWhere(req QOSRequest) (string, error) {
 	return where, nil
 }
 
-func (c *ChartConf) buildWhere(req QOSRequest) (string, error) {
-	switch c.Table {
+func (c *ChartMgr) buildWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+	switch chartConf.Table {
 	case "hy":
-		return c.buildHyWhere(req)
+		return c.buildHyWhere(req, chartConf)
 	case "miku":
-		return c.buildMikuWhere(req)
+		return c.buildMikuWhere(req, chartConf)
 	default:
-		return "", fmt.Errorf("不支持的表: %s", c.SQL.From)
+		return "", fmt.Errorf("不支持的表: %s", chartConf.SQL.From)
 	}
 }
 
-func (c *ChartConf) buildSelect(req QOSRequest) (string, error) {
-	choose := c.SQL.Select
-	switch c.Table {
+func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+	choose := chartConf.SQL.Select
+	switch chartConf.Table {
 	case "hy":
-		if c.SQL.GroupByMinute {
+		if chartConf.SQL.GroupByMinute {
 			choose += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m"
 		}
 	case "miku":
 	default:
-		return "", fmt.Errorf("不支持的表: %s", c.Table)
+		return "", fmt.Errorf("不支持的表: %s", chartConf.Table)
 	}
 	return choose, nil
 }
 
-func (c *ChartConf) buildSql(req QOSRequest) (string, error) {
+func (c *ChartMgr) buildSql(req QOSRequest, chartConf *config.ChartConf) (string, error) {
 	var sql string
-	if c.SQL.With != "" {
-		sql = fmt.Sprintf("WITH\n\t%s\n", c.SQL.With)
+	if chartConf.SQL.With != "" {
+		sql = fmt.Sprintf("WITH\n\t%s\n", chartConf.SQL.With)
 	}
 
-	choose, err := c.buildSelect(req)
+	choose, err := c.buildSelect(req, chartConf)
 	if err != nil {
 		return "", err
 	}
-	where, err := c.buildWhere(req)
+	where, err := c.buildWhere(req, chartConf)
 	if err != nil {
 		return "", err
 	}
@@ -181,16 +183,16 @@ FROM
 WHERE 1=1
 	%s
 `,
-		choose, c.SQL.From, where)
+		choose, chartConf.SQL.From, where)
 
-	if c.SQL.GroupBy != "" {
-		sql += fmt.Sprintf("GROUP BY\n\t%s\n", c.SQL.GroupBy)
-		if c.SQL.GroupByMinute {
+	if chartConf.SQL.GroupBy != "" {
+		sql += fmt.Sprintf("GROUP BY\n\t%s\n", chartConf.SQL.GroupBy)
+		if chartConf.SQL.GroupByMinute {
 			sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
 		}
 	}
-	if c.SQL.OrderBy != "" {
-		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", c.SQL.OrderBy)
+	if chartConf.SQL.OrderBy != "" {
+		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.SQL.OrderBy)
 	}
 	if req.LogLevel == "detail" {
 		log.Println("sql:\n", sql)
@@ -198,7 +200,7 @@ WHERE 1=1
 	return sql, nil
 }
 
-func (c *ChartConf) getLineData(results []map[string]any) any {
+func (c *ChartMgr) getLineData(results []map[string]any, chartConf *config.ChartConf) any {
 	seriesData := map[string]*SeriesData{}
 	data := LineChartData2{
 		XAxis:      []string{},
@@ -207,22 +209,22 @@ func (c *ChartConf) getLineData(results []map[string]any) any {
 	}
 	lastTs := ""
 	for _, result := range results {
-		dimensionValue := c.SeriesTitle
-		if c.SQL.Dimension != "" {
-			if _, ok := result[c.SQL.Dimension]; !ok {
+		dimensionValue := chartConf.SeriesTitle
+		if chartConf.SQL.Dimension != "" {
+			if _, ok := result[chartConf.SQL.Dimension]; !ok {
 				log.Printf("err, dimension nil, result: %+v\n", result)
 				continue
 			}
-			if result[c.SQL.Dimension] == nil {
+			if result[chartConf.SQL.Dimension] == nil {
 				log.Printf("err, dimension nil, result: %+v\n", result)
 				continue
 			}
-			dimensionValue = result[c.SQL.Dimension].(string)
+			dimensionValue = result[chartConf.SQL.Dimension].(string)
 		}
 		if _, ok := seriesData[dimensionValue]; !ok {
 			seriesData[dimensionValue] = &SeriesData{}
 		}
-		seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[c.SQL.Field].(string))
+		seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[chartConf.SQL.Field].(string))
 		t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
 		if lastTs == "" || t != lastTs {
 			data.XAxis = append(data.XAxis, t)
@@ -231,15 +233,15 @@ func (c *ChartConf) getLineData(results []map[string]any) any {
 
 	}
 	chartData := ChartData{
-		Type:  c.Type,
+		Type:  chartConf.Type,
 		Data:  data,
-		Title: c.Title,
+		Title: chartConf.Title,
 	}
 	return chartData
 }
 
-func (c *ChartConf) Query(req QOSRequest) (any, error) {
-	sql, err := c.buildSql(req)
+func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, error) {
+	sql, err := c.buildSql(req, chartConf)
 	if err != nil {
 		log.Println("build sql error:", err)
 		return "", err
@@ -249,9 +251,9 @@ func (c *ChartConf) Query(req QOSRequest) (any, error) {
 		return nil, fmt.Errorf("query err: %v", err)
 	}
 	//log.Printf("results: %+v\n", results)
-	switch c.Type {
+	switch chartConf.Type {
 	case "line":
-		return c.getLineData(results), nil
+		return c.getLineData(results, chartConf), nil
 	case "table":
 	case "pie":
 		//return c.getPieData(results), nil
@@ -259,17 +261,17 @@ func (c *ChartConf) Query(req QOSRequest) (any, error) {
 	return "", nil
 }
 
-func (c *ChartConf) GetChartInfo() ChartInfo {
+func (c *ChartMgr) GetChartInfo(chartConf *config.ChartConf) ChartInfo {
 	return ChartInfo{
-		ID:    c.Name,
-		Title: c.Title,
+		ID:    chartConf.Name,
+		Title: chartConf.Title,
 	}
 }
 
 func (c *ChartMgr) GetChartInfos() []ChartInfo {
 	infos := make([]ChartInfo, 0, len(c.charts))
 	for _, chart := range c.charts {
-		infos = append(infos, chart.GetChartInfo())
+		infos = append(infos, c.GetChartInfo(&chart))
 	}
 	return infos
 }
@@ -280,5 +282,5 @@ func (c *ChartMgr) Query(req QOSRequest) (any, error) {
 	if !ok {
 		return nil, fmt.Errorf("chart not found: %s", req.Chart)
 	}
-	return chart.Query(req)
+	return c.DoQuery(req, &chart)
 }

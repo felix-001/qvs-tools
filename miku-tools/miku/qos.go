@@ -39,7 +39,7 @@ func NewQOSServer(cfg *config.Config, resources *resources.Resources) *QOSServer
 
 // StartServer 启动HTTP服务器
 func (s *QOSServer) StartServer() {
-	s.chartMgr.Parse()
+	s.chartMgr.Parse(s.config)
 	// 静态文件服务
 	http.HandleFunc("/", s.homeHandler)
 

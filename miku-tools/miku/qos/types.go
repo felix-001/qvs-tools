@@ -166,24 +166,3 @@ const (
 	ChartTypePie   = "pie"
 	ChartTypeTable = "table"
 )
-
-type ChartConf struct {
-	Name        string    `json:"name"`
-	Title       string    `json:"title"`
-	SeriesTitle string    `json:"seriesTitle"`
-	Type        string    `json:"type"`
-	SQL         SQLConfig `json:"sql"`
-	Table       string    `json:"table"`
-}
-
-type SQLConfig struct {
-	With          string `json:"with"`
-	Select        string `json:"select"`
-	From          string `json:"from"`
-	Where         string `json:"where"`
-	GroupBy       string `json:"group_by"`
-	OrderBy       string `json:"order_by"`
-	Field         string `json:"field"`
-	Dimension     string `json:"dimension"`
-	GroupByMinute bool   `json:"group_by_minute"`
-}
