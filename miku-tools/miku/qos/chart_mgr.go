@@ -79,7 +79,10 @@ func (c *ChartMgr) buildHyWhereCommonPart(req QOSRequest, chartConf *config.Char
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
-	where := "\tAND " + chartConf.SQL.Where
+	where := ""
+	if chartConf.SQL.Where != "" {
+		where += "\tAND " + chartConf.SQL.Where
+	}
 	where += fmt.Sprintf("\tAND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("\tAND day >= '%s' and day <= '%s'\n", startDay, endDay)
 	where += "\tAND dim_heart_type != '0'\n"
@@ -183,6 +186,9 @@ WHERE 1=1
 		if chartConf.SQL.GroupByMinute {
 			sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
 		}
+	} else if chartConf.SQL.GroupByMinute {
+
+		sql += "GROUP BY\n\tdate_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
 	}
 	if chartConf.SQL.OrderBy != "" {
 		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.SQL.OrderBy)
@@ -238,7 +244,7 @@ type ResultCache struct {
 	Req   QOSRequest
 }
 
-var resultCache map[string]ResultCache
+var resultCache map[string]ResultCache = make(map[string]ResultCache)
 
 func (c *ChartMgr) needRefresh(req QOSRequest, md5 string) bool {
 	cache, ok := resultCache[md5]
@@ -298,6 +304,7 @@ func (c *ChartMgr) GetChartInfo(chartConf *config.ChartConf) ChartInfo {
 	return ChartInfo{
 		ID:    chartConf.Name,
 		Title: chartConf.Title,
+		Table: chartConf.Table,
 	}
 }
 

@@ -530,13 +530,23 @@
                 // 检查元素是否存在
                 if (!chartSelectionDiv) {
                     console.error('找不到id为chart-checkbox-group的div元素');
+return;
+                }
+
+                const chartSelectionDivHy = document.getElementById('chart-checkbox-group-hy');
+                if (!chartSelectionDivHy) {
+                    console.error('找不到id为chart-checkbox-group-hy的div元素')
                     return;
                 }
                 
                 // 获取所有的复选框组
-                const childDivs = chartSelectionDiv.querySelectorAll('.checkbox-group');
+                var childDivs = chartSelectionDiv.querySelectorAll('.checkbox-group');
+                var childDivsHy = chartSelectionDivHy.querySelectorAll('.checkbox-group');
+
+                // 将childDivsHy追加到childDivs中
+                childDivs = Array.from(childDivs).concat(Array.from(childDivsHy));
                 
-                console.log(`找到 ${childDivs.length} 个图表复选框组:`);
+                console.log(`找到 ${childDivs.length} 个图表复选框组和 ${childDivsHy.length} 个混合图表复选框组:`);
                 
                 // 使用 for...of 循环而不是 forEach，以便在 async 函数中使用 await
                 for (const div of childDivs) {
@@ -588,7 +598,9 @@
         console.log(chart, resp)
         switch (resp.type) {
             case 'line':
-                if (chart == 'chart_hyStreamsLagRateTrend') {
+                if (chart == 'chart_hyStreamsLagRateTrend' ||
+                    chart == 'chart_hyLagRateTrend2'
+                ) {
                     createLineChart2(resp);
                     break;
                 }

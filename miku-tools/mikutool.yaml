@@ -75,7 +75,7 @@ ipdb:
 redis_addrs:
 - 127.0.0.1:6380
 
-public_hy_sql:
+public_hy_sql: &public_hy_sql
   select: |
     COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
     COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagCnt,
@@ -168,7 +168,7 @@ public_hy_sql:
   order_by: ts_m
 
 chart_configs:
-  - name: chart_hyStreamsLagRateTrend
+  - name: chart_hyStreamsLagRateTrend2
     title: 虎牙多个流卡顿率趋势图
     seriesTitle: 卡顿率
     type: line
@@ -211,7 +211,7 @@ chart_configs:
       field: percent
       dimension: stream_id
 
-  - name: chart_hyLagRateTrend
+  - name: chart_hyLagRateTrend2
     title: 虎牙卡顿率趋势图2
     seriesTitle: 卡顿率
     type: line
