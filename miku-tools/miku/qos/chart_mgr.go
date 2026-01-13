@@ -1,6 +1,7 @@
 package qos
 
 import (
+	"crypto/md5"
 	"fmt"
 	"log"
 	"mikutool/config"
@@ -21,14 +22,6 @@ func NewChartMgr() *ChartMgr {
 }
 
 func (c *ChartMgr) Parse(conf *config.Config) error {
-	/*
-		charts := make([]config.ChartConf, 0)
-		if err := json.Unmarshal([]byte(Charts_conf_json), &charts); err != nil {
-			log.Printf("parse json fail: %v\n", err)
-			return err
-		}
-		log.Printf("charts: %+v\n", charts)
-	*/
 	c.charts = conf.ChartConfigs
 	for _, chart := range conf.ChartConfigs {
 		c.chartMap[chart.Name] = chart
@@ -240,15 +233,55 @@ func (c *ChartMgr) getLineData(results []map[string]any, chartConf *config.Chart
 	return chartData
 }
 
+type ResultCache struct {
+	Cache []map[string]any
+	Req   QOSRequest
+}
+
+var resultCache map[string]ResultCache
+
+func (c *ChartMgr) needRefresh(req QOSRequest, md5 string) bool {
+	cache, ok := resultCache[md5]
+	if !ok {
+		return true
+	}
+	cacheReq := cache.Req
+	if req.StartTime != cacheReq.StartTime ||
+		req.EndTime != cacheReq.EndTime ||
+		req.RequestId != cacheReq.RequestId ||
+		req.Protocol != cacheReq.Protocol ||
+		req.StreamID != cacheReq.StreamID ||
+		req.Domain != cacheReq.Domain ||
+		req.UserIp != cacheReq.UserIp ||
+		req.CdnIp != cacheReq.CdnIp ||
+		req.ExcludeStreams != cacheReq.ExcludeStreams ||
+		len(cache.Cache) == 0 {
+		return true
+	}
+	return false
+}
+
 func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, error) {
 	sql, err := c.buildSql(req, chartConf)
 	if err != nil {
 		log.Println("build sql error:", err)
 		return "", err
 	}
+
+	sqlHash := fmt.Sprintf("%x", md5.Sum([]byte(sql)))
+	log.Printf("SQL MD5 hash: %s", sqlHash)
+
 	var results []map[string]any
-	if err := util.TrinoQueryMap("miku", sql, &results); err != nil {
-		return nil, fmt.Errorf("query err: %v", err)
+	if c.needRefresh(req, sqlHash) {
+		if err := util.TrinoQueryMap("miku", sql, &results); err != nil {
+			return nil, fmt.Errorf("query err: %v", err)
+		}
+		resultCache[sqlHash] = ResultCache{
+			Req:   req,
+			Cache: results,
+		}
+	} else {
+		results = resultCache[sqlHash].Cache
 	}
 	//log.Printf("results: %+v\n", results)
 	switch chartConf.Type {

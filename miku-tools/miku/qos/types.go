@@ -142,6 +142,7 @@ type PieChartData struct {
 type ChartInfo struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
+	Table string `json:"table"`
 }
 
 type SeriesData struct {

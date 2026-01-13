@@ -213,7 +213,20 @@ func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	infos := s.chartMgr.GetChartInfos()
-	charts = append(charts, infos...)
+	for _, info := range infos {
+		if r.URL.Query().Get("db") == "hy" {
+			if info.Table != "hy" {
+				continue
+			}
+			charts = append(charts, info)
+		} else {
+			if info.Table == "hy" {
+				continue
+			}
+			charts = append(charts, info)
+		}
+	}
+
 	log.Println("infos:", infos)
 
 	bytes, err := json.Marshal(charts)
