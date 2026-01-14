@@ -235,6 +235,175 @@
             padding-top: 20px;
         }
     </style>
+    <style>
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .description {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        /* 下拉菜单样式 */
+        .dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .dropdown-btn {
+            width: 100%;
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .dropdown-btn:hover {
+            border-color: #667eea;
+            background-color: #f0f4ff;
+        }
+        
+        .dropdown-btn:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        .arrow {
+            transition: transform 0.3s ease;
+        }
+        
+        .dropdown.active .arrow {
+            transform: rotate(180deg);
+        }
+        
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            margin-top: 8px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dropdown.active .dropdown-content {
+            max-height: 400px;
+            opacity: 1;
+        }
+        
+        /* 选项样式 */
+        .option {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .option:hover {
+            background-color: #f8f9ff;
+        }
+        
+        .option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        .option label {
+            cursor: pointer;
+            font-size: 16px;
+            color: #333;
+            flex-grow: 1;
+        }
+        
+        .option .tag {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        /* 全选选项的特殊样式 */
+        .select-all-option {
+            border-bottom: 1px solid #e9ecef;
+            background-color: #f8f9ff;
+            font-weight: 500;
+        }
+        
+        .select-all-option .tag {
+            background-color: #667eea;
+            color: white;
+        }
+        
+        /* 底部按钮区域 */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .action-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .select-all-btn {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        
+        .select-all-btn:hover {
+            background-color: #dee2e6;
+        }
+        
+        .clear-btn {
+            background-color: #f8f9fa;
+            color: #666;
+        }
+        
+        .clear-btn:hover {
+            background-color: #e9ecef;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -259,6 +428,18 @@
                 <select id="appName" name="appName" required>
                     <option value="">请选择BUCKET</option>
                 </select>
+            </div>
+
+            
+            <div class="dropdown" id="dropdown">
+                <albel for="dropdownBtn">BUCKET选择:</albel>
+                <button type="button" class="dropdown-btn" id="dropdownBtn">
+                    <span id="dropdownText">请选择BUCKET</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="dropdown-content" id="dropdownContent">
+                    <!-- 选项将通过JavaScript动态生成 -->
+                </div>
             </div>
 
             <!-- 流ID输入 -->
@@ -530,7 +711,7 @@
                 // 检查元素是否存在
                 if (!chartSelectionDiv) {
                     console.error('找不到id为chart-checkbox-group的div元素');
-return;
+                    return;
                 }
 
                 const chartSelectionDivHy = document.getElementById('chart-checkbox-group-hy');
@@ -859,6 +1040,151 @@ return;
             });
         }
 
+    </script>
+
+    <script>
+        // 定义选项数据
+        const options = [
+            { id: 'huya', name: 'huya', label: '虎牙' },
+            { id: 'douyu', name: 'douyu', label: '斗鱼' },
+            { id: 'live', name: 'live', label: '直播' },
+            { id: 'agent', name: 'agent', label: '代理' },
+            { id: 'sched', name: 'sched', label: '调度' }
+        ];
+
+        // 定义全选选项的特殊ID
+        const SELECT_ALL_ID = 'select_all';
+        const SELECT_ALL_OPTION = {
+            id: SELECT_ALL_ID,
+            name: 'select_all',
+            label: '全选'
+        };
+
+        // 获取DOM元素
+        const dropdown = document.getElementById('dropdown');
+        const dropdownBtn = document.getElementById('dropdownBtn');
+        const dropdownText = document.getElementById('dropdownText');
+        const dropdownContent = document.getElementById('dropdownContent');
+
+        // 存储当前选中的选项（不包括全选选项）
+        let selectedOptions = [];
+
+        // 初始化选项
+        function initOptions() {
+            dropdownContent.innerHTML = '';
+            
+            // 首先添加全选选项
+            const selectAllElement = document.createElement('div');
+            selectAllElement.className = 'option select-all-option';
+            selectAllElement.innerHTML = `
+                <input type="checkbox" id="${SELECT_ALL_ID}" name="${SELECT_ALL_OPTION.name}" value="${SELECT_ALL_ID}">
+                <label for="${SELECT_ALL_ID}">${SELECT_ALL_OPTION.label}</label>
+            `;
+            
+            // 添加全选选项的复选框变更事件
+            const selectAllCheckbox = selectAllElement.querySelector('input[type="checkbox"]');
+            selectAllCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    // 选中所有选项
+                    selectedOptions = options.map(option => option.id);
+                } else {
+                    // 清空所有选项
+                    selectedOptions = [];
+                }
+                updateUI();
+            });
+            
+            dropdownContent.appendChild(selectAllElement);
+            
+            // 然后添加普通选项
+            options.forEach(option => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.innerHTML = `
+                    <input type="checkbox" id="${option.id}" name="${option.name}" value="${option.id}">
+                    <label for="${option.id}">${option.label}</label>
+                    <span class="tag">${option.name}</span>
+                `;
+                
+                // 添加复选框变更事件
+                const checkbox = optionElement.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        if (!selectedOptions.includes(option.id)) {
+                            selectedOptions.push(option.id);
+                        }
+                    } else {
+                        const index = selectedOptions.indexOf(option.id);
+                        if (index > -1) {
+                            selectedOptions.splice(index, 1);
+                        }
+                    }
+                    updateUI();
+                });
+                
+                dropdownContent.appendChild(optionElement);
+            });
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            // 更新下拉按钮文本
+            if (selectedOptions.length === 0) {
+                dropdownText.textContent = '请选择BUCKET';
+            } else if (selectedOptions.length === options.length) {
+                dropdownText.textContent = '已选择全部BUCKET';
+            } else {
+                const selectedLabels = selectedOptions.map(id => {
+                    const option = options.find(opt => opt.id === id);
+                    return option ? option.label : id;
+                });
+                dropdownText.textContent = selectedLabels.join(', ');
+            }
+            
+            // 更新全选复选框状态
+            const selectAllCheckbox = document.getElementById(SELECT_ALL_ID);
+            if (selectAllCheckbox) {
+                if (selectedOptions.length === options.length && options.length > 0) {
+                    selectAllCheckbox.checked = true;
+                    selectAllCheckbox.indeterminate = false;
+                } else if (selectedOptions.length > 0) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = true;
+                } else {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+            }
+            
+            // 更新普通选项复选框状态
+            options.forEach(option => {
+                const checkbox = document.getElementById(option.id);
+                if (checkbox) {
+                    checkbox.checked = selectedOptions.includes(option.id);
+                }
+            });
+        }
+
+        // 初始化
+        function init() {
+            initOptions();
+            updateUI();
+            
+            // 下拉菜单切换
+            dropdownBtn.addEventListener('click', () => {
+                dropdown.classList.toggle('active');
+            });
+            
+            // 点击其他地方关闭下拉菜单
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
