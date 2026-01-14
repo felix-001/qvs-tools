@@ -424,13 +424,6 @@
             </div>
 
             <!-- AppName选择 -->
-            <div class="form-group">
-                <label for="appName">BUCKET:</label>
-                <select id="appName" name="appName" required>
-                    <option value="">请选择BUCKET</option>
-                </select>
-            </div>
-
             
             <div class="dropdown" id="dropdown">
                 <albel for="dropdownBtn">BUCKET选择:</albel>
@@ -599,21 +592,6 @@
                 }));
 
                 init(window.options)
-                
-                appNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    select.appendChild(option);
-                });
-                
-                // 默认选择huyacdn
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === 'huyacdn') {
-                        select.selectedIndex = i;
-                        break;
-                    }
-                }
             } catch (error) {
                 console.error('加载AppName失败:', error);
                 alert('加载应用列表失败，请刷新页面重试');
@@ -687,8 +665,14 @@
             // 获取表单数据
             const formData = new FormData(e.target);
             const excludeStreams = formData.get('excludeStreams');
+            // 从下拉菜单获取选中的 BUCKET
+            const selectedBucketNames = selectedOptions.map(id => {
+                const option = window.options.find(opt => opt.id === id);
+                return option ? option.name : '';
+            }).filter(name => name).join(',');
+
             const data = {
-                appName: formData.get('appName'),
+                appName: selectedBucketNames,
                 startTime: formData.get('startTime'),
                 endTime: formData.get('endTime'),
                 streamId: formData.get('streamId'),
