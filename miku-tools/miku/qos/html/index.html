@@ -467,9 +467,15 @@
             </div>
 
             <!-- Protocol选项 -->
-            <div class="form-group">
-                <label for="protocol">Protocol:</label>
-                <input type="text" id="protocol" name="protocol" placeholder="请输入协议类型（可选）">
+            <div class="dropdown" id="protocolDropdown">
+                <label for="protocolBtn">Protocol:</label>
+                <button type="button" class="dropdown-btn" id="protocolBtn">
+                    <span id="protocolText">请选择Protocol</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="dropdown-content" id="protocolContent">
+                    <!-- 选项将通过JavaScript动态生成 -->
+                </div>
             </div>
 
             <!-- 剔除流ID列表 -->
@@ -565,14 +571,15 @@
         // 页面加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
             loadAppNames();
-            
+            loadProtocols();
+
             // 设置默认时间（最近24小时）
             setDefaultTimeRange();
-            
+
             // 设置全选/去全选功能
             setupSelectAllCharts('hy');
             setupSelectAllCharts('miku');
-            
+
 
         });
 
@@ -595,6 +602,27 @@
             } catch (error) {
                 console.error('加载AppName失败:', error);
                 alert('加载应用列表失败，请刷新页面重试');
+            }
+        }
+
+        // 加载Protocol列表
+        async function loadProtocols() {
+            try {
+                const response = await fetch('/api/v1/protocols');
+                const protocols = await response.json();
+
+                console.log("protocols:", protocols)
+                // 构造protocolOptions数组（更新全局变量）
+                window.protocolOptions = protocols.map(name => ({
+                    id: 'protocol_' + name.replace(/[^a-zA-Z0-9_-]/g, '_'),
+                    name: name,
+                    label: name
+                }));
+
+                initProtocolDropdown(window.protocolOptions)
+            } catch (error) {
+                console.error('加载Protocol列表失败:', error);
+                alert('加载协议列表失败，请刷新页面重试');
             }
         }
 
@@ -671,6 +699,12 @@
                 return option ? option.name : '';
             }).filter(name => name).join(',');
 
+            // 从下拉菜单获取选中的 Protocol
+            const selectedProtocolNames = protocolSelectedOptions.map(id => {
+                const option = window.protocolOptions.find(opt => opt.id === id);
+                return option ? option.name : '';
+            }).filter(name => name).join(',');
+
             const data = {
                 appName: selectedBucketNames,
                 startTime: formData.get('startTime'),
@@ -685,7 +719,7 @@
                 loglevel: formData.get('detailLog') === 'on' ? 'detail' : 'normal',
                 rawData: formData.get('rawData') === 'on',
                 userAnalysisStreams: formData.get('userAnalysisStreams') === 'on',
-                protocol: formData.get('protocol'),
+                protocol: selectedProtocolNames,
                 excludeStreams: excludeStreams || "", // 将剔除流ID列表通过excludeStreams字段传递
                 requestId: Math.random().toString(36).substring(2, 12) // 生成10位随机字符串
             };
@@ -1171,6 +1205,118 @@
             document.addEventListener('click', (e) => {
                 if (!dropdown.contains(e.target)) {
                     dropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Protocol 下拉菜单相关变量
+        let protocolSelectedOptions = [];
+
+        // 初始化 Protocol 下拉菜单
+        function initProtocolDropdown(options) {
+            const protocolDropdown = document.getElementById('protocolDropdown');
+            const protocolBtn = document.getElementById('protocolBtn');
+            const protocolText = document.getElementById('protocolText');
+            const protocolContent = document.getElementById('protocolContent');
+
+            if (!protocolDropdown || !protocolBtn || !protocolText || !protocolContent) {
+                console.error('Protocol 下拉菜单元素未找到');
+                return;
+            }
+
+            protocolContent.innerHTML = '';
+
+            // 添加全选选项
+            const selectAllElement = document.createElement('div');
+            selectAllElement.className = 'option select-all-option';
+            selectAllElement.innerHTML = `
+                <input type="checkbox" id="protocol_select_all" name="protocol_select_all" value="protocol_select_all">
+                <label for="protocol_select_all">全选</label>
+            `;
+
+            const selectAllCheckbox = selectAllElement.querySelector('input[type="checkbox"]');
+            selectAllCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    protocolSelectedOptions = options.map(option => option.id);
+                } else {
+                    protocolSelectedOptions = [];
+                }
+                updateProtocolUI(options, protocolText, selectAllCheckbox);
+            });
+
+            protocolContent.appendChild(selectAllElement);
+
+            // 添加普通选项
+            options.forEach(option => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.innerHTML = `
+                    <input type="checkbox" id="${option.id}" name="${option.name}" value="${option.id}">
+                    <label for="${option.id}">${option.label}</label>
+                `;
+
+                const checkbox = optionElement.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        if (!protocolSelectedOptions.includes(option.id)) {
+                            protocolSelectedOptions.push(option.id);
+                        }
+                    } else {
+                        const index = protocolSelectedOptions.indexOf(option.id);
+                        if (index > -1) {
+                            protocolSelectedOptions.splice(index, 1);
+                        }
+                    }
+                    updateProtocolUI(options, protocolText, selectAllCheckbox);
+                });
+
+                protocolContent.appendChild(optionElement);
+            });
+
+            // 切换按钮点击事件
+            protocolBtn.addEventListener('click', () => {
+                protocolDropdown.classList.toggle('active');
+            });
+
+            // 点击其他地方关闭下拉菜单
+            document.addEventListener('click', (e) => {
+                if (!protocolDropdown.contains(e.target)) {
+                    protocolDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // 更新 Protocol UI
+        function updateProtocolUI(options, protocolText, selectAllCheckbox) {
+            if (protocolSelectedOptions.length === 0) {
+                protocolText.textContent = '请选择Protocol';
+            } else if (protocolSelectedOptions.length === options.length) {
+                protocolText.textContent = '已选择全部Protocol';
+            } else {
+                const selectedLabels = protocolSelectedOptions.map(id => {
+                    const option = options.find(opt => opt.id === id);
+                    return option ? option.label : id;
+                });
+                protocolText.textContent = selectedLabels.join(', ');
+            }
+
+            // 更新全选复选框状态
+            if (protocolSelectedOptions.length === options.length && options.length > 0) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else if (protocolSelectedOptions.length > 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+
+            // 更新普通选项复选框状态
+            options.forEach(option => {
+                const checkbox = document.getElementById(option.id);
+                if (checkbox) {
+                    checkbox.checked = protocolSelectedOptions.includes(option.id);
                 }
             });
         }

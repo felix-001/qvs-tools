@@ -45,6 +45,7 @@ func (s *QOSServer) StartServer() {
 
 	// API接口
 	http.HandleFunc("/api/v1/appnames", s.getAppNamesHandler)
+	http.HandleFunc("/api/v1/protocols", s.getProtocolsHandler)
 	http.HandleFunc("/api/v1/qos", s.qosAnalysisHandler)
 	http.HandleFunc("/api/v1/charts", s.chartsHandler)
 
@@ -78,6 +79,21 @@ func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(appNames)
+}
+
+// getProtocolsHandler 获取Protocol列表处理器
+func (s *QOSServer) getProtocolsHandler(w http.ResponseWriter, r *http.Request) {
+	protocols := []string{
+		"HTTP-FLV",
+		"RTMP",
+		"HLS",
+		"Webrtc",
+		"QUIC",
+		"TCP",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(protocols)
 }
 
 // qosAnalysisHandler QOS分析处理器
