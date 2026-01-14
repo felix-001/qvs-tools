@@ -84,12 +84,12 @@ func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
 // getProtocolsHandler 获取Protocol列表处理器
 func (s *QOSServer) getProtocolsHandler(w http.ResponseWriter, r *http.Request) {
 	protocols := []string{
-		"HTTP-FLV",
-		"RTMP",
-		"HLS",
-		"Webrtc",
-		"QUIC",
-		"TCP",
+		"flv",
+		"slice",
+		"pstream",
+		"rtmp",
+		"hls",
+		"rtc",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
