@@ -588,6 +588,16 @@
                 const response = await fetch('/api/v1/appnames');
                 const appNames = await response.json();
                 const select = document.getElementById('appName');
+
+                console.log("appnames:", appNames)
+                // 构造options数组（更新全局变量），使用安全的ID
+                window.options = appNames.map(name => ({
+                    id: name,
+                    name: name,
+                    label: name
+                }));
+
+                init(window.options)
                 
                 appNames.forEach(name => {
                     const option = document.createElement('option');
@@ -1044,13 +1054,7 @@
 
     <script>
         // 定义选项数据
-        const options = [
-            { id: 'huya', name: 'huya', label: '虎牙' },
-            { id: 'douyu', name: 'douyu', label: '斗鱼' },
-            { id: 'live', name: 'live', label: '直播' },
-            { id: 'agent', name: 'agent', label: '代理' },
-            { id: 'sched', name: 'sched', label: '调度' }
-        ];
+        let options = []; // 将从 API 加载
 
         // 定义全选选项的特殊ID
         const SELECT_ALL_ID = 'select_all';
@@ -1071,6 +1075,9 @@
 
         // 初始化选项
         function initOptions() {
+
+            var options = window.options;
+            
             dropdownContent.innerHTML = '';
             
             // 首先添加全选选项
@@ -1103,7 +1110,6 @@
                 optionElement.innerHTML = `
                     <input type="checkbox" id="${option.id}" name="${option.name}" value="${option.id}">
                     <label for="${option.id}">${option.label}</label>
-                    <span class="tag">${option.name}</span>
                 `;
                 
                 // 添加复选框变更事件
@@ -1128,6 +1134,7 @@
 
         // 更新UI显示
         function updateUI() {
+            var options = window.options;
             // 更新下拉按钮文本
             if (selectedOptions.length === 0) {
                 dropdownText.textContent = '请选择BUCKET';
@@ -1140,7 +1147,7 @@
                 });
                 dropdownText.textContent = selectedLabels.join(', ');
             }
-            
+
             // 更新全选复选框状态
             const selectAllCheckbox = document.getElementById(SELECT_ALL_ID);
             if (selectAllCheckbox) {
@@ -1184,7 +1191,7 @@
         }
 
         // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', init);
+        //document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
