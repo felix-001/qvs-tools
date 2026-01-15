@@ -30,12 +30,12 @@ func (c *ChartMgr) Parse(conf *config.Config) error {
 	return nil
 }
 
-func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.SingleSQL) (string, error) {
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
-	where := chartConf.SQL.Where
+	where := chartConf.Where
 	where += fmt.Sprintf("AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("AND day >= '%s' and day <= '%s'\n", startDay, endDay)
 	if req.StreamID != "" {
@@ -73,15 +73,15 @@ func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.ChartConf) (
 	return where, nil
 }
 
-func (c *ChartMgr) buildHyWhereCommonPart(req QOSRequest, chartConf *config.ChartConf) string {
+func (c *ChartMgr) buildHyWhereCommonPart(req QOSRequest, chartConf *config.SingleSQL) string {
 	req.StartTime = strings.ReplaceAll(req.StartTime, "T", " ")
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
 
 	where := ""
-	if chartConf.SQL.Where != "" {
-		where += "\tAND " + chartConf.SQL.Where
+	if chartConf.Where != "" {
+		where += "\tAND " + chartConf.Where
 	}
 	where += fmt.Sprintf("\tAND from_unixtime(cts) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("\tAND day >= '%s' and day <= '%s'\n", startDay, endDay)
@@ -91,7 +91,7 @@ func (c *ChartMgr) buildHyWhereCommonPart(req QOSRequest, chartConf *config.Char
 	return where
 }
 
-func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.SingleSQL) (string, error) {
 	where := c.buildHyWhereCommonPart(req, chartConf)
 	if req.StreamID != "" {
 		streamID := strings.ToLower(req.StreamID)
@@ -131,22 +131,22 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (st
 	return where, nil
 }
 
-func (c *ChartMgr) buildWhere(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+func (c *ChartMgr) buildWhere(req QOSRequest, chartConf *config.SingleSQL) (string, error) {
 	switch chartConf.Table {
 	case "hy":
 		return c.buildHyWhere(req, chartConf)
 	case "miku":
 		return c.buildMikuWhere(req, chartConf)
 	default:
-		return "", fmt.Errorf("不支持的表: %s", chartConf.SQL.From)
+		return "", fmt.Errorf("不支持的表: %s", chartConf.From)
 	}
 }
 
-func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.ChartConf) (string, error) {
-	choose := chartConf.SQL.Select
+func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.SingleSQL) (string, error) {
+	choose := chartConf.Select
 	switch chartConf.Table {
 	case "hy":
-		if chartConf.SQL.GroupByMinute {
+		if chartConf.GroupByMinute {
 			choose += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m"
 		}
 	case "miku":
@@ -156,10 +156,24 @@ func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.ChartConf) (str
 	return choose, nil
 }
 
-func (c *ChartMgr) buildSql(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+func (c *ChartMgr) buildWith(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+	with := "WITH\n\t"
+	for _, conf := range chartConf.SQL.With {
+		sql, err := c.buildSql(req, conf.SQL)
+		if err != nil {
+			return "", err
+		}
+		with += fmt.Sprintf("%s AS (%s)\n\t", conf.Name, sql)
+	}
+	with += ","
+	return with, nil
+}
+
+func (c *ChartMgr) buildSql(req QOSRequest, chartConf *config.SingleSQL) (string, error) {
 	var sql string
-	if chartConf.SQL.With != "" {
-		sql = fmt.Sprintf("WITH\n\t%s\n", chartConf.SQL.With)
+
+	if chartConf.Raw != "" {
+		return chartConf.Raw, nil
 	}
 
 	choose, err := c.buildSelect(req, chartConf)
@@ -179,24 +193,42 @@ FROM
 WHERE 1=1
 	%s
 `,
-		choose, chartConf.SQL.From, where)
+		choose, chartConf.From, where)
 
-	if chartConf.SQL.GroupBy != "" {
-		sql += fmt.Sprintf("GROUP BY\n\t%s\n", chartConf.SQL.GroupBy)
-		if chartConf.SQL.GroupByMinute {
+	if chartConf.GroupBy != "" {
+		sql += fmt.Sprintf("GROUP BY\n\t%s\n", chartConf.GroupBy)
+		if chartConf.GroupByMinute {
 			sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
 		}
-	} else if chartConf.SQL.GroupByMinute {
+	} else if chartConf.GroupByMinute {
 
 		sql += "GROUP BY\n\tdate_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
 	}
-	if chartConf.SQL.OrderBy != "" {
-		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.SQL.OrderBy)
+	if chartConf.OrderBy != "" {
+		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.OrderBy)
 	}
 	if req.LogLevel == "detail" {
 		log.Println("sql:\n", sql)
 	}
 	return sql, nil
+}
+
+func (c *ChartMgr) buildFinalSQL(req QOSRequest, chartConf *config.ChartConf) (string, error) {
+	with := ""
+	if len(chartConf.SQL.With) != 0 {
+		var err error
+		with, err = c.buildWith(req, chartConf)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	sql, err := c.buildSql(req, chartConf.SQL.Final)
+	if err != nil {
+		return "", err
+	}
+
+	return with + sql, nil
 }
 
 func (c *ChartMgr) getDimensionValue(req QOSRequest, field string, result map[string]any, chartConf *config.ChartConf) string {
@@ -310,7 +342,7 @@ func (c *ChartMgr) needRefresh(req QOSRequest, md5 string) bool {
 }
 
 func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, error) {
-	sql, err := c.buildSql(req, chartConf)
+	sql, err := c.buildFinalSQL(req, chartConf)
 	if err != nil {
 		log.Println("build sql error:", err)
 		return "", err

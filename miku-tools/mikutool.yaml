@@ -189,6 +189,7 @@ public_hy_sql: &public_hy_sql
   from: huyabiz_quality_report_log
   group_by_minute: true 
   order_by: ts_m
+  table: hy
 
 chart_configs:
   - name: chart_hyStreamsLagRateTrend2
@@ -197,15 +198,15 @@ chart_configs:
     type: line
     table: hy
     sql:
-      with: |
-        extracted_parts AS (
-          SELECT
-            regexp_extract(dim_stream_url, '[src|huyap2p|huyalive|huyacdn|huyacdntest]/([^?]+)\.[flv|slice]', 1) AS streamName,
-            regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
-            regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
-            *
-          FROM huyabiz_quality_report_log
-        )
+      #with: |
+      #  extracted_parts AS (
+      #    SELECT
+      #      regexp_extract(dim_stream_url, '[src|huyap2p|huyalive|huyacdn|huyacdntest]/([^?]+)\.[flv|slice]', 1) AS streamName,
+      #      regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
+      #      regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
+      #      *
+      #    FROM huyabiz_quality_report_log
+      #  )
       select: |
         CASE
           WHEN streamName LIKE '%cxdexxtpl%' THEN streamName
@@ -241,7 +242,8 @@ chart_configs:
     type: line
     table: hy
     sql: 
-      <<: *public_hy_sql
+      final:
+        <<: *public_hy_sql
       fields: 
         - total_usr_cnt
 
