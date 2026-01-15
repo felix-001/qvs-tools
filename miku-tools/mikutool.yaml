@@ -85,13 +85,13 @@ public_hy_sql: &public_hy_sql
 
     COALESCE(
       COUNT(CASE WHEN field_video_bad_quality = 100 AND dim_p2p = '1' THEN 1 END) * 100.0 / 
-      COUNT(CASE WHEN dim_p2p = '1' THEN 1 END), 
+      NULLIF(COUNT(CASE WHEN dim_p2p = '1' THEN 1 END), 0), 
       0
     ) as p2p_lagrate,
 
     COALESCE(
       COUNT(CASE WHEN field_video_bad_quality = 100 AND dim_p2p = '0' THEN 1 END) * 100.0 / 
-      COUNT(CASE WHEN dim_p2p = '0' THEN 1 END), 
+      NULLIF(COUNT(CASE WHEN dim_p2p = '0' THEN 1 END), 0), 
       0
     ) as flv_lagrate,
 
