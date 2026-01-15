@@ -218,18 +218,20 @@ type ChartDataGetter interface {
 func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 	//log.Println("chartsHandler called")
 	var charts []qos.ChartInfo
-	seqs := chartsSeq
-	if r.URL.Query().Get("db") == "hy" {
-		seqs = hyChartSeq
-	}
-	for _, chart := range seqs {
-		//log.Println("chart", chart)
-		if generator, ok := qos.ChartGenerators[chart]; ok {
-			//log.Println("generator", generator)
-			chartInfo := generator.ChartInfo()
-			charts = append(charts, chartInfo)
+	/*
+		seqs := chartsSeq
+		if r.URL.Query().Get("db") == "hy" {
+			seqs = hyChartSeq
 		}
-	}
+		for _, chart := range seqs {
+			//log.Println("chart", chart)
+			if generator, ok := qos.ChartGenerators[chart]; ok {
+				//log.Println("generator", generator)
+				chartInfo := generator.ChartInfo()
+				charts = append(charts, chartInfo)
+			}
+		}
+	*/
 
 	infos := s.chartMgr.GetChartInfos()
 	for _, info := range infos {

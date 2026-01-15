@@ -235,6 +235,16 @@ chart_configs:
         - percent
       dimension: stream_id
 
+  - name: chart_hyOnlineNum
+    title: 虎牙在线用户数率趋势
+    seriesTitle: 在线用户数
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - total_usr_cnt
+
   - name: chart_hyLagRateTrend
     title: 虎牙整体卡顿率趋势
     seriesTitle: 卡顿率
