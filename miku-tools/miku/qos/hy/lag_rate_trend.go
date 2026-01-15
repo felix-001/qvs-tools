@@ -6,9 +6,11 @@ import (
 	"mikutool/miku/qos"
 )
 
+/*
 func init() {
 	qos.RegisterChartGenerator(&HuyaLagRate{})
 }
+*/
 
 // 虎牙每分钟卡顿率趋势图
 

@@ -211,8 +211,8 @@ chart_configs:
       field: percent
       dimension: stream_id
 
-  - name: chart_hyLagRateTrend2
-    title: 虎牙卡顿率趋势图2
+  - name: chart_hyLagRateTrend
+    title: 虎牙整体卡顿率趋势
     seriesTitle: 卡顿率
     type: line
     table: hy

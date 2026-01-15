@@ -95,7 +95,7 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (st
 	where := c.buildHyWhereCommonPart(req, chartConf)
 	if req.StreamID != "" {
 		streamID := strings.ToLower(req.StreamID)
-		where += fmt.Sprintf(`\tAND dim_stream_url like '%%%s%%'\n`, streamID)
+		where += fmt.Sprintf("\tAND dim_stream_url like '%%%s%%'\n", streamID)
 	}
 
 	if req.Domain != "" {
@@ -103,11 +103,11 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (st
 	}
 
 	if req.UserIp != "" {
-		where += fmt.Sprintf(`\tAND dim__ip = '%s'\n`, req.UserIp)
+		where += fmt.Sprintf("\tAND dim__ip = '%s'\n", req.UserIp)
 	}
 
 	if req.CdnIp != "" {
-		where += fmt.Sprintf(`\tAND dim_cdnip = '%s'\n`, req.CdnIp)
+		where += fmt.Sprintf("\tAND dim_cdnip = '%s'\n", req.CdnIp)
 	}
 
 	// 添加剔除流ID过滤
@@ -117,16 +117,16 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.ChartConf) (st
 		for _, stream := range excludeStreams {
 			stream = strings.TrimSpace(stream)
 			stream = strings.ToLower(stream)
-			where += fmt.Sprintf(`\tAND dim_stream_url not like '%%%s%%'`, stream)
+			where += fmt.Sprintf("\tAND dim_stream_url not like '%%%s%%'\n", stream)
 		}
 	}
 
 	switch req.Protocol {
 	case "hls":
 	case "p2p":
-		where += `\tAND dim_p2p = '1'\n`
+		where += "\tAND dim_p2p = '1'\n"
 	case "flv":
-		where += `\tAND dim_p2p = '0'\n`
+		where += "\tAND dim_p2p = '0'\n"
 	}
 	return where, nil
 }
@@ -199,7 +199,39 @@ WHERE 1=1
 	return sql, nil
 }
 
-func (c *ChartMgr) getLineData(results []map[string]any, chartConf *config.ChartConf) any {
+func (c *ChartMgr) getDimensionValue(req QOSRequest, result map[string]any, chartConf *config.ChartConf) string {
+	dimensionValue := chartConf.SeriesTitle
+	if chartConf.SQL.Dimension != "" {
+		if _, ok := result[chartConf.SQL.Dimension]; !ok {
+			log.Printf("err, dimension nil, result: %+v\n", result)
+			return ""
+		}
+		if result[chartConf.SQL.Dimension] == nil {
+			log.Printf("err, dimension nil, result: %+v\n", result)
+			return ""
+		}
+		dimensionValue = result[chartConf.SQL.Dimension].(string)
+	}
+	if req.Protocol != "" {
+		dimensionValue += "_" + req.Protocol
+	}
+	if req.Domain != "" {
+		dimensionValue += "_" + req.Domain
+	}
+	if req.UserIp != "" {
+		dimensionValue += "_usr:" + req.UserIp
+	}
+	if req.CdnIp != "" {
+		dimensionValue += "_cdn:" + req.CdnIp
+	}
+	if req.StreamID != "" {
+		dimensionValue += "_" + req.StreamID
+	}
+
+	return dimensionValue
+}
+
+func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartConf *config.ChartConf) any {
 	seriesData := map[string]*SeriesData{}
 	data := LineChartData2{
 		XAxis:      []string{},
@@ -208,17 +240,9 @@ func (c *ChartMgr) getLineData(results []map[string]any, chartConf *config.Chart
 	}
 	lastTs := ""
 	for _, result := range results {
-		dimensionValue := chartConf.SeriesTitle
-		if chartConf.SQL.Dimension != "" {
-			if _, ok := result[chartConf.SQL.Dimension]; !ok {
-				log.Printf("err, dimension nil, result: %+v\n", result)
-				continue
-			}
-			if result[chartConf.SQL.Dimension] == nil {
-				log.Printf("err, dimension nil, result: %+v\n", result)
-				continue
-			}
-			dimensionValue = result[chartConf.SQL.Dimension].(string)
+		dimensionValue := c.getDimensionValue(req, result, chartConf)
+		if dimensionValue == "" {
+			continue
 		}
 		if _, ok := seriesData[dimensionValue]; !ok {
 			seriesData[dimensionValue] = &SeriesData{}
@@ -292,7 +316,7 @@ func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, er
 	//log.Printf("results: %+v\n", results)
 	switch chartConf.Type {
 	case "line":
-		return c.getLineData(results, chartConf), nil
+		return c.getLineData(req, results, chartConf), nil
 	case "table":
 	case "pie":
 		//return c.getPieData(results), nil
