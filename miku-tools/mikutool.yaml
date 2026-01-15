@@ -300,6 +300,17 @@ chart_configs:
       fields: 
         - p2p_percent
 
+  - name: chart_hySrcPercent
+    title: 虎牙flv回客户源站样本占比趋势
+    seriesTitle: 回源站占比
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - srcRate
+
+
   - name: chart_hyLagUsrPercent
     title: 虎牙卡顿用户占比趋势
     seriesTitle: 卡顿用户占比
@@ -321,11 +332,12 @@ chart_configs:
         - lag_node_rate
 
   - name: chart_hyLagCnt
-    title: 虎牙卡顿样本数趋势
-    seriesTitle: 卡顿样本数
+    title: 虎牙样本数趋势
+    seriesTitle: 样本数
     type: line
     table: hy
     sql: 
       <<: *public_hy_sql
       fields: 
         - lagCnt
+        - total
