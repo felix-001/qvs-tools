@@ -159,13 +159,15 @@ func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.SingleSQL) (str
 func (c *ChartMgr) buildWith(req QOSRequest, chartConf *config.ChartConf) (string, error) {
 	with := "WITH\n\t"
 	for _, conf := range chartConf.SQL.With {
+		log.Printf("with conf: %+v\n", conf)
+		log.Printf("with sql: %+v\n", conf.SQL)
 		sql, err := c.buildSql(req, conf.SQL)
 		if err != nil {
 			return "", err
 		}
-		with += fmt.Sprintf("%s AS (%s)\n\t", conf.Name, sql)
+		with += fmt.Sprintf("%s AS (%s),\n\t", conf.Name, sql)
 	}
-	with += ","
+	with = with[:len(with)-3] + "\n"
 	return with, nil
 }
 
@@ -207,14 +209,12 @@ WHERE 1=1
 	if chartConf.OrderBy != "" {
 		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.OrderBy)
 	}
-	if req.LogLevel == "detail" {
-		log.Println("sql:\n", sql)
-	}
 	return sql, nil
 }
 
 func (c *ChartMgr) buildFinalSQL(req QOSRequest, chartConf *config.ChartConf) (string, error) {
 	with := ""
+	log.Printf("with: %+v\n", chartConf.SQL.With)
 	if len(chartConf.SQL.With) != 0 {
 		var err error
 		with, err = c.buildWith(req, chartConf)
@@ -228,6 +228,9 @@ func (c *ChartMgr) buildFinalSQL(req QOSRequest, chartConf *config.ChartConf) (s
 		return "", err
 	}
 
+	if req.LogLevel == "detail" {
+		log.Println("sql:\n", with+sql)
+	}
 	return with + sql, nil
 }
 
