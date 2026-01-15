@@ -867,7 +867,7 @@
                 type: 'inside',
                 xAxisIndex: 0,
                 start: 0,  // 百分比
-                end: 100    // 百分比
+end: 100    // 百分比
             }]
 		};
 		console.log('createLineChart options:', option)
@@ -886,7 +886,9 @@
 			renderer: 'canvas',
 			useDirtyRect: false
 		});
+        
         //console.log('xType', data.xType)
+        var keysArray = Object.keys(resp.data.seriesData);
 		var option = {
             title: {
                 text: resp.title,
@@ -894,7 +896,20 @@
             },
             tooltip: {
                 trigger: 'axis',
-                formatter: '{a} <br/>{b} : {c}'
+                //formatter: '{a} <br/>{b} : {c}'
+                 formatter: function(params) {
+                    let result = `<div style="font-weight:bold;margin-bottom:5px;">${params[0].axisValue}</div>`;
+                    params.forEach(param => {
+                        const value = param.value;
+                        result += `
+                            <div style="display:flex;align-items:center;margin:3px 0;">
+                                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:${param.color};margin-right:8px;"></span>
+                                <span>${param.seriesName}: ${value}</span>
+                            </div>
+                        `;
+                    });
+                    return result;
+                }
             },
 			xAxis: {
 				type: resp.data.xType,
@@ -911,6 +926,29 @@
 				//	color: resp.data.seriesData[key].color
 				//}
 			})),
+            legend: {
+                data: keysArray,
+                top: 40,
+                textStyle: {
+                    color: '#495057'
+                },
+                type: 'scroll',
+                pageIconColor: '#3498db',
+                pageTextStyle: {
+                    color: '#7f8c8d'
+                }
+            },
+            toolbox: {
+                feature: {
+                    dataZoom: {
+                        yAxisIndex: 'none'
+                    },
+                    restore: {},
+                    saveAsImage: {}
+                },
+                right: 20,
+                top: 20
+            },
             // 实现缩放
             dataZoom: [{
                 type: 'inside',
