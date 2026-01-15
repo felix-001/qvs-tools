@@ -6,9 +6,11 @@ import (
 	"mikutool/miku/qos"
 )
 
+/*
 func init() {
 	qos.RegisterChartGenerator(&LagNodeRate{})
 }
+*/
 
 // 卡顿的节点数占比
 

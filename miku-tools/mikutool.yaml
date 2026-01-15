@@ -97,7 +97,11 @@ public_hy_sql: &public_hy_sql
 
     COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) AS lag_usr_cnt,
     COUNT(DISTINCT dim__ip) AS total_usr_cnt,
-    COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) * 100.0 / COUNT(DISTINCT dim__ip) AS lag_usr_rate,
+    COALESCE(
+      COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) * 100.0 / 
+      NULLIF(COUNT(DISTINCT dim__ip), 0),
+      0
+    ) AS lag_usr_rate,
 
     COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) AS lag_node_cnt,
     COUNT(DISTINCT dim_cdnip) AS total_node_cnt,
@@ -295,6 +299,16 @@ chart_configs:
       <<: *public_hy_sql
       fields: 
         - lag_usr_rate
+
+  - name: chart_hyLagNodePercent
+    title: 虎牙卡顿节点占比趋势
+    seriesTitle: 卡顿节点占比
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - lag_node_rate
 
   - name: chart_hyLagCnt
     title: 虎牙卡顿样本数趋势
