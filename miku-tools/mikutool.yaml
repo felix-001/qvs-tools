@@ -341,3 +341,33 @@ chart_configs:
       fields: 
         - lagCnt
         - total
+
+  - name: chart_hySrcNoramalPercent
+    title: 虎牙回客户源站非转码流样本数占总样本数的比例
+    seriesTitle: 比例
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - srcNormalPercent
+
+  - name: chart_hySrcTranscodePercent
+    title: 虎牙回客户源站转码流样本数占总样本数的比例
+    seriesTitle: 比例
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - srcTranscodePercent
+
+  - name: chart_hyTranscodeRateTrend
+    title: 虎牙推流MIKU转码流占总样本数的比例
+    seriesTitle: 比例
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - mikuTranscodePercent
