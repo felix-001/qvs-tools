@@ -199,18 +199,26 @@ WHERE 1=1
 	return sql, nil
 }
 
-func (c *ChartMgr) getDimensionValue(req QOSRequest, result map[string]any, chartConf *config.ChartConf) string {
+func (c *ChartMgr) getDimensionValue(req QOSRequest, result map[string]any, chartConf *config.ChartConf) (string, string) {
 	dimensionValue := chartConf.SeriesTitle
+	resultField := ""
 	if chartConf.SQL.Dimension != "" {
 		if _, ok := result[chartConf.SQL.Dimension]; !ok {
 			log.Printf("err, dimension nil, result: %+v\n", result)
-			return ""
+			return "", ""
 		}
 		if result[chartConf.SQL.Dimension] == nil {
 			log.Printf("err, dimension nil, result: %+v\n", result)
-			return ""
+			return "", ""
 		}
 		dimensionValue = result[chartConf.SQL.Dimension].(string)
+	}
+	//log.Println("fields:", chartConf.SQL.Fields)
+	for _, field := range chartConf.SQL.Fields {
+		if result[field] != nil {
+			dimensionValue += "_" + field
+			resultField = field
+		}
 	}
 	if req.Protocol != "" {
 		dimensionValue += "_" + req.Protocol
@@ -228,7 +236,7 @@ func (c *ChartMgr) getDimensionValue(req QOSRequest, result map[string]any, char
 		dimensionValue += "_" + req.StreamID
 	}
 
-	return dimensionValue
+	return dimensionValue, resultField
 }
 
 func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartConf *config.ChartConf) any {
@@ -240,14 +248,15 @@ func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartCo
 	}
 	lastTs := ""
 	for _, result := range results {
-		dimensionValue := c.getDimensionValue(req, result, chartConf)
-		if dimensionValue == "" {
+		dimensionValue, field := c.getDimensionValue(req, result, chartConf)
+		if dimensionValue == "" || field == "" {
+			log.Println("err, dimensionValue or field is empty", "dimensionValue:", dimensionValue, "field:", field)
 			continue
 		}
 		if _, ok := seriesData[dimensionValue]; !ok {
 			seriesData[dimensionValue] = &SeriesData{}
 		}
-		seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[chartConf.SQL.Field].(string))
+		seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[field].(string))
 		t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
 		if lastTs == "" || t != lastTs {
 			data.XAxis = append(data.XAxis, t)

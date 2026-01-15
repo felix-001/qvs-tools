@@ -57,15 +57,15 @@ type ChartConf struct {
 }
 
 type SQLConfig struct {
-	With          string `json:"with" yaml:"with"`
-	Select        string `json:"select" yaml:"select"`
-	From          string `json:"from" yaml:"from"`
-	Where         string `json:"where" yaml:"where"`
-	GroupBy       string `json:"group_by" yaml:"group_by"`
-	OrderBy       string `json:"order_by" yaml:"order_by"`
-	Field         string `json:"field" yaml:"field"`
-	Dimension     string `json:"dimension" yaml:"dimension"`
-	GroupByMinute bool   `json:"group_by_minute" yaml:"group_by_minute"`
+	With          string   `json:"with" yaml:"with"`
+	Select        string   `json:"select" yaml:"select"`
+	From          string   `json:"from" yaml:"from"`
+	Where         string   `json:"where" yaml:"where"`
+	GroupBy       string   `json:"group_by" yaml:"group_by"`
+	OrderBy       string   `json:"order_by" yaml:"order_by"`
+	Fields        []string `json:"fields" yaml:"fields"`
+	Dimension     string   `json:"dimension" yaml:"dimension"`
+	GroupByMinute bool     `json:"group_by_minute" yaml:"group_by_minute"`
 }
 
 type Config struct {

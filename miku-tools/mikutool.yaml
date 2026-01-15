@@ -208,7 +208,8 @@ chart_configs:
         END
       group_by_minute: true
       order_by: ts_m
-      field: percent
+      fields: 
+        - percent
       dimension: stream_id
 
   - name: chart_hyLagRateTrend
@@ -218,4 +219,18 @@ chart_configs:
     table: hy
     sql: 
       <<: *public_hy_sql
-      field: percent
+      fields: 
+        - percent
+
+  - name: chart_hyLagRateDetail
+    title: 虎牙卡顿率趋势(分回源分转码)
+    seriesTitle: 卡顿率
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - mikuNormalLagRate
+        - mikuTrancodeLagRate
+        - srcNormalLagRate
+        - srcTranscodeLagRate
