@@ -6,9 +6,11 @@ import (
 	"mikutool/miku/qos"
 )
 
+/*
 func init() {
 	qos.RegisterChartGenerator(&HuyaLagCntTrend{})
 }
+*/
 
 // 虎牙卡顿样本数趋势图
 

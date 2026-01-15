@@ -83,6 +83,18 @@ public_hy_sql: &public_hy_sql
 
     COUNT(CASE WHEN dim_p2p = '1' THEN 1 END) * 100.0 / COUNT(*) as p2p_percent,
 
+    COALESCE(
+      COUNT(CASE WHEN field_video_bad_quality = 100 AND dim_p2p = '1' THEN 1 END) * 100.0 / 
+      COUNT(CASE WHEN dim_p2p = '1' THEN 1 END), 
+      0
+    ) as p2p_lagrate,
+
+    COALESCE(
+      COUNT(CASE WHEN field_video_bad_quality = 100 AND dim_p2p = '0' THEN 1 END) * 100.0 / 
+      COUNT(CASE WHEN dim_p2p = '0' THEN 1 END), 
+      0
+    ) as flv_lagrate,
+
     COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) AS lag_usr_cnt,
     COUNT(DISTINCT dim__ip) AS total_usr_cnt,
     COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) * 100.0 / COUNT(DISTINCT dim__ip) AS lag_usr_rate,
@@ -118,6 +130,12 @@ public_hy_sql: &public_hy_sql
     ) as srcLagRate,
 
     COALESCE(
+      COUNT(CASE WHEN field_video_bad_quality = 100 and dim_stream_url not LIKE '%/src/%' and dim_stream_url not like '%sxrxc%' THEN 1 END) * 100.0 /
+      NULLIF(COUNT(CASE WHEN dim_stream_url not LIKE '%/src/%' and dim_stream_url not like '%sxrxc%' THEN 1 END), 0),
+      0
+    ) as mikuLagRate,
+
+    COALESCE(
       COUNT(CASE WHEN field_video_bad_quality = 100 and (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%' ) THEN 1 END) * 100.0 /
       NULLIF(COUNT(CASE WHEN (dim_stream_url LIKE '%/src/%' or dim_stream_url like '%sxrxc%') and (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') THEN 1 END), 0),
       0
@@ -134,6 +152,7 @@ public_hy_sql: &public_hy_sql
       count(*),
       0
     ) as srcRate,
+
     COALESCE(
       COUNT(CASE WHEN (dim_stream_url like '%ratio%' or dim_stream_url like '%codec%' or dim_stream_url like '%cxdexxtpl%') and (dim_stream_url not LIKE '%/src/%' and dim_stream_url not like '%sxrxc%') THEN 1 END) * 100.0 /
       count(*),
@@ -222,8 +241,30 @@ chart_configs:
       fields: 
         - percent
 
+  - name: chart_hyLagRateByProtocol
+    title: 虎牙卡顿率趋势(分协议)
+    seriesTitle: 卡顿率
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - p2p_lagrate
+        - flv_lagrate
+
+  - name: chart_hyLagRateByOrigin
+    title: 虎牙卡顿率趋势(分源站)
+    seriesTitle: 卡顿率
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - srcLagRate
+        - mikuLagRate
+
   - name: chart_hyLagRateDetail
-    title: 虎牙卡顿率趋势(分回源分转码)
+    title: 虎牙卡顿率趋势(分源站分转码)
     seriesTitle: 卡顿率
     type: line
     table: hy
@@ -234,3 +275,33 @@ chart_configs:
         - mikuTrancodeLagRate
         - srcNormalLagRate
         - srcTranscodeLagRate
+
+  - name: chart_hyP2pPercent
+    title: 虎牙P2P样本占比趋势
+    seriesTitle: P2P占比
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - p2p_percent
+
+  - name: chart_hyLagUsrPercent
+    title: 虎牙卡顿用户占比趋势
+    seriesTitle: 卡顿用户占比
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - lag_usr_rate
+
+  - name: chart_hyLagCnt
+    title: 虎牙卡顿样本数趋势
+    seriesTitle: 卡顿样本数
+    type: line
+    table: hy
+    sql: 
+      <<: *public_hy_sql
+      fields: 
+        - lagCnt

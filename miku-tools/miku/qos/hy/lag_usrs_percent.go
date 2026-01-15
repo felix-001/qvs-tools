@@ -8,9 +8,11 @@ import (
 
 // 卡顿用户占总用户数的百分比
 
+/*
 func init() {
 	qos.RegisterChartGenerator(&LagUsrRate{})
 }
+*/
 
 type LagUsrRate struct {
 }

@@ -808,14 +808,8 @@
         console.log(chart, resp)
         switch (resp.type) {
             case 'line':
-                if (chart == 'chart_hyStreamsLagRateTrend' ||
-                    chart == 'chart_hyLagRateTrend' ||
-                    chart == 'chart_hyLagRateDetail'
-                ) {
-                    createLineChart2(resp);
-                    break;
-                }
-                createLineChart(resp.data);
+                createLineChart2(resp);
+                //createLineChart(resp.data);
                 break;
             case 'pie':
                 createPie(resp.data);

@@ -159,7 +159,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 
 var hyChartSeq = []string{
 	"chart_hyOnlineUsers",
-	"chart_hyLagUsrPercent",
+	//"chart_hyLagUsrPercent",
 	"chart_hySrcLagRateTrend", // 回空户源整体卡顿率
 	"chart_hyLagCntTrend",
 	"chart_hyTotalCntTrend",

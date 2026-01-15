@@ -260,7 +260,11 @@ func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartCo
 			if _, ok := seriesData[dimensionValue]; !ok {
 				seriesData[dimensionValue] = &SeriesData{}
 			}
-			seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, result[field].(string))
+			value, ok := result[field].(string)
+			if !ok {
+				value = fmt.Sprintf("%d", result[field].(int64))
+			}
+			seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, value)
 			t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
 			if lastTs == "" || t != lastTs {
 				data.XAxis = append(data.XAxis, t)
