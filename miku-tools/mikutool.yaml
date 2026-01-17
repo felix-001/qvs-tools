@@ -75,6 +75,33 @@ ipdb:
 redis_addrs:
 - 127.0.0.1:6380
 
+public_sql_ip: &public_sql_ip
+  select: |
+    DISTINCT dim__ip, 
+    ipresolve(dim__ip, 'isp') AS clientIsp, 
+    ipresolve(dim__ip, 'region') AS clientProvince,
+    ipresolve(dim__ip, 'country') AS clientCountry --,
+    -- dim_cdnip,
+    -- ipresolve(dim_cdnip, 'isp') AS cdnIsp,
+    -- ipresolve(dim_cdnip, 'region') AS cdnProvince
+  from: huyabiz_quality_report_log
+  table: hy
+
+area_mapping: &area_mapping
+  raw: |
+    SELECT province, area FROM (
+    VALUES
+      ('黑龙江', '东北'), ('吉林', '东北'), ('辽宁', '东北'),
+      ('北京', '华北'), ('天津', '华北'), ('河北', '华北'), ('山西', '华北'), ('内蒙', '华北'),
+      ('河南', '华中'), ('湖北', '华中'), ('湖南', '华中'),
+      ('山东', '华东'), ('江苏', '华东'), ('安徽', '华东'), ('上海', '华东'), ('浙江', '华东'), ('江西', '华东'),
+      ('广东', '华南'), ('广西', '华南'), ('海南', '华南'), ('福建', '华南'),
+      ('陕西', '西北'), ('甘肃', '西北'), ('宁夏', '西北'), ('青海', '西北'), ('新疆', '西北'),
+      ('四川', '西南'), ('贵州', '西南'), ('云南', '西南'), ('重庆', '西南'), ('西藏', '西南'),
+      ('香港', '其它'), ('澳门', '其它'), ('台湾', '其它')
+    ) AS t(province, area)
+  table: hy
+
 public_hy_sql: &public_hy_sql
   select: |
     COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as percent,
@@ -385,3 +412,34 @@ chart_configs:
       <<: *public_hy_sql
       fields: 
         - mikuTranscodePercent
+
+  - name: chart_hyUsrDisByArea
+    title: 虎牙用户分布(按大区)
+    seriesTitle: 用户数
+    type: pie
+    table: hy
+    sql: 
+      with:
+        - name: ip_analysis
+          sql:
+            <<: *public_sql_ip
+        - name: area_mapping
+          sql:
+            <<: *area_mapping
+      final:
+        #select: |
+        #  COALESCE(m.area, '未知') AS area,
+        #  COUNT(*) AS ip_count
+        #from: ip_analysis a LEFT JOIN area_mapping m ON a.clientProvince = m.province
+        #group: COALESCE(m.area, '未知')
+        raw: |
+          SELECT 
+            COALESCE(m.area, '未知') AS area,
+            COUNT(*) AS ip_count
+          FROM ip_analysis a
+          LEFT JOIN area_mapping m ON a.clientProvince = m.province
+          GROUP BY COALESCE(m.area, '未知')
+          ORDER BY ip_count DESC
+        table: hy
+      pie_name: area
+      pie_value: ip_count

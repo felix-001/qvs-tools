@@ -68,14 +68,16 @@ type SingleSQL struct {
 }
 
 type WithConfig struct {
-	Name string     `json:"name" yaml:"name"`
-	SQL  *SingleSQL `json:"sql" yaml:"sql"`
+	Name      string `json:"name" yaml:"name"`
+	SingleSQL `json:"sql" yaml:"sql"`
 }
 
 type SQLConfig struct {
 	With          []WithConfig `json:"with" yaml:"with"`
 	Final         *SingleSQL   `json:"final" yaml:"final"`
 	Fields        []string     `json:"fields" yaml:"fields"`
+	PieName       string       `json:"pie_name" yaml:"pie_name"`
+	PieValue      string       `json:"pie_value" yaml:"pie_value"`
 	Dimension     string       `json:"dimension" yaml:"dimension"`
 	GroupByMinute bool         `json:"group_by_minute" yaml:"group_by_minute"`
 }

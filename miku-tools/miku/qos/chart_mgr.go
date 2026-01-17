@@ -138,7 +138,7 @@ func (c *ChartMgr) buildWhere(req QOSRequest, chartConf *config.SingleSQL) (stri
 	case "miku":
 		return c.buildMikuWhere(req, chartConf)
 	default:
-		return "", fmt.Errorf("不支持的表: %s", chartConf.From)
+		return "", fmt.Errorf("不支持的表: %s", chartConf.Table)
 	}
 }
 
@@ -160,8 +160,8 @@ func (c *ChartMgr) buildWith(req QOSRequest, chartConf *config.ChartConf) (strin
 	with := "WITH\n\t"
 	for _, conf := range chartConf.SQL.With {
 		log.Printf("with conf: %+v\n", conf)
-		log.Printf("with sql: %+v\n", conf.SQL)
-		sql, err := c.buildSql(req, conf.SQL)
+		log.Printf("with sql: %+v\n", conf.SingleSQL)
+		sql, err := c.buildSql(req, &conf.SingleSQL)
 		if err != nil {
 			return "", err
 		}
@@ -315,6 +315,34 @@ func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartCo
 	}
 	return chartData
 }
+func (c *ChartMgr) getPieData(req QOSRequest, results []map[string]any, chartConf *config.ChartConf) (ChartData, error) {
+	items := []PieDataItem{}
+	for _, result := range results {
+		if result[chartConf.SQL.PieName] == nil {
+			log.Println("err, pieName nil, result:", result)
+			continue
+		}
+		if result[chartConf.SQL.PieValue] == nil {
+			log.Println("err, pieValue nil, result:", result)
+			continue
+		}
+		item := PieDataItem{
+			Name:  result[chartConf.SQL.PieName].(string),
+			Value: int(result[chartConf.SQL.PieValue].(int64)),
+		}
+		items = append(items, item)
+	}
+	pieData := PieChartData{
+		Title: chartConf.Title,
+		Data:  items,
+	}
+	chartData := ChartData{
+		Type:  ChartTypePie,
+		Data:  pieData,
+		Title: chartConf.Title,
+	}
+	return chartData, nil
+}
 
 type ResultCache struct {
 	Cache []map[string]any
@@ -366,13 +394,15 @@ func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, er
 	} else {
 		results = resultCache[sqlHash].Cache
 	}
-	//log.Printf("results: %+v\n", results)
+	if req.LogLevel == "detail" {
+		log.Printf("results: %+v\n", results)
+	}
 	switch chartConf.Type {
 	case "line":
 		return c.getLineData(req, results, chartConf), nil
 	case "table":
 	case "pie":
-		//return c.getPieData(results), nil
+		return c.getPieData(req, results, chartConf)
 	}
 	return "", nil
 }
