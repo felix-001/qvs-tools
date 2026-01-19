@@ -138,7 +138,7 @@ func (c *ChartMgr) buildWhere(req QOSRequest, chartConf *config.SingleSQL) (stri
 	case "miku":
 		return c.buildMikuWhere(req, chartConf)
 	default:
-		return "", fmt.Errorf("不支持的表: %s", chartConf.Table)
+		return "", fmt.Errorf("buildWhere, 不支持的表: %s, %+v", chartConf.Table, chartConf)
 	}
 }
 
@@ -151,7 +151,7 @@ func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.SingleSQL) (str
 		}
 	case "miku":
 	default:
-		return "", fmt.Errorf("不支持的表: %s", chartConf.Table)
+		return "", fmt.Errorf("buildSelect 不支持的表: %s, %+v", chartConf.Table, chartConf)
 	}
 	return choose, nil
 }
@@ -222,9 +222,13 @@ func (c *ChartMgr) buildFinalSQL(req QOSRequest, chartConf *config.ChartConf) (s
 			return "", err
 		}
 	}
+	if req.LogLevel == "detail" {
+		log.Printf("with SQL result: %s\n", with)
+	}
 
 	sql, err := c.buildSql(req, chartConf.SQL.Final)
 	if err != nil {
+		log.Printf("buildSql final err:%v, final: %+v\n", err, chartConf.SQL.Final)
 		return "", err
 	}
 
@@ -344,6 +348,13 @@ func (c *ChartMgr) getPieData(req QOSRequest, results []map[string]any, chartCon
 	return chartData, nil
 }
 
+func (c *ChartMgr) getTableData(req QOSRequest, results []map[string]any, chartConf *config.ChartConf) (ChartData, error) {
+	if req.LogLevel == "detail" {
+		log.Printf("%+v\n", results)
+	}
+	return ChartData{}, nil
+}
+
 type ResultCache struct {
 	Cache []map[string]any
 	Req   QOSRequest
@@ -401,6 +412,7 @@ func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, er
 	case "line":
 		return c.getLineData(req, results, chartConf), nil
 	case "table":
+		return c.getTableData(req, results, chartConf)
 	case "pie":
 		return c.getPieData(req, results, chartConf)
 	}

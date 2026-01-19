@@ -225,15 +225,6 @@ chart_configs:
     type: line
     table: hy
     sql:
-      #with: |
-      #  extracted_parts AS (
-      #    SELECT
-      #      regexp_extract(dim_stream_url, '[src|huyap2p|huyalive|huyacdn|huyacdntest]/([^?]+)\.[flv|slice]', 1) AS streamName,
-      #      regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
-      #      regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
-      #      *
-      #    FROM huyabiz_quality_report_log
-      #  )
       with:
         - name: extracted_parts
           sql:
@@ -427,11 +418,6 @@ chart_configs:
           sql:
             <<: *area_mapping
       final:
-        #select: |
-        #  COALESCE(m.area, '未知') AS area,
-        #  COUNT(*) AS ip_count
-        #from: ip_analysis a LEFT JOIN area_mapping m ON a.clientProvince = m.province
-        #group: COALESCE(m.area, '未知')
         raw: |
           SELECT 
             COALESCE(m.area, '未知') AS area,
@@ -443,3 +429,99 @@ chart_configs:
         table: hy
       pie_name: area
       pie_value: ip_count
+    
+  - name: chart_hyLagRateByNode
+    title: 虎牙按节点卡顿率表格
+    type: table
+    table: hy
+    sql: 
+      with:
+        - name: extracted_parts
+          sql:
+            raw: |
+              select
+                 -- 提取文件名部分
+                 regexp_extract(dim_stream_url, '[src|huyap2p|huyalive|huyacdn|huyacdntest]/([^?]+)\.[flv|slice]', 1) AS streamName,
+                 -- 提取ratio参数
+                 regexp_extract(dim_stream_url, '[?&]ratio=([^&]+)', 1) AS ratio_value,
+                 -- 提取codec参数
+                 regexp_extract(dim_stream_url, '[?&]codec=([^&]+)', 1) AS codec_value,
+                 *
+              from huyabiz_quality_report_log
+            table: hy
+        - name: add_stream_id
+          sql:
+            raw: |
+              select 
+                CASE
+                  -- 如果streamName已经包含cxdexxtpl，则直接使用streamName
+                  WHEN streamName LIKE '%%cxdexxtpl%%' THEN streamName
+                  -- 否则，构造新的流ID
+                  ELSE
+                    -- 基础部分：streamName + 如果包含/src/则加_cxdexxtpl_huyaxsrcx
+                    CONCAT(
+                      streamName,
+                      CASE WHEN dim_stream_url LIKE '%%/src/%%' THEN '_cxdexxtpl_huyaxsrcx' ELSE '' END
+                    ) ||
+                    -- 参数部分：只有当至少有一个参数不为空时才添加
+                    CASE
+                      WHEN ratio_value IS NOT NULL OR codec_value IS NOT NULL THEN
+                        CONCAT(
+                          '_cxdexxtpl_huyaxsrcx_',
+                          COALESCE(codec_value, 'null'),
+                          '_',
+                          COALESCE(ratio_value, 'null')
+                        )
+                      ELSE ''  -- 两个参数都为空，什么都不加
+                    END
+                END AS stream_id,*
+              from extracted_parts
+            table: hy
+        - name: middle_result
+          sql:
+            select: |
+              dim_cdnip,
+              count(*) as totalSamples,
+              count(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagSamples,
+              COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as lagRate,
+              ipresolve(dim_cdnip, 'isp') AS cdnIsp,
+              ipresolve(dim_cdnip, 'region') AS cdnProvince,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality = 100
+                  THEN dim__ip
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality = 100) AS lag_client_ips,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality != 100
+                  THEN dim__ip
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality != 100) AS normal_client_ips,
+              COUNT(DISTINCT dim__ip) as total_usr_cnt,
+              COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) AS lag_usr_cnt,
+              COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim__ip, NULL)) * 100.0 / COUNT(DISTINCT dim__ip) AS lag_usr_percent,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality = 100
+                  THEN stream_id
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality = 100) AS lag_streams,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality != 100
+                  THEN stream_id
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality != 100) AS normal_streams
+            table: hy
+            from: add_stream_id
+            group_by: dim_cdnip 
+      final:
+        raw: |
+            SELECT lagSamples*100/SUM(lagSamples) OVER() as lagRatio, *
+            FROM middle_result
+        table: hy

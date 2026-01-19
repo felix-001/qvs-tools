@@ -13,7 +13,7 @@ import (
 // 每个节点的卡顿率
 
 func init() {
-	qos.RegisterChartGenerator(&HyCdnLag{})
+	//qos.RegisterChartGenerator(&HyCdnLag{})
 }
 
 type HyCdnLag struct {
