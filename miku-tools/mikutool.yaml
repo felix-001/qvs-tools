@@ -101,6 +101,15 @@ area_mapping: &area_mapping
       ('香港', '其它'), ('澳门', '其它'), ('台湾', '其它')
     ) AS t(province, area)
   table: hy
+  area_query: &area_query
+    raw: |
+      SELECT 
+        COALESCE(m.area, '未知') AS area,
+        COUNT(*) AS ip_count
+      FROM ip_analysis a
+      LEFT JOIN area_mapping m ON a.clientProvince = m.province
+      GROUP BY COALESCE(m.area, '未知')
+      ORDER BY ip_count DESC
 
 public_hy_sql: &public_hy_sql
   select: |
@@ -434,14 +443,7 @@ chart_configs:
           sql:
             <<: *area_mapping
       final:
-        raw: |
-          SELECT 
-            COALESCE(m.area, '未知') AS area,
-            COUNT(*) AS ip_count
-          FROM ip_analysis a
-          LEFT JOIN area_mapping m ON a.clientProvince = m.province
-          GROUP BY COALESCE(m.area, '未知')
-          ORDER BY ip_count DESC
+        <<: *area_query
         table: hy
       pie_name: area
       pie_value: ip_count
@@ -459,6 +461,26 @@ chart_configs:
         table: hy
         group_by: ipresolve(dim__ip, 'region')
       pie_name: clientProvince
+      pie_value: ip_count
+
+  - name: chart_hyLagUsrDisByArea
+    title: 虎牙卡顿用户分布(分大区)
+    seriesTitle: 用户数
+    type: pie
+    table: hy
+    sql: 
+      with:
+        - name: ip_analysis
+          sql:
+            <<: *public_sql_ip
+            where: field_video_bad_quality = 100 
+        - name: area_mapping
+          sql:
+            <<: *area_mapping
+      final:
+        <<: *area_query 
+        table: hy
+      pie_name: area
       pie_value: ip_count
     
   - name: chart_hyLagRateByNode
