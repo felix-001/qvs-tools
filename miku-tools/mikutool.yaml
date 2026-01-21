@@ -815,3 +815,15 @@ chart_configs:
         table: miku
       fields: 
         - ratio_lag_player
+
+  - name: chart_mikuInternalLagRateTrend
+    title: 内部回源百秒卡顿率
+    seriesTitle: 卡顿率
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - ratio_lag_internal_player
