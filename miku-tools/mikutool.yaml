@@ -646,6 +646,73 @@ chart_configs:
             FROM middle_result
         table: hy
 
+  - name: chart_hyLagRateByUser
+    title: 虎牙按用户卡顿率表格
+    type: table
+    table: hy
+    sql: 
+      with:
+        - name: extracted_parts
+          sql:
+            <<: *ratio_codec 
+            table: hy
+        - name: add_stream_id
+          sql:
+            <<: *stream_id 
+            table: hy
+        - name: middle_result
+          sql:
+            select: |
+              dim__ip,
+              count(*) as totalSamples,
+              count(CASE WHEN field_video_bad_quality = 100 THEN 1 END) as lagSamples,
+              COUNT(CASE WHEN field_video_bad_quality = 100 THEN 1 END) * 100.0 / COUNT(*) as lagRate,
+              ipresolve(dim__ip, 'isp') AS cdnIsp,
+              ipresolve(dim__ip, 'region') AS cdnProvince,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality = 100
+                  THEN dim_cdnip
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality = 100) AS lag_cdn_ips,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality != 100
+                  THEN dim_cdnip
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality != 100) AS normal_cdn_ips,
+              COUNT(DISTINCT dim_cdnip) as total_cdn_cnt,
+              COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) AS lag_cdn_cnt,
+              COALESCE(
+                COUNT(DISTINCT IF(field_video_bad_quality = 100 , dim_cdnip, NULL)) * 100.0 / 
+                NULLIF(COUNT(DISTINCT dim_cdnip), 0),
+                0
+              ) AS lag_cdn_percent,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality = 100
+                  THEN stream_id
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality = 100) AS lag_streams,
+              array_agg(DISTINCT
+                CASE
+                  WHEN field_video_bad_quality != 100
+                  THEN stream_id
+                  ELSE NULL
+                END
+              ) FILTER (WHERE field_video_bad_quality != 100) AS normal_streams
+            table: hy
+            from: add_stream_id
+            group_by: dim__ip
+      final:
+        raw: |
+            SELECT lagSamples*100/NULLIF(SUM(lagSamples) OVER(), 0) as weight, *
+            FROM middle_result
+        table: hy
+
   - name: chart_hyLagRateByStreams
     title: 虎牙按流卡顿率表格
     type: table
