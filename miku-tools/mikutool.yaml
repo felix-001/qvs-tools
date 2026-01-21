@@ -404,6 +404,22 @@ chart_configs:
       fields: 
         - mikuTranscodePercent
 
+  - name: chart_hyUsrDisByCountry
+    title: 虎牙用户分布(分国家)
+    seriesTitle: 用户数
+    type: pie
+    table: hy
+    sql: 
+      final:
+        select:
+          count(DISTINCT dim__ip) as ip_count, ipresolve(dim__ip, 'country') as clientCountry
+        from: huyabiz_quality_report_log
+        table: hy
+        group_by: ipresolve(dim__ip, 'country')
+      pie_name: clientCountry
+      pie_value: ip_count
+    
+
   - name: chart_hyUsrDisByArea
     title: 虎牙用户分布(分大区)
     seriesTitle: 用户数
@@ -430,7 +446,7 @@ chart_configs:
       pie_name: area
       pie_value: ip_count
 
-  - name: chart_hyUsrDisByArea
+  - name: chart_hyUsrDisByProvince
     title: 虎牙用户分布(分省份)
     seriesTitle: 用户数
     type: pie
