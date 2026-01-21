@@ -352,7 +352,16 @@ func (c *ChartMgr) getTableData(req QOSRequest, results []map[string]any, chartC
 	if req.LogLevel == "detail" {
 		log.Printf("%+v\n", results)
 	}
-	return ChartData{}, nil
+	tableData := map[string]any{
+		"title": chartConf.Title,
+		"data":  results,
+	}
+	chartData := ChartData{
+		Type:  ChartTypeTable,
+		Data:  tableData,
+		Title: chartConf.Title,
+	}
+	return chartData, nil
 }
 
 type ResultCache struct {
