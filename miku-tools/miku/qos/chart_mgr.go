@@ -35,8 +35,11 @@ func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.SingleSQL) (
 	req.EndTime = strings.ReplaceAll(req.EndTime, "T", " ")
 	startDay := convertToDay(req.StartTime)
 	endDay := convertToDay(req.EndTime)
-	where := chartConf.Where
-	where += fmt.Sprintf("AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
+	where := ""
+	if chartConf.Where != "" {
+		where += "\tAND " + chartConf.Where
+	}
+	where += fmt.Sprintf(" AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00'\n", req.StartTime, req.EndTime)
 	where += fmt.Sprintf("AND day >= '%s' and day <= '%s'\n", startDay, endDay)
 	if req.StreamID != "" {
 		if req.FuzzySearch {
@@ -261,16 +264,6 @@ func (c *ChartMgr) getDimensionValue(req QOSRequest, field string, result map[st
 		}
 		dimensionValue = result[chartConf.SQL.Dimension].(string)
 	}
-	//log.Println("fields:", chartConf.SQL.Fields)
-	/*
-		for _, field := range chartConf.SQL.Fields {
-			if result[field] != nil {
-				log.Println("result:", result[field])
-				dimensionValue += "_" + field
-				resultField = field
-			}
-		}
-	*/
 	dimensionValue += "_" + field
 	if req.Protocol != "" {
 		dimensionValue += "_" + req.Protocol
@@ -311,13 +304,28 @@ func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartCo
 			}
 			value, ok := result[field].(string)
 			if !ok {
-				value = fmt.Sprintf("%d", result[field].(int64))
+				value_int, ok := result[field].(int64)
+				if !ok {
+					value_float := result[field].(float64)
+					value = fmt.Sprintf("%.1f", value_float)
+				} else {
+					value = fmt.Sprintf("%d", value_int)
+				}
 			}
 			seriesData[dimensionValue].YAxis = append(seriesData[dimensionValue].YAxis, value)
-			t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
-			if lastTs == "" || t != lastTs {
-				data.XAxis = append(data.XAxis, t)
-				lastTs = t
+			if result["ts_m"] != nil {
+				t := result["ts_m"].(time.Time).Format("2006-01-02 15:04:05")
+				if lastTs == "" || t != lastTs {
+					data.XAxis = append(data.XAxis, t)
+					lastTs = t
+				}
+			}
+			if result["ts"] != nil {
+				t := result["ts"].(time.Time).Format("2006-01-02 15:04:05")
+				if lastTs == "" || t != lastTs {
+					data.XAxis = append(data.XAxis, t)
+					lastTs = t
+				}
 			}
 		}
 

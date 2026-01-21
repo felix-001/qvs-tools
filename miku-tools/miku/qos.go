@@ -11,7 +11,6 @@ import (
 	_ "embed"
 	"mikutool/config"
 	"mikutool/miku/qos"
-	_ "mikutool/miku/qos/middle"
 	_ "mikutool/miku/qos/upstream"
 	_ "mikutool/miku/qos/usr"
 	"mikutool/resources"
