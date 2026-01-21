@@ -482,6 +482,22 @@ chart_configs:
         table: hy
       pie_name: area
       pie_value: ip_count
+
+  - name: chart_hyLagUsrDisByProvince
+    title: 虎牙卡顿用户分布(分省份)
+    seriesTitle: 用户数
+    type: pie
+    table: hy
+    sql: 
+      final:
+        select:
+          count(DISTINCT dim__ip) as ip_count, ipresolve(dim__ip, 'region') as clientProvince
+        from: huyabiz_quality_report_log
+        where: field_video_bad_quality = 100 
+        table: hy
+        group_by: ipresolve(dim__ip, 'region')
+      pie_name: clientProvince
+      pie_value: ip_count
     
   - name: chart_hyLagRateByNode
     title: 虎牙按节点卡顿率表格
