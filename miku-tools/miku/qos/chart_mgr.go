@@ -150,6 +150,9 @@ func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.SingleSQL) (str
 			choose += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai') as ts_m"
 		}
 	case "miku":
+		if chartConf.GroupByMinute {
+			choose += ", date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai') as ts_m"
+		}
 	default:
 		return "", fmt.Errorf("buildSelect 不支持的表: %s, %+v", chartConf.Table, chartConf)
 	}
@@ -159,8 +162,8 @@ func (c *ChartMgr) buildSelect(req QOSRequest, chartConf *config.SingleSQL) (str
 func (c *ChartMgr) buildWith(req QOSRequest, chartConf *config.ChartConf) (string, error) {
 	with := "WITH\n\t"
 	for _, conf := range chartConf.SQL.With {
-		log.Printf("with conf: %+v\n", conf)
-		log.Printf("with sql: %+v\n", conf.SingleSQL)
+		//log.Printf("with conf: %+v\n", conf)
+		//log.Printf("with sql: %+v\n", conf.SingleSQL)
 		sql, err := c.buildSql(req, &conf.SingleSQL)
 		if err != nil {
 			return "", err
@@ -200,11 +203,18 @@ WHERE 1=1
 	if chartConf.GroupBy != "" {
 		sql += fmt.Sprintf("GROUP BY\n\t%s\n", chartConf.GroupBy)
 		if chartConf.GroupByMinute {
-			sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+			if chartConf.Table == "hy" {
+				sql += ", date_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+			} else {
+				sql += ", date_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')"
+			}
 		}
 	} else if chartConf.GroupByMinute {
-
-		sql += "GROUP BY\n\tdate_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+		if chartConf.Table == "hy" {
+			sql += "GROUP BY\n\tdate_trunc('minute', from_unixtime(cts) at time zone 'Asia/Shanghai')"
+		} else {
+			sql += "GROUP BY\n\tdate_trunc('minute', from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai')"
+		}
 	}
 	if chartConf.OrderBy != "" {
 		sql += fmt.Sprintf("\nORDER BY\n\t%s\n", chartConf.OrderBy)

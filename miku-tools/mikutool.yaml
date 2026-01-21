@@ -266,6 +266,52 @@ public_hy_sql: &public_hy_sql
   order_by: ts_m
   table: hy
 
+public_miku_sql: &public_miku_sql
+  select: |
+    SUM(IF(type = 'player', lagduration, 0)) AS total_lag_duration_player,
+    SUM(IF(type = 'player', costtime, 0)) AS total_cost_time_player,
+    ROUND(SUM(IF(type = 'player', lagduration, 0)) * 100 / NULLIF(SUM(IF(type = 'player', costtime, 0)), 0), 4) AS ratio_lag_player,
+
+    SUM(IF(type = 'player' AND hitinfo = 'TCP_HIT -', lagduration, 0)) AS hit_total_lag_duration_player,
+    SUM(IF(type = 'player' AND hitinfo = 'TCP_HIT -', costtime, 0)) AS hit_total_cost_time_player,
+    ROUND(SUM(IF(type = 'player' AND hitinfo = 'TCP_HIT -', lagduration, 0)) / NULLIF(SUM(IF(type = 'player' AND hitinfo = 'TCP_HIT -', costtime, 0)), 0), 4) AS hit_ratio_lag_player,
+
+    SUM(IF(type = 'player' AND hitinfo != 'TCP_HIT -', lagduration, 0)) AS not_hit_total_lag_duration_player,
+    SUM(IF(type = 'player' AND hitinfo != 'TCP_HIT -', costtime, 0)) AS not_hit_total_cost_time_player,
+    ROUND(SUM(IF(type = 'player' AND hitinfo != 'TCP_HIT -', lagduration, 0)) / NULLIF(SUM(IF(type = 'player' AND hitinfo != 'TCP_HIT -', costtime, 0)), 0), 4) AS not_hit_ratio_lag_player,
+
+    SUM(IF(type = 'puller' and customerSource = true, lagduration, 0)) AS total_lag_duration_puller,
+    SUM(IF(type = 'puller' and customerSource = true, costtime, 0)) AS total_cost_time_puller,
+    ROUND(SUM(IF(type = 'puller' and customerSource = true, lagduration, 0)) * 100 / NULLIF(SUM(IF(type = 'puller' and customerSource = true, costtime, 0)), 0), 1) AS ratio_lag_puller,
+
+    SUM(IF(type = 'internal-player' and customerSource = false, lagduration, 0)) AS total_lag_duration_internal_player,
+    SUM(IF(type = 'internal-player' and customerSource = false, costtime, 0)) AS total_cost_time_internal_player,
+    ROUND(SUM(IF(type = 'internal-player' and customerSource = false, lagduration, 0)) * 100 / NULLIF(SUM(IF(type = 'internal-player' and customerSource = false, costtime, 0)), 0), 1) AS ratio_lag_internal_player,
+
+    SUM(IF(type = 'publisher', lagduration, 0)) AS total_lag_duration_publisher,
+    SUM(IF(type = 'publisher', costtime, 0)) AS total_cost_time_publisher,
+    ROUND(SUM(IF(type = 'publisher', lagduration, 0)) / NULLIF(SUM(IF(type = 'publisher', costtime, 0)), 0), 4) AS ratio_lag_publisher,
+
+    COUNT(CASE WHEN type = 'player' and HTTPResponseCode != 200 and request like '%%wsRange%%' THEN 1 END) * 100.0 /
+      NULLIF(COUNT(CASE WHEN type = 'player' and request like '%%wsRange%%' THEN 1 END), 0) as patch_fail_percent,
+
+    COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)) AS requests_puller,
+    COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and customerSource != true and request not like '%%ffmpegplayer%%', requestid, NULL)) AS retry_requests_puller,
+    ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and request not like '%%ffmpegplayer%%' and customerSource != true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource != true, requestid, NULL)), 0), 1) AS retry_ratio_puller,
+
+    SUM(if(type = 'puller' and customerSource != true and request not like '%%ffmpegplayer%%', retryTimes, 0)) as totalRetryTimes,
+
+    SUM(if(type = 'puller' and customerSource = true and request not like '%%ffmpegplayer%%', retryTimes, 0)) as upstreamRetryTimes,
+    ROUND(COUNT(DISTINCT IF(type = 'puller' AND retryTimes > 0 and request not like '%%ffmpegplayer%%' and customerSource = true, requestid, NULL)) * 100 / NULLIF(COUNT(DISTINCT IF(type = 'puller' and customerSource = true, requestid, NULL)), 0), 1) AS retry_ratio_upstream,
+
+    COUNT(DISTINCT IF(request not like '%%.pstream%%', regexp_replace(localaddr, '^(?:\\[)?([0-9a-fA-F:.]+)(?:\\])?:\\d+$', '$1'), NULL)) AS usr_cnt,
+
+    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
+    COUNT(*) as total,
+    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as loadRatio
+  from: dwd_flowd_miku_streamd_log
+  group_by_minute: true
+
 chart_configs:
   - name: chart_hyStreamsLagRateTrend2
     title: 虎牙多个流卡顿率趋势图
@@ -757,3 +803,15 @@ chart_configs:
             SELECT lagSamples*100/SUM(lagSamples) OVER() as weight, *
             FROM middle_result
         table: hy
+
+  - name: chart_mikuLagRateTrend
+    title: 用户百秒卡顿率趋势
+    seriesTitle: 卡顿率
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - ratio_lag_player

@@ -11,7 +11,6 @@ import (
 	_ "embed"
 	"mikutool/config"
 	"mikutool/miku/qos"
-	_ "mikutool/miku/qos/hy"
 	_ "mikutool/miku/qos/middle"
 	_ "mikutool/miku/qos/upstream"
 	_ "mikutool/miku/qos/usr"
@@ -123,21 +122,6 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("QOS analysis request: %+v", req)
 	}
 
-	if generator, ok := qos.ChartGenerators[req.Chart]; ok {
-		data := generator.Generate(req)
-		//log.Printf("data: %+v", data)
-		bytes, err := json.Marshal(data)
-		if err != nil {
-			log.Println("Error marshalling chart data:", err)
-			http.Error(w, "Error generating chart data", http.StatusInternalServerError)
-			return
-		}
-		//log.Println("data", data)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(bytes)
-		return
-	}
-
 	results, err := s.chartMgr.Query(req)
 	if err != nil {
 		log.Println("Error querying chart data:", err)
@@ -155,31 +139,6 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(bytes)
-}
-
-var hyChartSeq = []string{
-	"chart_hyOnlineUsers",
-	//"chart_hyLagUsrPercent",
-	"chart_hySrcLagRateTrend", // 回空户源整体卡顿率
-	"chart_hyLagCntTrend",
-	"chart_hyTotalCntTrend",
-	"chart_hyTranscodeRateTrend",
-	"chart_hyNormalRateTrend",
-	"chart_hySrcNoramalPercent",
-	"chart_hySrcTranscodePercent",
-	"chart_hySrcRateTrend",
-	"chart_hyPatchLagPercent",
-	"chart_hyp2pLagRateTrend",
-	"chart_hyLagrateByStreams",
-	"chart_hyLagRateByNode",
-	"chart_hyLagRateTrend",
-	"chart_hy_nodeview_lag",
-	"chart_hyTranscodeHyLagRateTrend", // 推流miku转码流卡顿率
-	"chart_hyMikuNormalLagRate",       // 推流miku非转码流卡顿率
-	"chart_hyLagSrcTranscodePercent",  // 回客户源转码流卡顿率
-	"chart_hyLagSrcNormalRate",        // 回客户源非转码流卡顿率
-	"chart_hyflvLagRateTrend",
-	"chart_hyP2p_percent",
 }
 
 var chartsSeq = []string{
