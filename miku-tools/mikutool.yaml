@@ -828,6 +828,30 @@ chart_configs:
       fields: 
         - ratio_lag_internal_player
 
+  - name: chart_mikuInternalUpstreamRetryRate
+    title: 内部回源重试率
+    seriesTitle: 重试率
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - retry_ratio_puller
+
+  - name: chart_mikuInternalUpstreamRetryCnt
+    title: 内部回源重试次数
+    seriesTitle: 重试次数
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - totalRetryTimes
+
   - name: chart_mikuCustomerUpstreamLagRateTrend
     title: 回客户源站百秒卡顿率 
     seriesTitle: 卡顿率
@@ -839,3 +863,15 @@ chart_configs:
         table: miku
       fields: 
         - ratio_lag_puller
+
+  - name: chart_mikuCustomerUpstreamRetryTimes
+    title: 回客户源站重试次数
+    seriesTitle: 重试次数
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - upstreamRetryTimes
