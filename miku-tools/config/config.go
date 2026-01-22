@@ -48,12 +48,13 @@ type IpdbConfig struct {
 }
 
 type ChartConf struct {
-	Name        string    `json:"name" yaml:"name"`
-	Title       string    `json:"title" yaml:"title"`
-	SeriesTitle string    `json:"seriesTitle" yaml:"seriesTitle"`
-	Type        string    `json:"type" yaml:"type"`
-	SQL         SQLConfig `json:"sql" yaml:"sql"`
-	Table       string    `json:"table" yaml:"table"`
+	Name            string    `json:"name" yaml:"name"`
+	Title           string    `json:"title" yaml:"title"`
+	SeriesTitle     string    `json:"seriesTitle" yaml:"seriesTitle"`
+	Type            string    `json:"type" yaml:"type"`
+	SQL             SQLConfig `json:"sql" yaml:"sql"`
+	Table           string    `json:"table" yaml:"table"`
+	RequireStreamId bool      `json:"requireStreamId"`
 }
 
 type SingleSQL struct {

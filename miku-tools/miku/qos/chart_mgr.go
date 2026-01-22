@@ -463,10 +463,13 @@ func (c *ChartMgr) GetChartInfos() []ChartInfo {
 }
 
 func (c *ChartMgr) Query(req QOSRequest) (any, error) {
-	log.Println("Query chart:", req.Chart)
 	chart, ok := c.chartMap[req.Chart]
 	if !ok {
 		return nil, fmt.Errorf("chart not found: %s", req.Chart)
+	}
+	if chart.RequireStreamId && req.StreamID == "" {
+		log.Println("err, need stream id")
+		return nil, fmt.Errorf("need stream id")
 	}
 	return c.DoQuery(req, &chart)
 }
