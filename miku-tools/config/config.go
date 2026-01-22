@@ -54,7 +54,7 @@ type ChartConf struct {
 	Type            string    `json:"type" yaml:"type"`
 	SQL             SQLConfig `json:"sql" yaml:"sql"`
 	Table           string    `json:"table" yaml:"table"`
-	RequireStreamId bool      `json:"requireStreamId"`
+	RequireStreamId bool      `json:"requireStreamId" yaml:"requireStreamId"`
 }
 
 type SingleSQL struct {

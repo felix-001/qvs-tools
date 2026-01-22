@@ -312,6 +312,52 @@ public_miku_sql: &public_miku_sql
   from: dwd_flowd_miku_streamd_log
   group_by_minute: true
 
+fps_with_sql: &fps_with_sql
+  - name: data_with_rank
+    sql:
+      select: |
+        from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
+        StreamName,
+        NodeID,
+        CASE WHEN cardinality(Fps) = 0 THEN 0
+          ELSE reduce(Fps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(Fps)
+        END AS avg_IncomingVideoFps,
+        CASE WHEN cardinality(AudioFps) = 0 THEN 0
+          ELSE reduce(AudioFps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(AudioFps)
+        END AS avg_IncomingAudioFps,
+        CASE
+          WHEN Type = 'publisher' THEN 'publisher'
+          WHEN Type = 'puller' AND CustomerSource = true THEN 'puller'
+        END AS source_type,
+        ROW_NUMBER() OVER (
+          PARTITION BY from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai'
+          ORDER BY CASE
+            WHEN Type = 'publisher' THEN 1
+            WHEN Type = 'puller' AND CustomerSource = true THEN 2
+            ELSE 3
+          END
+        ) AS rn
+      from: dwd_flowd_miku_streamd_log
+      where: (Type = 'publisher' OR (Type = 'puller' AND CustomerSource = true))
+      table: miku
+
+fps_final_sql: &fps_final_sql |
+  SELECT
+    ts,
+    StreamName,
+    NodeID,
+    avg_IncomingVideoFps,
+    avg_IncomingAudioFps,
+    source_type
+  FROM data_with_rank
+  WHERE rn = 1
+  ORDER BY ts
+
+fps_common: &fps_common
+  type: line
+  table: miku
+  requireStreamId: true
+
 chart_configs:
   - name: chart_hyStreamsLagRateTrend2
     title: 虎牙多个流卡顿率趋势图
@@ -879,49 +925,22 @@ chart_configs:
   - name: chart_mikuVideoFps
     title: 视频帧率
     seriesTitle: FPS
-    type: line
-    table: miku
-    sql: 
-      with:
-        - name: data_with_rank
-          sql:
-            select: |
-              from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
-              StreamName,
-              NodeID,
-              CASE WHEN cardinality(Fps) = 0 THEN 0
-                ELSE reduce(Fps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(Fps)
-              END AS avg_IncomingVideoFps,
-              CASE WHEN cardinality(AudioFps) = 0 THEN 0
-                ELSE reduce(AudioFps, CAST(0 AS double), (s, x) -> s + x, s -> s) / cardinality(AudioFps)
-              END AS avg_IncomingAudioFps,
-              CASE
-                WHEN Type = 'publisher' THEN 'publisher'
-                WHEN Type = 'puller' AND CustomerSource = true THEN 'puller'
-              END AS source_type,
-              ROW_NUMBER() OVER (
-                PARTITION BY from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai'
-                ORDER BY CASE
-                  WHEN Type = 'publisher' THEN 1
-                  WHEN Type = 'puller' AND CustomerSource = true THEN 2
-                  ELSE 3
-                END
-              ) AS rn
-            from: dwd_flowd_miku_streamd_log
-            where: (Type = 'publisher' OR (Type = 'puller' AND CustomerSource = true))
-            table: miku
-      final: 
-        raw: |
-          SELECT
-            ts,
-            StreamName,
-            NodeID,
-            avg_IncomingVideoFps,
-            avg_IncomingAudioFps,
-            source_type
-          FROM data_with_rank
-          WHERE rn = 1
-          ORDER BY ts
+    <<: *fps_common
+    sql:
+      with: *fps_with_sql
+      final:
+        raw: *fps_final_sql
         table: miku
-      fields: 
+      fields:
         - avg_IncomingVideoFps
+
+  - name: chart_mikuAudioFps
+    title: 音频帧率
+    <<: *fps_common
+    sql:
+      with: *fps_with_sql
+      final:
+        raw: *fps_final_sql
+        table: miku
+      fields:
+        - avg_IncomingAudioFps

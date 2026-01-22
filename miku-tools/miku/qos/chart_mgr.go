@@ -237,8 +237,10 @@ func (c *ChartMgr) buildFinalSQL(req QOSRequest, chartConf *config.ChartConf) (s
 	}
 	if req.LogLevel == "detail" {
 		log.Printf("with SQL result: %s\n", with)
+		log.Printf("conf: %+v\n", chartConf)
 	}
 
+	log.Printf("final: %+v\n", chartConf.SQL.Final)
 	sql, err := c.buildSql(req, chartConf.SQL.Final)
 	if err != nil {
 		log.Printf("buildSql final err:%v, final: %+v\n", err, chartConf.SQL.Final)
