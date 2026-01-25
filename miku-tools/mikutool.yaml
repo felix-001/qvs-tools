@@ -268,6 +268,8 @@ public_hy_sql: &public_hy_sql
 
 public_miku_sql: &public_miku_sql
   select: |
+    count(DISTINCT streamname) as stream_cnt,
+
     SUM(IF(type = 'player', lagduration, 0)) AS total_lag_duration_player,
     SUM(IF(type = 'player', costtime, 0)) AS total_cost_time_player,
     ROUND(SUM(IF(type = 'player', lagduration, 0)) * 100 / NULLIF(SUM(IF(type = 'player', costtime, 0)), 0), 4) AS ratio_lag_player,
@@ -969,3 +971,15 @@ chart_configs:
         table: miku
       fields: 
         - usr_cnt
+
+  - name: chart_mikuStreamCnt
+    title: 在线流个数
+    seriesTitle: 流个数
+    type: line
+    table: miku
+    sql:
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - stream_cnt
