@@ -58,7 +58,11 @@ func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.SingleSQL) (
 		where += fmt.Sprintf("AND Domain = '%s'\n", req.Domain)
 	}
 	if req.Protocol != "" {
-		where += fmt.Sprintf("AND Protocol = '%s'\n", req.Protocol)
+		protocol := req.Protocol
+		if protocol == "slice" {
+			protocol = "HuyaP2P"
+		}
+		where += fmt.Sprintf("AND Protocol = '%s'\n", protocol)
 	}
 	// 添加剔除流ID过滤
 	if req.ExcludeStreams != "" {
