@@ -355,6 +355,41 @@ fps_final_sql: &fps_final_sql |
   WHERE rn = 1
   ORDER BY ts
 
+bw_with_sql: &bw_with_sql
+  - name: bw_query
+    sql:
+      select: |
+        from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
+        StreamName,
+        NodeID,
+        IF(CostTime = 0, 0, CAST(RecvBytes AS double) * 8.0 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
+        CASE
+          WHEN Type = 'publisher' THEN 'publisher'
+          WHEN Type = 'puller' AND CustomerSource = true THEN 'puller'
+        END AS source_type,
+        ROW_NUMBER() OVER (
+          PARTITION BY from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai'
+          ORDER BY CASE
+            WHEN Type = 'publisher' THEN 1
+            WHEN Type = 'puller' AND CustomerSource = true THEN 2
+            ELSE 3
+          END
+        ) AS rn
+      from: dwd_flowd_miku_streamd_log
+      where: (Type = 'publisher' OR (Type = 'puller' AND CustomerSource = true))
+      table: miku
+
+bw_final_sql: &bw_final_sql |
+  SELECT
+    ts,
+    StreamName,
+    NodeID,
+    bandwidth,
+    source_type
+  FROM bw_query
+  WHERE rn = 1
+  ORDER BY ts
+
 fps_common: &fps_common
   type: line
   table: miku
@@ -947,6 +982,17 @@ chart_configs:
         table: miku
       fields:
         - avg_IncomingAudioFps
+
+  - name: chart_mikuUpstreamBw
+    title: 推流/回源带宽
+    <<: *fps_common
+    sql:
+      with: *bw_with_sql
+      final:
+        raw: *bw_final_sql
+        table: miku
+      fields:
+        - bandwidth 
 
   - name: chart_mikuPatchFail
     title: 补片失败率
