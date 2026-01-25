@@ -11,7 +11,6 @@ import (
 	_ "embed"
 	"mikutool/config"
 	"mikutool/miku/qos"
-	_ "mikutool/miku/qos/upstream"
 	"mikutool/resources"
 )
 
@@ -139,35 +138,6 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-var chartsSeq = []string{
-	// 用户
-	"chart_mikuOnlineStreams",
-	"chart_mikuOnlineNum",
-	"chart_mikuUsrDistributionCountry",
-	"chart_mikuUsrDistributionArea",
-	"chart_mikuUsrDistributionProv",
-	"chart_mikuLagUsrDistributionArea",
-	"chart_mikuLagUsrDistributionProv",
-	"chart_mikuLagrateByUser",
-	"chart_mikuUsrLagRate",
-	"chart_mikuPatchFailPercent",
-	// 边缘节点
-	"chart_mikuLagNodesPercent",
-	// 中间源
-	"chart_mikuInternalUpstreamLagRate",
-	"chart_mikuInternalUpstreamRetryTimes",
-	"chart_mikuInternalUpstreamRetryRate",
-	// 源站
-	"chart_mikuCustomerUpstreamLagRate",
-	"chart_mikuCustomerUpstreamRetryTimes",
-	"chart_mikuUpstreamAreaDis",
-	"chart_mikuUpstreamBandwidth",
-	"chart_mikuVideoFps",
-	"chart_mikuAudioFps",
-	// 其他
-	"chart_mikuLoadRate",
-}
-
 type ChartDataGetter interface {
 	GetChartInfo() qos.ChartInfo
 }
@@ -175,20 +145,6 @@ type ChartDataGetter interface {
 func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 	//log.Println("chartsHandler called")
 	var charts []qos.ChartInfo
-	/*
-		seqs := chartsSeq
-		if r.URL.Query().Get("db") == "hy" {
-			seqs = hyChartSeq
-		}
-		for _, chart := range seqs {
-			//log.Println("chart", chart)
-			if generator, ok := qos.ChartGenerators[chart]; ok {
-				//log.Println("generator", generator)
-				chartInfo := generator.ChartInfo()
-				charts = append(charts, chartInfo)
-			}
-		}
-	*/
 
 	infos := s.chartMgr.GetChartInfos()
 	for _, info := range infos {
