@@ -957,3 +957,15 @@ chart_configs:
         table: miku
       fields: 
         - patch_fail_percent
+
+  - name: chart_mikuOnlineNum
+    title: 在线人数
+    seriesTitle: 人数
+    type: line
+    table: miku
+    sql:
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - usr_cnt
