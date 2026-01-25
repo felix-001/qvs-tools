@@ -983,3 +983,35 @@ chart_configs:
         table: miku
       fields: 
         - stream_cnt
+      
+  - name: chart_mikuUpstreamAreaDis
+    title: 客户源站分布(按大区)
+    seriesTitle: 分布
+    type: pie
+    table: miku
+    sql: 
+      with:
+        - name: upstreamIp
+          sql:
+            select: |
+              DISTINCT REGEXP_EXTRACT(RemoteAddr, '^(?:\[)?([0-9a-fA-F:.]+)(?:\])?:\d+$', 1) as upstreamIp
+            from: dwd_flowd_miku_streamd_log
+            where: |
+              CustomerSource = true
+              AND HTTPResponseCode != 302
+            table: miku
+        - name: ip_analysis
+          sql:
+            raw: |
+              SELECT ipresolve(upstreamIp, 'region') AS clientProvince 
+              FROM upstreamIp
+            table: miku
+        - name: area_mapping
+          sql:
+            <<: *area_mapping
+      final:
+        <<: *area_query
+        table: miku
+      pie_name: area
+      pie_value: ip_count
+        
