@@ -12,7 +12,6 @@ import (
 	"mikutool/config"
 	"mikutool/miku/qos"
 	_ "mikutool/miku/qos/upstream"
-	_ "mikutool/miku/qos/usr"
 	"mikutool/resources"
 )
 

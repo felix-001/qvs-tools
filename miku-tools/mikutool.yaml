@@ -310,7 +310,7 @@ public_miku_sql: &public_miku_sql
 
     COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
     COUNT(*) as total,
-    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as loadRatio
+    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as load_rate 
   from: dwd_flowd_miku_streamd_log
   group_by_minute: true
 
@@ -983,6 +983,18 @@ chart_configs:
         table: miku
       fields: 
         - stream_cnt
+
+  - name: chart_mikuLoadRate
+    title: 秒开率
+    seriesTitle: 秒开率
+    type: line
+    table: miku
+    sql:
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - load_rate
       
   - name: chart_mikuUpstreamAreaDis
     title: 客户源站分布(按大区)
