@@ -734,7 +734,8 @@ chart_configs:
             group_by: dim_cdnip 
       final:
         raw: |
-            SELECT lagSamples*100/SUM(lagSamples) OVER() as lagRatio, *
+            SELECT lagSamples*100/SUM(lagSamples) OVER() as weight, 
+                 SUM(lagSamples) OVER() as totalLagSamples, *
             FROM middle_result
         table: hy
 
@@ -944,3 +945,15 @@ chart_configs:
         table: miku
       fields:
         - avg_IncomingAudioFps
+
+  - name: chart_mikuPatchFail
+    title: 补片失败率
+    seriesTitle: 失败率
+    type: line
+    table: miku
+    sql: 
+      final:
+        <<: *public_miku_sql
+        table: miku
+      fields: 
+        - patch_fail_percent

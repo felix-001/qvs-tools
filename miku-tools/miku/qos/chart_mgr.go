@@ -126,7 +126,7 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.SingleSQL) (st
 
 	switch req.Protocol {
 	case "hls":
-	case "p2p":
+	case "p2p", "slice":
 		where += "\tAND dim_p2p = '1'\n"
 	case "flv":
 		where += "\tAND dim_p2p = '0'\n"
@@ -370,7 +370,7 @@ func (c *ChartMgr) getPieData(req QOSRequest, results []map[string]any, chartCon
 
 func (c *ChartMgr) getTableData(req QOSRequest, results []map[string]any, chartConf *config.ChartConf) (ChartData, error) {
 	if req.LogLevel == "detail" {
-		log.Printf("%+v\n", results)
+		//log.Printf("%+v\n", results)
 	}
 	tableData := map[string]any{
 		"title": chartConf.Title,
@@ -435,7 +435,7 @@ func (c *ChartMgr) DoQuery(req QOSRequest, chartConf *config.ChartConf) (any, er
 		results = resultCache[sqlHash].Cache
 	}
 	if req.LogLevel == "detail" {
-		log.Printf("results: %+v\n", results)
+		//log.Printf("results: %+v\n", results)
 	}
 	switch chartConf.Type {
 	case "line":

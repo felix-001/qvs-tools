@@ -134,7 +134,7 @@ func (s *QOSServer) qosAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.LogLevel == "detail" {
-		log.Printf("Query results: %+v", string(bytes))
+		//log.Printf("Query results: %+v", string(bytes))
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(bytes)
@@ -214,7 +214,7 @@ func (s *QOSServer) chartsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("chartsHandler", string(bytes))
+	//log.Println("chartsHandler", string(bytes))
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(bytes)
 }
