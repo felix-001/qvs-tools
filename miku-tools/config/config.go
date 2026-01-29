@@ -214,7 +214,7 @@ func Load() *Config {
 		log.Fatalf("load config failed, err: %v", err)
 		return nil
 	}
-	data, err := os.ReadFile("/usr/local/etc/mikutool.yaml")
+	data, err := os.ReadFile("/tmp/mikutool.yaml")
 	if err != nil {
 		log.Fatalf("读取文件失败: %v", err)
 	}
