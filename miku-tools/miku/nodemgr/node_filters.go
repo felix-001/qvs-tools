@@ -1,6 +1,8 @@
 package nodemgr
 
 import (
+	"log"
+
 	public "github.com/qbox/mikud-live/common/model"
 )
 
@@ -108,11 +110,44 @@ type TimeLimitFilter struct {
 }
 
 func (f *TimeLimitFilter) Filter(node *public.RtNode) bool {
-	return len(node.Schedules) == 0
+	if len(node.Schedules) == 0 {
+		//log.Println("not time limit node")
+		return false
+	}
+	for _, schedule := range node.Schedules {
+		if len(schedule.ScheduleISPs) > 0 {
+			return false
+		}
+		if schedule.ScheduledStart == 0 && schedule.ScheduledEnd == 86400 {
+			log.Println("not time limit node")
+			return false
+		}
+	}
+	return true
 }
 
 func (f *TimeLimitFilter) Name() string {
 	return "TimeLimit"
+}
+
+type TimeLimitYiwangFilter struct {
+	Switch
+}
+
+func (f *TimeLimitYiwangFilter) Filter(node *public.RtNode) bool {
+	if len(node.Schedules) == 0 {
+		return false
+	}
+	for _, schedule := range node.Schedules {
+		if len(schedule.ScheduleISPs) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *TimeLimitYiwangFilter) Name() string {
+	return "TimeLimitYiwang"
 }
 
 type NotFilterNat1 struct {

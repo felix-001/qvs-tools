@@ -1,9 +1,10 @@
 package nodemgr
 
 import (
-	"fmt"
+	"log"
 
 	public "github.com/qbox/mikud-live/common/model"
+	"github.com/qbox/mikud-live/common/util"
 )
 
 type NodeCallback interface {
@@ -20,8 +21,52 @@ func (m *NodeMgr) GetMoudleCnt() int {
 	return len(m.modules)
 }
 
+func (m *NodeMgr) Test() {
+	cnt := 0
+	var bw float64
+	bwMap := make(map[string]float64)
+	for _, node := range m.allNodesMap {
+		if len(node.Schedules) == 0 {
+			//log.Println("not time limit node")
+			continue
+		}
+		if !node.IsDynamic {
+			continue
+		}
+		if node.RuntimeStatus != "Serving" {
+			continue
+		}
+		ability, ok := node.Abilities["live"]
+		if !ok || !ability.Can || ability.Frozen {
+			continue
+		}
+		for _, schedule := range node.Schedules {
+			if len(schedule.ScheduleISPs) > 0 {
+				continue
+			}
+			if schedule.ScheduledStart == 0 && schedule.ScheduledEnd == 86400 {
+				log.Println("not time limit node")
+				continue
+			}
+		}
+		for _, ipInfo := range node.Ips {
+			if util.IsPrivateIP(ipInfo.Ip) {
+				continue
+			}
+			bw += ipInfo.MaxOutMBps
+			if ipInfo.Isp == "" {
+				log.Println("ipInfo.Isp is empty")
+			}
+			bwMap[ipInfo.Isp] += ipInfo.MaxOutMBps * 8 / 1000
+		}
+		cnt++
+	}
+	log.Println("cnt:", cnt, "bw:", bw*8/1000)
+	log.Println("bwMap:", bwMap)
+}
+
 func (m *NodeMgr) Traverse() {
-	fmt.Println("NodeTraverse")
+	log.Println("NodeTraverse")
 	m.filterMgr.LoadFilterData()
 	allNodes := m.allNodesMap
 	totalNodes := 0

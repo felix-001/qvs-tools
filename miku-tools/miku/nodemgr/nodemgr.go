@@ -136,7 +136,7 @@ func (m *NodeMgr) LoadNodesFromFile(file string) bool {
 			fmt.Println("LoadNodes Unmarshal err:", err)
 			return false
 		}
-		fmt.Println("从/tmp/allnodes.json文件加载节点信息成功")
+		log.Println("从/tmp/allnodes.json文件加载节点信息成功", len(m.allNodesMap))
 		return true
 	}
 	return false

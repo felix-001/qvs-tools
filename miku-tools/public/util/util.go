@@ -19,6 +19,7 @@ import (
 	"github.com/qbox/bo-sdk/sdk/qconf/qconfapi"
 	schedUtil "github.com/qbox/mikud-live/cmd/sched/common/util"
 	schedModel "github.com/qbox/mikud-live/cmd/sched/model"
+	commonModel "github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/mikud-live/common/util"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/rs/zerolog"
@@ -317,4 +318,15 @@ func GetRandomPcdnFromSchedAPI(conf *config.Config) (string, string) {
 	}
 	sublogger.Info().Str("nodeId", selectNode.Node.Id).Str("machineId", selectNode.Node.MachineId).Msg("selected node")
 	return selectNode.Node.Id, pcdn
+}
+
+func GetNodeLocate(node *commonModel.RtNode, ipParser *ipdb.City) (string, string, string, string) {
+	for _, ipInfo := range node.Ips {
+		if util.IsPrivateIP(ipInfo.Ip) {
+			continue
+		}
+		return GetLocate(ipInfo.Ip, ipParser)
+	}
+	return "", "", "", ""
+
 }

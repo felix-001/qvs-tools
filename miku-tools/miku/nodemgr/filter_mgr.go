@@ -46,23 +46,24 @@ func (s *Switch) SetEnable(enable bool) {
 }
 
 type SwitchConf struct {
-	Dynamic        bool
-	Static         bool
-	NotBanProv     bool
-	Serving        bool
-	NoStreamdPorts bool
-	TimeLimit      bool
-	Abilities      bool
-	Services       bool
-	Nat1           bool
-	PrivateIp      bool
-	Forbidden      bool
-	ProbeSpeed     bool
-	Ipv6           bool
-	Rtt            bool
-	Loss           bool
-	TcpRetrans     bool
-	AvailableBw    bool
+	Dynamic         bool
+	Static          bool
+	NotBanProv      bool
+	Serving         bool
+	NoStreamdPorts  bool
+	TimeLimit       bool
+	Abilities       bool
+	Services        bool
+	Nat1            bool
+	PrivateIp       bool
+	Forbidden       bool
+	ProbeSpeed      bool
+	Ipv6            bool
+	Rtt             bool
+	Loss            bool
+	TcpRetrans      bool
+	AvailableBw     bool
+	TimeLimitYiwang bool
 }
 
 type EventHandler interface {
@@ -116,6 +117,11 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 				enable: conf.Nat1,
 			},
 		},
+		&TimeLimitYiwangFilter{
+			Switch: Switch{
+				enable: conf.TimeLimitYiwang,
+			},
+		},
 	}
 	ipFilters := []IpFilter{
 		&IpFilterPrivate{
@@ -140,12 +146,12 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 		},
 		&RttFilter{
 			Switch: Switch{
-				enable: conf.Ipv6,
+				enable: conf.Rtt,
 			},
 		},
 		&LossFilter{
 			Switch: Switch{
-				enable: conf.Ipv6,
+				enable: conf.Loss,
 			},
 		},
 		&IpFilterTcpRetrans{
@@ -181,6 +187,9 @@ func NewFilterMgr(filterType string, conf SwitchConf) *FilterMgr {
 }
 
 func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
+	if m.filterType == FilterTypeNone {
+		return true
+	}
 	if m.filterType == FilterTypeMongo {
 		return m.FilterNodeByAvailability(node)
 	}
@@ -189,7 +198,7 @@ func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
 			continue
 		}
 		if !filter.Filter(node) {
-			m.statistics[filter.Name()]++
+			m.statistics["not "+filter.Name()]++
 			return false
 		}
 	}
@@ -197,6 +206,10 @@ func (m *FilterMgr) FilterNode(node *public.RtNode) bool {
 }
 
 func (m *FilterMgr) FilterIp(node *public.RtNode, ip *public.RtIpStatus) bool {
+	if m.filterType == FilterTypeNone {
+		log.Println("FilterTypeNone")
+		return true
+	}
 	if m.filterType == FilterTypeMongo {
 		return m.FilterIpByAvailability(node, ip)
 	}
@@ -205,7 +218,7 @@ func (m *FilterMgr) FilterIp(node *public.RtNode, ip *public.RtIpStatus) bool {
 			continue
 		}
 		if !filter.Filter(node, ip) {
-			m.statistics[filter.Name()]++
+			m.statistics["not "+filter.Name()]++
 			return false
 		}
 	}
@@ -293,6 +306,24 @@ func (m *FilterMgr) GetNodeAbility(nodeId string) *commonUtil.NodeAvailabilityIn
 
 func (m *FilterMgr) SetFilterType(filterType string) {
 	m.filterType = filterType
+}
+
+func (m *FilterMgr) ResetSwitch() {
+	for _, filter := range m.ipFilters {
+		filter.SetEnable(false)
+	}
+	for _, filter := range m.nodeFilters {
+		filter.SetEnable(false)
+	}
+}
+
+func (m *FilterMgr) SwitchDefault() {
+	for _, filter := range m.ipFilters {
+		filter.SetEnable(true)
+	}
+	for _, filter := range m.nodeFilters {
+		filter.SetEnable(true)
+	}
 }
 
 func (m *FilterMgr) FilterSwitch(name string, enable bool) {
