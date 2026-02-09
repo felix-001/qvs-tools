@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	FilterTypeNone  = "none"
 	FilterTypeLocal = "local"
 	FilterTypeMongo = "mongo"
 )

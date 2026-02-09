@@ -9,6 +9,7 @@ import (
 	"mikutool/public/util"
 	"mikutool/resources"
 	"os"
+	"time"
 
 	commonModel "github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
@@ -167,11 +168,13 @@ func (m *NodeMgr) DumpNodes() {
 		fmt.Println("DumpNodes Marshal err:", err)
 		return
 	}
-	if err := os.WriteFile("allnodes.json", data, 0644); err != nil {
+	filename := fmt.Sprintf("nodes-%d.json", time.Now().Unix())
+	if err := os.WriteFile(filename, data, 0644); err != nil {
 		fmt.Println("DumpNodes WriteFile err:", err)
 		return
 	}
-	util.UploadFile("allnodes.json")
+
+	util.UploadFile(filename)
 	fmt.Println("DumpNodes 成功")
 }
 

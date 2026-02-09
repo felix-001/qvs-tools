@@ -94,6 +94,7 @@ type Config struct {
 	H                     bool
 	Detail                bool
 	Local                 bool
+	Output                string
 	Pcdn                  string
 	User                  string
 	Passwd                string
@@ -201,7 +202,7 @@ func Load() *Config {
 			log.Fatalf("读取文件失败: %v", err)
 		}
 		err = yaml.Unmarshal(data, &conf)
-		log.Printf("conf: %+v\n", conf)
+		//log.Printf("conf: %+v\n", conf)
 		if err != nil {
 			log.Fatalf("解析 YAML 失败: %v", err)
 		}
@@ -279,6 +280,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Player, "player", "", "player")
 	flag.StringVar(&c.Url, "url", "", "url")
 	flag.StringVar(&c.MailTo, "mail_to", "", "mail_to")
+	flag.StringVar(&c.Output, "output", "", "output")
 	flag.IntVar(&c.Port, "port", 0, "port")
 	flag.IntVar(&c.Basesub, "basesub", 0, "basesub")
 	flag.IntVar(&c.SubStream, "substream", 0, "substream")
