@@ -18,6 +18,9 @@ type CoverStatistics struct {
 }
 
 func (b *CoverStatistics) OnNode(node *commonModel.RtNode) {
+	if len(node.Ips) == 0 {
+		return
+	}
 	_, isp, _, _ := util.GetLocate(node.Ips[0].Ip, b.ipParser)
 	if isp != "" {
 		b.nodeCntMap[isp]++
@@ -85,6 +88,32 @@ func (t *TimeLimit) Done(result map[string]int) {
 	}
 }
 
+type StaticIdc struct {
+	NodeMap map[string]map[string]bool
+	NodeCnt int
+}
+
+func (s *StaticIdc) OnNode(node *commonModel.RtNode) {
+	if _, ok := s.NodeMap[node.Idc]; !ok {
+		s.NodeMap[node.Idc] = make(map[string]bool)
+	}
+	s.NodeMap[node.Idc][node.Id] = true
+	s.NodeCnt++
+}
+
+func (s *StaticIdc) OnIp(node *commonModel.RtNode, ip *commonModel.RtIpStatus) {
+}
+
+func (s *StaticIdc) Done(result map[string]int) {
+	for idc, nodeMap := range s.NodeMap {
+		fmt.Println("idc:", idc)
+		for nodeId := range nodeMap {
+			fmt.Println("\t" + nodeId)
+		}
+	}
+	fmt.Println("nodeCnt:", s.NodeCnt)
+}
+
 func (m *NodeMgr) NodesCover() {
 	b := &CoverStatistics{
 		ipParser:   m.resources.IpParser,
@@ -112,6 +141,15 @@ func (m *NodeMgr) NodesCover() {
 	m.filterMgr.FilterSwitch("Services", false)
 	m.filterMgr.FilterSwitch("NoStreamdPorts", false)
 	m.Register(timelimit)
+	m.Traverse()
+
+	staticIdc := &StaticIdc{
+		NodeMap: make(map[string]map[string]bool),
+	}
+	m.Register(staticIdc)
+	m.filterMgr.SetFilterType(FilterTypeLocal)
+	m.filterMgr.ResetSwitch()
+	m.filterMgr.FilterSwitch("Static", true)
 	m.Traverse()
 
 	m.Test()

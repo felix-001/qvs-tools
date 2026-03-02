@@ -220,12 +220,12 @@ func Load() *Config {
 		log.Fatalf("读取文件失败: %v", err)
 	}
 	err = yaml.Unmarshal(data, &conf)
-	log.Printf("conf: %+v\n", conf)
 	if err != nil {
 		log.Fatalf("解析 YAML 失败: %v", err)
 	}
 
 	conf.initIpdbConfig()
+	log.Printf("conf: %+v\n", conf)
 	return &conf
 }
 func (c *Config) ParseConsole() {
