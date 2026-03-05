@@ -63,14 +63,14 @@ ipdb:
     ipv4:
       expire: 20000
       local_url: /usr/local/etc/neo.ipv4.ipdb
-      reload_interval_s: 86400
-      remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv4.ipdb
+      #reload_interval_s: 86400
+      #remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv4.ipdb
       retry_count: 3
     ipv6:
       expire: 20000
       local_url: /usr/local/etc/neo.ipv6.ipdb
-      reload_interval_s: 86400
-      remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv6.ipdb
+      #reload_interval_s: 86400
+      #remote_url: http://pv53kxj7u.bkt.clouddn.com/neo.ipv6.ipdb
       retry_count: 3
 redis_addrs:
 - 127.0.0.1:6380
@@ -310,7 +310,7 @@ public_miku_sql: &public_miku_sql
 
     COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) as loadCnt,
     COUNT(*) as total,
-    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as load_rate 
+    COUNT(CASE WHEN SendFirstPktTime < 1000 THEN 1 END) * 100.0 / COUNT(*) as loadRatio
   from: dwd_flowd_miku_streamd_log
   group_by_minute: true
 
@@ -352,41 +352,6 @@ fps_final_sql: &fps_final_sql |
     avg_IncomingAudioFps,
     source_type
   FROM data_with_rank
-  WHERE rn = 1
-  ORDER BY ts
-
-bw_with_sql: &bw_with_sql
-  - name: bw_query
-    sql:
-      select: |
-        from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai' as ts,
-        StreamName,
-        NodeID,
-        IF(CostTime = 0, 0, CAST(RecvBytes AS double) * 8.0 * 1000 / 1000 / 1000 / CostTime) AS bandwidth,
-        CASE
-          WHEN Type = 'publisher' THEN 'publisher'
-          WHEN Type = 'puller' AND CustomerSource = true THEN 'puller'
-        END AS source_type,
-        ROW_NUMBER() OVER (
-          PARTITION BY from_unixtime(ts/1000000000) at time zone 'Asia/Shanghai'
-          ORDER BY CASE
-            WHEN Type = 'publisher' THEN 1
-            WHEN Type = 'puller' AND CustomerSource = true THEN 2
-            ELSE 3
-          END
-        ) AS rn
-      from: dwd_flowd_miku_streamd_log
-      where: (Type = 'publisher' OR (Type = 'puller' AND CustomerSource = true))
-      table: miku
-
-bw_final_sql: &bw_final_sql |
-  SELECT
-    ts,
-    StreamName,
-    NodeID,
-    bandwidth,
-    source_type
-  FROM bw_query
   WHERE rn = 1
   ORDER BY ts
 
@@ -771,7 +736,7 @@ chart_configs:
             group_by: dim_cdnip 
       final:
         raw: |
-            SELECT lagSamples*100/SUM(lagSamples) OVER() as weight, 
+            SELECT lagSamples*100.00/SUM(lagSamples) OVER() as weight, 
                  SUM(lagSamples) OVER() as totalLagSamples, *
             FROM middle_result
         table: hy
@@ -839,7 +804,7 @@ chart_configs:
             group_by: dim__ip
       final:
         raw: |
-            SELECT lagSamples*100/NULLIF(SUM(lagSamples) OVER(), 0) as weight, *
+            SELECT ROUND(lagSamples*100.00/SUM(lagSamples) OVER(), 2) as weight, *
             FROM middle_result
         table: hy
 
@@ -884,7 +849,7 @@ chart_configs:
             group_by: stream_id
       final:
         raw: |
-            SELECT lagSamples*100/SUM(lagSamples) OVER() as weight, *
+            SELECT ROUND(lagSamples * 100.0 / SUM(lagSamples) OVER(), 2) as weight, *
             FROM middle_result
         table: hy
 
@@ -983,17 +948,6 @@ chart_configs:
       fields:
         - avg_IncomingAudioFps
 
-  - name: chart_mikuUpstreamBw
-    title: 推流/回源带宽
-    <<: *fps_common
-    sql:
-      with: *bw_with_sql
-      final:
-        raw: *bw_final_sql
-        table: miku
-      fields:
-        - bandwidth 
-
   - name: chart_mikuPatchFail
     title: 补片失败率
     seriesTitle: 失败率
@@ -1029,18 +983,6 @@ chart_configs:
         table: miku
       fields: 
         - stream_cnt
-
-  - name: chart_mikuLoadRate
-    title: 秒开率
-    seriesTitle: 秒开率
-    type: line
-    table: miku
-    sql:
-      final:
-        <<: *public_miku_sql
-        table: miku
-      fields: 
-        - load_rate
       
   - name: chart_mikuUpstreamAreaDis
     title: 客户源站分布(按大区)
@@ -1073,33 +1015,3 @@ chart_configs:
       pie_name: area
       pie_value: ip_count
         
-  - name: chart_mikuUsrAreaDis
-    title: 用户分布(按大区)
-    seriesTitle: 分布
-    type: pie
-    table: miku
-    sql: 
-      with:
-        - name: upstreamIp
-          sql:
-            select: |
-              DISTINCT REGEXP_EXTRACT(RemoteAddr, '^(?:\[)?([0-9a-fA-F:.]+)(?:\])?:\d+$', 1) as upstreamIp
-            from: dwd_flowd_miku_streamd_log
-            where: |
-              type = 'player'
-              AND HTTPResponseCode != 302
-            table: miku
-        - name: ip_analysis
-          sql:
-            raw: |
-              SELECT ipresolve(upstreamIp, 'region') AS clientProvince 
-              FROM upstreamIp
-            table: miku
-        - name: area_mapping
-          sql:
-            <<: *area_mapping
-      final:
-        <<: *area_query
-        table: miku
-      pie_name: area
-      pie_value: ip_count
