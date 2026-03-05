@@ -49,7 +49,8 @@ func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.SingleSQL) (
 		}
 	}
 	if req.AppName != "" {
-		where += fmt.Sprintf("AND AppName = '%s'\n", req.AppName)
+		appnames := strings.Split(req.AppName, ",")
+		where += fmt.Sprintf("AND AppName IN ('%s')\n", strings.Join(appnames, "','"))
 	}
 	if req.CdnIp != "" {
 		where += fmt.Sprintf("AND remoteaddr like '%%%s%%'\n", req.CdnIp)
@@ -58,11 +59,9 @@ func (c *ChartMgr) buildMikuWhere(req QOSRequest, chartConf *config.SingleSQL) (
 		where += fmt.Sprintf("AND Domain = '%s'\n", req.Domain)
 	}
 	if req.Protocol != "" {
-		protocol := req.Protocol
-		if protocol == "slice" {
-			protocol = "HuyaP2P"
-		}
-		where += fmt.Sprintf("AND Protocol = '%s'\n", protocol)
+		protocol := strings.ReplaceAll(req.Protocol, "slice", "HuyaP2P")
+		protocols := strings.Split(protocol, ",")
+		where += fmt.Sprintf("AND Protocol IN ('%s')\n", strings.Join(protocols, "','"))
 	}
 	// 添加剔除流ID过滤
 	if req.ExcludeStreams != "" {
@@ -128,13 +127,21 @@ func (c *ChartMgr) buildHyWhere(req QOSRequest, chartConf *config.SingleSQL) (st
 		}
 	}
 
-	switch req.Protocol {
-	case "hls":
-	case "p2p", "slice":
-		where += "\tAND dim_p2p = '1'\n"
-	case "flv":
-		where += "\tAND dim_p2p = '0'\n"
+	protocols := strings.Split(req.Protocol, ",")
+	ins := ""
+	for _, protocol := range protocols {
+		switch protocol {
+		case "hls":
+			ins += "'2',"
+		case "p2p", "slice":
+			ins += "'1',"
+		case "flv":
+			ins += "'0',"
+		}
 	}
+	ins = ins[:len(ins)-1]
+	where += fmt.Sprintf("\tAND dim_p2p IN (%s)\n", ins)
+
 	return where, nil
 }
 
