@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	_ "embed"
 	"mikutool/config"
 	"mikutool/miku/qos"
+	"mikutool/public/util"
 	"mikutool/resources"
 )
 
@@ -64,14 +66,42 @@ func (s *QOSServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 
 // getAppNamesHandler 获取AppName列表处理器
 func (s *QOSServer) getAppNamesHandler(w http.ResponseWriter, r *http.Request) {
-	// 模拟AppName列表，实际应该从数据库获取
-	appNames := []string{
-		"huyacdn",
-		"huyap2p",
-		"livessports",
-		"douyu",
-		"vzan",
+	// 计算时间范围：当前时间作为结束时间，当前时间减去30分钟作为开始时间
+	endTime := time.Now()
+	startTime := endTime.Add(-30 * time.Minute)
+
+	// 格式化时间为字符串
+	startTimeStr := startTime.Format("2006-01-02 15:04:05")
+	endTimeStr := endTime.Format("2006-01-02 15:04:05")
+
+	// 格式化日期为字符串（用于day字段过滤）
+	dayStr := startTime.Format("20060102")
+
+	// 构建SQL查询语句
+	sql := fmt.Sprintf(`
+		SELECT DISTINCT appname 
+		FROM miku.dwd_flowd_miku_streamd_log 
+		WHERE 1=1 
+			AND from_unixtime(ts/1000000000) BETWEEN TIMESTAMP '%s+08:00' AND TIMESTAMP '%s+08:00' 
+		AND day >= '%s' and day <= '%s'
+	`, startTimeStr, endTimeStr, dayStr, dayStr)
+
+	// 执行Trino查询
+	var results []map[string]any
+	if err := util.TrinoQueryMap("miku", sql, &results); err != nil {
+		log.Println("Error querying app names:", err)
+		http.Error(w, "Error querying app names", http.StatusInternalServerError)
+		return
 	}
+
+	// 提取appname列表
+	appNames := make([]string, 0, len(results))
+	for _, result := range results {
+		if appname, ok := result["appname"].(string); ok && appname != "" {
+			appNames = append(appNames, appname)
+		}
+	}
+	log.Println("appNames:", appNames)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(appNames)
