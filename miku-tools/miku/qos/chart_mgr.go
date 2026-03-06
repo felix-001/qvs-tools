@@ -315,6 +315,10 @@ func (c *ChartMgr) getLineData(req QOSRequest, results []map[string]any, chartCo
 			if _, ok := seriesData[dimensionValue]; !ok {
 				seriesData[dimensionValue] = &SeriesData{}
 			}
+			if result[field] == nil {
+				log.Println("err, field nil, result:", result, "field:", field)
+				continue
+			}
 			value, ok := result[field].(string)
 			if !ok {
 				value_int, ok := result[field].(int64)
