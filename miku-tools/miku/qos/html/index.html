@@ -311,6 +311,43 @@
         .dropdown.active .dropdown-content {
             max-height: 400px;
             opacity: 1;
+            overflow-y: auto;
+        }
+        
+        /* 搜索框样式 */
+        .search-box {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            z-index: 5;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 选项列表容器 */
+        .options-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        
+        /* 隐藏的选项 */
+        .option.hidden {
+            display: none;
         }
         
         /* 选项样式 */
@@ -1157,6 +1194,35 @@ end: 100    // 百分比
             
             dropdownContent.innerHTML = '';
             
+            // 添加搜索框
+            const searchBox = document.createElement('div');
+            searchBox.className = 'search-box';
+            searchBox.innerHTML = `
+                <input type="text" id="bucketSearch" placeholder="搜索BUCKET..." autocomplete="off">
+            `;
+            dropdownContent.appendChild(searchBox);
+            
+            // 添加搜索功能
+            const searchInput = searchBox.querySelector('input');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                const optionElements = dropdownContent.querySelectorAll('.option:not(.select-all-option)');
+                
+                optionElements.forEach(optionElement => {
+                    const label = optionElement.querySelector('label').textContent.toLowerCase();
+                    if (label.includes(searchTerm)) {
+                        optionElement.classList.remove('hidden');
+                    } else {
+                        optionElement.classList.add('hidden');
+                    }
+                });
+            });
+            
+            // 创建选项列表容器
+            const optionsList = document.createElement('div');
+            optionsList.className = 'options-list';
+            dropdownContent.appendChild(optionsList);
+            
             // 首先添加全选选项
             const selectAllElement = document.createElement('div');
             selectAllElement.className = 'option select-all-option';
@@ -1178,7 +1244,7 @@ end: 100    // 百分比
                 updateUI();
             });
             
-            dropdownContent.appendChild(selectAllElement);
+            optionsList.appendChild(selectAllElement);
             
             // 然后添加普通选项
             options.forEach(option => {
@@ -1205,7 +1271,7 @@ end: 100    // 百分比
                     updateUI();
                 });
                 
-                dropdownContent.appendChild(optionElement);
+                optionsList.appendChild(optionElement);
             });
         }
 
@@ -1283,6 +1349,35 @@ end: 100    // 百分比
             }
 
             protocolContent.innerHTML = '';
+            
+            // 添加搜索框
+            const searchBox = document.createElement('div');
+            searchBox.className = 'search-box';
+            searchBox.innerHTML = `
+                <input type="text" id="protocolSearch" placeholder="搜索Protocol..." autocomplete="off">
+            `;
+            protocolContent.appendChild(searchBox);
+            
+            // 添加搜索功能
+            const searchInput = searchBox.querySelector('input');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                const optionElements = protocolContent.querySelectorAll('.option:not(.select-all-option)');
+                
+                optionElements.forEach(optionElement => {
+                    const label = optionElement.querySelector('label').textContent.toLowerCase();
+                    if (label.includes(searchTerm)) {
+                        optionElement.classList.remove('hidden');
+                    } else {
+                        optionElement.classList.add('hidden');
+                    }
+                });
+            });
+            
+            // 创建选项列表容器
+            const optionsList = document.createElement('div');
+            optionsList.className = 'options-list';
+            protocolContent.appendChild(optionsList);
 
             // 添加全选选项
             const selectAllElement = document.createElement('div');
@@ -1302,7 +1397,7 @@ end: 100    // 百分比
                 updateProtocolUI(options, protocolText, selectAllCheckbox);
             });
 
-            protocolContent.appendChild(selectAllElement);
+            optionsList.appendChild(selectAllElement);
 
             // 添加普通选项
             options.forEach(option => {
@@ -1328,7 +1423,7 @@ end: 100    // 百分比
                     updateProtocolUI(options, protocolText, selectAllCheckbox);
                 });
 
-                protocolContent.appendChild(optionElement);
+                optionsList.appendChild(optionElement);
             });
 
             // 切换按钮点击事件
