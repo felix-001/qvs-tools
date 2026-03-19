@@ -16,7 +16,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/qbox/bo-sdk/base/xlog.v1"
@@ -216,6 +218,21 @@ func Http(conf *config.Config) (string, error) {
 	}
 	if conf.Uid != "" {
 		conf.Ak, conf.Sk = GetAkSk(conf)
+	}
+	if conf.User != "" {
+		bytes, err := os.ReadFile(fmt.Sprintf("/usr/local/etc/%s.txt", conf.User))
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		ss := strings.Split(string(bytes)[0:len(bytes)-1], ",")
+		if len(ss) != 2 {
+			log.Println("user file is empty")
+			return "", fmt.Errorf("user file is empty")
+		}
+		conf.Ak = ss[0]
+		conf.Sk = ss[1]
+		log.Println("ak:", conf.Ak, "sk:", conf.Sk)
 	}
 	if conf.Addr == "" {
 		log.Println("need -addr <url>")
