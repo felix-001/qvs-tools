@@ -246,6 +246,9 @@ func Http(conf *config.Config) (string, error) {
 		log.Println("need -sk <sk>")
 		return "", fmt.Errorf("missing sk")
 	}
+	if conf.Body != "" {
+		conf.HeaderMap["content-type"] = "application/json"
+	}
 	log.Println("headers:", conf.HeaderMap)
 
 	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
