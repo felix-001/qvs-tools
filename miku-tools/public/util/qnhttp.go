@@ -241,7 +241,11 @@ func Http(conf *config.Config) (string, error) {
 		}
 		switch conf.Path {
 		case "domain":
-			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com", conf.Bucket)
+			if conf.Domain == "" {
+				log.Println("need -domain <domain>")
+				return "", fmt.Errorf("missing domain")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com/?domainConfig&name=%s", conf.Domain)
 		case "bucket":
 			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com/?config", conf.Bucket)
 		default:
