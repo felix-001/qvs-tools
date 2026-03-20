@@ -234,6 +234,21 @@ func Http(conf *config.Config) (string, error) {
 		conf.Sk = ss[1]
 		log.Println("ak:", conf.Ak, "sk:", conf.Sk)
 	}
+	if conf.Path != "" {
+		if conf.Bucket == "" {
+			log.Println("need -bucket <bucket>")
+			return "", fmt.Errorf("missing bucket")
+		}
+		switch conf.Path {
+		case "domain":
+			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com", conf.Bucket)
+		case "bucket":
+			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com/?config", conf.Bucket)
+		default:
+			log.Println("invalid path:", conf.Path)
+			return "", fmt.Errorf("invalid path")
+		}
+	}
 	if conf.Addr == "" {
 		log.Println("need -addr <url>")
 		return "", fmt.Errorf("missing address")

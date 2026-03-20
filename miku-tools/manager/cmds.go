@@ -16,10 +16,11 @@ func (m *CommandManager) CmdHttp() *Command {
 		util.Http(m.config)
 	}
 	cmd := &Command{
-		Desc: "qn http客户端, -uid <uid> -user <user> -method <method(默认为GET)> -addr <url> -body <body> -header <key: value>\nexample:\n" +
+		Desc: "qn http客户端, -uid <uid> -user <user> -method <method(默认为GET)> -addr <url> -body <body> -header <key: value> -path <path>\nexample:\n" +
 			"miku -cmd http -ak xxx -sk xxx -method POST -addr http://miku-lived.dooquuequezi.com/api/v1/centerauth" +
 			" -body '{\"bucket\": \"test-bucket\"}' -header 'content-type:application/json'" +
-			"\n-user 可选值: mikutest(pilitest@qiniu.com), mikuonline, qvs",
+			"\n-user 可选值: mikutest(pilitest@qiniu.com), mikuonline, qvs\n" +
+			"-path 可选值: domain, bucket, 如果传了-path, 则-addr会被忽略",
 		Handler: handler,
 	}
 	return cmd

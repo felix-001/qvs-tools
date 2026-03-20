@@ -173,6 +173,7 @@ type Config struct {
 	MailTo                string                `json:"mail_to" yaml:"mail_to"`
 	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
 	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
+	Path                  string                `json:"path" yaml:"path"`
 }
 
 func (c *Config) initIpdbConfig() {
@@ -306,7 +307,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.MailFrom, "mail_from", "", "发件人邮箱")
 	flag.IntVar(&c.Process, "process", 0, "进程id")
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
-
+	flag.StringVar(&c.Path, "path", "http api 请求的path", "path")
 	flag.Parse()
 }
 
