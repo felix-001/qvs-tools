@@ -120,6 +120,13 @@ func IsPublicIPAddress(ip string) bool {
 }
 
 func GetAkSk(conf *config.Config) (string, string) {
+	if conf.AccountCfgFile == "" {
+		log.Println("need cc_file conf")
+		return "", ""
+	}
+	if conf.Detail {
+		log.Printf(" account cfg: %+v\n", conf.AccountCfg)
+	}
 	qc := qconfapi.New(&conf.AccountCfg)
 	ag := appg.Client{Conn: qc}
 	uid, err := strconv.Atoi(conf.Uid)

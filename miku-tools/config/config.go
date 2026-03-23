@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -159,6 +160,7 @@ type Config struct {
 	IpdbRaw               IpdbConfig            `json:"ipdb_raw" yaml:"ipdb"`
 	RedisAddrs            []string              `json:"redis_addrs" yaml:"redis_addrs"`
 	AccountCfg            qnconfig.Config       `json:"acc" yaml:"acc"`
+	AccountCfgFile        string                `json:"acc_file" yaml:"acc_file"`
 	DyApiSecret           string                `json:"dy_api_secret" yaml:"dy_api_secret"`
 	DyApiDomain           string                `json:"dy_api_domain" yaml:"dy_api_domain"`
 	MongoConf             *dal.MongoCfg         `json:"mongo_config" yaml:"mongo_config"`
@@ -209,6 +211,20 @@ func Load() *Config {
 		}
 
 		conf.initIpdbConfig()
+		if conf.AccountCfgFile == "" {
+			conf.AccountCfgFile = "/usr/local/etc/acc.json"
+		}
+		data, err = os.ReadFile(conf.AccountCfgFile)
+		if err == nil {
+			err = json.Unmarshal(data, &conf.AccountCfg)
+			if err != nil {
+				log.Printf("解析 json 失败: %v\n", err)
+			} else {
+				log.Printf("读取文件成功: %v\n", conf.AccountCfgFile)
+			}
+		} else {
+			log.Printf("读取文件失败: %v, err: %v\n", conf.AccountCfgFile, err)
+		}
 		return &conf
 	}
 	_, err = os.Stat("/tmp/mikutool.yaml")
@@ -308,6 +324,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.Process, "process", 0, "进程id")
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
 	flag.StringVar(&c.Path, "path", "http api 请求的path", "path")
+	flag.StringVar(&c.AccountCfgFile, "accfile", "/usr/local/etc/acc.json", "账号配置文件")
 	flag.Parse()
 }
 

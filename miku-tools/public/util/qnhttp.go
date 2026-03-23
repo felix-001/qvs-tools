@@ -242,9 +242,11 @@ func Http(conf *config.Config) (string, error) {
 		domain := "mls-test.cn-east-1.qiniumiku.com"
 		switch conf.User {
 		case "gray":
-			domain = "mls.cn-east-1.qiniumiku.com"
+			domain = "mls-test.cn-east-1.qiniumiku.com"
 		case "mikutest":
 			domain = "mls.cn-east-1.jfcs.qiniu.io"
+		case "mikuonline":
+			domain = "mls.cn-east-1.qiniumiku.com"
 		case "qvs":
 			domain = "qiniuapi.com"
 		}
