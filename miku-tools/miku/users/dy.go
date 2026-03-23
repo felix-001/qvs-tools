@@ -78,7 +78,7 @@ func getMetrics(t int64) *MetricResp {
 	wsSecret := hex.EncodeToString(hash[:])
 	addr := fmt.Sprintf("http://%s/pcdn/v1/metrics/top_nodes/qiniu/?timestamp=%s&topn=20&wsSecret=%s&wsTime=%s",
 		Conf.DyApiDomain, ts, wsSecret, wsTime)
-	metrics, err := util.Get(addr)
+	metrics, err := util.Get(addr, false)
 	if err != nil {
 		log.Println("get metrics err:", err)
 		return nil
@@ -365,7 +365,7 @@ func getCodeList(conf *config.Config) []*CodeListItem {
 		end := start + 24*60*60
 		addr := fmt.Sprintf("http://miku-statd.qiniuapi.com/statd/v1/codecount?"+
 			"start=%d&end=%d&domain=qn-ss.douyucdn.cn", start, end)
-		resp, err := util.QnHttpReq("GET", addr, "", conf.Ak, conf.Sk, map[string]string{})
+		resp, err := util.QnHttpReq("GET", addr, "", conf.Ak, conf.Sk, map[string]string{}, conf.Detail)
 		if err != nil {
 			log.Println("get 500 err:", err)
 			errCnt++

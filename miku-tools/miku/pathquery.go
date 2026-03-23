@@ -116,7 +116,7 @@ func (m *Miku) Pathquery() {
 	headers := map[string]string{
 		"X-Real-IP": clientIp,
 	}
-	respData, err := util.HttpReq("GET", addr, string(bytes), headers)
+	respData, err := util.HttpReq("GET", addr, string(bytes), headers, m.conf.Detail)
 	if err != nil {
 		logger.Error().Err(err).Msg("req pathquery err")
 		return

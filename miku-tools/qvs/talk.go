@@ -26,7 +26,7 @@ func TalkApi(conf *config.Config) {
 	}
 	addr := fmt.Sprintf("http://qvs.qiniuapi.com/v1/namespaces/%s/devices/%s/talk", conf.NsId, conf.GBId)
 	body := `{ "isV2": true, "version": "2014", "transProtocol":"tcp" }`
-	respStr, err := util.QnHttpReq("POST", addr, body, conf.Ak, conf.Sk, map[string]string{})
+	respStr, err := util.QnHttpReq("POST", addr, body, conf.Ak, conf.Sk, map[string]string{}, conf.Detail)
 	if err != nil {
 		log.Println("http req err", err)
 		return

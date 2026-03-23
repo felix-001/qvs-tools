@@ -51,7 +51,7 @@ func TestDns(conf *config.Config, res *resources.Resources) {
 		for isp, provIp := range res.V4Ips {
 			for prov, ip := range provIp {
 				addr := fmt.Sprintf("http://%s/?dns&domain=www.qiniu.com&ip=%s&type=0", conf.Domain, ip)
-				respStr, err := util.QnHttpReq("GET", addr, "", conf.Ak, conf.Sk, map[string]string{})
+				respStr, err := util.QnHttpReq("GET", addr, "", conf.Ak, conf.Sk, map[string]string{}, conf.Detail)
 				if err != nil {
 				}
 				resp := &DnsResponse{}

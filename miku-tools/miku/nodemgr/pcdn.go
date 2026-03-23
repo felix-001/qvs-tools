@@ -14,7 +14,7 @@ import (
 
 func GetPcdnFromSchedAPI(skipReport, skipRoot bool, conf *config.Config, nodeMgr *NodeMgr) (string, string) {
 	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
-	resp, err := util.Get(addr)
+	resp, err := util.Get(addr, conf.Detail)
 	if err != nil {
 		log.Println("get nodes err:", err)
 		return "", ""

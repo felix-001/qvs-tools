@@ -212,7 +212,7 @@ var sublogger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 func GetPcdnFromSchedAPI(conf *config.Config) (string, string) {
 	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=area&mode=detail&ipversion=ipv4"
-	resp, err := Get(addr)
+	resp, err := Get(addr, conf.Detail)
 	if err != nil {
 		sublogger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
 		return "", ""
@@ -274,7 +274,7 @@ func InetAton(ipStr string) (uint32, error) {
 
 func GetRandomPcdnFromSchedAPI(conf *config.Config) (string, string) {
 	addr := "http://10.34.146.62:6060/api/v1/nodes?level=default&dimension=isp&mode=detail&ipversion=ipv4"
-	resp, err := Get(addr)
+	resp, err := Get(addr, conf.Detail)
 	if err != nil {
 		sublogger.Error().Err(err).Str("addr", addr).Msg("get nodes err")
 		return "", ""

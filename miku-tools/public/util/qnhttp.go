@@ -93,7 +93,7 @@ func signToken(ak, sk, method, path, host, body string, headers map[string]strin
 	return token
 }
 
-func HttpReq(method, addr, body string, headers map[string]string) (string, error) {
+func HttpReq(method, addr, body string, headers map[string]string, detailLog bool) (string, error) {
 	dailCtx := func(ctx context.Context, network, addr string) (net.Conn, error) {
 		dialer := net.Dialer{Timeout: 120 * time.Second}
 		conn, err := dialer.DialContext(ctx, network, addr)
@@ -129,7 +129,9 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		req.Header.Set("Content-Type", "application/json")
 
 	}
-	//log.Printf("%+v\n", req)
+	if detailLog {
+		log.Printf("%+v\n", req)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
@@ -143,7 +145,9 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 		log.Println(err)
 		return "", err
 	}
-	log.Printf("resp header: %+v\n", resp.Header)
+	if detailLog {
+		log.Printf("resp header: %+v\n", resp.Header)
+	}
 	if resp.StatusCode != 200 {
 		log.Println("status code:", resp.StatusCode, "body:", string(resp_body), "status:", resp.Status)
 		return "", errHttpStatusCode
@@ -151,7 +155,7 @@ func HttpReq(method, addr, body string, headers map[string]string) (string, erro
 	return string(resp_body), err
 }
 
-func QnHttpReq(method, addr, body, ak, sk string, headerMap map[string]string) (string, error) {
+func QnHttpReq(method, addr, body, ak, sk string, headerMap map[string]string, detailLog bool) (string, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		log.Println(err)
@@ -169,7 +173,7 @@ func QnHttpReq(method, addr, body, ak, sk string, headerMap map[string]string) (
 	//token := signToken(ak, sk, method, u.Path, u.Host, body, headers)
 	token := signToken(ak, sk, method, u.String(), host, body, headers)
 	headers["Authorization"] = token
-	return HttpReq(method, addr, body, headers)
+	return HttpReq(method, addr, body, headers, detailLog)
 }
 
 func S3get(addr string, conf *config.Config) (string, error) {
@@ -183,7 +187,7 @@ func S3get(addr string, conf *config.Config) (string, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return QnHttpReq("GET", addr, "", ak, sk, map[string]string{})
+	return QnHttpReq("GET", addr, "", ak, sk, map[string]string{}, conf.Detail)
 }
 
 func S3patch(addr, body string, conf *config.Config) (string, error) {
@@ -197,15 +201,15 @@ func S3patch(addr, body string, conf *config.Config) (string, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return QnHttpReq("PATCH", addr, body, ak, sk, map[string]string{})
+	return QnHttpReq("PATCH", addr, body, ak, sk, map[string]string{}, conf.Detail)
 }
 
-func Get(addr string) (string, error) {
-	return HttpReq("GET", addr, "", nil)
+func Get(addr string, detailLog bool) (string, error) {
+	return HttpReq("GET", addr, "", nil, detailLog)
 }
 
-func GetWithBody(addr, body string) (string, error) {
-	return HttpReq("GET", addr, body, nil)
+func GetWithBody(addr, body string, detailLog bool) (string, error) {
+	return HttpReq("GET", addr, body, nil, detailLog)
 }
 
 func Http(conf *config.Config) (string, error) {
@@ -235,6 +239,15 @@ func Http(conf *config.Config) (string, error) {
 		log.Println("ak:", conf.Ak, "sk:", conf.Sk)
 	}
 	if conf.Path != "" {
+		domain := "mls-test.cn-east-1.qiniumiku.com"
+		switch conf.User {
+		case "gray":
+			domain = "mls.cn-east-1.qiniumiku.com"
+		case "mikutest":
+			domain = "mls.cn-east-1.jfcs.qiniu.io"
+		case "qvs":
+			domain = "qiniuapi.com"
+		}
 		if conf.Bucket == "" {
 			log.Println("need -bucket <bucket>")
 			return "", fmt.Errorf("missing bucket")
@@ -245,12 +258,11 @@ func Http(conf *config.Config) (string, error) {
 				log.Println("need -domain <domain>")
 				return "", fmt.Errorf("missing domain")
 			}
-			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com/?domainConfig&name=%s", conf.Domain)
+			conf.Addr = fmt.Sprintf("http://%s.%s/?domainConfig&name=%s", conf.Bucket, domain, conf.Domain)
 		case "bucket":
-			conf.Addr = fmt.Sprintf("http://%s.mls-test.cn-east-1.qiniumiku.com/?config", conf.Bucket)
+			conf.Addr = fmt.Sprintf("http://%s.%s/?config", conf.Bucket, domain)
 		default:
-			log.Println("invalid path:", conf.Path)
-			return "", fmt.Errorf("invalid path")
+			conf.Addr = fmt.Sprintf("http://%s", domain)
 		}
 	}
 	if conf.Addr == "" {
@@ -270,7 +282,7 @@ func Http(conf *config.Config) (string, error) {
 	}
 	log.Println("headers:", conf.HeaderMap)
 
-	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
+	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap, conf.Detail)
 	if err != nil {
 		log.Println(err)
 		return "", err
@@ -361,7 +373,7 @@ func HttpRequest(conf *config.Config) (string, error) {
 	}
 	//log.Println("headers:", conf.HeaderMap)
 
-	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap)
+	resp, err := QnHttpReq(method, conf.Addr, conf.Body, conf.Ak, conf.Sk, conf.HeaderMap, conf.Detail)
 	if err != nil {
 		log.Println(err)
 		return "", err

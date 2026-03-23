@@ -24,7 +24,7 @@ func GetNodesByStreamId(conf *config.Config) map[string]schedModel.StreamNodeDet
 
 	addr := fmt.Sprintf("http://10.34.146.62:6060/api/v1/bucket/%s/stream/%s/nodes",
 		conf.Bucket, conf.Stream)
-	resp, err := util.Get(addr)
+	resp, err := util.Get(addr, conf.Detail)
 	if err != nil {
 		return nil
 	}
