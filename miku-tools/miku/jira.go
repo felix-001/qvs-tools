@@ -6,19 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mikutool/config"
 	"net/http"
 )
 
 const (
-	JIRA_URL  = "http://jira.qiniu.io"
-	USERNAME  = "liyuanquan"
-	PASSWORD  = "Swayinwind*1987" // 注意：生产环境建议使用 API Token
+	JIRA_URL  = "https://jira.qiniu.io"
 	ISSUE_KEY = "MIKU-2293"
 )
 
-func GetIssue() {
+func GetIssue(conf *config.Config) {
 	// 1. 创建 Basic Auth 认证头
-	credentials := fmt.Sprintf("%s:%s", USERNAME, PASSWORD)
+	credentials := fmt.Sprintf("%s:%s", conf.User, conf.Passwd)
 	encoded := base64.StdEncoding.EncodeToString([]byte(credentials))
 	authHeader := fmt.Sprintf("Basic %s", encoded)
 
@@ -95,18 +94,98 @@ type Issue struct {
 	} `json:"fields"`
 }
 
-// CreateIssueRequest 创建 issue 的请求结构体
+// Project JIRA 项目结构体
+type Project struct {
+	ID     string `json:"id"`
+	Key    string `json:"key"`
+	Name   string `json:"name"`
+	Avatar struct {
+		URL48x48 string `json:"48x48"`
+	} `json:"avatarUrls"`
+}
+
+// GetProjects 获取所有项目列表
+func GetProjects() {
+	// 1. 创建 Basic Auth 认证头
+	credentials := fmt.Sprintf("%s:%s", USERNAME, PASSWORD)
+	encoded := base64.StdEncoding.EncodeToString([]byte(credentials))
+	authHeader := fmt.Sprintf("Basic %s", encoded)
+
+	// 2. 创建请求
+	url := fmt.Sprintf("%s/rest/api/2/project", JIRA_URL)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Printf("创建请求失败: %v\n", err)
+		return
+	}
+
+	// 3. 设置请求头
+	req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Content-Type", "application/json")
+
+	// 4. 发送请求
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("请求失败: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// 5. 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("读取响应失败: %v\n", err)
+		return
+	}
+
+	// 6. 检查状态码
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("请求异常，状态码: %d, 响应: %s\n", resp.StatusCode, string(body))
+		return
+	}
+
+	// 7. 解析 JSON
+	var projects []Project
+	if err := json.Unmarshal(body, &projects); err != nil {
+		fmt.Printf("JSON解析失败: %v\n", err)
+		return
+	}
+
+	// 8. 打印项目列表
+	fmt.Println("项目列表:")
+	for _, p := range projects {
+		fmt.Printf("  - [%s] %s (ID: %s)\n", p.Key, p.Name, p.ID)
+	}
+}
+
+// CreateIssueRequest 创建 issue 的请求体
 type CreateIssueRequest struct {
-	Fields struct {
-		Project struct {
-			Key string `json:"key"`
-		} `json:"project"`
-		Summary     string `json:"summary"`
-		Description string `json:"description"`
-		IssueType   struct {
-			Name string `json:"name"`
-		} `json:"issuetype"`
-	} `json:"fields"`
+	Fields IssueFields `json:"fields"`
+}
+
+type IssueFields struct {
+	Project     Project      `json:"project"`
+	Summary     string       `json:"summary"`
+	Description string       `json:"description"`
+	IssueType   IssueType    `json:"issuetype"`
+	Components  []Components `json:"components"`
+	Assignee    Assignee     `json:"assignee"`
+}
+
+type IssueType struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+type Components struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type Assignee struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
 }
 
 // CreateIssue 创建 JIRA issue
@@ -117,11 +196,18 @@ func CreateIssue(projectKey, summary, description, issueType string) {
 	authHeader := fmt.Sprintf("Basic %s", encoded)
 
 	// 2. 构建请求体
-	reqBody := CreateIssueRequest{}
-	//reqBody.Fields.Project.Key = projectKey
-	reqBody.Fields.Summary = summary
-	reqBody.Fields.Description = description
-	reqBody.Fields.IssueType.Name = issueType
+	reqBody := CreateIssueRequest{
+		Fields: IssueFields{
+			Project:     Project{Key: projectKey, ID: "15701"},
+			Summary:     summary,
+			Description: description,
+			Components: []Components{
+				{ID: "22213", Name: "agent"},
+			},
+			Assignee:  Assignee{Key: USERNAME, Name: USERNAME},
+			IssueType: IssueType{Name: issueType, ID: "10003"},
+		},
+	}
 
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
