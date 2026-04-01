@@ -138,6 +138,8 @@ type Config struct {
 	N                     int
 	Loop                  int
 	Bw                    int
+	Offset                int
+	Limit                 int
 	F                     string
 	T                     string
 	Pattern               string
@@ -325,6 +327,8 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
 	flag.StringVar(&c.Path, "path", "http api 请求的path", "path")
 	flag.StringVar(&c.AccountCfgFile, "accfile", "/usr/local/etc/acc.json", "账号配置文件")
+	flag.IntVar(&c.Offset, "offset", 0, "offset")
+	flag.IntVar(&c.Limit, "limit", 100, "limit")
 	flag.Parse()
 }
 

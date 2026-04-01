@@ -131,7 +131,7 @@ func GetAkSk(conf *config.Config) (string, string) {
 	ag := appg.Client{Conn: qc}
 	uid, err := strconv.Atoi(conf.Uid)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
 	ak, sk, err := ag.GetAkSk(xlog.FromContextSafe(context.Background()), uint32(uid))
 	if err != nil {

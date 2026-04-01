@@ -245,7 +245,7 @@ func Http(conf *config.Config) (string, error) {
 			domain = "mls-test.cn-east-1.qiniumiku.com"
 		case "mikutest":
 			domain = "mls.cn-east-1.jfcs.qiniu.io"
-		case "mikuonline":
+		case "mikuonline", "qvsmiku":
 			domain = "mls.cn-east-1.qiniumiku.com"
 		case "qvs":
 			domain = "qiniuapi.com"
@@ -263,6 +263,50 @@ func Http(conf *config.Config) (string, error) {
 			conf.Addr = fmt.Sprintf("http://%s.%s/?domainConfig&name=%s", conf.Bucket, domain, conf.Domain)
 		case "bucket":
 			conf.Addr = fmt.Sprintf("http://%s.%s/?config", conf.Bucket, domain)
+		case "roominfo":
+			if conf.ID == "" {
+				log.Println("need -id")
+				return "", fmt.Errorf("need -id")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.%s/?roomrti&roomid=%s", conf.Bucket, domain, conf.ID)
+		case "listroom":
+			conf.Addr = fmt.Sprintf("http://%s.%s/?roomrtis&offset=%d&limit=%d", conf.Bucket, domain, conf.Offset, conf.Limit)
+		case "userinfo":
+			if conf.ID == "" {
+				log.Println("need -id")
+				return "", fmt.Errorf("need -id")
+			}
+			if conf.Uid == "" {
+				log.Println("need -uid")
+				return "", fmt.Errorf("need -uid")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.%s/?userrti&roomid=%s&userid=%s", conf.Bucket, domain, conf.ID, conf.Uid)
+		case "listuser":
+			if conf.ID == "" {
+				log.Println("need -id")
+				return "", fmt.Errorf("need -id")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.%s/?userrtis&roomid=%s&offset=%d&limit=%d", conf.Bucket, domain, conf.ID, conf.Offset, conf.Limit)
+		case "deleteuser":
+			method = "DELETE"
+			if conf.ID == "" {
+				log.Println("need -id")
+				return "", fmt.Errorf("need -id")
+			}
+			if conf.Uid == "" {
+				log.Println("need -uid")
+				return "", fmt.Errorf("need -uid")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.%s/?userrti&roomid=%s&userid=%s", conf.Bucket, domain, conf.ID, conf.Uid)
+		case "deleteroom":
+			method = "DELETE"
+			if conf.ID == "" {
+				log.Println("need -id")
+				return "", fmt.Errorf("need -id")
+			}
+			conf.Addr = fmt.Sprintf("http://%s.%s/?roomrti&roomid=%s", conf.Bucket, domain, conf.ID)
+		case "authrti":
+			conf.Addr = fmt.Sprintf("http://%s.%s/?authrti", conf.Bucket, domain)
 		default:
 			conf.Addr = fmt.Sprintf("http://%s", domain)
 		}
@@ -289,7 +333,9 @@ func Http(conf *config.Config) (string, error) {
 		log.Println(err)
 		return "", err
 	}
-	fmt.Println(resp)
+	if conf.Detail {
+		fmt.Println("raw resp:", resp)
+	}
 	respMap := make(map[string]any)
 	if err := json.Unmarshal([]byte(resp), &respMap); err != nil {
 		log.Println("err:", err)

@@ -20,7 +20,7 @@ func (m *CommandManager) CmdHttp() *Command {
 			"miku -cmd http -ak xxx -sk xxx -method POST -addr http://miku-lived.dooquuequezi.com/api/v1/centerauth -detail(输出详细日志, 可选)" +
 			" -body '{\"bucket\": \"test-bucket\"}' -header 'content-type:application/json'" +
 			"\n-user 可选值: mikutest(pilitest@qiniu.com), mikuonline, qvs\n" +
-			"-path 可选值: domain, bucket, 如果传了-path, 则-addr会被忽略",
+			"-path 可选值: domain, bucket, roominfo, listroom, authrti,如果传了-path, 则-addr会被忽略",
 		Handler: handler,
 	}
 	return cmd
@@ -453,6 +453,17 @@ func (m *CommandManager) CmdProcMonitor() *Command {
 	}
 	cmd := &Command{
 		Desc:    "监控到进程重启发送邮件，-process=<进程名> -smtp_host <SMTP服务器地址> -smtp_port <SMTP端口，默认587> -smtp_user <SMTP用户名> -smtp_pass <SMTP密码> -mail_from <发件人邮箱> -smtp_use_tls <是否使用TLS，默认true> -to <收件人邮箱，多个用逗号分隔> -subject <邮件主题> -body <邮件内容> -type <邮件类型：report/alert，默认report>",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdPublish() *Command {
+	handler := func() {
+		miku.Publish(m.config)
+	}
+	cmd := &Command{
+		Desc:    "发布",
 		Handler: handler,
 	}
 	return cmd
