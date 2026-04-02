@@ -24,6 +24,12 @@ type CkConfig struct {
 	Table  string   `json:"table" yaml:"table"`
 }
 
+type GitHubConf struct {
+	GitHubToken string `json:"githubToken"`
+	Owner       string `json:"owner"` // GitHub repository owner
+	Repo        string `json:"repo"`  // GitHub repository name
+}
+
 type TCPRetranFilterConfig struct {
 	Enable                 bool    `json:"enable" yaml:"enable"`                                       // 是否开启
 	TCPRetranRateThreshold float64 `json:"tcp_retran_rate_threshold" yaml:"tcp_retran_rate_threshold"` // TCP 重传率阈值
@@ -151,6 +157,7 @@ type Config struct {
 	Skip                  string
 	Url                   string
 	JiraApiKeyFile        string
+	GithubconfFile        string
 	ApiKey                string
 	Redirect              bool
 	Internal              bool
@@ -182,6 +189,7 @@ type Config struct {
 	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
 	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
 	Path                  string                `json:"path" yaml:"path"`
+	GitHubConf            GitHubConf            `json:"githubConf" yaml:"githubConf"`
 }
 
 func (c *Config) initIpdbConfig() {
@@ -240,6 +248,20 @@ func Load() *Config {
 		}
 		conf.ApiKey = string(data)[:len(data)-1]
 		log.Printf("读取文件成功: %v, apikey; %s\n", conf.JiraApiKeyFile, conf.ApiKey)
+
+		if conf.GithubconfFile == "" {
+			conf.GithubconfFile = "/usr/local/etc/github.json"
+		}
+		data, err = os.ReadFile(conf.GithubconfFile)
+		if err != nil {
+			log.Fatalf("读取文件失败: %v", err)
+		}
+		err = json.Unmarshal(data, &conf.GitHubConf)
+		if err != nil {
+			log.Fatalf("解析 json 失败: %v", err)
+		} else {
+			log.Printf("读取文件成功: %v\n", conf.GithubconfFile)
+		}
 		return &conf
 	}
 	_, err = os.Stat("/tmp/mikutool.yaml")
@@ -345,6 +367,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.JiraApiKeyFile, "api_key", "/usr/local/etc/jira_api_key.conf", "jira api key file")
 	flag.StringVar(&c.Env, "env", "online", "env")
 	flag.StringVar(&c.Bin, "bin", "sched", "bin")
+	flag.StringVar(&c.GithubconfFile, "githubconf", "/usr/local/etc/github.conf", "github config file")
 
 	flag.Parse()
 }

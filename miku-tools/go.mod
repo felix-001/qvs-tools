@@ -6,6 +6,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
 	github.com/emiago/sipgo v0.33.0
 	github.com/go-echarts/go-echarts/v2 v2.6.3
+	github.com/google/go-github/v48 v48.2.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/icholy/digest v1.1.0
 	github.com/jmoiron/sqlx v1.4.0
@@ -17,6 +18,7 @@ require (
 	github.com/redis/go-redis/v9 v9.11.0
 	github.com/rs/zerolog v1.32.0
 	github.com/trinodb/trino-go-client v0.326.0
+	golang.org/x/oauth2 v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -51,6 +53,7 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/consul/api v1.10.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
