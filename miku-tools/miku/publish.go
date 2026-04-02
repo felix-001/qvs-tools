@@ -1,7 +1,18 @@
 package miku
 
-import "mikutool/config"
+import (
+	"mikutool/config"
+)
 
 func Publish(conf *config.Config) {
-	Build(conf)
+	//Build(conf)
+	/*
+		packageName, err := GetOldPackageName(conf)
+		if err != nil {
+			log.Printf("获取旧包名失败: %v\n", err)
+			return
+		}
+		log.Printf("旧包名: %s\n", packageName)
+	*/
+	UpdatePackageName(conf, "MIKUD_LIVE.2026-04-02-16-11-20.tar.gz")
 }

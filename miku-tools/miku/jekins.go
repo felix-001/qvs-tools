@@ -860,13 +860,13 @@ func GetStatus(conf *config.Config) {
 	cmdStatus(client, args)
 }
 
-func Build(conf *config.Config) {
+func Build(conf *config.Config) (string, error) {
 	if conf.User == "iqiyi" {
 		conf.User = "liyuanquan"
 	}
 	if conf.ApiKey == "" {
 		log.Println("api key is empty")
-		return
+		return "", fmt.Errorf("api key is empty")
 	}
 	cfg := &Config{
 		BaseURL:  "https://jenkins.qiniu.io",
@@ -879,7 +879,7 @@ func Build(conf *config.Config) {
 	client, err := NewJenkinsClient(cfg)
 	if err != nil {
 		log.Printf("failed to create client: %v\n", err)
-		return
+		return "", fmt.Errorf("failed to create client: %w", err)
 	}
 	args := &CLIArgs{
 		Service: conf.Bin,
@@ -891,13 +891,13 @@ func Build(conf *config.Config) {
 		buildNum, err = cmdProd(client, args, cfg)
 		if err != nil {
 			log.Printf("failed to trigger prod: %v\n", err)
-			return
+			return "", fmt.Errorf("failed to trigger prod: %w", err)
 		}
 	} else {
 		buildNum, err = CmdTest(client, args, cfg)
 		if err != nil {
 			log.Printf("failed to trigger test: %v\n", err)
-			return
+			return "", fmt.Errorf("failed to trigger test: %w", err)
 		}
 	}
 	log.Println("build number:", buildNum)
@@ -921,7 +921,9 @@ func Build(conf *config.Config) {
 
 		if !status.InProgress {
 			log.Printf("build completed, package name: %s\n", status.PackageName)
-			return
+			return status.PackageName, nil
 		}
 	}
+
+	return "", fmt.Errorf("timed out waiting for build to complete")
 }

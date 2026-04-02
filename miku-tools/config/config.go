@@ -338,7 +338,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.MailFrom, "mail_from", "", "发件人邮箱")
 	flag.IntVar(&c.Process, "process", 0, "进程id")
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
-	flag.StringVar(&c.Path, "path", "http api 请求的path", "path")
+	flag.StringVar(&c.Path, "path", "", "http api 请求的path")
 	flag.StringVar(&c.AccountCfgFile, "accfile", "/usr/local/etc/acc.json", "账号配置文件")
 	flag.IntVar(&c.Offset, "offset", 0, "offset")
 	flag.IntVar(&c.Limit, "limit", 100, "limit")
