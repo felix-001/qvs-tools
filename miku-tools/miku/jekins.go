@@ -210,7 +210,7 @@ func NewJenkinsClient(cfg *Config) (*JenkinsClient, error) {
 // 登录到Jenkins
 func (jc *JenkinsClient) Login() error {
 	if jc.config.ApiToken != "" {
-		fmt.Printf("[jenkins] Using API token auth (user=%s)\n", jc.config.Username)
+		//fmt.Printf("[jenkins] Using API token auth (user=%s)\n", jc.config.Username)
 		return nil
 	}
 
@@ -444,7 +444,7 @@ func (jc *JenkinsClient) GetQueueItem(queueID int) (*BuildInfo, error) {
 func (jc *JenkinsClient) GetBuildStatus(jobPath string, buildNumber int) (map[string]interface{}, error) {
 	buildURL := jc.buildURL(fmt.Sprintf("/%s/%d/api/json", strings.TrimPrefix(jobPath, "/"), buildNumber))
 
-	log.Println(buildURL)
+	//log.Println(buildURL)
 	req, err := http.NewRequest("GET", buildURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create status request: %w", err)
@@ -713,30 +713,34 @@ func cmdStatus(client *JenkinsClient, args *CLIArgs) (*Status, error) {
 		result := "IN_PROGRESS"
 		status.InProgress = true
 		if r, ok := info["result"].(string); ok {
-			if r == "SUCCESS" {
-				status.InProgress = false
-			}
+			//if r == "SUCCESS" {
+			//status.InProgress = false
+			//}
+			log.Println(r)
 			result = r
 		}
 
 		duration := 0.0
 		if d, ok := info["duration"].(float64); ok {
 			duration = d / 1000
+			if duration > 0 {
+				status.InProgress = false
+			}
 		}
 
-		url := ""
-		if u, ok := info["url"].(string); ok {
-			url = u
-		}
+		//url := ""
+		//if u, ok := info["url"].(string); ok {
+		//	url = u
+		//}
 
 		fmt.Printf("[jenkins] Build #%d: %s (%.0fs)\n", args.BuildNumber, result, duration)
-		fmt.Printf("[jenkins] URL: %s\n", url)
+		//fmt.Printf("[jenkins] URL: %s\n", url)
 
 		if actions, ok := info["actions"].([]interface{}); ok {
 			for _, action := range actions {
 				if a, ok := action.(map[string]interface{}); ok {
 					if params, ok := a["parameters"].([]interface{}); ok && len(params) > 0 {
-						fmt.Println("[jenkins] Build parameters:")
+						//fmt.Println("[jenkins] Build parameters:")
 						for _, param := range params {
 							if p, ok := param.(map[string]interface{}); ok {
 								name := p["name"].(string)
@@ -747,7 +751,7 @@ func cmdStatus(client *JenkinsClient, args *CLIArgs) (*Status, error) {
 								if name == "PACKAGE_NAME" {
 									status.PackageName = value
 								}
-								fmt.Printf("  %s = %s\n", name, value)
+								//fmt.Printf("  %s = %s\n", name, value)
 							}
 						}
 					}
@@ -897,4 +901,27 @@ func Build(conf *config.Config) {
 		}
 	}
 	log.Println("build number:", buildNum)
+	// 每隔1秒轮询检查构建状态，直到编译结束
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	if conf.Env == "online" {
+		args.JobPath = "mikud-live-module-pipeline"
+	} else {
+		args.JobPath = "mikud-dev-jfcs-deploy"
+	}
+	args.BuildNumber = buildNum
+
+	for range ticker.C {
+		status, err := cmdStatus(client, args)
+		if err != nil {
+			log.Printf("failed to get status: %v\n", err)
+			continue
+		}
+
+		if !status.InProgress {
+			log.Printf("build completed, package name: %s\n", status.PackageName)
+			return
+		}
+	}
 }
