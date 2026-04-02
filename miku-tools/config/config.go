@@ -95,6 +95,7 @@ type Config struct {
 	H                     bool
 	Detail                bool
 	Local                 bool
+	Env                   string
 	Output                string
 	Pcdn                  string
 	User                  string
@@ -129,6 +130,7 @@ type Config struct {
 	Host                  string
 	QnTestUrl             string
 	Player                string
+	Bin                   string
 	Process               int
 	Basesub               int
 	SubStream             int
@@ -148,6 +150,8 @@ type Config struct {
 	Protocol              string
 	Skip                  string
 	Url                   string
+	JiraApiKeyFile        string
+	ApiKey                string
 	Redirect              bool
 	Internal              bool
 	Silence               bool
@@ -227,6 +231,15 @@ func Load() *Config {
 		} else {
 			log.Printf("读取文件失败: %v, err: %v\n", conf.AccountCfgFile, err)
 		}
+		if conf.JiraApiKeyFile == "" {
+			conf.JiraApiKeyFile = "/usr/local/etc/jira_api_key.conf"
+		}
+		data, err = os.ReadFile(conf.JiraApiKeyFile)
+		if err != nil {
+			log.Fatalf("读取文件失败: %v", err)
+		}
+		conf.ApiKey = string(data)[:len(data)-1]
+		log.Printf("读取文件成功: %v, apikey; %s\n", conf.JiraApiKeyFile, conf.ApiKey)
 		return &conf
 	}
 	_, err = os.Stat("/tmp/mikutool.yaml")
@@ -329,6 +342,10 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.AccountCfgFile, "accfile", "/usr/local/etc/acc.json", "账号配置文件")
 	flag.IntVar(&c.Offset, "offset", 0, "offset")
 	flag.IntVar(&c.Limit, "limit", 100, "limit")
+	flag.StringVar(&c.JiraApiKeyFile, "api_key", "/usr/local/etc/jira_api_key.conf", "jira api key file")
+	flag.StringVar(&c.Env, "env", "online", "env")
+	flag.StringVar(&c.Bin, "bin", "sched", "bin")
+
 	flag.Parse()
 }
 

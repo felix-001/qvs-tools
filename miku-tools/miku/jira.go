@@ -105,9 +105,9 @@ type Project struct {
 }
 
 // GetProjects 获取所有项目列表
-func GetProjects() {
+func GetProjects(conf *config.Config) {
 	// 1. 创建 Basic Auth 认证头
-	credentials := fmt.Sprintf("%s:%s", USERNAME, PASSWORD)
+	credentials := fmt.Sprintf("%s:%s", conf.User, conf.Passwd)
 	encoded := base64.StdEncoding.EncodeToString([]byte(credentials))
 	authHeader := fmt.Sprintf("Basic %s", encoded)
 
@@ -189,9 +189,9 @@ type Assignee struct {
 }
 
 // CreateIssue 创建 JIRA issue
-func CreateIssue(projectKey, summary, description, issueType string) {
+func CreateIssue(projectKey, summary, description, issueType string, conf *config.Config) {
 	// 1. 创建 Basic Auth 认证头
-	credentials := fmt.Sprintf("%s:%s", USERNAME, PASSWORD)
+	credentials := fmt.Sprintf("%s:%s", conf.User, conf.Passwd)
 	encoded := base64.StdEncoding.EncodeToString([]byte(credentials))
 	authHeader := fmt.Sprintf("Basic %s", encoded)
 
@@ -204,7 +204,7 @@ func CreateIssue(projectKey, summary, description, issueType string) {
 			Components: []Components{
 				{ID: "22213", Name: "agent"},
 			},
-			Assignee:  Assignee{Key: USERNAME, Name: USERNAME},
+			Assignee:  Assignee{Key: conf.User, Name: conf.User},
 			IssueType: IssueType{Name: issueType, ID: "10003"},
 		},
 	}

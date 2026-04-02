@@ -463,7 +463,7 @@ func (m *CommandManager) CmdPublish() *Command {
 		miku.Publish(m.config)
 	}
 	cmd := &Command{
-		Desc:    "发布",
+		Desc:    "发布, -env <env, default: online, 可选值online/jfcs>",
 		Handler: handler,
 	}
 	return cmd
