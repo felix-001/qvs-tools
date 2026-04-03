@@ -13,6 +13,7 @@ func Publish(conf *config.Config) {
 	githubMgr := NewGitHubMgr(conf.GitHubConf)
 	prTitle := githubMgr.GetPrTitle(conf.Pr)
 	log.Println(prTitle)
-	ResetGitLab()
-	OpenConfEdit(conf)
+	//ResetGitLab()
+	//OpenConfEdit(conf)
+	GitlabPR(conf, prTitle)
 }
