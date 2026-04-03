@@ -337,3 +337,12 @@ func GetNodeLocate(node *commonModel.RtNode, ipParser *ipdb.City) (string, strin
 	return "", "", "", ""
 
 }
+
+func ContainInStringSlice(slice []string, item string) bool {
+	for _, sliceItem := range slice {
+		if sliceItem == item {
+			return true
+		}
+	}
+	return false
+}

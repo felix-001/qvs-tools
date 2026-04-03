@@ -9,6 +9,7 @@ import (
 	"mikutool/public/util"
 	"mikutool/resources"
 	"os"
+	"strings"
 	"time"
 
 	commonModel "github.com/qbox/mikud-live/common/model"
@@ -213,4 +214,58 @@ func (m *NodeMgr) dumpOutProvNodes() {
 		}
 
 	}
+}
+
+var douyulist = []string{
+	"ff20aba243c144fe1dd15202cbb54675",
+	"04dc7a3f19e0e1aba5a1015407c48d4e",
+	"4b57785dcad347d5ea3497f3c85a6c72",
+	"b72c51ed7a4f1a38836037d6d95cc9d8",
+	"6e9c0ed96c4cc968728d97727ae2eb17",
+	"4b3ef6efdbeaf3b53726487737e85c81",
+	"643f5908a79ab5fe370cc4c270f1915a",
+	"b313ef6513801afbaf9db826538a10ad",
+	"b72c51ed7a4f1a38836037d6d95cc9d8",
+	"380477484dda70ca56f878dac9d26dc6",
+	"38d88cffd2c0a9c3d8abf09fd0a28886",
+}
+
+func (m *NodeMgr) Filternode() {
+	file, err := os.ReadFile("/tmp/nodelist.txt")
+	if err != nil {
+		log.Println("Read nodelist.txt err:", err)
+		return
+	}
+	lines := strings.Split(string(file), "\n")
+	machidMap := make(map[string]bool)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		machidMap[line] = true
+	}
+	log.Println("len(machidMap)", len(machidMap))
+	log.Println("len(m.allNodesMap)", len(m.allNodesMap))
+	cnt := 0
+	for _, node := range m.allNodesMap {
+		if !node.IsDynamic {
+			continue
+		}
+		if !machidMap[node.MachineId] {
+			continue
+		}
+
+		_, _, area, province := util.GetNodeLocate(node, m.resources.IpParser)
+		if util.ContainInStringSlice(douyulist, node.MachineId) {
+			log.Println("skip", node.MachineId, area, province)
+			continue
+		}
+
+		if area == "华东" || area == "华中" /*|| province == "黑龙江"*/ {
+			fmt.Println(node.Id, node.MachineId, area, province)
+			cnt++
+		}
+	}
+	log.Println("cnt", cnt)
 }

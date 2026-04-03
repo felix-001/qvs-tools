@@ -148,6 +148,7 @@ type Config struct {
 	Bw                    int
 	Offset                int
 	Limit                 int
+	Pr                    int
 	F                     string
 	T                     string
 	Pattern               string
@@ -164,6 +165,7 @@ type Config struct {
 	Silence               bool
 	Random                bool
 	HeadReq               bool
+	UpdateConf            bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck" yaml:"ck"`
 	Ak                    string                `json:"ak" yaml:"ak"`
@@ -368,6 +370,8 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Env, "env", "online", "env")
 	flag.StringVar(&c.Bin, "bin", "sched", "bin")
 	flag.StringVar(&c.GithubconfFile, "githubconf", "/usr/local/etc/github.conf", "github config file")
+	flag.IntVar(&c.Pr, "pr", 0, "pr")
+	flag.BoolVar(&c.UpdateConf, "update_conf", false, "update conf")
 
 	flag.Parse()
 }

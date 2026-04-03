@@ -468,3 +468,15 @@ func (m *CommandManager) CmdPublish() *Command {
 	}
 	return cmd
 }
+
+func (m *CommandManager) CmdFilternode() *Command {
+	handler := func() {
+		m.nodeMgr.Filternode()
+	}
+	return &Command{
+		Desc:         "过滤节点",
+		Handler:      handler,
+		NeedIpParser: true,
+		NeedNodeInfo: true,
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"log"
 	"mikutool/config"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -69,4 +70,45 @@ func UpdatePackageName(conf *config.Config, packageName string) error {
 
 	fmt.Printf("文件 %s 中的包名已全部替换\n", conf.Path)
 	return nil
+}
+
+func ResetGitLab() {
+	path := "/Users/liyuanquan/workspace/deploy/"
+
+	// 定义要执行的 git 命令
+	commands := []string{
+		"git fetch upstream",
+		"git reset --hard upstream/master",
+		"git status",
+	}
+
+	// 依次执行每个命令
+	for _, cmdStr := range commands {
+		log.Printf("执行命令：%s\n", cmdStr)
+
+		// 创建命令
+		cmd := exec.Command("bash", "-c", cmdStr)
+
+		// 设置工作目录
+		cmd.Dir = path
+
+		// 执行命令并获取输出
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("命令执行失败：%v\n", err)
+		}
+
+		// 输出命令执行结果
+		fmt.Printf("命令：%s\n", cmdStr)
+		fmt.Printf("输出:\n%s\n", string(output))
+		if err != nil {
+			fmt.Printf("错误：%v\n\n", err)
+		} else {
+			fmt.Println()
+		}
+	}
+}
+
+func OpenConfEdit(conf *config.Config) {
+	//path := fmt.Sprintf("/Users/liyuanquan/workspace/deploy/floy/miku-%s/env_common/_package/%s.json", conf.Bin, conf.Bin)
 }
