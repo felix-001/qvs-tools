@@ -14,4 +14,5 @@ func Publish(conf *config.Config) {
 	prTitle := githubMgr.GetPrTitle(conf.Pr)
 	log.Println(prTitle)
 	ResetGitLab()
+	OpenConfEdit(conf)
 }

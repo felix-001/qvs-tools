@@ -109,6 +109,17 @@ func ResetGitLab() {
 	}
 }
 
-func OpenConfEdit(conf *config.Config) {
-	//path := fmt.Sprintf("/Users/liyuanquan/workspace/deploy/floy/miku-%s/env_common/_package/%s.json", conf.Bin, conf.Bin)
+func OenConfEdit(conf *config.Config) {
+	path := fmt.Sprintf("/Users/liyuanquan/workspace/deploy/floy/miku-%s/env_common/_package/%s.json", conf.Bin, conf.Bin)
+	log.Printf("打开配置文件：%s\n", path)
+
+	// 使用 open 命令（macOS）打开文件
+	cmd := exec.Command("open", path)
+
+	err := cmd.Start()
+	if err != nil {
+		log.Printf("打开文件失败：%v\n", err)
+		return
+	}
+	log.Printf("正在打开文件：%s\n", path)
 }
