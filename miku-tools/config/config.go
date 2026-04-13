@@ -159,6 +159,7 @@ type Config struct {
 	Url                   string
 	JiraApiKeyFile        string
 	GithubconfFile        string
+	DnsPodConfFile        string
 	ApiKey                string
 	Redirect              bool
 	Internal              bool
@@ -263,6 +264,19 @@ func Load() *Config {
 			log.Fatalf("解析 json 失败: %v", err)
 		} else {
 			log.Printf("读取文件成功: %v\n", conf.GithubconfFile)
+		}
+		if conf.DnsPodConfFile == "" {
+			conf.DnsPodConfFile = "/usr/local/etc/dnspod.json"
+		}
+		data, err = os.ReadFile(conf.DnsPodConfFile)
+		if err != nil {
+			log.Fatalf("读取文件失败: %v", err)
+		}
+		err = json.Unmarshal(data, &conf.DnsPod)
+		if err != nil {
+			log.Fatalf("解析 json 失败: %v", err)
+		} else {
+			log.Printf("读取文件成功: %v\n", conf.DnsPodConfFile)
 		}
 		return &conf
 	}

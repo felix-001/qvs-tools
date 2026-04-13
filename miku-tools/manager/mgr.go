@@ -139,6 +139,10 @@ func (m *CommandManager) loadResources(cmd *Command) {
 		m.resources.NodeFilterCol = filter.NewAvailableResourceRepo(availableResourceCol, zerolog.Logger{})
 	}
 	if cmd.NeedDnsPod {
+		if m.config.DnsPod.SecretKey == "" {
+			log.Fatal("dns pod secret key is empty\n")
+			return
+		}
 		var err error
 		m.resources.DnsPodCli, err = tencent_dnspod.NewTencentClient(m.config.DnsPod)
 		if err != nil {

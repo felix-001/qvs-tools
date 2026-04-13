@@ -272,6 +272,20 @@ func (m *CommandManager) CmdIpv6Records() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdDns() *Command {
+	handler := func() {
+		m.miku.DumpDns()
+	}
+	cmd := &Command{
+		Desc: "dump dns记录列表, -doman <domain> -host <host, 可选>, \n\texample: " +
+			"-domain \"mikudns.com\"  -host \"qn-kuai-flv-yq.njyqkj0ksyz.com.subscribe\"\n" +
+			"\t如果不指定-host则是获取所有记录",
+		Handler:    handler,
+		NeedDnsPod: true,
+	}
+	return cmd
+}
+
 func (m *CommandManager) CmdTy() *Command {
 	handler := func() {
 		m.miku.TingYunErrNodes()
