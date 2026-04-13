@@ -494,3 +494,13 @@ func (m *CommandManager) CmdFilternode() *Command {
 		NeedNodeInfo: true,
 	}
 }
+
+func (m *CommandManager) CmdBlacklist() *Command {
+	handler := func() {
+		m.nodeMgr.DownloadNodeStatus(m.config)
+	}
+	return &Command{
+		Desc:    "下载节点状态",
+		Handler: handler,
+	}
+}

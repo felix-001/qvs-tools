@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"mikutool/config"
 	"mikutool/public/util"
 	"mikutool/resources"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +18,7 @@ import (
 	commonModel "github.com/qbox/mikud-live/common/model"
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 )
 
 type NodeMgr struct {
@@ -268,4 +272,102 @@ func (m *NodeMgr) Filternode() {
 		}
 	}
 	log.Println("cnt", cnt)
+}
+
+type Response struct {
+	NodeStatus302
+}
+
+// NodeStatus 表示节点状态信息
+type NodeStatus302 struct {
+	MikuNodeid string `json:"mikuNodeid"`
+	ID         string `json:"id"`
+	CreateAt   string `json:"createAt"`
+	UpdateAt   string `json:"updateAt"`
+	NodeID     string `json:"nodeId"`
+	NodeID32   int    `json:"nodeId32"`
+	MachineId  string `json:"host"`
+	Status     string `json:"status"`
+	BwMbps     int    `json:"bwMbps"`
+	//CPU                      CPUInfo                `json:"cpu"`
+	//Memory                   MemoryInfo             `json:"memory"`
+	Uptime int `json:"uptime"`
+	Date   int `json:"date"`
+	//Services                 map[string]ServiceInfo `json:"services"`
+	//Disks                    map[string]DiskInfo    `json:"disks"`
+	//DiskIOStats              []DiskIOStat           `json:"diskIOStats"`
+	RebootStatus   int     `json:"rebootStatus"`
+	TCPRetransRate float64 `json:"tcpRetransRate"`
+	MovingAvg      float64 `json:"movingAvg"`
+	Abandoned      bool    `json:"abandoned"`
+	HTTPOnly       bool    `json:"httpOnly"`
+	ResourceType   string  `json:"resourceType"`
+	//Ips                      []IPStatus `json:"ips"`
+	Quality                  string   `json:"quality"`
+	QualityTags              []int    `json:"qualityTags"`
+	Area                     string   `json:"area"`
+	ManualArea               string   `json:"manualArea"`
+	ISP                      string   `json:"isp"`
+	ForbidMiku               bool     `json:"forbidMiku"`
+	ScheduleArea             []string `json:"scheduleArea"`             // 可调度区域: 优先级高, 人工修改
+	NiulinkScheduleArea      []string `json:"niulinkScheduleArea"`      // 可调度区域
+	AnalyzerBlacklistedAreas []string `json:"analyzerBlacklistedAreas"` // 黑名单区域
+	NiulinkBlacklistedAreas  []string `json:"niulinkBlacklistedAreas"`  // 人工黑名单区域
+}
+
+func (m *NodeMgr) DownloadNodeStatus(conf *config.Config) {
+	if conf.Node == "" {
+		log.Println("DownloadNodeStatus node is empty")
+		return
+	}
+	start_time := time.Now()
+	logger := zlog.Logger.With().Str("DownloadNodeStatus machineId", conf.Node).Logger()
+
+	// http://dn_scheduler.fusion.internal.qiniu.io/dn/node?id=vdnd-qnvm-<machineId>
+	baseURL := "http://dn_scheduler.fusion.internal.qiniu.io/dn/node"
+	params := url.Values{}
+	params.Add("id", "vdnd-qnvm-"+conf.Node)
+
+	client := &http.Client{}
+	reqURL := fmt.Sprintf("%s?%s", baseURL, params.Encode())
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		logger.Error().Err(err).Msg("DownloadNodeStatus Failed")
+		return
+	}
+	defer func() {
+		if time.Since(start_time).Milliseconds() > 1000 {
+			logger.Info().Msgf(" end, elapsed_time: %v", time.Since(start_time))
+		}
+	}()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Error().Err(err).Msg("请求失败")
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error().Int("status_code", resp.StatusCode).Str("url", reqURL).Msg("请求失败")
+		return
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error().Err(err).Msg("读取响应体失败")
+		return
+	}
+
+	var responseData Response
+	if err := json.Unmarshal(body, &responseData); err != nil {
+		logger.Error().Err(err).Msgf("JSON 解析失败")
+		return
+	}
+	data, err := json.MarshalIndent(responseData.NodeStatus302, "", "  ")
+	if err != nil {
+		logger.Error().Err(err).Msgf("JSON 序列化失败")
+		return
+	}
+	fmt.Println(string(data))
 }
