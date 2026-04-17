@@ -99,7 +99,7 @@ func (m *Miku) convertToCSV(jsonStr string) error {
 	defer writer.Flush()
 
 	// 写入表头
-	headers := []string{"ID", "Host", "Type", "Value", "TTL", "Status", "Domain", "Line"}
+	headers := []string{"ID", "Host", "Type", "Value", "TTL", "Status", "Domain", "Line", "Weight"}
 	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("写入表头失败: %w", err)
 	}
@@ -115,6 +115,7 @@ func (m *Miku) convertToCSV(jsonStr string) error {
 			fmt.Sprintf("%v", getValue(record, "status", "Status")),
 			fmt.Sprintf("%v", getValue(record, "domain", "Domain")),
 			fmt.Sprintf("%v", getValue(record, "line", "Line")),
+			fmt.Sprintf("%v", getValue(record, "weight", "Weight")),
 		}
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("写入记录失败: %w", err)
