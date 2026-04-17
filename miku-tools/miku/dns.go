@@ -13,6 +13,52 @@ import (
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
 )
 
+type RecordListItem struct {
+	// 记录Id
+	RecordId *uint64 `json:"RecordId,omitempty" name:"RecordId"`
+
+	// 记录值
+	Value *string `json:"Value,omitempty" name:"Value"`
+
+	// 记录状态，启用：ENABLE，暂停：DISABLE
+	Status *string `json:"Status,omitempty" name:"Status"`
+
+	// 更新时间
+	UpdatedOn *string `json:"UpdatedOn,omitempty" name:"UpdatedOn"`
+
+	// 主机名
+	Name *string `json:"Name,omitempty" name:"Name"`
+
+	// 记录线路
+	Line *string `json:"Line,omitempty" name:"Line"`
+
+	// 线路Id
+	LineId *string `json:"LineId,omitempty" name:"LineId"`
+
+	// 记录类型
+	Type *string `json:"Type,omitempty" name:"Type"`
+
+	// 记录权重，用于负载均衡记录
+	// 注意：此字段可能返回 null，表示取不到有效值。
+	Weight *uint64 `json:"Weight,omitempty" name:"Weight"`
+
+	// 记录监控状态，正常：OK，告警：WARN，宕机：DOWN，未设置监控或监控暂停则为空
+	MonitorStatus *string `json:"MonitorStatus,omitempty" name:"MonitorStatus"`
+
+	// 记录备注说明
+	Remark *string `json:"Remark,omitempty" name:"Remark"`
+
+	// 记录缓存时间
+	TTL *uint64 `json:"TTL,omitempty" name:"TTL"`
+
+	// MX值，只有MX记录有
+	// 注意：此字段可能返回 null，表示取不到有效值。
+	MX *uint64 `json:"MX,omitempty" name:"MX"`
+
+	// 是否是默认的ns记录
+	DefaultNS *bool `json:"DefaultNS,omitempty" name:"DefaultNS"`
+}
+
 func (m *Miku) DumpDns() {
 	if m.conf.Domain == "" {
 		log.Println("domain is empty")
@@ -24,6 +70,42 @@ func (m *Miku) DumpDns() {
 		log.Println(err)
 		return
 	}
+	if m.conf.Enable {
+		var recordListFiltered []RecordListItem
+		for _, item := range resp.RecordList {
+			if *item.Status != "ENABLE" {
+				continue
+			}
+			if m.conf.Line != "" && *item.Line != m.conf.Line {
+				continue
+			}
+			record := RecordListItem{
+				RecordId:      item.RecordId,
+				Value:         item.Value,
+				Status:        item.Status,
+				UpdatedOn:     item.UpdatedOn,
+				Name:          item.Name,
+				Line:          item.Line,
+				LineId:        item.LineId,
+				Type:          item.Type,
+				Weight:        item.Weight,
+				MonitorStatus: item.MonitorStatus,
+				Remark:        item.Remark,
+				TTL:           item.TTL,
+				MX:            item.MX,
+				DefaultNS:     item.DefaultNS,
+			}
+			recordListFiltered = append(recordListFiltered, record)
+		}
+		bytes, err := json.MarshalIndent(recordListFiltered, "", "  ")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println(string(bytes))
+		return
+	}
+
 	bytes, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		fmt.Println(err)

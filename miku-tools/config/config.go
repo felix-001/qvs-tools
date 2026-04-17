@@ -137,6 +137,7 @@ type Config struct {
 	QnTestUrl             string
 	Player                string
 	Bin                   string
+	Line                  string
 	Process               int
 	Basesub               int
 	SubStream             int
@@ -167,6 +168,7 @@ type Config struct {
 	Random                bool
 	HeadReq               bool
 	UpdateConf            bool
+	Enable                bool
 	HeaderMap             HeaderMap
 	CK                    CkConfig              `json:"ck" yaml:"ck"`
 	Ak                    string                `json:"ak" yaml:"ak"`
@@ -386,6 +388,8 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.GithubconfFile, "githubconf", "/usr/local/etc/github.conf", "github config file")
 	flag.IntVar(&c.Pr, "pr", 0, "pr")
 	flag.BoolVar(&c.UpdateConf, "update_conf", false, "update conf")
+	flag.BoolVar(&c.Enable, "enable", false, "是否开启")
+	flag.StringVar(&c.Line, "line", "", "line")
 
 	flag.Parse()
 }
