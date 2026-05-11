@@ -8,8 +8,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"github.com/qbox/mikud-live/cmd/dnspod/model"
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
 )
 
@@ -59,9 +61,14 @@ type RecordListItem struct {
 	DefaultNS *bool `json:"DefaultNS,omitempty" name:"DefaultNS"`
 }
 
-func (m *Miku) DumpDns() {
+func (m *Miku) Dns() {
 	if m.conf.Domain == "" {
 		log.Println("domain is empty")
+		return
+	}
+	if m.conf.Del {
+		log.Println("del dns record")
+		m.DelDnsRecord()
 		return
 	}
 	xl := xlog.NewDummyWithCtx(context.Background())
@@ -216,4 +223,29 @@ func getValue(m map[string]interface{}, keys ...string) interface{} {
 		}
 	}
 	return ""
+}
+
+func (m *Miku) DelDnsRecord() {
+	if m.conf.ID == "" {
+		log.Println("id is empty")
+		return
+	}
+	recordID, err := strconv.ParseUint(m.conf.ID, 10, 64)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	xl := xlog.NewDummyWithCtx(context.Background())
+	record := model.Record{
+		Domain: m.conf.Domain,
+		DnspodRecord: &model.DnspodRecord{
+			RecordID: recordID,
+		},
+	}
+	resp, err := m.resources.DnsPodCli.Delete(xl, record)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(resp)
 }

@@ -274,10 +274,10 @@ func (m *CommandManager) CmdIpv6Records() *Command {
 
 func (m *CommandManager) CmdDns() *Command {
 	handler := func() {
-		m.miku.DumpDns()
+		m.miku.Dns()
 	}
 	cmd := &Command{
-		Desc: "dump dns记录列表, -doman <domain> -host <host, 可选>, \n\texample: " +
+		Desc: "dump dns记录列表, -doman <domain> -host <host, 可选> -del <是否删除, default: false> -id <record id> \n\texample: " +
 			"-domain \"mikudns.com\"  -host \"qn-kuai-flv-yq.njyqkj0ksyz.com.subscribe\"\n" +
 			"\t如果不指定-host则是获取所有记录",
 		Handler:    handler,

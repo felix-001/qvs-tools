@@ -101,6 +101,7 @@ type Config struct {
 	H                     bool
 	Detail                bool
 	Local                 bool
+	Del                   bool
 	Env                   string
 	Output                string
 	Pcdn                  string
@@ -390,6 +391,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.UpdateConf, "update_conf", false, "update conf")
 	flag.BoolVar(&c.Enable, "enable", false, "是否开启")
 	flag.StringVar(&c.Line, "line", "", "line")
+	flag.BoolVar(&c.Del, "del", false, "是否删除")
 
 	flag.Parse()
 }
