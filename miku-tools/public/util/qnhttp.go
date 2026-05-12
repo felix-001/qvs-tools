@@ -307,6 +307,18 @@ func Http(conf *config.Config) (string, error) {
 			conf.Addr = fmt.Sprintf("http://%s.%s/?roomrti&roomid=%s", conf.Bucket, domain, conf.ID)
 		case "authrti":
 			conf.Addr = fmt.Sprintf("http://%s.%s/?authrti", conf.Bucket, domain)
+		case "wm": // watermark
+			conf.Addr = fmt.Sprintf("http://%s/?watermarkTemplate", domain)
+			if conf.Method == "PATCH" || method == "GET" || method == "DELETE" {
+				conf.Addr += fmt.Sprintf("&id=%s", conf.ID)
+			}
+		case "upwm": // upload watermark
+			conf.Addr = fmt.Sprintf("http://%s/?watermarkImage", domain)
+			if method == "DELETE" {
+				conf.Addr += fmt.Sprintf("&fileName=%s", conf.Name)
+			}
+		case "listwm": // list watermark
+			conf.Addr = fmt.Sprintf("http://%s/?watermarkTemplates", domain)
 		default:
 			conf.Addr = fmt.Sprintf("http://%s", domain)
 		}
