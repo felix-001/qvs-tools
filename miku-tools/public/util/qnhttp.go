@@ -319,6 +319,8 @@ func Http(conf *config.Config) (string, error) {
 			}
 		case "listwm": // list watermark
 			conf.Addr = fmt.Sprintf("http://%s/?watermarkTemplates", domain)
+		case "codec": // update codec template
+			conf.Addr = fmt.Sprintf("http://%s/?codecTemplate", domain)
 		default:
 			conf.Addr = fmt.Sprintf("http://%s", domain)
 		}
