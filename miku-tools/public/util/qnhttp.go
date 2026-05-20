@@ -313,7 +313,7 @@ func Http(conf *config.Config) (string, error) {
 				conf.Addr += fmt.Sprintf("&id=%s", conf.ID)
 			}
 		case "upwm": // upload watermark
-			conf.Addr = fmt.Sprintf("http://%s/?watermarkImage", domain)
+			conf.Addr = fmt.Sprintf("http://%s/?watermarkImageUpload", domain)
 			if method == "DELETE" {
 				conf.Addr += fmt.Sprintf("&fileName=%s", conf.Name)
 			}
