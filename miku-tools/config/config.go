@@ -310,7 +310,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Addr, "addr", "", "addr")
 	flag.StringVar(&c.Ak, "ak", "", "ak")
 	flag.StringVar(&c.Sk, "sk", "", "sk")
-	flag.StringVar(&c.Secret, "secret", "", "secret")
+	//flag.StringVar(&c.Secret, "secret", "", "secret")
 	flag.StringVar(&c.Pcdn, "pcdn", "", "pcdn")
 	flag.StringVar(&c.Bucket, "bucket", "livessports", "bucket")
 	flag.StringVar(&c.Stream, "stream", "teststream", "stream")

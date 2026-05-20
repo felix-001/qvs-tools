@@ -2,6 +2,8 @@ package miku
 
 import (
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +14,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	zerolog "github.com/rs/zerolog/log"
 )
 
 type HuyaP2pPcdnBatchPostBody struct {
@@ -19,6 +23,10 @@ type HuyaP2pPcdnBatchPostBody struct {
 }
 
 func (m *Miku) GetPCDN() {
+	if m.conf.Bucket == "dy" {
+		m.GetDouyuPCDN()
+		return
+	}
 	for i := 0; i < m.conf.Loop; i++ {
 		go m.loopReq()
 	}
@@ -87,4 +95,40 @@ func (m *Miku) ExecuteGetPCDNBatchRequest() ([]byte, error) {
 	defer resp.Body.Close()
 
 	return ioutil.ReadAll(resp.Body)
+}
+
+func DouyuAuth(streamName, wsTime, secret string) string {
+	raw := secret + streamName + wsTime
+	hash := md5.Sum([]byte(raw))
+	expectedSecret := hex.EncodeToString(hash[:])
+	zerolog.Info().Str("streamName", streamName).
+		Str("wsTime", wsTime).
+		Str("expectedSecret", expectedSecret).
+		Str("raw", raw).
+		Msg("[DouyuAuth]")
+	return expectedSecret
+}
+
+func (m *Miku) GetDouyuPCDN() {
+	if m.conf.Secret == "" {
+		log.Println("secret is empty")
+		return
+	}
+	t := time.Now().Unix() + 600
+	tHex := strconv.FormatInt(t, 16)
+	wsSecret := DouyuAuth(m.conf.Stream, tHex, m.conf.Secret)
+	addr := fmt.Sprintf("http://miku-lived-test.qiniuapi.com/live/%s.xs?wsTime=%s&wsSecret=%s", m.conf.Stream, tHex, wsSecret)
+	resp, err := http.Get(addr)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Println(string(body))
+
 }
