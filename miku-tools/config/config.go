@@ -298,7 +298,7 @@ func Load() *Config {
 	}
 
 	conf.initIpdbConfig()
-	log.Printf("conf: %+v\n", conf)
+	//log.Printf("conf: %+v\n", conf)
 	return &conf
 }
 func (c *Config) ParseConsole() {
