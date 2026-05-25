@@ -504,3 +504,13 @@ func (m *CommandManager) CmdBlacklist() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdPanic() *Command {
+	handler := func() {
+		m.miku.TracePanic(m.config)
+	}
+	return &Command{
+		Desc:    "trace panic",
+		Handler: handler,
+	}
+}

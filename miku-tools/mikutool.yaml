@@ -361,6 +361,13 @@ fps_common: &fps_common
   table: miku
   requireStreamId: true
 
+# 企业微信机器人 webhook 地址，用于发送告警通知
+wecom_webhook: ""
+
+# miku-sched panic 检查的节点列表
+sched_panic_nodes:
+  - ""
+
 chart_configs:
   - name: chart_hyStreamsLagRateTrend2
     title: 虎牙多个流卡顿率趋势图

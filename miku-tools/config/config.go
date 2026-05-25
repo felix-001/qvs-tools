@@ -193,6 +193,8 @@ type Config struct {
 	SMTPUseTLS            bool                  `json:"smtp_use_tls" yaml:"smtp_use_tls"`
 	MailTo                string                `json:"mail_to" yaml:"mail_to"`
 	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
+	WeComWebhook          string                `json:"wecom_webhook" yaml:"wecom_webhook"`
+	SchedPanicNodes       []string              `json:"sched_panic_nodes" yaml:"sched_panic_nodes"`
 	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
 	Path                  string                `json:"path" yaml:"path"`
 	GitHubConf            GitHubConf            `json:"githubConf" yaml:"githubConf"`
