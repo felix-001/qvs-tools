@@ -368,3 +368,25 @@ func (m *Miku) statisticsErrNodes(data string) {
 		fmt.Printf("task: %s, url: %s, id: %d, name: %s, expire: %s\n", task.Name, task.Url, task.ID, task.Name, task.Expire)
 	}
 }
+
+func (m *Miku) IpLoc() {
+	if m.conf.Ip == "" {
+		log.Println("need -ip")
+		return
+	}
+	country, isp, area, prov := util.GetLocate(m.conf.Ip, m.resources.IpParser)
+	log.Println("country:", country)
+	log.Println("isp:", isp)
+	log.Println("area:", area)
+	log.Println("prov:", prov)
+	if m.conf.N > 0 {
+		for i := 0; i < m.conf.N; i++ {
+			country, isp, area, prov := util.GetLocate(m.conf.Ip, m.resources.IpParser)
+			log.Println("country:", country)
+			log.Println("isp:", isp)
+			log.Println("area:", area)
+			log.Println("prov:", prov)
+			time.Sleep(time.Second)
+		}
+	}
+}

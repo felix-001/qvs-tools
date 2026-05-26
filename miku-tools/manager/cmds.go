@@ -514,3 +514,14 @@ func (m *CommandManager) CmdPanic() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdIploc() *Command {
+	handler := func() {
+		m.miku.IpLoc()
+	}
+	return &Command{
+		Desc:         "ip loc",
+		Handler:      handler,
+		NeedIpParser: true,
+	}
+}
