@@ -329,7 +329,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Pattern, "pattern", "", "pattern")
 	flag.StringVar(&c.Replace, "replace", "", "replace")
 	flag.StringVar(&c.Raw, "raw", "", "raw")
-	flag.StringVar(&c.User, "user", "iqiyi", "user")
+	flag.StringVar(&c.User, "user", "", "user")
 	flag.StringVar(&c.Passwd, "passwd", "", "passwd")
 	flag.StringVar(&c.SchedIp, "sched_ip", "10.34.146.62", "sched_ip")
 	flag.StringVar(&c.Node, "node", "", "node")
