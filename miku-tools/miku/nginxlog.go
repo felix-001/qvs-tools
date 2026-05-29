@@ -108,8 +108,9 @@ func listFilesOnNode(node, path, pattern string) ([]string, error) {
 
 // grepFileOnNode 在远程节点的指定文件上执行 grep
 func grepFileOnNode(node, filePath, query string) {
-	grepCmd := fmt.Sprintf("grep '%s' %s", query, filePath)
+	grepCmd := fmt.Sprintf("grep -E '%s' %s", query, filePath)
 	log.Printf("[%s] 搜索文件 %s", node, filePath)
+	log.Printf("[%s] 执行命令: %s", node, grepCmd)
 	cmd := exec.Command("qssh", node, grepCmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
