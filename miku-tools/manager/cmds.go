@@ -525,3 +525,25 @@ func (m *CommandManager) CmdIploc() *Command {
 		NeedIpParser: true,
 	}
 }
+
+func (m *CommandManager) CmdRegister() *Command {
+	handler := func() {
+		m.miku.StreamRegister()
+	}
+	return &Command{
+		Desc: "stream register\n" +
+			"  -bucket <bucket>     空间\n" +
+			"  -stream <stream>     流ID(key)\n" +
+			"  -node <nodeId>       nodeID\n" +
+			"  -url <url>           完整推流url\n" +
+			"  -protocol <type>     业务类型(协议): live(rtmp|httpflv|hls), rtc, iovt(gb28181|onvif)\n" +
+			"  -ip <ip>             请求IP\n" +
+			"  -conn_id <id>        connectId(不传则自动生成)\n" +
+			"  -domain <domain>     推流域名\n" +
+			"  -raw_app <app>       原始app名(可选)\n" +
+			"example:\n" +
+			"  miku -cmd register -bucket test-bucket -stream teststream -node node1 -domain test.com -url http://..." +
+			" -protocol live -ip 1.2.3.4 -conn_id abc123",
+		Handler: handler,
+	}
+}

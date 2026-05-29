@@ -1,6 +1,7 @@
 package miku
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -389,4 +390,105 @@ func (m *Miku) IpLoc() {
 			time.Sleep(time.Second)
 		}
 	}
+}
+
+type StreamRegisterRequest struct {
+	Bucket string `json:"bucket" binding:"required"` // 空间
+	Key    string `json:"key" binding:"required"`    // 流ID
+	Node   string `json:"nodeId" binding:"required"` // nodeID
+	Url    string `json:"url" binding:"required"`    // 完整推流url
+	RawUrl string `json:"rawUrl"`                    // 改写之前的完整推流url
+	Type   string `json:"type" binding:"required"`   // 业务类型(协议）:  live (rtmp | httpflv | hls ), rtc, iovt ( gb28181 | onvif )
+	//Protocol  string `json:"protocol" binding:"required"` // 协议
+	IP         string `json:"ip"` // 请求IP
+	ConnectId  string `json:"connectId" binding:"required"`
+	LocalAddr  string `json:"localAddr"`
+	RemoteAddr string `json:"remoteAddr"`
+	Domain     string `json:"domain" binding:"required"` // 推流域名
+	EdgePort   string `json:"edgePort"`                  // 边缘节点对外开放的端口
+	Master     string `json:"masterKey"`                 //publishcheck 如果streamConf开启主备流
+}
+
+func (m *Miku) StreamRegister() {
+	conf := m.conf
+
+	// 生成 ConnectId（如果为空）
+	connId := conf.ConnId
+	if connId == "" {
+		b := make([]byte, 10)
+		rand.Read(b)
+		connId = hex.EncodeToString(b)
+	}
+
+	// 检查必填字段
+	var missing []string
+	if conf.Bucket == "" {
+		missing = append(missing, "-bucket")
+	}
+	if conf.Stream == "" {
+		missing = append(missing, "-stream")
+	}
+	if conf.Node == "" {
+		missing = append(missing, "-node")
+	}
+	if conf.Url == "" {
+		missing = append(missing, "-url")
+	}
+	if conf.Protocol == "" {
+		missing = append(missing, "-protocol")
+	}
+	if conf.Domain == "" {
+		missing = append(missing, "-domain")
+	}
+	if conf.Ip == "" {
+		missing = append(missing, "-ip")
+	}
+	if len(missing) > 0 {
+		log.Printf("缺少必填参数: %v", missing)
+		return
+	}
+
+	req := StreamRegisterRequest{
+		Bucket:    conf.Bucket,
+		Key:       conf.Stream,
+		Node:      conf.Node,
+		Url:       conf.Url,
+		RawUrl:    conf.RawApp,
+		Type:      conf.Protocol,
+		IP:        conf.Ip,
+		ConnectId: connId,
+		Domain:    conf.Domain,
+		LocalAddr: fmt.Sprintf("%s:8080", conf.Ip),
+	}
+
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		log.Printf("序列化请求失败: %v", err)
+		return
+	}
+
+	log.Printf("请求 StreamRegister: %s", string(reqBody))
+
+	addr := fmt.Sprintf("http://%s:6060/api/v1/streamregister", m.conf.SchedIp)
+	resp, err := http.Post(addr, "application/json", bytes.NewReader(reqBody))
+	if err != nil {
+		log.Printf("请求失败: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("读取响应失败: %v", err)
+		return
+	}
+
+	// 美化输出 JSON
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, respBody, "", "  "); err != nil {
+		// 如果不是合法 JSON，直接输出原始内容
+		fmt.Printf("响应 (状态码 %d):\n%s\n", resp.StatusCode, string(respBody))
+		return
+	}
+	fmt.Printf("响应 (状态码 %d):\n%s\n", resp.StatusCode, prettyJSON.String())
 }
