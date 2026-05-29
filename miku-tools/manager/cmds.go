@@ -526,6 +526,16 @@ func (m *CommandManager) CmdIploc() *Command {
 	}
 }
 
+func (m *CommandManager) CmdNginxLog() *Command {
+	handler := func() {
+		m.miku.NginxLogSearch(m.config)
+	}
+	return &Command{
+		Desc:    "在多个节点上并行搜索 nginx 日志, -path <日志目录> -pattern <文件匹配模式> -query <搜索关键词>",
+		Handler: handler,
+	}
+}
+
 func (m *CommandManager) CmdRegister() *Command {
 	handler := func() {
 		m.miku.StreamRegister()
