@@ -2,6 +2,7 @@ package miku
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,10 +15,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/pcap"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
@@ -491,4 +496,259 @@ func (m *Miku) StreamRegister() {
 		return
 	}
 	fmt.Printf("响应 (状态码 %d):\n%s\n", resp.StatusCode, prettyJSON.String())
+}
+
+type HandshakeInfo struct {
+	ClientHelloTime time.Time
+	CCSTime         time.Time
+	ClientIP        string
+	ServerIP        string
+}
+
+func (m *Miku) Packet_backup() {
+	handle, err := pcap.OpenOffline("/tmp/test.pcap")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer handle.Close()
+
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	handshakes := make(map[uint64]*HandshakeInfo) // key: tcp stream index
+	packetNum := 0
+
+	for packet := range packetSource.Packets() {
+		packetNum++
+		// 获取 TCP 层和网络层
+		netLayer := packet.NetworkLayer()
+		tcpLayer := packet.TransportLayer()
+		if netLayer == nil || tcpLayer == nil {
+			continue
+		}
+
+		// 获取 TCP 流的标识 (gopacket 内部哈希或者自己拼 5 元组)
+		// 这里为了简化，使用 gopacket 自带的 Flow 标识
+		flow := tcpLayer.TransportFlow().FastHash()
+		// 注意：FastHash 是单向的，为了双向匹配，需要规范流Key
+		// 这里略去复杂的流归一化逻辑，假设你知道如何处理
+
+		payload := tcpLayer.LayerPayload()
+		if len(payload) < 5 {
+			continue // 不是 TLS 包
+		}
+
+		contentType := payload[0]
+		// 1. 检测 Client Hello (Content Type: 22, Handshake Type: 1)
+		if contentType == 22 && len(payload) > 5 && payload[5] == 1 {
+			// 记录 Client Hello
+			srcIP := netLayer.NetworkFlow().Src().String()
+			dstIP := netLayer.NetworkFlow().Dst().String()
+			handshakes[flow] = &HandshakeInfo{
+				ClientHelloTime: packet.Metadata().Timestamp,
+				ClientIP:        srcIP,
+				ServerIP:        dstIP,
+			}
+		}
+
+		// 2. 检测 Change Cipher Spec (Content Type: 20)
+		if contentType == 20 {
+			if info, exists := handshakes[flow]; exists {
+				// 确保是服务端发回来的 CCS
+				srcIP := netLayer.NetworkFlow().Src().String()
+				if srcIP == info.ServerIP {
+					info.CCSTime = packet.Metadata().Timestamp
+					duration := info.CCSTime.Sub(info.ClientHelloTime).Milliseconds()
+					fmt.Printf("Packet %d, Stream %d: Handshake took %d ms\n", packetNum, flow, duration)
+					delete(handshakes, flow) // 计算完毕，移除
+				}
+			}
+		}
+	}
+}
+
+func (m *Miku) ParseCsv() {
+	pcapFile := m.conf.F
+	if pcapFile == "" {
+		log.Println("缺少 pcap 文件路径，请使用 -f <pcap_file>")
+		return
+	}
+
+	outputFile := "/tmp/tls_handshakes.csv"
+
+	cmd := exec.Command("tshark",
+		"-r", pcapFile,
+		"-Y", "tls.handshake.type==1 or tls.record.content_type==20",
+		"-T", "fields",
+		"-e", "frame.number",
+		"-e", "frame.time_relative",
+		"-e", "tcp.stream",
+		"-e", "ip.src",
+		"-e", "ip.dst",
+		"-e", "tls.handshake.type",
+		"-e", "tls.record.content_type",
+		"-E", "header=y",
+		"-E", "separator=,",
+	)
+
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("执行 tshark 失败: %v, stderr: %s", err, stderr.String())
+		return
+	}
+
+	if err := os.WriteFile(outputFile, output, 0644); err != nil {
+		log.Printf("写入输出文件失败: %v", err)
+		return
+	}
+
+	log.Printf("tshark 分析完成，结果已保存到 %s", outputFile)
+}
+
+type TLSRecord struct {
+	FrameNum    int
+	Time        float64
+	Stream      int
+	Src         string
+	Dst         string
+	Handshake   float64
+	ContentType float64
+}
+
+type HandshakeResult struct {
+	Stream         int
+	ClientHello    float64
+	ServerCCS      float64
+	Duration       float64
+	ClientEndpoint string
+	ServerEndpoint string
+}
+
+func (m *Miku) Packet() {
+	m.ParseCsv()
+	// 读取 CSV
+	file, err := os.Open("/tmp/tls_handshakes.csv")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1 // tshark 可能省略尾部空字段，不校验字段数
+	records, err := reader.ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	if len(records) < 2 {
+		log.Println("CSV 文件中没有数据")
+		return
+	}
+
+	// 按流分组
+	streams := make(map[int][]TLSRecord)
+
+	// 跳过标题行
+	for _, row := range records[1:] {
+		// tshark 会省略尾部空字段，补齐到 7 个字段
+		cols := make([]string, 7)
+		for i, v := range row {
+			if i < 7 {
+				cols[i] = v
+			}
+		}
+
+		frame, _ := strconv.Atoi(cols[0])
+		t, _ := strconv.ParseFloat(cols[1], 64)
+		stream, _ := strconv.Atoi(cols[2])
+
+		handshake, _ := strconv.ParseFloat(cols[5], 64)
+		contentType, _ := strconv.ParseFloat(cols[6], 64)
+
+		record := TLSRecord{
+			FrameNum:    frame,
+			Time:        t,
+			Stream:      stream,
+			Src:         cols[3],
+			Dst:         cols[4],
+			Handshake:   handshake,
+			ContentType: contentType,
+		}
+
+		streams[stream] = append(streams[stream], record)
+	}
+
+	var results []HandshakeResult
+
+	// 分析每个流
+	for stream, packets := range streams {
+		// 按时间排序
+		sort.Slice(packets, func(i, j int) bool {
+			return packets[i].Time < packets[j].Time
+		})
+
+		// 找到 Client Hello
+		var clientHelloTime float64
+		var clientHelloSrc, clientHelloDst string
+
+		for _, pkt := range packets {
+			if pkt.Handshake == 1.0 {
+				clientHelloTime = pkt.Time
+				clientHelloSrc = pkt.Src
+				clientHelloDst = pkt.Dst
+				break
+			}
+		}
+
+		if clientHelloTime == 0 {
+			continue
+		}
+
+		// 找到服务器 Change Cipher Spec
+		for _, pkt := range packets {
+			if pkt.Time <= clientHelloTime {
+				continue
+			}
+
+			// 检查是否来自服务器的 Change Cipher Spec
+			if pkt.Handshake == 0 && pkt.ContentType == 20.0 &&
+				pkt.Src == clientHelloDst && pkt.Dst == clientHelloSrc {
+
+				duration := (pkt.Time - clientHelloTime) * 1000 // 转毫秒
+
+				results = append(results, HandshakeResult{
+					Stream:         stream,
+					ClientHello:    clientHelloTime,
+					ServerCCS:      pkt.Time,
+					Duration:       duration,
+					ClientEndpoint: fmt.Sprintf("%s -> %s", clientHelloSrc, clientHelloDst),
+					ServerEndpoint: fmt.Sprintf("%s -> %s", pkt.Src, pkt.Dst),
+				})
+				break
+			}
+		}
+	}
+
+	// 输出结果
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Println("SSL 握手耗时分析")
+	fmt.Println(strings.Repeat("=", 80))
+
+	var totalDuration float64
+	for _, result := range results {
+		fmt.Printf("TCP Stream %d:\n", result.Stream)
+		fmt.Printf("  Client Hello 时间: %.6fs\n", result.ClientHello)
+		fmt.Printf("  Change Cipher Spec 时间: %.6fs\n", result.ServerCCS)
+		fmt.Printf("  握手耗时: %.2fms\n", result.Duration)
+		fmt.Printf("  客户端 -> 服务器: %s\n", result.ClientEndpoint)
+		fmt.Println()
+		totalDuration += result.Duration
+	}
+
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Printf("总握手次数: %d\n", len(results))
+	if len(results) > 0 {
+		fmt.Printf("平均握手耗时: %.2fms\n", totalDuration/float64(len(results)))
+	}
 }

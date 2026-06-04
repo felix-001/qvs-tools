@@ -7,6 +7,7 @@ require (
 	github.com/emiago/sipgo v0.33.0
 	github.com/go-echarts/go-echarts/v2 v2.6.3
 	github.com/google/go-github/v48 v48.2.0
+	github.com/google/gopacket v1.1.19
 	github.com/gorilla/websocket v1.5.3
 	github.com/icholy/digest v1.1.0
 	github.com/jmoiron/sqlx v1.4.0

@@ -557,3 +557,13 @@ func (m *CommandManager) CmdRegister() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdPacket() *Command {
+	handler := func() {
+		m.miku.Packet()
+	}
+	return &Command{
+		Desc:    "packet",
+		Handler: handler,
+	}
+}
