@@ -626,7 +626,9 @@ type HandshakeResult struct {
 }
 
 func (m *Miku) Packet() {
-	m.ParseCsv()
+	if _, err := os.Stat("/tmp/tls_handshakes.csv"); os.IsNotExist(err) {
+		m.ParseCsv()
+	}
 	// 读取 CSV
 	file, err := os.Open("/tmp/tls_handshakes.csv")
 	if err != nil {

@@ -242,7 +242,7 @@ func Load() *Config {
 			if err != nil {
 				log.Printf("解析 json 失败: %v\n", err)
 			} else {
-				log.Printf("读取文件成功: %v\n", conf.AccountCfgFile)
+				//log.Printf("读取文件成功: %v\n", conf.AccountCfgFile)
 			}
 		} else {
 			log.Printf("读取文件失败: %v, err: %v\n", conf.AccountCfgFile, err)
@@ -255,7 +255,7 @@ func Load() *Config {
 			log.Fatalf("读取文件失败: %v", err)
 		}
 		conf.ApiKey = string(data)[:len(data)-1]
-		log.Printf("读取文件成功: %v, apikey; %s\n", conf.JiraApiKeyFile, conf.ApiKey)
+		//log.Printf("读取文件成功: %v, apikey; %s\n", conf.JiraApiKeyFile, conf.ApiKey)
 
 		if conf.GithubconfFile == "" {
 			conf.GithubconfFile = "/usr/local/etc/github.json"
@@ -268,7 +268,7 @@ func Load() *Config {
 		if err != nil {
 			log.Fatalf("解析 json 失败: %v", err)
 		} else {
-			log.Printf("读取文件成功: %v\n", conf.GithubconfFile)
+			//log.Printf("读取文件成功: %v\n", conf.GithubconfFile)
 		}
 		if conf.DnsPodConfFile == "" {
 			conf.DnsPodConfFile = "/usr/local/etc/dnspod.json"
@@ -281,7 +281,7 @@ func Load() *Config {
 		if err != nil {
 			log.Fatalf("解析 json 失败: %v", err)
 		} else {
-			log.Printf("读取文件成功: %v\n", conf.DnsPodConfFile)
+			//log.Printf("读取文件成功: %v\n", conf.DnsPodConfFile)
 		}
 		return &conf
 	}
