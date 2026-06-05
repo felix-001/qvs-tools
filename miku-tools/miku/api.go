@@ -623,6 +623,7 @@ type HandshakeResult struct {
 	Duration       float64
 	ClientEndpoint string
 	ServerEndpoint string
+	FrameNum       int
 }
 
 func (m *Miku) Packet() {
@@ -724,6 +725,7 @@ func (m *Miku) Packet() {
 					Duration:       duration,
 					ClientEndpoint: fmt.Sprintf("%s -> %s", clientHelloSrc, clientHelloDst),
 					ServerEndpoint: fmt.Sprintf("%s -> %s", pkt.Src, pkt.Dst),
+					FrameNum:       pkt.FrameNum,
 				})
 				break
 			}
