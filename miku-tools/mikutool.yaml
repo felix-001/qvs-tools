@@ -361,6 +361,12 @@ fps_common: &fps_common
   table: miku
   requireStreamId: true
 
+# 听云配置
+tingyun:
+  auth_key: ""        # 听云鉴权key, 在听云web生成
+  task_id: ""         # 默认任务ID
+  domain: "network.tingyun.com"  # 听云域名
+
 # 企业微信机器人 webhook 地址，用于发送告警通知
 wecom_webhook: ""
 

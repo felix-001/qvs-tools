@@ -30,6 +30,12 @@ type GitHubConf struct {
 	Repo        string `json:"repo"`  // GitHub repository name
 }
 
+type TingyunConf struct {
+	AuthKey string `json:"auth_key" yaml:"auth_key"`
+	TaskId  string `json:"task_id" yaml:"task_id"`
+	Domain  string `json:"domain" yaml:"domain"`
+}
+
 type TCPRetranFilterConfig struct {
 	Enable                 bool    `json:"enable" yaml:"enable"`                                       // 是否开启
 	TCPRetranRateThreshold float64 `json:"tcp_retran_rate_threshold" yaml:"tcp_retran_rate_threshold"` // TCP 重传率阈值
@@ -183,6 +189,7 @@ type Config struct {
 	DyApiSecret           string                `json:"dy_api_secret" yaml:"dy_api_secret"`
 	DyApiDomain           string                `json:"dy_api_domain" yaml:"dy_api_domain"`
 	MongoConf             *dal.MongoCfg         `json:"mongo_config" yaml:"mongo_config"`
+	Tingyun               TingyunConf           `json:"tingyun" yaml:"tingyun"`
 	TcpRetranFilterConfig TCPRetranFilterConfig `json:"tcp_retran_filter_config" yaml:"tcp_retran_filter_config"`
 	DnsPod                config.DnspodConfig   `json:"dnspod" yaml:"dnspod"`
 	SMTPHost              string                `json:"smtp_host" yaml:"smtp_host"`
@@ -192,6 +199,7 @@ type Config struct {
 	MailFrom              string                `json:"mail_from" yaml:"mail_from"`
 	SMTPUseTLS            bool                  `json:"smtp_use_tls" yaml:"smtp_use_tls"`
 	MailTo                string                `json:"mail_to" yaml:"mail_to"`
+	FilterIp              string                `json:"filter_ip" yaml:"filter_ip"`
 	Args                  []string              `json:"-" yaml:"-"` // 命令行参数，不进行JSON序列化
 	WeComWebhook          string                `json:"wecom_webhook" yaml:"wecom_webhook"`
 	SchedPanicNodes       []string              `json:"sched_panic_nodes" yaml:"sched_panic_nodes"`
@@ -341,9 +349,10 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Protocol, "protocol", "flv", "protocol")
 	flag.StringVar(&c.Name, "name", "", "name")
 	flag.StringVar(&c.Key, "key", "", "key")
-	flag.StringVar(&c.Task, "task", "3995057", "task")
+	flag.StringVar(&c.Task, "task", "", "task id, 也可在配置文件tingyun.task_id中配置")
 	flag.StringVar(&c.StartTime, "start", "", "start_time")
 	flag.StringVar(&c.EndTime, "end", "", "end_time")
+	flag.StringVar(&c.FilterIp, "filter_ip", "", "过滤IP(监测点IP或目标主机IP)")
 	flag.StringVar(&c.ID, "id", "", "id")
 	flag.StringVar(&c.Province, "prov", "江苏", "province")
 	flag.StringVar(&c.NsId, "nsid", "bj", "nsid")

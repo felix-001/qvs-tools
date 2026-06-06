@@ -291,7 +291,13 @@ func (m *CommandManager) CmdTy() *Command {
 		m.miku.TingYunErrNodes()
 	}
 	cmd := &Command{
-		Desc:    "获取听云原始数据,统计ton n异常节点, -key <key> -task <task, default>, -start <start, default>, -end <end, default>",
+		Desc: "获取听云原始数据,分析再缓冲时间异常IP\n" +
+			"  -key <authkey>        听云鉴权key(也可在配置文件tingyun.auth_key中配置)\n" +
+			"  -task <taskId>        任务ID(也可在配置文件tingyun.task_id中配置)\n" +
+			"  -start <startTime>    开始时间,格式: 2006-01-02 15:04 (默认24小时前)\n" +
+			"  -end <endTime>        结束时间,格式: 2006-01-02 15:04 (默认当前时间)\n" +
+			"  -filter_ip <ip>       过滤IP(监测点IP或目标主机IP,可选)\n" +
+			"  异常判定: 再缓冲时间>30s为异常记录, 异常率>60%为异常IP",
 		Handler: handler,
 	}
 	return cmd

@@ -206,26 +206,52 @@ func (m *Miku) LoopPlaycheck() {
 
 }
 
-// TingYunErrNodes 发送 HTTP 请求获取听云网络数据
+// TingYunErrNodes 请求听云API获取原始数据，分析再缓冲时间异常的IP
 func (m *Miku) TingYunErrNodes() {
-	if m.conf.Key == "" {
-		log.Println("tingyun key is empty")
+	// 获取 auth_key：命令行 -key 优先，否则从配置文件获取
+	authKey := m.conf.Key
+	if authKey == "" {
+		authKey = m.conf.Tingyun.AuthKey
+	}
+	if authKey == "" {
+		log.Println("tingyun auth key is empty, use -key or configure tingyun.auth_key")
 		return
 	}
-	// 若 StartTime 或 EndTime 为空，设置默认值
+
+	// 获取 task ID：命令行 -task 优先，否则从配置文件获取
+	taskId := m.conf.Task
+	if taskId == "" {
+		taskId = m.conf.Tingyun.TaskId
+	}
+	if taskId == "" {
+		log.Println("tingyun task id is empty, use -task or configure tingyun.task_id")
+		return
+	}
+
+	// 获取域名：配置文件优先，默认 network.tingyun.com
+	domain := m.conf.Tingyun.Domain
+	if domain == "" {
+		domain = "network.tingyun.com"
+	}
+
+	// 若 StartTime 或 EndTime 为空，设置默认值（最近24小时）
 	if m.conf.StartTime == "" || m.conf.EndTime == "" {
 		currentTime := time.Now()
 		m.conf.EndTime = currentTime.Format("2006-01-02 15:04")
 		m.conf.StartTime = currentTime.AddDate(0, 0, -1).Format("2006-01-02 15:04")
 	}
+
+	// 构建请求URL
 	query := url.Values{}
-	query.Add("authkey", m.conf.Key)
-	query.Add("taskId", m.conf.Task)
+	query.Add("authkey", authKey)
+	query.Add("taskId", taskId)
 	query.Add("beginTimeStr", m.conf.StartTime)
 	query.Add("endTimeStr", m.conf.EndTime)
 	query.Add("taskType", "3")
-	addr := fmt.Sprintf("https://network.tingyun.com/network-report-data/rawdata/rawdata-csv-authkey?%s", query.Encode())
+	addr := fmt.Sprintf("https://%s/network-report-data/rawdata/rawdata-csv-authkey?%s", domain, query.Encode())
 	log.Println("addr:", addr)
+
+	// 发送请求
 	resp, err := http.Get(addr)
 	if err != nil {
 		log.Printf("请求听云数据失败: %v", err)
@@ -244,134 +270,252 @@ func (m *Miku) TingYunErrNodes() {
 		return
 	}
 
-	//fmt.Println(string(body))
+	// 保存原始数据
 	err = os.WriteFile("/tmp/tingyun.csv", body, 0644)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	m.statisticsErrNodes(string(body))
+	log.Println("原始数据已保存到 /tmp/tingyun.csv")
+
+	m.analyzeRebufferTime(string(body))
 }
 
-type ProbeResult struct {
-	ClientIp string
-	Locate   string
-	WaitTime float64
-	Time     string
+// rebufferRecord 单条听云原始数据记录
+type rebufferRecord struct {
+	Time         string
+	MonitorIP    string  // 监测点IP
+	TargetIP     string  // 目标主机IP (含地区信息，如 "183.134.26.4(衢州>移动)")
+	TargetIPPure string  // 目标主机IP (纯IP)
+	City         string  // 城市
+	Isp          string  // 运营商
+	RebufferTime float64 // 再缓冲时间(s)
+	CityIsp      string  // 城市运营商
 }
 
-type ClientipResult struct {
-	PcdnIp   string
-	Locate   string
-	WaitTime float64
-	Time     string
+// ipRebufferAnalysis 按IP分组的再缓冲时间分析结果
+type ipRebufferAnalysis struct {
+	IP              string
+	TotalRecords    int
+	AbnormalRecords int
+	AbnormalRate    float64
+	AbnormalDetails []rebufferRecord
 }
 
-func (m *Miku) statisticsErrNodes(data string) {
+func (m *Miku) analyzeRebufferTime(data string) {
 	lines := strings.Split(data, "\n")
-	log.Println("lines:", len(lines))
-	ipResultsMap := make(map[string][]ProbeResult)
-	clientIpResultMap := make(map[string][]ClientipResult)
-	citypIspMap := make(map[string]int)
-	pcdnIpAbnormalResultsMap := make(map[string][]ProbeResult)
+	if len(lines) < 2 {
+		log.Println("no data")
+		return
+	}
+
+	// 解析表头，获取列索引
+	headerFields := strings.Split(lines[0], ",")
+	for i := range headerFields {
+		headerFields[i] = strings.Trim(headerFields[i], "\"")
+	}
+	colIndex := make(map[string]int)
+	for i, h := range headerFields {
+		colIndex[strings.TrimSpace(h)] = i
+	}
+
+	monitorIPCol, ok1 := colIndex["监测点 IP"]
+	targetIPCol, ok2 := colIndex["目标主机 IP"]
+	rebufferCol, ok3 := colIndex["再缓冲时间(s)"]
+	if !ok1 || !ok2 || !ok3 {
+		log.Printf("缺少必要列: 监测点IP=%v, 目标主机IP=%v, 再缓冲时间=%v", ok1, ok2, ok3)
+		return
+	}
+
+	timeCol := colIndex["时间"]
+	cityCol := colIndex["城市"]
+	ispCol := colIndex["运营商"]
+	cityIspCol := colIndex["城市运营商"]
+	errCodeCol := colIndex["错误代码"]
+
+	filterIP := m.conf.FilterIp
+
+	// 按 监测点IP 和 目标主机IP 分组统计
+	monitorIPMap := make(map[string]*ipRebufferAnalysis)
+	targetIPMap := make(map[string]*ipRebufferAnalysis)
+
 	for _, line := range lines[1:] {
-		fields := strings.Split(line, ",")
-		if len(fields) < 27 {
-			log.Println("fields:", len(fields))
+		if line == "" {
 			continue
 		}
-		// 去除 fields 中每个元素前后的双引号
+		fields := strings.Split(line, ",")
 		for i := range fields {
 			fields[i] = strings.Trim(fields[i], "\"")
 		}
-		// 错误代码
-		if fields[26] != "" {
-			log.Println("err code:", fields[26])
+
+		if len(fields) <= rebufferCol {
 			continue
 		}
-		waitTime, err := strconv.ParseFloat(fields[10], 64)
+
+		// 跳过有错误代码的记录
+		if errCodeCol > 0 && errCodeCol < len(fields) && fields[errCodeCol] != "" {
+			continue
+		}
+
+		monitorIP := fields[monitorIPCol]
+		targetIP := fields[targetIPCol]
+		rebufferTimeStr := fields[rebufferCol]
+
+		rebufferTime, err := strconv.ParseFloat(rebufferTimeStr, 64)
 		if err != nil {
-			log.Printf("将 fields[10] 转换为 float64 失败: %v", err)
 			continue
 		}
-		pcdnIp := fields[7]
-		ipResultsMap[pcdnIp] = append(ipResultsMap[pcdnIp], ProbeResult{
-			ClientIp: fields[3],
-			Locate:   fields[2],
-			WaitTime: waitTime,
-			Time:     fields[0],
-		})
-		clientIpResultMap[fields[3]] = append(clientIpResultMap[fields[3]], ClientipResult{
-			PcdnIp:   pcdnIp,
-			Locate:   fields[2],
-			WaitTime: waitTime,
-			Time:     fields[0],
-		})
-		citypIspMap[fields[2]]++
-		if waitTime > 5 {
-			pcdnIpAbnormalResultsMap[pcdnIp] = append(pcdnIpAbnormalResultsMap[pcdnIp], ProbeResult{
-				ClientIp: fields[3],
-				Locate:   fields[2],
-				WaitTime: waitTime,
-				Time:     fields[0],
-			})
+
+		// 如果指定了 filter_ip，只处理匹配的记录
+		if filterIP != "" && monitorIP != filterIP && !strings.HasPrefix(targetIP, filterIP) {
+			continue
+		}
+
+		// 提取纯目标主机IP（去掉括号中的地区信息）
+		targetIPPure := targetIP
+		if idx := strings.Index(targetIP, "("); idx > 0 {
+			targetIPPure = targetIP[:idx]
+		}
+
+		city := ""
+		if cityCol > 0 && cityCol < len(fields) {
+			city = fields[cityCol]
+		}
+		isp := ""
+		if ispCol > 0 && ispCol < len(fields) {
+			isp = fields[ispCol]
+		}
+		timeStr := ""
+		if timeCol >= 0 && timeCol < len(fields) {
+			timeStr = fields[timeCol]
+		}
+		cityIsp := ""
+		if cityIspCol > 0 && cityIspCol < len(fields) {
+			cityIsp = fields[cityIspCol]
+		}
+
+		record := rebufferRecord{
+			Time:         timeStr,
+			MonitorIP:    monitorIP,
+			TargetIP:     targetIP,
+			TargetIPPure: targetIPPure,
+			City:         city,
+			Isp:          isp,
+			RebufferTime: rebufferTime,
+			CityIsp:      cityIsp,
+		}
+
+		isAbnormal := rebufferTime > 30
+
+		// 按监测点IP分组
+		if _, ok := monitorIPMap[monitorIP]; !ok {
+			monitorIPMap[monitorIP] = &ipRebufferAnalysis{IP: monitorIP}
+		}
+		monitorIPMap[monitorIP].TotalRecords++
+		if isAbnormal {
+			monitorIPMap[monitorIP].AbnormalRecords++
+			monitorIPMap[monitorIP].AbnormalDetails = append(monitorIPMap[monitorIP].AbnormalDetails, record)
+		}
+
+		// 按目标主机IP分组
+		if _, ok := targetIPMap[targetIPPure]; !ok {
+			targetIPMap[targetIPPure] = &ipRebufferAnalysis{IP: targetIPPure}
+		}
+		targetIPMap[targetIPPure].TotalRecords++
+		if isAbnormal {
+			targetIPMap[targetIPPure].AbnormalRecords++
+			targetIPMap[targetIPPure].AbnormalDetails = append(targetIPMap[targetIPPure].AbnormalDetails, record)
 		}
 	}
-	log.Println("ipResultsMap:", len(ipResultsMap))
-	for ip, results := range ipResultsMap {
-		fmt.Printf("ip: %s, cnt: %d\n", ip, len(results))
+
+	// 输出结果
+	fmt.Println()
+	fmt.Println("========================================")
+	fmt.Println("  听云再缓冲时间异常分析报告")
+	fmt.Printf("  时间范围: %s ~ %s\n", m.conf.StartTime, m.conf.EndTime)
+	if filterIP != "" {
+		fmt.Printf("  过滤IP: %s\n", filterIP)
 	}
-	ipAvgWaitTimeMap := make(map[string]float64)
-	single := 0
-	multi := 0
-	for ip, results := range ipResultsMap {
-		var totalWaitTime float64
-		for _, result := range results {
-			totalWaitTime += result.WaitTime
+	fmt.Println("  异常判定: 再缓冲时间 > 30s 为异常记录, 异常率 > 60% 为异常IP")
+	fmt.Println("========================================")
+
+	fmt.Println()
+	fmt.Println("--- 监测点IP异常分析 ---")
+	hasAbnormal := false
+	for _, analysis := range monitorIPMap {
+		if analysis.TotalRecords == 0 {
+			continue
 		}
-		ipAvgWaitTimeMap[ip] = totalWaitTime / float64(len(results))
-		if ipAvgWaitTimeMap[ip] > 10 {
-			fmt.Printf("ip: %s, avg wait time: %.1f\n", ip, ipAvgWaitTimeMap[ip])
-			for _, result := range results {
-				fmt.Printf("\ttime: %s, client ip: %s, locate: %s, wait time: %.1f\n", result.Time, result.ClientIp, result.Locate, result.WaitTime)
+		analysis.AbnormalRate = float64(analysis.AbnormalRecords) / float64(analysis.TotalRecords) * 100
+		if analysis.AbnormalRate > 60 {
+			hasAbnormal = true
+			fmt.Printf("[异常] 监测点IP: %s, 总记录: %d, 异常记录: %d, 异常率: %.1f%%\n",
+				analysis.IP, analysis.TotalRecords, analysis.AbnormalRecords, analysis.AbnormalRate)
+			for _, r := range analysis.AbnormalDetails {
+				fmt.Printf("  时间: %s, 目标主机: %s, 城市: %s, 运营商: %s, 再缓冲时间: %.3fs\n",
+					r.Time, r.TargetIP, r.City, r.Isp, r.RebufferTime)
 			}
 		}
-		if len(results) >= 2 {
-			multi++
-		} else {
-			single++
-		}
 	}
-	log.Println("clientIpResultMap:", len(clientIpResultMap))
-	for ip, results := range clientIpResultMap {
-		fmt.Printf("client ip: %s, cnt: %d\n", ip, len(results))
-		for _, result := range results {
-			fmt.Printf("\ttime: %s, pcdn ip: %s, locate: %s, wait time: %.1f\n", result.Time, result.PcdnIp, result.Locate, result.WaitTime)
-		}
+	if !hasAbnormal {
+		fmt.Println("未发现异常的监测点IP")
 	}
-	log.Println("single:", single)
-	log.Println("multi:", multi)
-	log.Println("citypIspMap:", len(citypIspMap))
-	for city, cnt := range citypIspMap {
-		fmt.Printf("city: %s, cnt: %d\n", city, cnt)
-	}
-	log.Println("pcdnIpAbnormalResultsMap:", len(pcdnIpAbnormalResultsMap))
-	for ip, results := range pcdnIpAbnormalResultsMap {
-		if len(results) < 2 {
+
+	fmt.Println()
+	fmt.Println("--- 目标主机IP异常分析 ---")
+	hasAbnormal = false
+	for _, analysis := range targetIPMap {
+		if analysis.TotalRecords == 0 {
 			continue
 		}
-		fmt.Printf("ip: %s, cnt: %d\n", ip, len(results))
-		for _, result := range results {
-			fmt.Printf("\ttime: %s, client ip: %s, locate: %s, wait time: %.1f\n", result.Time, result.ClientIp, result.Locate, result.WaitTime)
+		analysis.AbnormalRate = float64(analysis.AbnormalRecords) / float64(analysis.TotalRecords) * 100
+		if analysis.AbnormalRate > 60 {
+			hasAbnormal = true
+			fmt.Printf("[异常] 目标主机IP: %s, 总记录: %d, 异常记录: %d, 异常率: %.1f%%\n",
+				analysis.IP, analysis.TotalRecords, analysis.AbnormalRecords, analysis.AbnormalRate)
+			for _, r := range analysis.AbnormalDetails {
+				fmt.Printf("  时间: %s, 监测点IP: %s, 城市: %s, 运营商: %s, 再缓冲时间: %.3fs\n",
+					r.Time, r.MonitorIP, r.City, r.Isp, r.RebufferTime)
+			}
 		}
 	}
+	if !hasAbnormal {
+		fmt.Println("未发现异常的目标主机IP")
+	}
+
+	// 打印所有IP的摘要
+	fmt.Println()
+	fmt.Println("--- 全部监测点IP摘要 ---")
+	for _, analysis := range monitorIPMap {
+		if analysis.TotalRecords == 0 {
+			continue
+		}
+		analysis.AbnormalRate = float64(analysis.AbnormalRecords) / float64(analysis.TotalRecords) * 100
+		fmt.Printf("监测点IP: %s, 总记录: %d, 异常记录: %d, 异常率: %.1f%%\n",
+			analysis.IP, analysis.TotalRecords, analysis.AbnormalRecords, analysis.AbnormalRate)
+	}
+
+	fmt.Println()
+	fmt.Println("--- 全部目标主机IP摘要 ---")
+	for _, analysis := range targetIPMap {
+		if analysis.TotalRecords == 0 {
+			continue
+		}
+		analysis.AbnormalRate = float64(analysis.AbnormalRecords) / float64(analysis.TotalRecords) * 100
+		fmt.Printf("目标主机IP: %s, 总记录: %d, 异常记录: %d, 异常率: %.1f%%\n",
+			analysis.IP, analysis.TotalRecords, analysis.AbnormalRecords, analysis.AbnormalRate)
+	}
+
+	// 打印可用任务列表
 	tasks, err := m.getTaskList()
 	if err != nil {
-		log.Println("err:", err)
+		log.Println("获取任务列表失败:", err)
 		return
 	}
+	fmt.Println()
+	fmt.Println("--- 可用任务列表 ---")
 	for _, task := range tasks {
-		fmt.Printf("task: %s, url: %s, id: %d, name: %s, expire: %s\n", task.Name, task.Url, task.ID, task.Name, task.Expire)
+		fmt.Printf("任务: %s, ID: %d, URL: %s, 过期时间: %s\n", task.Name, task.ID, task.Url, task.Expire)
 	}
 }
 
@@ -571,12 +715,16 @@ func (m *Miku) ParseCsv() {
 		log.Println("缺少 pcap 文件路径，请使用 -f <pcap_file>")
 		return
 	}
+	if m.conf.Ip == "" {
+		log.Println("缺少 ip 参数，请使用 -ip <ip>")
+		return
+	}
 
 	outputFile := "/tmp/tls_handshakes.csv"
 
 	cmd := exec.Command("tshark",
 		"-r", pcapFile,
-		"-Y", "tls.handshake.type==1 or tls.record.content_type==20",
+		"-Y", fmt.Sprintf("ip.addr == %s and (tls.handshake.type==1 or tls.handshake.type==4)", m.conf.Ip),
 		"-T", "fields",
 		"-e", "frame.number",
 		"-e", "frame.time_relative",
@@ -584,9 +732,10 @@ func (m *Miku) ParseCsv() {
 		"-e", "ip.src",
 		"-e", "ip.dst",
 		"-e", "tls.handshake.type",
-		"-e", "tls.record.content_type",
+		//"-e", "tls.record.content_type",
 		"-E", "header=y",
 		"-E", "separator=,",
+		"-E", "aggregator=;", // 修改这里：用分号聚合同名字段
 	)
 
 	var stderr strings.Builder
@@ -654,10 +803,10 @@ func (m *Miku) Packet() {
 
 	// 跳过标题行
 	for _, row := range records[1:] {
-		// tshark 会省略尾部空字段，补齐到 7 个字段
-		cols := make([]string, 7)
+		// tshark 会省略尾部空字段，补齐到 6 个字段
+		cols := make([]string, 6)
 		for i, v := range row {
-			if i < 7 {
+			if i < 6 {
 				cols[i] = v
 			}
 		}
@@ -667,16 +816,16 @@ func (m *Miku) Packet() {
 		stream, _ := strconv.Atoi(cols[2])
 
 		handshake, _ := strconv.ParseFloat(cols[5], 64)
-		contentType, _ := strconv.ParseFloat(cols[6], 64)
+		//contentType, _ := strconv.ParseFloat(cols[6], 64)
 
 		record := TLSRecord{
-			FrameNum:    frame,
-			Time:        t,
-			Stream:      stream,
-			Src:         cols[3],
-			Dst:         cols[4],
-			Handshake:   handshake,
-			ContentType: contentType,
+			FrameNum:  frame,
+			Time:      t,
+			Stream:    stream,
+			Src:       cols[3],
+			Dst:       cols[4],
+			Handshake: handshake,
+			//ContentType: contentType,
 		}
 
 		streams[stream] = append(streams[stream], record)
@@ -715,8 +864,7 @@ func (m *Miku) Packet() {
 			}
 
 			// 检查是否来自服务器的 Change Cipher Spec
-			if pkt.Handshake == 0 && pkt.ContentType == 20.0 &&
-				pkt.Src == clientHelloDst && pkt.Dst == clientHelloSrc {
+			if pkt.Handshake == 4.0 {
 
 				duration := (pkt.Time - clientHelloTime) * 1000 // 转毫秒
 
@@ -742,6 +890,7 @@ func (m *Miku) Packet() {
 	var totalDuration float64
 	for _, result := range results {
 		fmt.Printf("TCP Stream %d:\n", result.Stream)
+		fmt.Printf("FrameNum: %d\n", result.FrameNum)
 		fmt.Printf("  Client Hello 时间: %.6fs\n", result.ClientHello)
 		fmt.Printf("  Change Cipher Spec 时间: %.6fs\n", result.ServerCCS)
 		fmt.Printf("  握手耗时: %.2fms\n", result.Duration)
