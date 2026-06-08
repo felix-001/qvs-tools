@@ -236,7 +236,9 @@ func Http(conf *config.Config) (string, error) {
 		}
 		conf.Ak = ss[0]
 		conf.Sk = ss[1]
-		log.Println("ak:", conf.Ak, "sk:", conf.Sk)
+		if conf.Detail {
+			log.Println("ak:", conf.Ak, "sk:", conf.Sk)
+		}
 	}
 	if conf.Path != "" {
 		domain := "mls-test.cn-east-1.qiniumiku.com"
@@ -244,6 +246,7 @@ func Http(conf *config.Config) (string, error) {
 		case "gray":
 			domain = "mls-test.cn-east-1.qiniumiku.com"
 		case "mikutest":
+			// uid: 1381218095
 			domain = "mls.cn-east-1.jfcs.qiniu.io"
 		case "mikuonline", "qvsmiku":
 			domain = "mls.cn-east-1.qiniumiku.com"

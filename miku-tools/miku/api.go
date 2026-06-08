@@ -67,7 +67,7 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 		conf.App = "live"
 	}
 
-	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0",
+	playUrl := fmt.Sprintf("%s://%s/%s/%s.%s",
 		scheme, conf.Domain, conf.App, conf.Stream, conf.Format)
 	if conf.QnTestUrl != "" {
 		playUrl += "&qnTestUrl=" + conf.QnTestUrl
@@ -82,6 +82,13 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 	if conf.Internal {
 		playUrl = fmt.Sprintf("%s://127.0.0.1/%s/%s.%s?did=a75e6982-7538-4629-ad3c-fd0d60b1ba54&expire=0&domain=%s",
 			scheme, conf.App, conf.Stream, conf.Format, conf.Domain)
+	}
+	if conf.Query != "" {
+		if strings.Contains(playUrl, "?") {
+			playUrl += "&" + conf.Query
+		} else {
+			playUrl += "?" + conf.Query
+		}
 	}
 
 	b := make([]byte, 10)
