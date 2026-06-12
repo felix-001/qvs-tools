@@ -243,7 +243,7 @@ func Http(conf *config.Config) (string, error) {
 	if conf.Path != "" {
 		domain := "mls-test.cn-east-1.qiniumiku.com"
 		switch conf.User {
-		case "gray":
+		case "gray", "qa":
 			domain = "mls-test.cn-east-1.qiniumiku.com"
 		case "mikutest":
 			// uid: 1381218095
