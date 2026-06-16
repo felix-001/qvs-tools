@@ -16,11 +16,47 @@ func (m *CommandManager) CmdHttp() *Command {
 		util.Http(m.config)
 	}
 	cmd := &Command{
-		Desc: "qn http客户端, -uid <uid> -user <user> -method <method(默认为GET)> -addr <url> -body <body> -header <key: value> -path <path>\nexample:\n" +
-			"miku -cmd http -ak xxx -sk xxx -method POST -addr http://miku-lived.dooquuequezi.com/api/v1/centerauth -detail(输出详细日志, 可选)" +
-			" -body '{\"bucket\": \"test-bucket\"}' -header 'content-type:application/json'" +
-			"\n-user 可选值: mikutest(pilitest@qiniu.com), mikuonline, qvs, admin, gray, vzan, qa, jfcs\n" +
-			"-path 可选值: domain, bucket, roominfo, listroom, authrti, wm(watermark), upwm(upload watermark),如果传了-path, 则-addr会被忽略",
+		Desc: "七牛鉴权 HTTP 客户端，自动计算 Qiniu Authorization 签名并发起请求，响应以格式化 JSON 输出\n" +
+			"\n" +
+			"鉴权方式(三选一，最终需有 ak/sk):\n" +
+			"  -ak <ak> -sk <sk>              直接指定 ak/sk\n" +
+			"  -uid <uid>                     通过 qconf 按 uid 查询 ak/sk(需配置 acc 账号文件)\n" +
+			"  -user <user>                   从 /usr/local/etc/<user>.txt 读取 ak,sk\n" +
+			"                                 可选值: mikutest, mikuonline, qvsmiku, qvs, admin, gray, vzan, qa, jfcs\n" +
+			"\n" +
+			"请求参数:\n" +
+			"  -method <method>               HTTP 方法，默认 GET；若传了 -body 且未指定 -method，则默认 POST\n" +
+			"  -addr <url>                    请求地址(与 -path 二选一，传 -path 时会忽略 -addr)\n" +
+			"  -body <body>                   请求体(JSON 字符串)，非空时会自动添加 content-type: application/json\n" +
+			"  -header <key: value>           自定义请求头，可多次指定\n" +
+			"  -detail                        输出详细日志(含请求/响应头、ak/sk 等)\n" +
+			"\n" +
+			"快捷路径(-path 模式，自动拼接 URL，需配合 -user 选择后端域名):\n" +
+			"  -path domain                   查询域名配置，需 -bucket -domain\n" +
+			"  -path bucket                   查询 bucket 配置，需 -bucket\n" +
+			"  -path roominfo                 查询房间信息，需 -bucket -id(roomid)\n" +
+			"  -path listroom                 列出房间，需 -bucket，可选 -offset -limit\n" +
+			"  -path userinfo                 查询用户信息，需 -bucket -id(roomid) -uid\n" +
+			"  -path listuser                 列出用户，需 -bucket -id(roomid)，可选 -offset -limit\n" +
+			"  -path deleteuser               删除用户(DELETE)，需 -bucket -id(roomid) -uid\n" +
+			"  -path deleteroom               删除房间(DELETE)，需 -bucket -id(roomid)\n" +
+			"  -path authrti                  鉴权 RTI，需 -bucket\n" +
+			"  -path wm                       水印模板，PATCH/GET/DELETE 时需 -id\n" +
+			"  -path upwm                     上传水印图片，DELETE 时需 -name\n" +
+			"  -path listwm                   列出水印模板\n" +
+			"  -path codec                    编解码模板\n" +
+			"\n" +
+			"-user 对应的后端域名:\n" +
+			"  gray/qa(默认)                  mls-test.cn-east-1.qiniumiku.com\n" +
+			"  mikutest                       mls.cn-east-1.jfcs.qiniu.io\n" +
+			"  mikuonline/qvsmiku             mls.cn-east-1.qiniumiku.com\n" +
+			"  qvs                            qiniuapi.com\n" +
+			"\n" +
+			"示例:\n" +
+			"  miku -cmd http -ak xxx -sk xxx -method POST -addr http://miku-lived.dooquuequezi.com/api/v1/centerauth \\\n" +
+			"    -body '{\"bucket\": \"test-bucket\"}' -header 'content-type:application/json' -detail\n" +
+			"  miku -cmd http -user mikutest -path domain -bucket mybucket -domain test.example.com\n" +
+			"  miku -cmd http -user qa -path listroom -bucket mybucket -offset 0 -limit 20",
 		Handler: handler,
 	}
 	return cmd
