@@ -287,6 +287,18 @@ func (m *CommandManager) CmdDns() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdDnslog() *Command {
+	handler := func() {
+		m.miku.DnsLog()
+	}
+	cmd := &Command{
+		Desc:       "获取dns操作日志(全量), -domain <domain>",
+		Handler:    handler,
+		NeedDnsPod: true,
+	}
+	return cmd
+}
+
 func (m *CommandManager) CmdTy() *Command {
 	handler := func() {
 		m.miku.TingYunErrNodes()
