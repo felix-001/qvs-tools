@@ -56,6 +56,7 @@ func (m *CommandManager) CmdHttp() *Command {
 			"  miku -cmd http -ak xxx -sk xxx -method POST -addr http://miku-lived.dooquuequezi.com/api/v1/centerauth \\\n" +
 			"    -body '{\"bucket\": \"test-bucket\"}' -header 'content-type:application/json' -detail\n" +
 			"  miku -cmd http -user mikutest -path domain -bucket mybucket -domain test.example.com\n" +
+			"  miku -cmd http -user qa -body '{\"source_path_query_sched\": \"v2\"}' -bucket liyqtest -detail -method PATCH" +
 			"  miku -cmd http -user qa -path listroom -bucket mybucket -offset 0 -limit 20",
 		Handler: handler,
 	}
