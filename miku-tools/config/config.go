@@ -96,6 +96,24 @@ type SQLConfig struct {
 	GroupByMinute bool         `json:"group_by_minute" yaml:"group_by_minute"`
 }
 
+// WsExecConf ssh 命令远程执行配置 (GoTTY WebSocket)
+type WsExecConf struct {
+	WsHost        string `json:"ws_host" yaml:"ws_host"`
+	AdminHost     string `json:"admin_host" yaml:"admin_host"`
+	UsertokenPath string `json:"usertoken_path" yaml:"usertoken_path"`
+	Auth          string `json:"auth" yaml:"auth"`
+	AuthFile      string `json:"auth_file" yaml:"auth_file"`
+	LoginURL      string `json:"login_url" yaml:"login_url"`
+	TargetURL     string `json:"target_url" yaml:"target_url"`
+	UserFile      string `json:"user_file" yaml:"user_file"`
+	PassFile      string `json:"pass_file" yaml:"pass_file"`
+	TotpBin       string `json:"totp_bin" yaml:"totp_bin"`
+	TotpProfile   string `json:"totp_profile" yaml:"totp_profile"`
+	TimeoutSec    int    `json:"timeout_sec" yaml:"timeout_sec"`
+	Columns       int    `json:"columns" yaml:"columns"`
+	Rows          int    `json:"rows" yaml:"rows"`
+}
+
 type Config struct {
 	Cmd                   string
 	Uid                   string
@@ -206,6 +224,7 @@ type Config struct {
 	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
 	Path                  string                `json:"path" yaml:"path"`
 	GitHubConf            GitHubConf            `json:"githubConf" yaml:"githubConf"`
+	WsExec                WsExecConf            `json:"ws_exec" yaml:"ws_exec"`
 }
 
 func (c *Config) initIpdbConfig() {

@@ -361,6 +361,23 @@ fps_common: &fps_common
   table: miku
   requireStreamId: true
 
+# ssh 命令远程执行 (GoTTY WebSocket)
+ws_exec:
+  ws_host: jarvis-ws-inner-v2.niulinkcloud.com
+  admin_host: linkcloud-admin.qiniu.io
+  usertoken_path: /api/proxy/jarvis/v1/webshell/usertoken
+  auth: ""  # 可选，也可通过 LINKCLOUD_AUTH 环境变量指定
+  auth_file: /usr/local/etc/linkcloud_auth.txt
+  login_url: ""   # 默认七牛 SSO 登录页
+  target_url: ""  # 默认 linkcloud-admin 节点页
+  user_file: ~/.secrets/linkcloud_user
+  pass_file: ~/.secrets/linkcloud_pass
+  totp_bin: ""       # 默认 macOS: ~/Documents/QiNiuWork/code_base/totp, Linux: ~/totp
+  totp_profile: ""   # 默认 macOS: linkcloud, Linux: Linkcloud
+  timeout_sec: 30
+  columns: 500
+  rows: 50
+
 # 听云配置
 tingyun:
   auth_key: ""        # 听云鉴权key, 在听云web生成

@@ -623,3 +623,32 @@ func (m *CommandManager) CmdPacket() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdSsh() *Command {
+	handler := func() {
+		m.miku.WsExec(m.config)
+	}
+	return &Command{
+		Desc: "通过 GoTTY WebSocket 在远程节点执行命令\n" +
+			"  -node <nodeId>       节点 ID (必需)\n" +
+			"  -query <command>     要执行的命令，默认 hostname\n" +
+			"  -t <timeout_sec>     超时秒数，默认 30 (yaml: ws_exec.timeout_sec)\n" +
+			"\n" +
+			"yaml 配置项 (ws_exec):\n" +
+			"  ws_host              WebSocket 主机\n" +
+			"  admin_host           管理后台主机 (获取 usertoken)\n" +
+			"  usertoken_path       usertoken API 路径\n" +
+			"  auth                 管理后台 Authorization (可选)\n" +
+			"  auth_file            缓存的 auth 文件路径\n" +
+			"  user_file/pass_file  LinkCloud LDAP 账号密码文件\n" +
+			"  totp_bin/totp_profile TOTP 命令及 profile\n" +
+			"  login_url/target_url SSO 登录页与目标页 (可选)\n" +
+			"  timeout_sec/columns/rows\n" +
+			"\n" +
+			"鉴权优先级: LINKCLOUD_AUTH 环境变量 > ws_exec.auth > auth_file > SSO 自动登录\n" +
+			"example:\n" +
+			"  miku -cmd ssh -node vdn-xxx -query hostname\n" +
+			"  miku -cmd ssh -node vdn-xxx -query 'uname -a' -t 60",
+		Handler: handler,
+	}
+}
