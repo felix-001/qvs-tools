@@ -27,6 +27,15 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+// gin v1.9+ 依赖 sonic，在 Go 1.25 下无法链接；固定到 v1.8.2（使用 json-iterator / encoding/json）。
+replace github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.8.2
+
+exclude (
+	github.com/bytedance/sonic v1.9.1
+	github.com/bytedance/sonic v1.12.3
+	github.com/bytedance/sonic/loader v0.2.0
+)
+
 require (
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
@@ -34,12 +43,10 @@ require (
 	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 // indirect
-	github.com/bytedance/sonic v1.12.3 // indirect
-	github.com/bytedance/sonic/loader v0.2.0 // indirect
+	github.com/bytedance/sonic v1.5.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
-	github.com/cloudwego/base64x v0.1.4 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/facebookgo/httpdown v0.0.0-20180706035922-5979d39b15c2 // indirect
@@ -126,5 +133,6 @@ require (
 	golang.org/x/time v0.10.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	labix.org/v2/mgo v0.0.0-20140701140051-000000000287 // indirect
 )
