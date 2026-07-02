@@ -2,7 +2,6 @@ package miku
 
 import (
 	"bytes"
-	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,13 +15,10 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/pcap"
 	publicUtil "github.com/qbox/mikud-live/common/util"
 )
 
@@ -568,53 +564,37 @@ type StreamRegisterRequest struct {
 func (m *Miku) StreamRegister() {
 	conf := m.conf
 
-	// 生成 ConnectId（如果为空）
 	connId := conf.ConnId
-	if connId == "" {
-		b := make([]byte, 10)
-		rand.Read(b)
-		connId = hex.EncodeToString(b)
-	}
 
 	// 检查必填字段
-	var missing []string
-	if conf.Bucket == "" {
-		missing = append(missing, "-bucket")
-	}
-	if conf.Stream == "" {
-		missing = append(missing, "-stream")
-	}
 	if conf.Node == "" {
-		missing = append(missing, "-node")
+		conf.Node = "cf1b9ef8-33e6-3569-80f8-85ba87e4039f-vdn-jsyz1-dls-1-87"
 	}
 	if conf.Url == "" {
-		missing = append(missing, "-url")
+		conf.Url = fmt.Sprintf("rtmp://%s/%s/teststream", conf.Bucket, conf.Domain)
 	}
-	if conf.Protocol == "" {
-		missing = append(missing, "-protocol")
-	}
-	if conf.Domain == "" {
-		missing = append(missing, "-domain")
-	}
-	if conf.Ip == "" {
-		missing = append(missing, "-ip")
-	}
-	if len(missing) > 0 {
-		log.Printf("缺少必填参数: %v", missing)
-		return
+	if conf.ConnId == "" {
+		const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+		b := make([]byte, 10)
+		for i := range b {
+			b[i] = charset[rand.Intn(len(charset))]
+		}
+		connId = string(b)
+		conf.ConnId = connId
 	}
 
 	req := StreamRegisterRequest{
-		Bucket:    conf.Bucket,
-		Key:       conf.Stream,
-		Node:      conf.Node,
-		Url:       conf.Url,
-		RawUrl:    conf.RawApp,
-		Type:      conf.Protocol,
-		IP:        conf.Ip,
-		ConnectId: connId,
-		Domain:    conf.Domain,
-		LocalAddr: fmt.Sprintf("%s:8080", conf.Ip),
+		Bucket:     conf.Bucket,
+		Key:        conf.Stream,
+		Node:       conf.Node,
+		Url:        conf.Url,
+		RawUrl:     conf.RawApp,
+		Type:       "live",
+		IP:         conf.Ip,
+		ConnectId:  connId,
+		Domain:     conf.Domain,
+		LocalAddr:  fmt.Sprintf("%s:1935", conf.Ip),
+		RemoteAddr: "61.169.114.36:2345",
 	}
 
 	reqBody, err := json.Marshal(req)
@@ -656,6 +636,7 @@ type HandshakeInfo struct {
 	ServerIP        string
 }
 
+/*
 func (m *Miku) Packet_backup() {
 	handle, err := pcap.OpenOffline("/tmp/test.pcap")
 	if err != nil {
@@ -715,6 +696,7 @@ func (m *Miku) Packet_backup() {
 		}
 	}
 }
+*/
 
 func (m *Miku) ParseCsv() {
 	pcapFile := m.conf.F
@@ -782,6 +764,7 @@ type HandshakeResult struct {
 	FrameNum       int
 }
 
+/*
 func (m *Miku) Packet() {
 	if _, err := os.Stat("/tmp/tls_handshakes.csv"); os.IsNotExist(err) {
 		m.ParseCsv()
@@ -912,3 +895,4 @@ func (m *Miku) Packet() {
 		fmt.Printf("平均握手耗时: %.2fms\n", totalDuration/float64(len(results)))
 	}
 }
+*/

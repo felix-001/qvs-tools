@@ -483,6 +483,27 @@ func (m *CommandManager) CmdTestHy1() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdOrigin() *Command {
+	handler := func() {
+		m.miku.Origin()
+	}
+	return &Command{
+		Desc: "回源排查：遍历节点和流，查询 Trino internal-player 日志\n" +
+			"  -f <file>           节点列表文件(首列为 nodeid，跳过表头)\n" +
+			"  -t <file>           流列表文件(首列为 streamname，跳过表头)\n" +
+			"  -day <YYYYMMDD>     查询日期(默认: 20260701)\n" +
+			"  -hour <HH>          查询小时(默认: 14)\n" +
+			"  -app <appname>      appname(默认: maozhua)\n" +
+			"  -output <file>      输出文件(默认: origin_result_<ts>.jsonl)\n" +
+			"  -addr <url>         节点查询 API(默认: http://miku-lived.qiniuapi.com:2240/v1/runtime/nodes)\n" +
+			"\n" +
+			"命中记录写入 JSONL，每行包含 nodeId、streamId、sql、results\n" +
+			"example:\n" +
+			"  miku -cmd origin -f nodes.txt -t streams.txt -day 20260701 -hour 14",
+		Handler: handler,
+	}
+}
+
 func (m *CommandManager) CmdQos() *Command {
 	handler := func() {
 		miku.Qos(m.config, &m.resources)
@@ -598,15 +619,17 @@ func (m *CommandManager) CmdRegister() *Command {
 	}
 	return &Command{
 		Desc: "stream register\n" +
-			"  -bucket <bucket>     空间\n" +
-			"  -stream <stream>     流ID(key)\n" +
-			"  -node <nodeId>       nodeID\n" +
-			"  -url <url>           完整推流url\n" +
-			"  -protocol <type>     业务类型(协议): live(rtmp|httpflv|hls), rtc, iovt(gb28181|onvif)\n" +
-			"  -ip <ip>             请求IP\n" +
-			"  -conn_id <id>        connectId(不传则自动生成)\n" +
-			"  -domain <domain>     推流域名\n" +
-			"  -raw_app <app>       原始app名(可选)\n" +
+			"  -bucket <bucket>     空间 (默认: liyqtest)\n" +
+			"  -stream <stream>     流ID/key (默认: teststream)\n" +
+			"  -node <nodeId>       nodeID (必填，默认: vdn-jsyz1-dls-1-87)\n" +
+			"  -url <url>           完整推流url (必填， 默认: rtmp://<domain>/liyqtest/teststream)\n" +
+			"  -ip <ip>             请求IP (默认: 114.230.94.166)\n" +
+			"  -conn_id <id>        connectId (默认: 置空则自动生成)\n" +
+			"  -domain <domain>     推流域名 (默认: liyqtest.com)\n" +
+			"  -raw_app <app>       原始app名，映射为 rawUrl (可选，默认空)\n" +
+			"  -sched_ip <ip>       调度服务地址 (默认: 10.34.146.62，请求发往 http://<sched_ip>:6060)\n" +
+			"\n" +
+			"隐式字段: localAddr 自动设为 <ip>:8080\n" +
 			"example:\n" +
 			"  miku -cmd register -bucket test-bucket -stream teststream -node node1 -domain test.com -url http://..." +
 			" -protocol live -ip 1.2.3.4 -conn_id abc123",
@@ -614,6 +637,7 @@ func (m *CommandManager) CmdRegister() *Command {
 	}
 }
 
+/*
 func (m *CommandManager) CmdPacket() *Command {
 	handler := func() {
 		m.miku.Packet()
@@ -623,6 +647,7 @@ func (m *CommandManager) CmdPacket() *Command {
 		Handler: handler,
 	}
 }
+*/
 
 func (m *CommandManager) CmdSsh() *Command {
 	handler := func() {

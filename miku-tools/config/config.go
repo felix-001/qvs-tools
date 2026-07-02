@@ -156,6 +156,8 @@ type Config struct {
 	Task                  string
 	StartTime             string
 	EndTime               string
+	Day                   string
+	Hour                  string
 	NsId                  string
 	GBId                  string
 	Host                  string
@@ -341,9 +343,9 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Sk, "sk", "", "sk")
 	//flag.StringVar(&c.Secret, "secret", "", "secret")
 	flag.StringVar(&c.Pcdn, "pcdn", "", "pcdn")
-	flag.StringVar(&c.Bucket, "bucket", "livessports", "bucket")
+	flag.StringVar(&c.Bucket, "bucket", "liyqtest", "bucket")
 	flag.StringVar(&c.Stream, "stream", "teststream", "stream")
-	flag.StringVar(&c.Domain, "domain", "www.test.com", "domain")
+	flag.StringVar(&c.Domain, "domain", "push.liyqtest.com", "domain")
 	flag.StringVar(&c.SourceId, "source_id", "", "source_id")
 	flag.StringVar(&c.OriginKey, "origin_key", "", "origin_key")
 	flag.StringVar(&c.OriginKeyDy, "origin_key_dy", "", "origin_key_dy")
@@ -360,8 +362,8 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Passwd, "passwd", "", "passwd")
 	flag.StringVar(&c.SchedIp, "sched_ip", "10.34.146.62", "sched_ip")
 	flag.StringVar(&c.Node, "node", "", "node")
-	flag.StringVar(&c.ConnId, "conn_id", "12345678abcdef", "conn_id")
-	flag.StringVar(&c.Ip, "ip", "103.85.174.230", "ip")
+	flag.StringVar(&c.ConnId, "conn_id", "", "conn_id")
+	flag.StringVar(&c.Ip, "ip", "114.230.94.166", "ip")
 	flag.StringVar(&c.Query, "query", "", "query")
 	flag.StringVar(&c.Format, "format", "flv", "format")
 	flag.StringVar(&c.App, "app", "", "app")
@@ -371,6 +373,8 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Task, "task", "", "task id, 也可在配置文件tingyun.task_id中配置")
 	flag.StringVar(&c.StartTime, "start", "", "start_time")
 	flag.StringVar(&c.EndTime, "end", "", "end_time")
+	flag.StringVar(&c.Day, "day", "", "trino 查询日期，格式 YYYYMMDD")
+	flag.StringVar(&c.Hour, "hour", "", "trino 查询小时")
 	flag.StringVar(&c.FilterIp, "filter_ip", "", "过滤IP(监测点IP或目标主机IP)")
 	flag.StringVar(&c.ID, "id", "", "id")
 	flag.StringVar(&c.Province, "prov", "江苏", "province")
