@@ -523,6 +523,7 @@ func (m *Miku) analyzeRebufferTime(data string) {
 }
 
 func (m *Miku) IpLoc() {
+	m.nodesIpLoc()
 	if m.conf.Ip == "" {
 		log.Println("need -ip")
 		return
@@ -539,6 +540,54 @@ func (m *Miku) IpLoc() {
 			log.Println("isp:", isp)
 			log.Println("area:", area)
 			log.Println("prov:", prov)
+			time.Sleep(time.Second)
+		}
+	}
+
+}
+
+// ipLocNodeIds 需要循环查询地理位置信息的节点列表
+var ipLocNodeIds = []string{
+	"ea9f3e95-47f6-3b87-8e29-a3c60c31d3f8-yzh999",
+	"9b836e81-a37d-3bcf-b41c-5b55d7718a0e-yzh996",
+	"fa670e5e-5398-3e35-8380-198ec9f028a3-vdn-zjwz-dls-1-37",
+	"b2d4f969-d7b8-3f87-8ac5-b017f9151ce6-vdn-zjwz-dls-1-38",
+}
+
+// nodesIpLoc 遍历 ipLocNodeIds，对每个节点获取其公网 IP 列表，
+// 再查询 IP 库得到地理位置信息并打印。整个动作循环 -n 次。
+func (m *Miku) nodesIpLoc() {
+	apiBase := m.conf.Addr
+	if apiBase == "" {
+		apiBase = defaultOriginNodeAPI
+	}
+
+	loops := m.conf.N
+	if loops <= 0 {
+		loops = 1
+	}
+
+	for i := 0; i < loops; i++ {
+		log.Printf("=== 节点地理位置查询 第 %d/%d 轮 ===", i+1, loops)
+		for _, nodeId := range ipLocNodeIds {
+			node, err := fetchRtNode(apiBase, nodeId)
+			if err != nil {
+				log.Printf("获取节点 %s 失败: %v", nodeId, err)
+				continue
+			}
+			ips := getPublicIPs(node)
+			if len(ips) == 0 {
+				log.Printf("节点 %s 无公网 IP，跳过", nodeId)
+				continue
+			}
+			log.Printf("节点 %s 公网 IP: %v", nodeId, ips)
+			for _, ip := range ips {
+				country, isp, area, prov := util.GetLocate(ip, m.resources.IpParser)
+				log.Printf("  IP: %s, country: %s, isp: %s, area: %s, prov: %s",
+					ip, country, isp, area, prov)
+			}
+		}
+		if i < loops-1 {
 			time.Sleep(time.Second)
 		}
 	}
