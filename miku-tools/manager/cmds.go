@@ -124,10 +124,22 @@ func (m *CommandManager) CmdInvite() *Command {
 
 func (m *CommandManager) CmdKodo() *Command {
 	handler := func() {
+		util.DownloadIpdb(m.config)
+	}
+	cmd := &Command{
+		Desc: "使用 ipdb 配置(ipdb.ips_source_param)中的 remote_url 从 kodo 下载 ipdb 文件到 /tmp 目录\n" +
+			"  依赖配置项 ak/sk/remote_url/retry_count, 下载后保存为 /tmp/<ipv4|ipv6>.ipdb",
+		Handler: handler,
+	}
+	return cmd
+}
+
+func (m *CommandManager) CmdSign() *Command {
+	handler := func() {
 		util.SignResource(m.config)
 	}
 	cmd := &Command{
-		Desc:    "kodo",
+		Desc:    "kodo 私有资源签名, -uid <uid> -key <key> -domain <domain>",
 		Handler: handler,
 	}
 	return cmd
