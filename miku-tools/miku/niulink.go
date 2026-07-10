@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"mikutool/config"
 	"net/http"
 	"net/url"
 	"os"
@@ -107,7 +108,7 @@ func (m *Miku) niuLinkHttpReq(page, size int) (*NiuLinkData, error) {
 	return httpReq(http.MethodGet, addr, "", niuLinkCli, headers)
 }
 
-func (m *Miku) Niulink(config *Config) {
+func (m *Miku) Niulink(config *config.Config) {
 	tmp := make(map[string]CostLevel)
 	for i := 1; i <= 6; i++ {
 		nilLinkData, err := m.niuLinkHttpReq(i, 1000)
