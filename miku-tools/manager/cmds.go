@@ -689,3 +689,13 @@ func (m *CommandManager) CmdSsh() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdNiulink() *Command {
+	handler := func() {
+		m.miku.Niulink(m.config)
+	}
+	return &Command{
+		Desc:    "niulink",
+		Handler: handler,
+	}
+}
