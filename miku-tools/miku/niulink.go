@@ -94,6 +94,7 @@ func (m *Miku) niuLinkHttpReq(page, size int) (*NiuLinkData, error) {
 		Timeout: time.Second * time.Duration(600),
 	}
 	addr := fmt.Sprintf("http://%s%s?page=%d&size=%d", m.conf.Domain, "/billing/v2/vendor/nodes/costlevel", page, size)
+	fmt.Println("addr:", addr)
 	u, err := url.Parse(addr)
 	if err != nil {
 		return nil, err
@@ -110,12 +111,13 @@ func (m *Miku) niuLinkHttpReq(page, size int) (*NiuLinkData, error) {
 
 func (m *Miku) Niulink(config *config.Config) {
 	tmp := make(map[string]CostLevel)
-	for i := 1; i <= 6; i++ {
+	for i := 1; i <= m.conf.N; i++ {
 		nilLinkData, err := m.niuLinkHttpReq(i, 1000)
 		if err != nil {
 			logger.Error().Msgf("get niulink info, err: %s", err.Error())
 			continue
 		}
+		fmt.Println("len(nilLinkData.CostLevels):", len(nilLinkData.CostLevels))
 		for _, value := range nilLinkData.CostLevels {
 			tmp[value.OriginNodeID] = value
 		}
