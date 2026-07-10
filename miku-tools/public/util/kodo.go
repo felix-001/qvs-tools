@@ -102,7 +102,7 @@ func downloadIpdbFromKodo(name string, param *ipdb.IPSourceReqParam) error {
 	privateAccessUrl := fmt.Sprintf("%s&now=%d", privateUrl, time.Now().Unix())
 	log.Printf("ipdb [%s] load privateAccessUrl: %s\n", name, privateAccessUrl)
 
-	dst := filepath.Join("/tmp", fmt.Sprintf("%s.ipdb", name))
+	dst := filepath.Join("/tmp", fmt.Sprintf("%d.ipdb", time.Now().UnixMilli()))
 
 	client := &http.Client{Timeout: 60 * time.Second}
 	retry := int(param.RemoteRetry)

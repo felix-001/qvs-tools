@@ -108,6 +108,7 @@ func (m *CommandManager) loadResources(cmd *Command) {
 	m.resources.V4Ips = util.LoadV4Ips()
 	m.resources.V6Ips = util.LoadV6Ips()
 	if cmd.NeedIpParser {
+		log.Printf("ipdb config ipv4: %+v, ipv6: %+v\n", m.config.IPDB.IP["ipv4"], m.config.IPDB.IP["ipv6"])
 		m.resources.IpParser, err = ipdb.NewCity(m.config.IPDB)
 		if err != nil {
 			log.Println("load ipdb err", err)

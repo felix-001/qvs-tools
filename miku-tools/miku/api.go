@@ -523,12 +523,13 @@ func (m *Miku) analyzeRebufferTime(data string) {
 }
 
 func (m *Miku) IpLoc() {
-	m.nodesIpLoc()
+	//m.nodesIpLoc()
 	if m.conf.Ip == "" {
 		log.Println("need -ip")
 		return
 	}
 	country, isp, area, prov := util.GetLocate(m.conf.Ip, m.resources.IpParser)
+	log.Println("ip:", m.conf.Ip)
 	log.Println("country:", country)
 	log.Println("isp:", isp)
 	log.Println("area:", area)
