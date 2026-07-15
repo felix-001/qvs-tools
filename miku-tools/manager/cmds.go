@@ -690,6 +690,20 @@ func (m *CommandManager) CmdSsh() *Command {
 	}
 }
 
+func (m *CommandManager) CmdTimeout() *Command {
+	handler := func() {
+		csvPath := "/Users/liyuanquan/Downloads/sqllab_liyqkodofsagent_20260715T060745.csv"
+		if m.config.Path != "" {
+			csvPath = m.config.Path
+		}
+		m.miku.TimeoutStat(csvPath)
+	}
+	return &Command{
+		Desc:    "读取 timeout CSV 日志，按 host 聚合统计条目数（从大到小），可用 -path 指定 CSV 文件路径",
+		Handler: handler,
+	}
+}
+
 func (m *CommandManager) CmdNiulink() *Command {
 	handler := func() {
 		m.miku.Niulink(m.config)
