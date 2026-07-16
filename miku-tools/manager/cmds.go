@@ -118,8 +118,14 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 			"\n" +
 			"节点与客户端:\n" +
 			"  -node <node>                   节点 ID (默认: ...-vdn-jsyz1-dls-1-87)\n" +
-			"  -ip <clientIp>                 客户端 IP，写入 remote 为 <ip>:8080 (默认: 114.230.94.166)\n" +
+			"  -ip <clientIp>                 单次模式客户端 IP，写入 remote 为 <ip>:8080 (默认: 114.230.94.166)\n" +
 			"  -user <user>                   用户标识 (可选)\n" +
+			"\n" +
+			"调用模式:\n" +
+			"  -n <n>                         循环次数 (默认: 0)\n" +
+			"    n=0  单次模式: 使用 -ip 调用一次 playcheck\n" +
+			"    n>0  批量模式: 从 /tmp/ips.txt 读取 IP 列表(每行一个)，\n" +
+			"         遍历每个 IP，对每个 IP 调用 playcheck 共 n 次\n" +
 			"\n" +
 			"可选参数:\n" +
 			"  -qn_test_url <domain>          追加到播放 URL 的 qnTestUrl，streamd 向 lived 请求 playcheck 时使用的 domain\n" +
