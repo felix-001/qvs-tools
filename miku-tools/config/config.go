@@ -404,7 +404,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.HeadReq, "head_req", false, "是否发送HEAD请求")
 	flag.Var(&c.HeaderMap, "header", "header")
 	flag.BoolVar(&c.Random, "random", false, "随机")
-	flag.IntVar(&c.N, "n", 100, "n")
+	flag.IntVar(&c.N, "n", 0, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
 	flag.StringVar(&c.SMTPHost, "smtp_host", "", "SMTP服务器地址")
 	flag.IntVar(&c.SMTPPort, "smtp_port", 587, "SMTP服务器端口")

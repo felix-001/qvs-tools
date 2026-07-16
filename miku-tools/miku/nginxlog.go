@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"mikutool/config"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -22,45 +23,100 @@ type fileTarget struct {
 	path string
 }
 
+// nodeSearchTarget 表示一个待搜索的节点及其日志路径/文件模式
+type nodeSearchTarget struct {
+	node    string
+	path    string
+	pattern string
+}
+
+// loadNginxNodes 优先从 /tmp/nodes.txt 读取节点列表。
+// 每行格式: <nodeid>_<序号>，序号可为空；按序号生成 path/pattern。
+// 读取失败时回退到内置 nginxNodes，使用 cfg.Path / cfg.Pattern。
+func loadNginxNodes(cfg *config.Config) []nodeSearchTarget {
+	data, err := os.ReadFile("/tmp/nodes.txt")
+	if err != nil {
+		log.Printf("[NginxLogSearch] 读取 /tmp/nodes.txt 失败，使用内置节点列表: %v", err)
+		if cfg.Path == "" {
+			log.Fatalf("[NginxLogSearch] -path 不能为空")
+		}
+		if cfg.Pattern == "" {
+			log.Fatalf("[NginxLogSearch] -pattern 不能为空")
+		}
+		var targets []nodeSearchTarget
+		for _, node := range nginxNodes {
+			node = strings.TrimSpace(node)
+			if node == "" {
+				continue
+			}
+			targets = append(targets, nodeSearchTarget{
+				node:    node,
+				path:    cfg.Path,
+				pattern: cfg.Pattern,
+			})
+		}
+		return targets
+	}
+
+	var targets []nodeSearchTarget
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "_", 2)
+		nodeId := parts[0]
+		seq := ""
+		if len(parts) > 1 {
+			seq = parts[1]
+		}
+		// 序号为空 -> qvs-sip；序号为 2 -> qvs-sip2
+		targets = append(targets, nodeSearchTarget{
+			node:    nodeId,
+			path:    "/home/qboxserver/qvs-sip" + seq + "/_package/run/",
+			pattern: "qvs-sip" + seq + ".log*",
+		})
+	}
+	log.Printf("[NginxLogSearch] 从 /tmp/nodes.txt 读取到 %d 个节点", len(targets))
+	return targets
+}
+
 // NginxLogSearch 先在每个节点上列出所有匹配的文件，再对所有文件并行搜索
 func (m *Miku) NginxLogSearch(cfg *config.Config) {
-	if cfg.Path == "" {
-		log.Fatalf("[NginxLogSearch] -path 不能为空")
-	}
-	if cfg.Pattern == "" {
-		log.Fatalf("[NginxLogSearch] -pattern 不能为空")
-	}
 	if cfg.Query == "" {
 		log.Fatalf("[NginxLogSearch] -query 不能为空")
 	}
 
-	log.Printf("[NginxLogSearch] 开始，path=%s, pattern=%s, query=%s",
-		cfg.Path, cfg.Pattern, cfg.Query)
+	targets := loadNginxNodes(cfg)
+	if len(targets) == 0 {
+		log.Println("[NginxLogSearch] 无可用节点")
+		return
+	}
+
+	log.Printf("[NginxLogSearch] 开始，nodes=%d, query=%s", len(targets), cfg.Query)
 
 	// 第一阶段：在每个节点上 ls 匹配的文件
 	var mu sync.Mutex
 	var files []fileTarget
 	var wg sync.WaitGroup
 
-	for _, node := range nginxNodes {
-		node := strings.TrimSpace(node)
-		if node == "" {
-			continue
-		}
+	for _, t := range targets {
+		t := t
 		wg.Add(1)
-		go func(n string) {
+		go func() {
 			defer wg.Done()
-			matches, err := listFilesOnNode(n, cfg.Path, cfg.Pattern)
+			log.Printf("[%s] path=%s, pattern=%s", t.node, t.path, t.pattern)
+			matches, err := listFilesOnNode(t.node, t.path, t.pattern)
 			if err != nil {
-				log.Printf("[%s] 列出文件失败: %v", n, err)
+				log.Printf("[%s] 列出文件失败: %v", t.node, err)
 				return
 			}
 			mu.Lock()
 			for _, f := range matches {
-				files = append(files, fileTarget{node: n, path: f})
+				files = append(files, fileTarget{node: t.node, path: f})
 			}
 			mu.Unlock()
-		}(node)
+		}()
 	}
 	wg.Wait()
 

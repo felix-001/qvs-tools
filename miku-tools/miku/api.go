@@ -126,11 +126,39 @@ func playcheck(ip string, conf *config.Config) *PlayCheckResp {
 }
 
 func Playcheck(conf *config.Config) {
+	if conf.N != 0 {
+		data, err := os.ReadFile("/tmp/ips.txt")
+		if err != nil {
+			log.Println("read /tmp/ips.txt err:", err)
+			return
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			ip := strings.TrimSpace(line)
+			if ip == "" {
+				continue
+			}
+			remote := ip + ":8080"
+			if publicUtil.IsIPv6(ip) {
+				remote = fmt.Sprintf("[%s]:8080", ip)
+			}
+			for i := 0; i < conf.N; i++ {
+				printPlaycheckResp(playcheck(remote, conf))
+			}
+		}
+		return
+	}
+
 	remote := conf.Ip + ":8080"
 	if publicUtil.IsIPv6(conf.Ip) {
 		remote = fmt.Sprintf("[%s]:8080", conf.Ip)
 	}
-	resp := playcheck(remote, conf)
+	printPlaycheckResp(playcheck(remote, conf))
+}
+
+func printPlaycheckResp(resp *PlayCheckResp) {
+	if resp == nil {
+		return
+	}
 	bytes, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
 		log.Println(err)

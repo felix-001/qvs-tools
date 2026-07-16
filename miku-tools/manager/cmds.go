@@ -101,11 +101,35 @@ func (m *CommandManager) CmdPlayCheck() *Command {
 		miku.Playcheck(m.config)
 	}
 	cmd := &Command{
-		Desc: "请求playcheck 302接口, -https <true/false> \n-domain <domain> \n-app <app, 默认live> \n-protocol <protocol, 默认flv> \n" +
-			"-bucket <bucket, 默认live> \n-stream <stream> \n-format <format, 默认flv> \n-sched_ip <sched_ip, 默认xs3427> \n" +
-			"-user <user, 默认iqiyi> \n-node <node, 默认vdn-jsyz1-dls-1-9> \n-conn_id <conn_id, 默认12345678abcdef> \n-ip <clientIp> \n" +
-			"-port <port, 默认6060>\n" +
-			"-qn_test_url <streamd向lived请求playcheck的domain>\n-head_req",
+		Desc: "请求 playcheck 302 接口，向调度服务 POST /api/v1/playcheck，打印格式化 JSON 响应\n" +
+			"\n" +
+			"请求目标:\n" +
+			"  -sched_ip <ip>                 调度服务地址 (默认: 10.34.146.62)\n" +
+			"  -port <port>                   调度服务端口 (默认: 6060)\n" +
+			"\n" +
+			"播放参数:\n" +
+			"  -https                         使用 https 拼播放 URL (默认: false，即 http)\n" +
+			"  -domain <domain>               播放域名 (默认: push.liyqtest.com)\n" +
+			"  -app <app>                     app 名 (默认: live)\n" +
+			"  -bucket <bucket>               空间 (默认: liyqtest)\n" +
+			"  -stream <stream>               流名/key (默认: teststream)\n" +
+			"  -format <format>               播放格式/后缀 (默认: flv)\n" +
+			"  -protocol <protocol>           协议字段 (默认: flv)\n" +
+			"\n" +
+			"节点与客户端:\n" +
+			"  -node <node>                   节点 ID (默认: ...-vdn-jsyz1-dls-1-87)\n" +
+			"  -ip <clientIp>                 客户端 IP，写入 remote 为 <ip>:8080 (默认: 114.230.94.166)\n" +
+			"  -user <user>                   用户标识 (可选)\n" +
+			"\n" +
+			"可选参数:\n" +
+			"  -qn_test_url <domain>          追加到播放 URL 的 qnTestUrl，streamd 向 lived 请求 playcheck 时使用的 domain\n" +
+			"  -head_req                      使用 HEAD 方法请求 (默认: GET)\n" +
+			"  -player <player>               追加 player 查询参数\n" +
+			"  -query <query>                 追加自定义查询串\n" +
+			"  -redirect                      使用 127.0.0.1 形式的 redirect 播放 URL\n" +
+			"  -internal                      使用 internal 形式的播放 URL\n" +
+			"\n" +
+			"说明: conn_id 每次请求自动随机生成；播放 URL 形如 <scheme>://<domain>/<app>/<stream>.<format>",
 		Handler: handler,
 	}
 	return cmd
@@ -620,7 +644,22 @@ func (m *CommandManager) CmdNginxLog() *Command {
 		m.miku.NginxLogSearch(m.config)
 	}
 	return &Command{
-		Desc:    "在多个节点上并行搜索 nginx 日志, -path <日志目录> -pattern <文件匹配模式> -query <搜索关键词>",
+		Desc: "在多个节点上并行搜索 nginx/qvs-sip 日志：先 ls 匹配文件，再并行 grep\n" +
+			"\n" +
+			"必需参数:\n" +
+			"  -query <keyword>               搜索关键词(grep -E)\n" +
+			"\n" +
+			"节点列表(优先从 /tmp/nodes.txt 读取):\n" +
+			"  每行格式: <nodeid>_<序号>，序号可为空\n" +
+			"  读取成功时自动推导 path/pattern，无需再传 -path/-pattern:\n" +
+			"    path    = /home/qboxserver/qvs-sip<序号>/_package/run/\n" +
+			"    pattern = qvs-sip<序号>.log*\n" +
+			"  例: vdn-xxx        -> qvs-sip/_package/run/ , qvs-sip.log*\n" +
+			"      vdn-xxx_2      -> qvs-sip2/_package/run/ , qvs-sip2.log*\n" +
+			"\n" +
+			"回退模式(/tmp/nodes.txt 不存在时，使用内置节点列表):\n" +
+			"  -path <dir>                    日志目录(必需)\n" +
+			"  -pattern <glob>                文件匹配模式(必需，如 *.log*)",
 		Handler: handler,
 	}
 }
