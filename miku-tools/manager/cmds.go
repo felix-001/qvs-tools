@@ -152,13 +152,23 @@ func (m *CommandManager) CmdInvite() *Command {
 	return cmd
 }
 
-func (m *CommandManager) CmdKodo() *Command {
+func (m *CommandManager) CmdIpdb() *Command {
 	handler := func() {
 		util.DownloadIpdb(m.config)
 	}
 	cmd := &Command{
-		Desc: "使用 ipdb 配置(ipdb.ips_source_param)中的 remote_url 从 kodo 下载 ipdb 文件到 /tmp 目录\n" +
-			"  依赖配置项 ak/sk/remote_url/retry_count, 下载后保存为 /tmp/<时间戳>.ipdb",
+		Desc: "从 ipipfile.qbox.net 下载 ipdb 文件，ak/sk 从配置 ipdb.ips_source_param 读取\n" +
+			"  -name <ipv4|ipv6>  指定下载 ipv4 或 ipv6，不传则两者都下\n" +
+			"  -path <path>       保存路径（可选）；默认用配置 local_url，再否则 /tmp/neo.<name>.ipdb\n" +
+			"\n" +
+			"下载地址:\n" +
+			"  ipv4: http://ipipfile.qbox.net/neo.ipv4.ipdb\n" +
+			"  ipv6: http://ipipfile.qbox.net/neo.ipv6.ipdb\n" +
+			"\n" +
+			"example:\n" +
+			"  miku -cmd ipdb -name ipv4\n" +
+			"  miku -cmd ipdb -name ipv6 -path /tmp/neo.ipv6.ipdb\n" +
+			"  miku -cmd ipdb",
 		Handler: handler,
 	}
 	return cmd

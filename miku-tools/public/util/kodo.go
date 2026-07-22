@@ -58,32 +58,67 @@ func SignResource(conf *config.Config) {
 	fmt.Println(addr)
 }
 
-// DownloadIpdb 使用 ipdb 配置(ipdb.ips_source_param)中的 remote_url 从 kodo 下载 ipdb 文件到 /tmp 目录。
-// 参考 pili ipdb.v1 中 cityWorker.loadRemote 的实现，通过 kodo.Client 生成私有下载链接后拉取文件。
+// 固定的 ipdb 下载地址（与 pili ipdb loader 使用的 kodo 私有桶一致）
+var ipdbRemoteURLs = map[string]string{
+	"ipv4": "http://ipipfile.qbox.net/neo.ipv4.ipdb",
+	"ipv6": "http://ipipfile.qbox.net/neo.ipv6.ipdb",
+}
+
+// DownloadIpdb 从 ipipfile.qbox.net 下载 ipdb 文件。
+// ak/sk 从配置 ipdb.ips_source_param 读取；可通过 conf.Name 指定 ipv4/ipv6，为空则全部下载。
+// 保存路径优先使用 -path，其次配置中的 local_url，最后落盘到 /tmp/neo.<name>.ipdb。
+// 鉴权方式参考 pili ipdb.v1 cityWorker.loadRemote：kodo.MakePrivateUrl。
 func DownloadIpdb(conf *config.Config) {
 	if len(conf.IPDB.IP) == 0 {
 		log.Println("no ipdb config, check ipdb.ips_source_param in mikutool.yaml")
 		return
 	}
-	for name, param := range conf.IPDB.IP {
-		if param == nil || param.RemoteUrl == "" {
-			log.Printf("ipdb [%s] has no remote_url, skip\n", name)
+
+	names := []string{"ipv4", "ipv6"}
+	if conf.Name != "" {
+		if _, ok := ipdbRemoteURLs[conf.Name]; !ok {
+			log.Printf("unsupported name %q, expect ipv4 or ipv6\n", conf.Name)
+			return
+		}
+		names = []string{conf.Name}
+	}
+
+	for _, name := range names {
+		param := conf.IPDB.IP[name]
+		if param == nil {
+			log.Printf("ipdb [%s] not found in config, skip\n", name)
 			continue
 		}
-		if err := downloadIpdbFromKodo(name, param); err != nil {
+		if param.AK == "" || param.SK == "" {
+			log.Printf("ipdb [%s] missing ak/sk in config, skip\n", name)
+			continue
+		}
+		remoteURL := ipdbRemoteURLs[name]
+		dst := ""
+		// -path 仅在指定单个 name 时生效，避免 ipv4/ipv6 写到同一文件
+		if conf.Path != "" && len(names) == 1 {
+			dst = conf.Path
+		}
+		if dst == "" {
+			dst = param.LocalUrl
+		}
+		if dst == "" {
+			dst = filepath.Join("/tmp", fmt.Sprintf("neo.%s.ipdb", name))
+		}
+		if err := downloadIpdbFromKodo(name, remoteURL, dst, param); err != nil {
 			log.Printf("download ipdb [%s] err: %v\n", name, err)
 			continue
 		}
 	}
 }
 
-func downloadIpdbFromKodo(name string, param *ipdb.IPSourceReqParam) error {
-	u, err := url.Parse(param.RemoteUrl)
+func downloadIpdbFromKodo(name, remoteURL, dst string, param *ipdb.IPSourceReqParam) error {
+	u, err := url.Parse(remoteURL)
 	if err != nil {
-		return fmt.Errorf("parse remote_url %s err: %w", param.RemoteUrl, err)
+		return fmt.Errorf("parse remote_url %s err: %w", remoteURL, err)
 	}
 	if u.Path == "" || u.Path == "/" {
-		return fmt.Errorf("remote_url %s has no key path", param.RemoteUrl)
+		return fmt.Errorf("remote_url %s has no key path", remoteURL)
 	}
 
 	key := u.Path[1:]
@@ -102,7 +137,9 @@ func downloadIpdbFromKodo(name string, param *ipdb.IPSourceReqParam) error {
 	privateAccessUrl := fmt.Sprintf("%s&now=%d", privateUrl, time.Now().Unix())
 	log.Printf("ipdb [%s] load privateAccessUrl: %s\n", name, privateAccessUrl)
 
-	dst := filepath.Join("/tmp", fmt.Sprintf("%d.ipdb", time.Now().UnixMilli()))
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return fmt.Errorf("mkdir %s err: %w", filepath.Dir(dst), err)
+	}
 
 	client := &http.Client{Timeout: 60 * time.Second}
 	retry := int(param.RemoteRetry)
