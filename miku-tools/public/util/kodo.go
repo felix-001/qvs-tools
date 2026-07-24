@@ -58,14 +58,16 @@ func SignResource(conf *config.Config) {
 	fmt.Println(addr)
 }
 
-// 固定的 ipdb 下载地址（与 pili ipdb loader 使用的 kodo 私有桶一致）
-var ipdbRemoteURLs = map[string]string{
-	"ipv4": "http://ipipfile.qbox.net/neo.ipv4.ipdb",
-	"ipv6": "http://ipipfile.qbox.net/neo.ipv6.ipdb",
+const defaultIpdbDomain = "ipipfile.qbox.net"
+
+var ipdbNames = map[string]bool{
+	"ipv4": true,
+	"ipv6": true,
 }
 
-// DownloadIpdb 从 ipipfile.qbox.net 下载 ipdb 文件。
+// DownloadIpdb 从指定 domain 下载 ipdb 文件（默认 ipipfile.qbox.net）。
 // ak/sk 从配置 ipdb.ips_source_param 读取；可通过 conf.Name 指定 ipv4/ipv6，为空则全部下载。
+// domain 通过 -domain 传入，为空则用 defaultIpdbDomain。
 // 保存路径优先使用 -path，其次配置中的 local_url，最后落盘到 /tmp/neo.<name>.ipdb。
 // 鉴权方式参考 pili ipdb.v1 cityWorker.loadRemote：kodo.MakePrivateUrl。
 func DownloadIpdb(conf *config.Config) {
@@ -74,9 +76,14 @@ func DownloadIpdb(conf *config.Config) {
 		return
 	}
 
+	domain := conf.Domain
+	if domain == "" {
+		domain = defaultIpdbDomain
+	}
+
 	names := []string{"ipv4", "ipv6"}
 	if conf.Name != "" {
-		if _, ok := ipdbRemoteURLs[conf.Name]; !ok {
+		if !ipdbNames[conf.Name] {
 			log.Printf("unsupported name %q, expect ipv4 or ipv6\n", conf.Name)
 			return
 		}
@@ -93,7 +100,7 @@ func DownloadIpdb(conf *config.Config) {
 			log.Printf("ipdb [%s] missing ak/sk in config, skip\n", name)
 			continue
 		}
-		remoteURL := ipdbRemoteURLs[name]
+		remoteURL := fmt.Sprintf("http://%s/neo.%s.ipdb", domain, name)
 		dst := ""
 		// -path 仅在指定单个 name 时生效，避免 ipv4/ipv6 写到同一文件
 		if conf.Path != "" && len(names) == 1 {

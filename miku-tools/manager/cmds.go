@@ -157,17 +157,19 @@ func (m *CommandManager) CmdIpdb() *Command {
 		util.DownloadIpdb(m.config)
 	}
 	cmd := &Command{
-		Desc: "从 ipipfile.qbox.net 下载 ipdb 文件，ak/sk 从配置 ipdb.ips_source_param 读取\n" +
+		Desc: "下载 ipdb 文件，ak/sk 从配置 ipdb.ips_source_param 读取\n" +
+			"  -domain <domain>   下载域名（可选，默认 ipipfile.qbox.net）\n" +
 			"  -name <ipv4|ipv6>  指定下载 ipv4 或 ipv6，不传则两者都下\n" +
 			"  -path <path>       保存路径（可选）；默认用配置 local_url，再否则 /tmp/neo.<name>.ipdb\n" +
 			"\n" +
 			"下载地址:\n" +
-			"  ipv4: http://ipipfile.qbox.net/neo.ipv4.ipdb\n" +
-			"  ipv6: http://ipipfile.qbox.net/neo.ipv6.ipdb\n" +
+			"  ipv4: http://<domain>/neo.ipv4.ipdb\n" +
+			"  ipv6: http://<domain>/neo.ipv6.ipdb\n" +
 			"\n" +
 			"example:\n" +
 			"  miku -cmd ipdb -name ipv4\n" +
 			"  miku -cmd ipdb -name ipv6 -path /tmp/neo.ipv6.ipdb\n" +
+			"  miku -cmd ipdb -domain ipipfile.qbox.net\n" +
 			"  miku -cmd ipdb",
 		Handler: handler,
 	}
