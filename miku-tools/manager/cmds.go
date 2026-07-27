@@ -423,13 +423,27 @@ func (m *CommandManager) CmdPathquery() *Command {
 		m.miku.Pathquery()
 	}
 	cmd := &Command{
-		Desc: "请求pathquery API\n" +
-			"如果指定-local, 则需要指定-node, -ip可选指定, 如果-ip不指定, 则传给调度的x-real-ip的header是空值\n" +
-			" -conn_id <conn_id, default>\n -stream <stream, default>\n -domain <domain, default>\n " +
-			"-area <area, default>\n -isp <isp, default>\n -bucket <bucket, default>\n -user <user, default>\n " +
-			"-sched_ip <sched_ip, default>\n -node <node>\n -format <format, default>\n -origin <origin, default>\n " +
-			"-ip <指定clientip>\n -skip <需要skip的节点>\n -random <如果指定了-area和-isp, 选点失败, 则默认会随机选个点>\n " +
-			"-app <指定传入的playurl的app,如果不传，默认使用-bucket指定的参数>",
+		Desc: "向 lived 发送 pathquery 请求，模拟播放调度流程，返回拉流源站路径\n" +
+			"工作模式:\n" +
+			"  默认模式: 先通过 sched API 获取 PCDN 节点，再向该节点发起 pathquery\n" +
+			"  -local:   直连模式，跳过 sched 选点，直接向指定 -node 发起 pathquery（必须指定 -node）\n" +
+			"            此模式下 -ip 可选，不指定则 X-Real-IP header 为空\n" +
+			"参数说明:\n" +
+			"  -stream <流名>           播放流名称（默认使用配置值）\n" +
+			"  -domain <域名>           播放域名（默认使用配置值）\n" +
+			"  -bucket <空间名>         Bucket 名称（默认使用配置值）\n" +
+			"  -app <应用名>            playUrl 中的 app 字段，不传则使用 -bucket 的值\n" +
+			"  -format <格式>           播放格式，如 flv/m3u8/slice（默认使用配置值）\n" +
+			"  -user <用户>             用户标识（默认使用配置值）\n" +
+			"  -area <区域>             选点区域，用于 sched API 筛选节点\n" +
+			"  -isp <运营商>            选点运营商，用于 sched API 筛选节点\n" +
+			"  -sched_ip <调度地址>     lived 调度服务地址（默认使用配置值）\n" +
+			"  -node <节点ID>           指定目标节点（-local 模式下必填）\n" +
+			"  -ip <客户端IP>           指定 X-Real-IP，模拟客户端来源 IP\n" +
+			"  -origin <源站地址>       回源地址（format=slice 时会转换为 ex1 参数）\n" +
+			"  -skip <节点ID列表>       逗号分隔，pathquery 时跳过这些节点\n" +
+			"  -random                  当 -area/-isp 选点失败时，随机选取一个节点\n" +
+			"  -conn_id <连接ID>        连接标识（默认自动生成随机字符串）",
 		Handler: handler,
 	}
 	return cmd
