@@ -680,6 +680,31 @@ func (m *CommandManager) CmdNginxLog() *Command {
 	}
 }
 
+func (m *CommandManager) CmdReproRegisterRace() *Command {
+	handler := func() {
+		m.miku.ReproRegisterUnregisterRace()
+	}
+	return &Command{
+		Desc: "复现 register/unregister 竞态: register -> unregister 与 register 并行\n" +
+			"  -loop <n>              循环次数 (默认: 10，必须 > 0)\n" +
+			"  -bucket <bucket>       空间 (默认: liyqtest)\n" +
+			"  -stream <stream>       流 key (默认: livetest)\n" +
+			"  -node <nodeId>         节点 ID\n" +
+			"  -domain <domain>       推流域名 (默认: test.push.qiniuapi.com)\n" +
+			"  -url <url>             推流 URL (默认: http://<domain>/<bucket>/xxx.flv)\n" +
+			"  -sched_ip <ip>         调度服务 IP (默认: 10.34.146.62)\n" +
+			"  -host <ip>             Redis 地址 (默认: 10.34.91.37)\n" +
+			"  -port <port>           Redis 端口 (默认: 8200)\n" +
+			"\n" +
+			"每轮流程: register(old) -> 20ms -> unregister(old) 与 3ms 后 register(new) 并行 -> 30ms -> 查 Redis\n" +
+			"若 Redis key 为空则 exit 0，否则循环结束后 exit 1\n" +
+			"\n" +
+			"example:\n" +
+			"  miku -cmd reproregisterrace -loop 100 -stream livetest",
+		Handler: handler,
+	}
+}
+
 func (m *CommandManager) CmdRegister() *Command {
 	handler := func() {
 		m.miku.StreamRegister()
