@@ -173,6 +173,7 @@ type Config struct {
 	OnlineNum             int
 	N                     int
 	Loop                  int
+	SleepMs               int
 	Bw                    int
 	Offset                int
 	Limit                 int
@@ -406,6 +407,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Random, "random", false, "随机")
 	flag.IntVar(&c.N, "n", 0, "n")
 	flag.IntVar(&c.Loop, "loop", 10, "loop")
+	flag.IntVar(&c.SleepMs, "sleep_ms", 5, "register 与 unregister 之间的 sleep 毫秒数")
 	flag.StringVar(&c.SMTPHost, "smtp_host", "", "SMTP服务器地址")
 	flag.IntVar(&c.SMTPPort, "smtp_port", 587, "SMTP服务器端口")
 	flag.StringVar(&c.SMTPUser, "smtp_user", "", "SMTP用户名")

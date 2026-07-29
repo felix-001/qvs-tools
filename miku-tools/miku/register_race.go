@@ -25,6 +25,12 @@ type streamUnregisterRequest struct {
 	RawUrl    string `json:"rawUrl"`
 }
 
+type streamRegisterResponse struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	ConnectId string `json:"connectId"`
+}
+
 func genConnectID() (string, error) {
 	b := make([]byte, 5)
 	if _, err := rand.Read(b); err != nil {
@@ -33,21 +39,28 @@ func genConnectID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (m *Miku) reproDoRegister(client *http.Client, registerURL string, req StreamRegisterRequest) {
+func (m *Miku) reproDoRegister(client *http.Client, registerURL string, req StreamRegisterRequest) string {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		log.Printf("[register] marshal err: %v", err)
-		return
+		return ""
 	}
-	log.Printf("[register] req connectId=%s", req.ConnectId)
+	log.Printf("[register] req connectId=%s masterKey=%s", req.ConnectId, req.Master)
 	resp, err := client.Post(registerURL, "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		log.Printf("[register] err: %v", err)
-		return
+		return ""
 	}
 	defer resp.Body.Close()
 	respBody, _ := io.ReadAll(resp.Body)
 	log.Printf("[register] resp=%s", string(respBody))
+
+	var parsed streamRegisterResponse
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		log.Printf("[register] unmarshal resp err: %v", err)
+		return ""
+	}
+	return parsed.Code
 }
 
 func (m *Miku) reproDoUnregister(client *http.Client, unregisterURL string, req streamUnregisterRequest) {
@@ -72,6 +85,8 @@ func (m *Miku) reproHGetAll(ctx context.Context, rdb redis.UniversalClient, key 
 }
 
 func (m *Miku) ReproRegisterUnregisterRace() {
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
 	conf := m.conf
 	loopCount := conf.Loop
 	if loopCount <= 0 {
@@ -126,12 +141,20 @@ func (m *Miku) ReproRegisterUnregisterRace() {
 	client := &http.Client{Timeout: 10 * time.Second}
 	ctx := context.Background()
 
-	log.Printf("开始循环: count=%d, bucket=%s, key=%s, node=%s", loopCount, bucket, key, node)
-	log.Println("流程: register -> sleep 20ms -> unregister || sleep 3ms -> register -> sleep 30ms -> 读 Redis")
+	sleepMs := conf.SleepMs
+	if sleepMs < 0 {
+		sleepMs = 0
+	}
+
+	log.Printf("开始循环: count=%d, bucket=%s, key=%s, node=%s, sleep_ms=%d", loopCount, bucket, key, node, sleepMs)
+	log.Printf("流程: register || sleep %dms -> unregister -> sleep 30ms -> 读 Redis", sleepMs)
+	log.Printf("判定: new=1000 且 Redis 空 => HIT 真竞态; new!=1000 且 Redis 空 => 假阳性跳过")
 	log.Printf("register=%s", registerURL)
 	log.Printf("unregister=%s", unregisterURL)
 	log.Printf("redis=%s:%d key=%s", redisHost, redisPort, redisKey)
 	log.Println()
+
+	falsePositive := 0
 
 	for i := 1; i <= loopCount; i++ {
 		connectIDOld, err := genConnectID()
@@ -154,6 +177,7 @@ func (m *Miku) ReproRegisterUnregisterRace() {
 			Type:      "live",
 			ConnectId: connectIDOld,
 			Domain:    domain,
+			Master:    key, // 模拟 lived: req.Master = key
 		})
 		time.Sleep(20 * time.Millisecond)
 
@@ -174,16 +198,18 @@ func (m *Miku) ReproRegisterUnregisterRace() {
 			Type:      "live",
 			ConnectId: connectIDNew,
 			Domain:    domain,
+			Master:    key, // 关键：绕过 CheckStream 的 Stream is online，进入 Set/Del 竞态窗口
 		}
 
+		var newCode string
 		done := make(chan struct{}, 2)
 		go func() {
-			m.reproDoUnregister(client, unregisterURL, unregisterReq)
+			newCode = m.reproDoRegister(client, registerURL, registerReq)
 			done <- struct{}{}
 		}()
-		time.Sleep(3 * time.Millisecond)
+		time.Sleep(time.Duration(sleepMs) * time.Millisecond)
 		go func() {
-			m.reproDoRegister(client, registerURL, registerReq)
+			m.reproDoUnregister(client, unregisterURL, unregisterReq)
 			done <- struct{}{}
 		}()
 		<-done
@@ -198,8 +224,16 @@ func (m *Miku) ReproRegisterUnregisterRace() {
 		log.Printf("[redis] HGETALL %s =>", redisKey)
 		if len(result) == 0 {
 			log.Println("(empty)")
-			log.Printf("发现 Redis key 为空，退出循环。round=%d, old=%s, new=%s", i, connectIDOld, connectIDNew)
-			os.Exit(0)
+			// 真阳性：new 注册成功(1000) 但 Redis 被 old unregister Del 掉
+			if newCode == "1000" {
+				log.Printf("HIT race: new register success but redis empty. round=%d, old=%s, new=%s", i, connectIDOld, connectIDNew)
+				os.Exit(0)
+			}
+			// 假阳性：new 未成功写入（如 1037），old Del 后 Redis 空
+			falsePositive++
+			log.Printf("skip false positive: newCode=%s redis empty. fp=%d round=%d", newCode, falsePositive, i)
+			log.Println()
+			continue
 		}
 		for k, v := range result {
 			log.Printf("  %s: %s", k, v)
@@ -207,6 +241,6 @@ func (m *Miku) ReproRegisterUnregisterRace() {
 		log.Println()
 	}
 
-	log.Printf("循环结束，共执行 %d 次，Redis key 一直非空。", loopCount)
+	log.Printf("循环结束，共执行 %d 次，Redis key 一直非空（或未打中真竞态，假阳性 %d 次）。", loopCount, falsePositive)
 	os.Exit(1)
 }

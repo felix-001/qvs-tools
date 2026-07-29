@@ -680,13 +680,14 @@ func (m *CommandManager) CmdNginxLog() *Command {
 	}
 }
 
-func (m *CommandManager) CmdReproRegisterRace() *Command {
+func (m *CommandManager) CmdRace() *Command {
 	handler := func() {
 		m.miku.ReproRegisterUnregisterRace()
 	}
 	return &Command{
 		Desc: "复现 register/unregister 竞态: register -> unregister 与 register 并行\n" +
 			"  -loop <n>              循环次数 (默认: 10，必须 > 0)\n" +
+			"  -sleep_ms <ms>         register 与 unregister 之间的 sleep 毫秒数 (默认: 5)\n" +
 			"  -bucket <bucket>       空间 (默认: liyqtest)\n" +
 			"  -stream <stream>       流 key (默认: livetest)\n" +
 			"  -node <nodeId>         节点 ID\n" +
@@ -696,11 +697,11 @@ func (m *CommandManager) CmdReproRegisterRace() *Command {
 			"  -host <ip>             Redis 地址 (默认: 10.34.91.37)\n" +
 			"  -port <port>           Redis 端口 (默认: 8200)\n" +
 			"\n" +
-			"每轮流程: register(old) -> 20ms -> unregister(old) 与 3ms 后 register(new) 并行 -> 30ms -> 查 Redis\n" +
+			"每轮流程: register(new) || sleep_ms 后 unregister(old) 并行 -> 30ms -> 查 Redis\n" +
 			"若 Redis key 为空则 exit 0，否则循环结束后 exit 1\n" +
 			"\n" +
 			"example:\n" +
-			"  miku -cmd reproregisterrace -loop 100 -stream livetest",
+			"  miku -cmd reproregisterrace -loop 100 -sleep_ms 5 -stream livetest",
 		Handler: handler,
 	}
 }
