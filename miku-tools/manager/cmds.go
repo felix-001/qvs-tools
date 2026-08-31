@@ -784,3 +784,34 @@ func (m *CommandManager) CmdNiulink() *Command {
 		Handler: handler,
 	}
 }
+
+func (m *CommandManager) CmdSipsearch() *Command {
+	handler := func() {
+		miku.SipSearch(m.config)
+	}
+	cmd := &Command{
+		Desc: "从本地日志中搜索同时满足多个正则的完整信令，最多并发处理 10 个文件\n" +
+			"\n" +
+			"参数:\n" +
+			"  -path <路径[,路径...]>          日志文件或目录，多个路径用逗号分隔；目录会递归遍历其下的文件\n" +
+			"  -pattern <正则[,正则...]>      行匹配正则，多个正则用逗号分隔；同一信令必须全部匹配才会输出\n" +
+			"  -raw <文件名正则>               目录下文件名过滤正则，例如 .*dump.*log.*；不传则处理目录下所有普通文件\n" +
+			"\n" +
+			"处理规则:\n" +
+			"  每行依次匹配所有 -pattern；遇到 <--------------------------------------------------------------------------------------------------->\n" +
+			"  视为一个信令结束。只有该信令匹配了全部正则才打印完整内容，随后重置匹配状态。\n" +
+			"  每个文件读取到内存后逐行处理，每处理 100000 行输出一次进度，文件完成后输出文件处理日志。\n" +
+			"\n" +
+			"示例:\n" +
+			"  # -path 传具体日志文件；-raw 对具体文件同样按文件名过滤\n" +
+			"  miku -cmd sipsearch -path /tmp/sip.log -pattern 'start,stream_id=[^ ]+'\n" +
+			"\n" +
+			"  # -path 传目录；递归搜索目录下文件，并按文件名正则过滤\n" +
+			"  miku -cmd sipsearch -path /tmp -pattern 'Register,Catalog' -raw '.*dump.*log.*'\n" +
+			"\n" +
+			"  # -path 传多个文件或目录，使用逗号分隔\n" +
+			"  miku -cmd sipsearch -path /var/log/a,/var/log/b -pattern 'foo,bar' -raw '.*dump.*log.*'",
+		Handler: handler,
+	}
+	return cmd
+}
