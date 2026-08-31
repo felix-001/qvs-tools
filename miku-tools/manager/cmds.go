@@ -243,6 +243,37 @@ func (m *CommandManager) CmdHy() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdNodelog() *Command {
+	handler := func() {
+		miku.NodeLog(m.config)
+	}
+	cmd := &Command{
+		Desc: "登录多个节点远程搜索日志：自动准备 miku，展开路径参数后执行 sipsearch\n" +
+			"\n" +
+			"参数:\n" +
+			"  -node <节点[,节点...]>          节点 ID，多个节点用逗号分隔；每个节点并发执行\n" +
+			"  -path <路径模板>                 日志路径模板，支持 ${service}，例如 /home/qboxserver/${service}/_package/run/auditlog/sip_dump\n" +
+			"  -path_params <key=值[,值...]>    占位参数，例如 service=qvs-sip,qvs-sip1,qvs-sip2，会展开成多个日志路径\n" +
+			"  -pattern <正则[,正则...]>       传给 sipsearch 的行匹配正则，多个正则用逗号分隔\n" +
+			"  -exclude_pattern <正则[,正则...]> 排除正则；信令内任意一行命中任意一个则不输出\n" +
+			"  -raw <文件名正则>                文件名过滤正则，默认 .*dump.*log.*\n" +
+			"  -archive <文件名>                miku 压缩包文件名，默认 miku-1788147017.tar.gz\n" +
+			"  -force                           无论远端是否已有 miku，都重新下载并覆盖\n" +
+			"  -output <文件>                   将结果追加写入本地文件；不传则打印到终端\n" +
+			"\n" +
+			"远端流程: 不存在 /home/qboxserver/liyq/miku 时，创建目录、从 qupfile.cloudvdn.com 下载压缩包、解压并 chmod +x；\n" +
+			"随后执行 /home/qboxserver/liyq/miku -cmd sipsearch -path <展开后的路径> -pattern <正则> -raw <文件名正则>。\n" +
+			"\n" +
+			"示例:\n" +
+			"  miku -cmd nodelog -node vdn-a,vdn-b -path '/home/qboxserver/${service}/_package/run/auditlog/sip_dump' \\\n" +
+			"    -path_params 'service=qvs-sip,qvs-sip1,qvs-sip2' -pattern 'Register,Catalog' -raw '.*dump.*log.*'\n" +
+			"  miku -cmd nodelog -node vdn-a -path '/home/qboxserver/${service}/_package/run/auditlog/sip_dump' \\\n" +
+			"    -path_params 'service=qvs-sip' -pattern 'Register,Catalog' -force -output /tmp/nodelog.result",
+		Handler: handler,
+	}
+	return cmd
+}
+
 func (m *CommandManager) CmdBw() *Command {
 	handler := func() {
 		m.nodeMgr.BwStatistics()
@@ -795,6 +826,7 @@ func (m *CommandManager) CmdSipsearch() *Command {
 			"参数:\n" +
 			"  -path <路径[,路径...]>          日志文件或目录，多个路径用逗号分隔；目录会递归遍历其下的文件\n" +
 			"  -pattern <正则[,正则...]>      行匹配正则，多个正则用逗号分隔；同一信令必须全部匹配才会输出\n" +
+			"  -exclude_pattern <正则[,正则...]> 排除正则；信令内任意一行命中任意一个则不输出\n" +
 			"  -raw <文件名正则>               目录下文件名过滤正则，例如 .*dump.*log.*；不传则处理目录下所有普通文件\n" +
 			"\n" +
 			"处理规则:\n" +

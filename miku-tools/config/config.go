@@ -180,6 +180,7 @@ type Config struct {
 	F                     string
 	T                     string
 	Pattern               string
+	ExcludePattern        string
 	Replace               string
 	Raw                   string
 	Protocol              string
@@ -192,6 +193,7 @@ type Config struct {
 	Redirect              bool
 	Internal              bool
 	Silence               bool
+	Force                 bool `json:"force" yaml:"force"`
 	Random                bool
 	HeadReq               bool
 	UpdateConf            bool
@@ -225,6 +227,8 @@ type Config struct {
 	SchedPanicNodes       []string              `json:"sched_panic_nodes" yaml:"sched_panic_nodes"`
 	ChartConfigs          []ChartConf           `json:"chart_configs" yaml:"chart_configs"`
 	Path                  string                `json:"path" yaml:"path"`
+	PathParams            string                `json:"path_params" yaml:"path_params"`
+	Archive               string                `json:"archive" yaml:"archive"`
 	GitHubConf            GitHubConf            `json:"githubConf" yaml:"githubConf"`
 	WsExec                WsExecConf            `json:"ws_exec" yaml:"ws_exec"`
 }
@@ -356,6 +360,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.F, "f", "", "f")
 	flag.StringVar(&c.T, "t", "", "t")
 	flag.StringVar(&c.Pattern, "pattern", "", "pattern")
+	flag.StringVar(&c.ExcludePattern, "exclude_pattern", "", "排除正则，多个正则用逗号分隔")
 	flag.StringVar(&c.Replace, "replace", "", "replace")
 	flag.StringVar(&c.Raw, "raw", "", "raw")
 	flag.StringVar(&c.User, "user", "", "user")
@@ -414,6 +419,8 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.Process, "process", 0, "进程id")
 	flag.BoolVar(&c.SMTPUseTLS, "smtp_use_tls", true, "是否使用TLS")
 	flag.StringVar(&c.Path, "path", "", "http api 请求的path")
+	flag.StringVar(&c.PathParams, "path_params", "", "路径占位变量参数")
+	flag.StringVar(&c.Archive, "archive", "miku-1788147017.tar.gz", "nodelog 使用的 miku 压缩包文件名")
 	flag.StringVar(&c.AccountCfgFile, "accfile", "/usr/local/etc/acc.json", "账号配置文件")
 	flag.IntVar(&c.Offset, "offset", 0, "offset")
 	flag.IntVar(&c.Limit, "limit", 100, "limit")
@@ -424,6 +431,7 @@ func (c *Config) ParseConsole() {
 	flag.IntVar(&c.Pr, "pr", 0, "pr")
 	flag.BoolVar(&c.UpdateConf, "update_conf", false, "update conf")
 	flag.BoolVar(&c.Enable, "enable", false, "是否开启")
+	flag.BoolVar(&c.Force, "force", false, "是否强制覆盖远端 miku")
 	flag.StringVar(&c.Line, "line", "", "line")
 	flag.BoolVar(&c.Del, "del", false, "是否删除")
 

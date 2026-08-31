@@ -35,6 +35,11 @@ func SipSearch(cfg *config.Config) {
 		}
 		compiledPatterns[i] = compiled
 	}
+	excludePatterns, err := compileSipSearchPatterns(cfg.ExcludePattern)
+	if err != nil {
+		log.Printf("[SipSearch] 排除正则无效: %v", err)
+		return
+	}
 
 	filePattern, err := compileSipSearchFilePattern(cfg.Raw)
 	if err != nil {
@@ -59,11 +64,24 @@ func SipSearch(cfg *config.Config) {
 			defer wg.Done()
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchSipSearchFile(filePath, compiledPatterns, &outputMu)
+			searchSipSearchFile(filePath, compiledPatterns, excludePatterns, &outputMu)
 		}()
 	}
 	wg.Wait()
 	log.Println("[SipSearch] 所有文件处理完成")
+}
+
+func compileSipSearchPatterns(value string) ([]*regexp.Regexp, error) {
+	values := splitSipSearchArg(value)
+	patterns := make([]*regexp.Regexp, 0, len(values))
+	for _, value := range values {
+		pattern, err := regexp.Compile(value)
+		if err != nil {
+			return nil, fmt.Errorf("%q: %w", value, err)
+		}
+		patterns = append(patterns, pattern)
+	}
+	return patterns, nil
 }
 
 func splitSipSearchArg(value string) []string {
@@ -131,7 +149,7 @@ func collectSipSearchFiles(paths []string, filePattern *regexp.Regexp) []string 
 	return files
 }
 
-func searchSipSearchFile(filePath string, patterns []*regexp.Regexp, outputMu *sync.Mutex) {
+func searchSipSearchFile(filePath string, patterns, excludePatterns []*regexp.Regexp, outputMu *sync.Mutex) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Printf("[SipSearch] 读取文件 %s 失败: %v", filePath, err)
@@ -139,6 +157,7 @@ func searchSipSearchFile(filePath string, patterns []*regexp.Regexp, outputMu *s
 	}
 
 	matched := make([]bool, len(patterns))
+	excluded := false
 	var record []string
 	lineCount := 0
 	scanner := bufio.NewScanner(strings.NewReader(string(data)))
@@ -152,8 +171,14 @@ func searchSipSearchFile(filePath string, patterns []*regexp.Regexp, outputMu *s
 				matched[i] = true
 			}
 		}
+		for _, pattern := range excludePatterns {
+			if pattern.MatchString(line) {
+				excluded = true
+				break
+			}
+		}
 		if strings.Contains(line, sipSearchDelimiter) {
-			allMatched := true
+			allMatched := !excluded
 			for _, isMatched := range matched {
 				if !isMatched {
 					allMatched = false
@@ -167,6 +192,7 @@ func searchSipSearchFile(filePath string, patterns []*regexp.Regexp, outputMu *s
 			}
 			record = record[:0]
 			matched = make([]bool, len(patterns))
+			excluded = false
 		}
 		if lineCount%100000 == 0 {
 			log.Printf("[SipSearch] 文件 %s 已处理 %d 行", filePath, lineCount)
