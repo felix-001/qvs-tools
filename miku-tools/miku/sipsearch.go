@@ -194,9 +194,6 @@ func searchSipSearchFile(filePath string, patterns, excludePatterns []*regexp.Re
 			matched = make([]bool, len(patterns))
 			excluded = false
 		}
-		if lineCount%100000 == 0 {
-			log.Printf("[SipSearch] 文件 %s 已处理 %d 行", filePath, lineCount)
-		}
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("[SipSearch] 处理文件 %s 失败: %v", filePath, err)

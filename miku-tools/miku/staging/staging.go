@@ -262,7 +262,7 @@ func read200(conf *config.Config, conn net.Conn) error {
 }
 
 func runGbCli(conf *config.Config, gbid string) {
-	conn, err := net.Dial("tcp", "101.133.131.188:55063")
+	conn, err := net.Dial("tcp", "115.231.27.155:5061")
 	if err != nil {
 		fmt.Println("Error connecting:", err)
 		return
