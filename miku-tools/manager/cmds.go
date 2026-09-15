@@ -187,6 +187,66 @@ func (m *CommandManager) CmdSign() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdNginxLog() *Command {
+	handler := func() {
+		m.miku.NginxLogSearch(m.config)
+	}
+	return &Command{
+		Desc: "在多个节点上并行搜索 nginx/qvs-sip 日志：先 ls 匹配文件，再并行 grep\n" +
+			"\n" +
+			"工作流程:\n" +
+			"  1. 读取节点列表并为每个节点确定日志目录和文件模式。\n" +
+			"  2. 在所有节点上并行执行 ls，收集实际存在的日志文件。\n" +
+			"  3. 对收集到的所有文件并行执行 grep -E <query>。\n" +
+			"  4. 命中行会带节点和文件路径输出；没有命中时输出未找到匹配结果。\n" +
+			"\n" +
+			"必需参数:\n" +
+			"  -query <keyword>               搜索关键词或 grep -E 正则表达式\n" +
+			"                                 例如: ERROR|timeout、stream_id=[^ ]+\n" +
+			"\n" +
+			"节点列表模式(推荐):\n" +
+			"  默认优先读取 /tmp/nodes.txt。文件可读取时，不使用 -node，也不需要传 -path/-pattern；\n" +
+			"  每行一个节点，格式为 <nodeid>_<序号>，序号可省略，空行会被忽略。\n" +
+			"\n" +
+			"  节点与日志路径的对应关系:\n" +
+			"    vdn-xxx        -> /home/qboxserver/qvs-sip/_package/run/qvs-sip.log*\n" +
+			"    vdn-xxx_1      -> /home/qboxserver/qvs-sip1/_package/run/qvs-sip1.log*\n" +
+			"    vdn-xxx_2      -> /home/qboxserver/qvs-sip2/_package/run/qvs-sip2.log*\n" +
+			"\n" +
+			"回退模式(/tmp/nodes.txt 不存在或读取失败):\n" +
+			"  使用内置的 3 个节点，并要求同时传入:\n" +
+			"  -path <dir>                    远程日志目录\n" +
+			"  -pattern <glob>                远程文件 glob，例如 '*.log*'\n" +
+			"\n" +
+			"注意事项:\n" +
+			"  -query 是 grep -E 正则；包含空格、|、+、[] 时建议用单引号包裹。\n" +
+			"  -pattern 是 ls 使用的 glob，不是正则，建议用单引号避免本地 shell 展开。\n" +
+			"  远端连接依赖 qssh；/tmp/nodes.txt 存在但为空时会直接提示无可用节点。\n" +
+			"\n" +
+			"示例 1：准备节点文件并搜索错误或超时\n" +
+			"  printf '%s\\n' 'vdn-jsyz1-dls-1-67' 'vdn-jsyz1-dls-1-66_1' \\\n" +
+			"    'vdn-jsyz1-dls-1-65_2' > /tmp/nodes.txt\n" +
+			"  miku -cmd nginxlog -query 'ERROR|timeout'\n" +
+			"\n" +
+			"示例 2：搜索指定流或多种状态\n" +
+			"  miku -cmd nginxlog -query 'stream_id=abc123'\n" +
+			"  miku -cmd nginxlog -query 'Register|Catalog|401|500'\n" +
+			"\n" +
+			"示例 3：使用内置节点和自定义 qvs-sip 目录\n" +
+			"  rm -f /tmp/nodes.txt\n" +
+			"  miku -cmd nginxlog -path '/home/qboxserver/qvs-sip/_package/run/' \\\n" +
+			"    -pattern 'qvs-sip.log*' -query 'upstream timed out'\n" +
+			"\n" +
+			"示例 4：搜索 nginx 的 404 或 502\n" +
+			"  miku -cmd nginxlog -path '/var/log/nginx/' -pattern '*.log*' \\\n" +
+			"    -query '404|502'\n" +
+			"\n" +
+			"查看本说明:\n" +
+			"  miku -cmd nginxlog -h",
+		Handler: handler,
+	}
+}
+
 func (m *CommandManager) CmdNodeByIp() *Command {
 	handler := func() {
 		m.nodeMgr.GetNodeByIp()
@@ -337,18 +397,6 @@ func (m *CommandManager) CmdLoopPlaycheck() *Command {
 	cmd := &Command{
 		Desc:    "对playcheck接口进行拨测, 遍历每个省份*isp的组合, 测试playcheck返回的情况",
 		Handler: handler,
-	}
-	return cmd
-}
-
-func (m *CommandManager) CmdLocate() *Command {
-	handler := func() {
-		m.Locate()
-	}
-	cmd := &Command{
-		Desc:         "查询ip的位置信息, -ip <ip>",
-		Handler:      handler,
-		NeedIpParser: true,
 	}
 	return cmd
 }
@@ -702,29 +750,16 @@ func (m *CommandManager) CmdIploc() *Command {
 	}
 }
 
-func (m *CommandManager) CmdNginxLog() *Command {
+func (m *CommandManager) CmdLocate() *Command {
 	handler := func() {
-		m.miku.NginxLogSearch(m.config)
+		m.Locate()
 	}
-	return &Command{
-		Desc: "在多个节点上并行搜索 nginx/qvs-sip 日志：先 ls 匹配文件，再并行 grep\n" +
-			"\n" +
-			"必需参数:\n" +
-			"  -query <keyword>               搜索关键词(grep -E)\n" +
-			"\n" +
-			"节点列表(优先从 /tmp/nodes.txt 读取):\n" +
-			"  每行格式: <nodeid>_<序号>，序号可为空\n" +
-			"  读取成功时自动推导 path/pattern，无需再传 -path/-pattern:\n" +
-			"    path    = /home/qboxserver/qvs-sip<序号>/_package/run/\n" +
-			"    pattern = qvs-sip<序号>.log*\n" +
-			"  例: vdn-xxx        -> qvs-sip/_package/run/ , qvs-sip.log*\n" +
-			"      vdn-xxx_2      -> qvs-sip2/_package/run/ , qvs-sip2.log*\n" +
-			"\n" +
-			"回退模式(/tmp/nodes.txt 不存在时，使用内置节点列表):\n" +
-			"  -path <dir>                    日志目录(必需)\n" +
-			"  -pattern <glob>                文件匹配模式(必需，如 *.log*)",
-		Handler: handler,
+	cmd := &Command{
+		Desc:         "查询ip的位置信息, -ip <ip>",
+		Handler:      handler,
+		NeedIpParser: true,
 	}
+	return cmd
 }
 
 func (m *CommandManager) CmdRegister() *Command {
@@ -846,4 +881,52 @@ func (m *CommandManager) CmdSipsearch() *Command {
 		Handler: handler,
 	}
 	return cmd
+}
+
+func (m *CommandManager) CmdGbdev() *Command {
+	handler := func() {
+		qvs.GBDev(m.config.ConfigFile)
+	}
+	return &Command{
+		Desc: "模拟 GB28181 设备：通过 SIP UDP/TCP 向平台注册并完成 Digest 鉴权，定时发送 Keepalive，接收并响应 Catalog 查询。\n" +
+			"\n" +
+			"用法:\n" +
+			"  miku -cmd gbdev -config /path/to/gbdev.yaml\n" +
+			"\n" +
+			"配置示例:\n" +
+			"  server:\n" +
+			"    id: '34020000002000000001'\n" +
+			"    realm: '3402000000'\n" +
+			"    address: '192.168.1.10:5060'\n" +
+			"  device:\n" +
+			"    id: '34020000001320000001'\n" +
+			"    password: '12345678'\n" +
+			"    name: '模拟 IPC'\n" +
+			"    manufacturer: 'Miku'\n" +
+			"    model: 'GBDEV'\n" +
+			"    firmware: '1.0.0'\n" +
+			"  local:\n" +
+			"    address: '0.0.0.0:5060'\n" +
+			"    advertise_address: '192.168.1.20:5060'\n" +
+			"  transport: udp              # udp 或 tcp，默认 udp\n" +
+			"  register_expires: 3600      # 注册有效期，单位秒\n" +
+			"  keepalive_interval: 60s     # Go duration，例如 30s、1m\n" +
+			"  channels:\n" +
+			"    - device_id: '34020000001320000002'\n" +
+			"      name: 'Camera 1'\n" +
+			"      manufacturer: 'Miku'\n" +
+			"      model: 'IPC'\n" +
+			"      owner: 'Miku'\n" +
+			"      civil_code: '340200'\n" +
+			"      address: 'Building 1'\n" +
+			"      parental: 0\n" +
+			"      parent_id: '34020000001320000001'\n" +
+			"      safety_way: 0\n" +
+			"      register_way: 1\n" +
+			"      secrecy: 0\n" +
+			"      status: 'ON'\n" +
+			"\n" +
+			"说明：local.address 是本地监听地址；设备在 NAT 后或监听 0.0.0.0 时，应通过 local.advertise_address 配置平台可访问的 Contact/Via 地址。",
+		Handler: handler,
+	}
 }

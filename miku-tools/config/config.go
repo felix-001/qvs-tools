@@ -189,6 +189,7 @@ type Config struct {
 	JiraApiKeyFile        string
 	GithubconfFile        string
 	DnsPodConfFile        string
+	ConfigFile            string
 	ApiKey                string
 	Redirect              bool
 	Internal              bool
@@ -253,6 +254,9 @@ func Load() *Config {
 	var conf Config
 	conf.HeaderMap = make(map[string]string)
 	conf.Args = os.Args[1:] // 保存命令行参数（排除程序名）
+	if commandFromArgs(conf.Args) == "gbdev" {
+		return &conf
+	}
 	_, err := os.Stat("/usr/local/etc/mikutool.yaml")
 	if !os.IsNotExist(err) {
 		data, err := os.ReadFile("/usr/local/etc/mikutool.yaml")
@@ -336,6 +340,19 @@ func Load() *Config {
 	//log.Printf("conf: %+v\n", conf)
 	return &conf
 }
+
+func commandFromArgs(args []string) string {
+	for i, arg := range args {
+		if strings.HasPrefix(arg, "-cmd=") {
+			return strings.TrimPrefix(arg, "-cmd=")
+		}
+		if arg == "-cmd" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
 func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Help, "help", false, "help")
 	flag.StringVar(&c.Cmd, "cmd", "", "需要执行的命令")
@@ -428,6 +445,7 @@ func (c *Config) ParseConsole() {
 	flag.StringVar(&c.Env, "env", "online", "env")
 	flag.StringVar(&c.Bin, "bin", "sched", "bin")
 	flag.StringVar(&c.GithubconfFile, "githubconf", "/usr/local/etc/github.conf", "github config file")
+	flag.StringVar(&c.ConfigFile, "config", "", "命令专用 YAML 配置文件")
 	flag.IntVar(&c.Pr, "pr", 0, "pr")
 	flag.BoolVar(&c.UpdateConf, "update_conf", false, "update conf")
 	flag.BoolVar(&c.Enable, "enable", false, "是否开启")
