@@ -120,7 +120,7 @@ func (m *Miku) Dns() {
 	}
 
 	// 转换为 CSV 并写入文件
-	if err := m.convertToCSV(string(bytes)); err != nil {
+	if err := m.convertToCSV(resp); err != nil {
 		log.Printf("转换为 CSV 失败: %v", err)
 		return
 	}
@@ -128,46 +128,8 @@ func (m *Miku) Dns() {
 	fmt.Println(string(bytes))
 }
 
-func (m *Miku) convertToCSV(jsonStr string) error {
-	// 解析 JSON 响应
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &data); err != nil {
-		return fmt.Errorf("解析 JSON 失败: %w", err)
-	}
-
-	// 提取记录列表
-	var records []map[string]interface{}
-	if data["records"] != nil {
-		if recs, ok := data["records"].([]interface{}); ok {
-			for _, rec := range recs {
-				if recMap, ok := rec.(map[string]interface{}); ok {
-					records = append(records, recMap)
-				}
-			}
-		}
-	} else if data["RecordList"] != nil {
-		// 尝试另一种可能的结构
-		if recs, ok := data["RecordList"].([]interface{}); ok {
-			for _, rec := range recs {
-				if recMap, ok := rec.(map[string]interface{}); ok {
-					records = append(records, recMap)
-				}
-			}
-		}
-	} else if data["data"] != nil {
-		// 尝试标准 API 响应结构
-		if dataMap, ok := data["data"].(map[string]interface{}); ok {
-			if recs, ok := dataMap["records"].([]interface{}); ok {
-				for _, rec := range recs {
-					if recMap, ok := rec.(map[string]interface{}); ok {
-						records = append(records, recMap)
-					}
-				}
-			}
-		}
-	}
-
-	if len(records) == 0 {
+func (m *Miku) convertToCSV(resp *model.DnspodRecordsResponse) error {
+	if resp == nil || len(resp.RecordList) == 0 {
 		return fmt.Errorf("未找到 DNS 记录")
 	}
 
@@ -187,24 +149,36 @@ func (m *Miku) convertToCSV(jsonStr string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	// 写入表头
-	headers := []string{"ID", "Host", "Type", "Value", "TTL", "Status", "Domain", "Line", "Weight"}
+	// 写入表头：每个 DNS 记录字段一列
+	headers := []string{
+		"RecordId", "Value", "Status", "UpdatedOn", "Name",
+		"Line", "LineId", "Type", "Weight", "MonitorStatus",
+		"Remark", "TTL", "MX", "DefaultNS",
+	}
 	if err := writer.Write(headers); err != nil {
 		return fmt.Errorf("写入表头失败: %w", err)
 	}
 
 	// 写入记录
-	for _, record := range records {
+	for _, record := range resp.RecordList {
+		if record == nil {
+			continue
+		}
 		row := []string{
-			fmt.Sprintf("%v", getValue(record, "id", "ID")),
-			fmt.Sprintf("%v", getValue(record, "host", "Host", "name")),
-			fmt.Sprintf("%v", getValue(record, "type", "Type")),
-			fmt.Sprintf("%v", getValue(record, "value", "Value")),
-			fmt.Sprintf("%v", getValue(record, "ttl", "TTL")),
-			fmt.Sprintf("%v", getValue(record, "status", "Status")),
-			fmt.Sprintf("%v", getValue(record, "domain", "Domain")),
-			fmt.Sprintf("%v", getValue(record, "line", "Line")),
-			fmt.Sprintf("%v", getValue(record, "weight", "Weight")),
+			formatUint64(record.RecordId),
+			formatString(record.Value),
+			formatString(record.Status),
+			formatString(record.UpdatedOn),
+			formatString(record.Name),
+			formatString(record.Line),
+			formatString(record.LineId),
+			formatString(record.Type),
+			formatUint64(record.Weight),
+			formatString(record.MonitorStatus),
+			formatString(record.Remark),
+			formatUint64(record.TTL),
+			formatUint64(record.MX),
+			formatBool(record.DefaultNS),
 		}
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("写入记录失败: %w", err)
@@ -215,14 +189,28 @@ func (m *Miku) convertToCSV(jsonStr string) error {
 	return nil
 }
 
-// getValue 从 map 中获取值，支持多个键名
-func getValue(m map[string]interface{}, keys ...string) interface{} {
-	for _, key := range keys {
-		if val, ok := m[key]; ok {
-			return val
-		}
+// formatString 将可能为 nil 的字符串指针转为 CSV 字段值
+func formatString(v *string) string {
+	if v == nil {
+		return ""
 	}
-	return ""
+	return *v
+}
+
+// formatUint64 将可能为 nil 的 uint64 指针转为 CSV 字段值
+func formatUint64(v *uint64) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatUint(*v, 10)
+}
+
+// formatBool 将可能为 nil 的 bool 指针转为 CSV 字段值
+func formatBool(v *bool) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatBool(*v)
 }
 
 func (m *Miku) DelDnsRecord() {
