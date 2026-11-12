@@ -12,7 +12,13 @@ import (
 	"time"
 
 	"github.com/qbox/mikud-live/cmd/dnspod/model"
+	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	"github.com/qbox/pili/base/qiniu/xlog.v1"
+)
+
+const (
+	// dnsPageRetry 单页最大尝试次数(含首次)。超时多为服务端深分页抖动，重试可恢复
+	dnsPageRetry = 3
 )
 
 type RecordListItem struct {
@@ -77,6 +83,70 @@ func (m *Miku) Dns() {
 		log.Println(err)
 		return
 	}
+	if resp == nil || len(resp.RecordList) == 0 {
+		log.Println("未找到 DNS 记录")
+		return
+	}
+
+	var writer *csv.Writer
+	var csvPath, jsonPath string
+	if !m.conf.Enable {
+		timestamp := time.Now().Format("20060102_150405")
+		csvPath = filepath.Join("/tmp", fmt.Sprintf("dns_records_%s_%s.csv", m.conf.Domain, timestamp))
+		jsonPath = filepath.Join("/tmp", fmt.Sprintf("dns_records_%s_%s.json", m.conf.Domain, timestamp))
+		csvFile, err := os.Create(csvPath)
+		if err != nil {
+			log.Printf("创建 CSV 失败: %v", err)
+			return
+		}
+		defer csvFile.Close()
+		writer = csv.NewWriter(csvFile)
+		defer writer.Flush()
+		if err := writer.Write(dnsCSVHeaders); err != nil {
+			log.Printf("写入 CSV 表头失败: %v", err)
+			return
+		}
+		if err := dumpDNSPage(writer, csvPath, jsonPath, resp, resp); err != nil {
+			log.Printf("写入第 1 页失败: %v", err)
+			return
+		}
+	}
+
+	// 单次请求最多返回 MaxRecordListLimit 条，记录数超出时串行分页拉全量
+	if resp.RecordCountInfo != nil && resp.RecordCountInfo.TotalCount != nil {
+		total := *resp.RecordCountInfo.TotalCount
+		limit := tencent_dnspod.MaxRecordListLimit
+		if total > limit {
+			pages := int((total + limit - 1) / limit)
+			log.Printf("域名 %s 共 %d 条记录，超过单页上限 %d，开始串行分页拉取，共 %d 页",
+				m.conf.Domain, total, limit, pages)
+
+			start := time.Now()
+			for page := 1; page < pages; page++ {
+				offset := limit * uint64(page)
+				log.Printf("分页进度 %d/%d offset=%d 已获取 %d/%d 条",
+					page+1, pages, offset, len(resp.RecordList), total)
+
+				result, err := m.getRecordsWithRetry(xl.Spawn(), offset)
+				if err != nil {
+					log.Printf("分页拉取失败 page=%d offset=%d: %v，已获取 %d/%d 条，部分结果已写入 csv/json",
+						page+1, offset, err, len(resp.RecordList), total)
+					return
+				}
+				if result != nil {
+					resp.RecordList = append(resp.RecordList, result.RecordList...)
+					if writer != nil {
+						if err := dumpDNSPage(writer, csvPath, jsonPath, result, resp); err != nil {
+							log.Printf("写入第 %d 页失败: %v", page+1, err)
+							return
+						}
+					}
+				}
+			}
+			log.Printf("分页拉取完成，实际获取 %d/%d 条，耗时 %s",
+				len(resp.RecordList), total, time.Since(start).Round(time.Second))
+		}
+	}
 	if m.conf.Enable {
 		var recordListFiltered []RecordListItem
 		for _, item := range resp.RecordList {
@@ -112,54 +182,50 @@ func (m *Miku) Dns() {
 		fmt.Println(string(bytes))
 		return
 	}
-
-	bytes, err := json.MarshalIndent(resp, "", "  ")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// 转换为 CSV 并写入文件
-	if err := m.convertToCSV(resp); err != nil {
-		log.Printf("转换为 CSV 失败: %v", err)
-		return
-	}
-
-	fmt.Println(string(bytes))
 }
 
-func (m *Miku) convertToCSV(resp *model.DnspodRecordsResponse) error {
-	if resp == nil || len(resp.RecordList) == 0 {
-		return fmt.Errorf("未找到 DNS 记录")
+func (m *Miku) getRecordsWithRetry(xl *xlog.Logger, offset uint64) (*model.DnspodRecordsResponse, error) {
+	var lastErr error
+	for attempt := 1; attempt <= dnsPageRetry; attempt++ {
+		resp, err := m.resources.DnsPodCli.GetRecords(xl, m.conf.Domain, m.conf.Host, "", offset)
+		if err == nil {
+			return resp, nil
+		}
+		lastErr = err
+		if attempt < dnsPageRetry {
+			log.Printf("分页重试 offset=%d 第 %d 次失败: %v", offset, attempt, err)
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
 	}
+	return nil, lastErr
+}
 
-	// 生成 CSV 文件名
-	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("dns_records_%s_%s.csv", m.conf.Domain, timestamp)
-	filepath := filepath.Join("/tmp", filename)
+var dnsCSVHeaders = []string{
+	"RecordId", "Value", "Status", "UpdatedOn", "Name",
+	"Line", "LineId", "Type", "Weight", "MonitorStatus",
+	"Remark", "TTL", "MX", "DefaultNS",
+}
 
-	// 创建 CSV 文件
-	file, err := os.Create(filepath)
-	if err != nil {
-		return fmt.Errorf("创建文件失败: %w", err)
+// dumpDNSPage 将本页记录追加到 CSV，并用累计结果覆盖 JSON
+func dumpDNSPage(writer *csv.Writer, csvPath, jsonPath string, page, all *model.DnspodRecordsResponse) error {
+	if err := appendCSVRecords(writer, page); err != nil {
+		return err
 	}
-	defer file.Close()
-
-	// 创建 CSV writer
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// 写入表头：每个 DNS 记录字段一列
-	headers := []string{
-		"RecordId", "Value", "Status", "UpdatedOn", "Name",
-		"Line", "LineId", "Type", "Weight", "MonitorStatus",
-		"Remark", "TTL", "MX", "DefaultNS",
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return fmt.Errorf("写入 CSV 失败: %w", err)
 	}
-	if err := writer.Write(headers); err != nil {
-		return fmt.Errorf("写入表头失败: %w", err)
+	if err := writeDNSJSON(jsonPath, all); err != nil {
+		return err
 	}
+	log.Printf("已更新文件 csv=%s json=%s 累计 %d 条", csvPath, jsonPath, len(all.RecordList))
+	return nil
+}
 
-	// 写入记录
+func appendCSVRecords(writer *csv.Writer, resp *model.DnspodRecordsResponse) error {
+	if resp == nil {
+		return nil
+	}
 	for _, record := range resp.RecordList {
 		if record == nil {
 			continue
@@ -184,8 +250,17 @@ func (m *Miku) convertToCSV(resp *model.DnspodRecordsResponse) error {
 			return fmt.Errorf("写入记录失败: %w", err)
 		}
 	}
+	return nil
+}
 
-	log.Printf("DNS 记录已保存到: %s", filepath)
+func writeDNSJSON(path string, resp *model.DnspodRecordsResponse) error {
+	bytes, err := json.MarshalIndent(resp, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化 JSON 失败: %w", err)
+	}
+	if err := os.WriteFile(path, bytes, 0644); err != nil {
+		return fmt.Errorf("写入 JSON 失败: %w", err)
+	}
 	return nil
 }
 

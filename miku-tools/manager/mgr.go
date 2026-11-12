@@ -12,8 +12,10 @@ import (
 	"mikutool/public/util"
 	"mikutool/qvs/staging"
 	"mikutool/resources"
+	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/qbox/mikud-live/cmd/dnspod/tencent_dnspod"
 	publicCommon "github.com/qbox/mikud-live/common"
@@ -22,6 +24,7 @@ import (
 	"github.com/qbox/pili/common/ipdb.v1"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
+	tccommon "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 )
 
 type CommandManager struct {
@@ -145,10 +148,14 @@ func (m *CommandManager) loadResources(cmd *Command) {
 			return
 		}
 		var err error
+		// SDK 默认 ReqTimeout=60s，深分页读 body 会超时；DefaultHttpClient 与内部 httpClient 同指针，构造后再改成 180s。
+		httpClient := &http.Client{}
+		tccommon.DefaultHttpClient = httpClient
 		m.resources.DnsPodCli, err = tencent_dnspod.NewTencentClient(m.config.DnsPod)
 		if err != nil {
 			log.Println("load dns pod client err", err)
 		}
+		httpClient.Timeout = 180 * time.Second
 	}
 	m.nodeMgr.SetResources(m.resources)
 	m.miku.SetResources(m.resources)
