@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"mikutool/config"
@@ -147,24 +148,148 @@ func (m *NodeMgr) LoadNodesFromFile(file string) bool {
 	return false
 }
 
+const (
+	allNodesCacheFile = "/tmp/allnodes.json"
+	// livedRuntimeNodesAPI lived 运行时节点列表接口
+	livedRuntimeNodesAPI = "http://miku-lived.qiniuapi.com:2240/v1/runtime/nodes"
+	// livedNodesAPITimeout 节点列表接口超时，全量节点响应体较大，放宽到 15 分钟
+	livedNodesAPITimeout = 15 * time.Minute
+)
+
 func (m *NodeMgr) LoadNodes() {
 	log.Println("LoadNodes")
-	if m.LoadNodesFromFile("/tmp/allnodes.json") {
+	// -from-redis=true 时保持原有逻辑：优先读 /tmp/allnodes.json，读不到再从 redis 拉取。
+	// 默认为 false，改为从 lived 运行时接口拉取，成功后再写入 /tmp/allnodes.json 缓存。
+	if m.conf != nil && m.conf.FromRedis {
+		if m.LoadNodesFromFile(allNodesCacheFile) {
+			return
+		}
+		m.loadNodesFromRedis()
 		return
 	}
+	m.loadNodesFromHTTP()
+}
+
+func (m *NodeMgr) loadNodesFromRedis() {
 	log.Println("redis:", m.resources.Redis)
 	allNodes, err := commonModel.GetAllRTNodes(zerolog.Logger{}, m.resources.Redis)
 	if err != nil {
 		fmt.Println("LoadNodes GetAllRTNodes err:", err)
 		return
 	}
-	allNodesMap := make(map[string]*commonModel.RtNode)
+	m.setAllNodes(allNodes)
+	// SetAllNodes 内部依赖 redis 读取 TCP 重传率，只有 redis 路径才能调用
+	m.filterMgr.SetAllNodes(allNodes)
+	log.Println("LoadNodes 成功")
+}
+
+// loadNodesFromHTTP 从 lived 运行时节点接口拉取全量节点，并缓存到 /tmp/allnodes.json
+func (m *NodeMgr) loadNodesFromHTTP() {
+	apiBase := livedRuntimeNodesAPI
+	if m.conf != nil && strings.TrimSpace(m.conf.Addr) != "" {
+		apiBase = strings.TrimSpace(m.conf.Addr)
+	}
+	log.Println("LoadNodes 从接口获取节点列表:", apiBase)
+
+	client := &http.Client{Timeout: livedNodesAPITimeout}
+	resp, err := client.Get(apiBase)
+	if err != nil {
+		log.Println("LoadNodes 请求接口失败:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("LoadNodes 读取响应失败:", err)
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("LoadNodes 接口返回非 200: %d, body: %s\n", resp.StatusCode, truncateForLog(body))
+		return
+	}
+
+	allNodes, err := parseRTNodes(body)
+	if err != nil {
+		log.Println("LoadNodes 解析节点列表失败:", err)
+		return
+	}
+	if len(allNodes) == 0 {
+		log.Println("LoadNodes 接口返回空节点列表")
+		return
+	}
+
+	m.setAllNodes(allNodes)
+	m.cacheNodesToFile()
+	log.Printf("LoadNodes 成功, 节点数: %d\n", len(allNodes))
+}
+
+// parseRTNodes 兼容裸数组和 {code,data:{nodes:[...]}} / {data:[...]} 等包裹形式
+func parseRTNodes(body []byte) ([]*commonModel.RtNode, error) {
+	var direct []*commonModel.RtNode
+	if err := json.Unmarshal(body, &direct); err == nil {
+		return direct, nil
+	}
+
+	var envelope struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) > 0 {
+		if err := json.Unmarshal(envelope.Data, &direct); err == nil {
+			return direct, nil
+		}
+		var wrapped struct {
+			Nodes []*commonModel.RtNode `json:"nodes"`
+			List  []*commonModel.RtNode `json:"list"`
+		}
+		if err := json.Unmarshal(envelope.Data, &wrapped); err == nil {
+			if len(wrapped.Nodes) > 0 {
+				return wrapped.Nodes, nil
+			}
+			if len(wrapped.List) > 0 {
+				return wrapped.List, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("无法识别的节点列表格式: %s", truncateForLog(body))
+}
+
+func (m *NodeMgr) setAllNodes(allNodes []*commonModel.RtNode) {
+	allNodesMap := make(map[string]*commonModel.RtNode, len(allNodes))
 	for _, node := range allNodes {
+		if node == nil {
+			continue
+		}
 		allNodesMap[node.Id] = node
 	}
 	m.allNodesMap = allNodesMap
-	m.filterMgr.SetAllNodes(allNodes)
-	log.Println("LoadNodes 成功")
+}
+
+// cacheNodesToFile 把节点列表写入 /tmp/allnodes.json，下次启动可直接复用。
+// 落盘格式与 DumpNodes/LoadNodesFromFile 保持一致（nodeId -> node 的 map）。
+func (m *NodeMgr) cacheNodesToFile() {
+	data, err := json.Marshal(m.allNodesMap)
+	if err != nil {
+		log.Println("cacheNodesToFile Marshal err:", err)
+		return
+	}
+	if err := os.WriteFile(allNodesCacheFile, data, 0644); err != nil {
+		log.Println("cacheNodesToFile WriteFile err:", err)
+		return
+	}
+	log.Println("节点列表已缓存到", allNodesCacheFile, "len:", len(m.allNodesMap))
+}
+
+func truncateForLog(body []byte) string {
+	const limit = 500
+	s := strings.TrimSpace(string(body))
+	if len(s) <= limit {
+		return s
+	}
+	return s[:limit] + "...(truncated)"
 }
 
 func (m *NodeMgr) DumpNodes() {

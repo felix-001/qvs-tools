@@ -125,6 +125,7 @@ type Config struct {
 	H                     bool
 	Detail                bool
 	Local                 bool
+	FromRedis             bool `json:"from_redis" yaml:"from_redis"` // 节点列表来源：true=redis，false=http lived 接口
 	Del                   bool
 	Env                   string
 	Output                string
@@ -420,6 +421,7 @@ func (c *Config) ParseConsole() {
 	flag.BoolVar(&c.Https, "https", false, "是否https")
 	flag.BoolVar(&c.Detail, "detail", false, "是否详细输出")
 	flag.BoolVar(&c.Local, "local", false, "是否本地运行模式(不依赖redis/mongo等各种资源)")
+	flag.BoolVar(&c.FromRedis, "from-redis", false, "节点列表来源: true=从redis获取, false=从 lived 接口 http://miku-lived.qiniuapi.com:2240/v1/runtime/nodes 获取")
 	flag.BoolVar(&c.Redirect, "redirect", false, "是否开启302")
 	flag.BoolVar(&c.Internal, "internal", false, "是否是内部的")
 	flag.BoolVar(&c.Silence, "silence", false, "是否发送静音的语音数据")
