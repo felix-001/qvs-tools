@@ -673,10 +673,13 @@ func (m *CommandManager) CmdSql() *Command {
 			"页面能力:\n" +
 			"  - 选择 database(catalog) / schema / table，点击「See table schema」查询表全部字段\n" +
 			"  - 字段复选框：勾选字段会作为 SELECT 列表，并在结果表左侧优先展示\n" +
-			"  - 根据筛选条件动态重建 SQL：流id(streamname)、bucket(appname)、day、hour、minute、\n" +
+			"  - 根据筛选条件动态重建 SQL：流id(streamname)、bucket(appname)、nodeid、day、hour、minute、\n" +
 			"    protocol(flv/hls)、type(puller/player/internal-player)、requestid、\n" +
+			"    request(包含)、localip(包含)、remoteip(包含)、\n" +
 			"    httpresponsecode(=或!=)、status(=或!=)、order by、limit\n" +
 			"  - 「回源请求」复选框：勾选后追加 customersource = true\n" +
+			"  - 「转换时间」复选框(默认选中)：SELECT 首列追加\n" +
+			"    from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time\n" +
 			"  - SQL 输入框可直接手动编辑；Ctrl/Cmd+Enter 执行\n" +
 			"  - 结果表格支持分页，双击行弹出该行全部字段详情\n" +
 			"\n" +

@@ -168,6 +168,12 @@
     </div>
     <div class="row">
       <div>
+        <label class="fl">nodeid</label>
+        <input type="text" id="fNodeId" placeholder="节点 id（精确匹配）">
+      </div>
+    </div>
+    <div class="row">
+      <div>
         <label class="fl">day</label>
         <input type="text" id="fDay" placeholder="YYYYMMDD">
       </div>
@@ -203,6 +209,22 @@
       <div>
         <label class="fl">requestid</label>
         <input type="text" id="fRequestId" placeholder="requestid">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">request (包含)</label>
+        <input type="text" id="fRequest" placeholder="request like '%关键词%'">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">localip (包含)</label>
+        <input type="text" id="fLocalIp" placeholder="localaddr like '%ip%'">
+      </div>
+      <div>
+        <label class="fl">remoteip (包含)</label>
+        <input type="text" id="fRemoteIp" placeholder="remoteaddr like '%ip%'">
       </div>
     </div>
     <div class="row">
@@ -486,6 +508,8 @@
     if (stream) conds.push('streamname = ' + sqlStr(stream));
     const app = $('fApp').value.trim();
     if (app) conds.push('appname = ' + sqlStr(app));
+    const nodeid = $('fNodeId').value.trim();
+    if (nodeid) conds.push('nodeid = ' + sqlStr(nodeid));
     const day = $('fDay').value.trim();
     if (day) conds.push('day = ' + sqlStr(day));
     const hour = $('fHour').value.trim();
@@ -496,6 +520,12 @@
     if (protocol) conds.push('protocol = ' + sqlStr(protocol));
     const requestid = $('fRequestId').value.trim();
     if (requestid) conds.push('requestid = ' + sqlStr(requestid));
+    const requestKw = $('fRequest').value.trim();
+    if (requestKw) conds.push('request LIKE ' + sqlStr('%' + requestKw + '%'));
+    const localIp = $('fLocalIp').value.trim();
+    if (localIp) conds.push('localaddr LIKE ' + sqlStr('%' + localIp + '%'));
+    const remoteIp = $('fRemoteIp').value.trim();
+    if (remoteIp) conds.push('remoteaddr LIKE ' + sqlStr('%' + remoteIp + '%'));
     const httpCode = $('fHttpCode').value.trim();
     if (httpCode) conds.push('httpresponsecode ' + $('fHttpCodeOp').value + ' ' + httpCode);
     const type = $('fType').value;
@@ -659,8 +689,9 @@
 
   /* ---------------- 事件绑定 ---------------- */
   function bindInputs() {
-    const autoIds = ['fStream', 'fApp', 'fDay', 'fHour', 'fMinute', 'fProtocol',
-      'fType', 'fRequestId', 'fHttpCode', 'fHttpCodeOp', 'fStatus', 'fStatusOp',
+    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fDay', 'fHour', 'fMinute', 'fProtocol',
+      'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
+      'fHttpCodeOp', 'fStatus', 'fStatusOp',
       'fCustomerSource', 'fTimeSelect', 'fOrderBy', 'fOrderDir', 'fLimit'];
     autoIds.forEach((id) => {
       const el = $(id);
