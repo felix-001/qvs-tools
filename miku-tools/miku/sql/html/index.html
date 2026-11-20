@@ -762,7 +762,20 @@
   }
 
   /* ---------------- 初始化 ---------------- */
+  function todayDayStr() {
+    // day 字段按北京时间分天，格式 YYYYMMDD
+    try {
+      const ymd = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' });
+      if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd.replace(/-/g, '');
+    } catch (e) { /* 退化为本地时区 */ }
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return '' + d.getFullYear() + mm + dd;
+  }
+
   async function init() {
+    if (!$('fDay').value.trim()) $('fDay').value = todayDayStr();
     bindInputs();
     buildSQL();
     await loadCatalogs();
