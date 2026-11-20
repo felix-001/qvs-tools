@@ -683,6 +683,7 @@ func (m *CommandManager) CmdSql() *Command {
 			"  - 「排除字段」区域：勾选的字段不在结果中输出(含行详情弹窗)，默认排除\n" +
 			"    version、hitinfo、httpreferer、httplocation、latency；有排除时 SELECT 展开为字段清单\n" +
 			"  - SQL 输入框可直接手动编辑；Ctrl/Cmd+Enter 执行\n" +
+			"  - 「停止查询」按钮：强制停止正在执行的查询(先调后端 cancel 接口，再中断前端请求)\n" +
 			"  - 结果表格支持分页，双击行弹出该行字段详情\n" +
 			"\n" +
 			"参数:\n" +

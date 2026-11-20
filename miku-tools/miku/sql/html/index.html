@@ -42,7 +42,12 @@
   button:hover { background: #0069d9; }
   button.ghost { background: #fff; color: #007bff; }
   button.ghost:hover { background: #f0f7ff; }
+  button.danger { background: #d9534f; border-color: #d9534f; }
+  button.danger:hover { background: #c9302c; border-color: #c9302c; }
+  button.danger:disabled { background: #d9534f; }
   button:disabled { opacity: .55; cursor: not-allowed; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .status.running { color: #007bff; animation: blink 1.2s ease-in-out infinite; }
   .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; }
   .chk input[type=checkbox] { margin: 0; }
   .cols {
@@ -308,6 +313,7 @@
     <textarea id="sqlBox" spellcheck="false" placeholder="SELECT * FROM ..."></textarea>
     <div class="toolbar" style="margin-top:8px">
       <button id="btnRun">执行查询</button>
+      <button id="btnStop" class="danger" disabled>停止查询</button>
       <button class="ghost" id="btnRebuild2">重建 SQL</button>
       <span class="spacer"></span>
       <span class="status" id="status"></span>
@@ -347,6 +353,11 @@
     result: null,       // {columns, rows}
     page: 0,
     pageSize: 200,
+    running: false,     // 是否有查询进行中
+    abortCtl: null,     // 当前查询的 AbortController
+    requestId: '',      // 当前查询 id，用于服务端强制取消
+    stopping: false,    // 是否为用户主动停止
+    cancelOk: false,    // 后端是否确认取消
   };
 
   /* ---------------- 基础请求 ---------------- */
@@ -357,14 +368,19 @@
     return data;
   }
 
-  async function postJSON(url, body) {
+  async function postJSON(url, body, signal) {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal,
     });
     const data = await resp.json();
-    if (data && data.error) throw new Error(data.error);
+    if (data && data.error) {
+      const err = new Error(data.error);
+      err.payload = data;
+      throw err;
+    }
     return data;
   }
 
@@ -654,30 +670,76 @@
   }
 
   /* ---------------- 执行查询 ---------------- */
+  function setRunning(running) {
+    state.running = running;
+    $('btnRun').disabled = running;
+    $('btnStop').disabled = !running;
+  }
+
+  async function stopQuery() {
+    if (!state.running) return;
+    const rid = state.requestId;
+    state.stopping = true;
+    setStatus('正在停止查询...', 'running');
+    // 1) 通知后端取消（让 Trino 真正终止，而不是只断前端连接）
+    let cancelOk = false;
+    try {
+      const r = await postJSON('/api/v1/query/cancel', { request_id: rid });
+      cancelOk = !!(r && r.cancelled);
+    } catch (e) { /* 后端取消失败也继续中断前端请求 */ }
+    state.cancelOk = cancelOk;
+    // 2) 中断前端 fetch
+    if (state.abortCtl) {
+      try { state.abortCtl.abort(); } catch (e) { /* ignore */ }
+    }
+  }
+
   async function runQuery() {
     const sql = $('sqlBox').value.trim();
     if (!sql) {
       setStatus('SQL 不能为空', 'err');
       return;
     }
-    const btn = $('btnRun');
-    btn.disabled = true;
-    setStatus('查询中...');
+    if (state.running) return;
+
+    const requestId = 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    state.requestId = requestId;
+    state.abortCtl = new AbortController();
+    state.stopping = false;
+    state.cancelOk = false;
+
+    const startedAt = Date.now();
+    setRunning(true);
+    setStatus('查询中...', 'running');
     try {
       const data = await postJSON('/api/v1/query', {
         catalog: $('catalog').value.trim(),
         schema: $('schema').value.trim(),
         sql,
-      });
+        request_id: requestId,
+      }, state.abortCtl.signal);
       state.result = { columns: data.columns || [], rows: data.rows || [] };
       state.page = 0;
       renderResult();
       setStatus('返回 ' + (data.row_count || 0) + ' 行，耗时 '
         + (data.elapsed_ms != null ? data.elapsed_ms + ' ms' : '-'), 'ok');
     } catch (e) {
-      setStatus('查询失败: ' + e.message, 'err');
+      const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
+      if (e.name === 'AbortError' || state.stopping) {
+        setStatus(state.cancelOk
+          ? '已停止查询（已通知后端取消，耗时 ' + secs + 's）'
+          : '已停止查询（本地中断，耗时 ' + secs + 's）', 'err');
+      } else if (e.payload && e.payload.cancelled) {
+        setStatus('查询已被后端取消', 'err');
+      } else {
+        setStatus('查询失败: ' + e.message, 'err');
+      }
     } finally {
-      btn.disabled = false;
+      state.abortCtl = null;
+      state.requestId = '';
+      state.stopping = false;
+      state.cancelOk = false;
+      setRunning(false);
     }
   }
 
@@ -920,6 +982,7 @@
     $('btnRebuild').addEventListener('click', buildSQL);
     $('btnRebuild2').addEventListener('click', buildSQL);
     $('btnRun').addEventListener('click', runQuery);
+    $('btnStop').addEventListener('click', stopQuery);
 
     $('btnCloseModal').addEventListener('click', () => {
       $('detailModal').classList.remove('show');

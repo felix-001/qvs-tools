@@ -2,13 +2,14 @@ package util
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/trinodb/trino-go-client/trino"
+	trinoDriver "github.com/trinodb/trino-go-client/trino"
 )
 
 type QualityReport struct {
@@ -299,6 +300,17 @@ func TrinoQueryRowsCtx(ctx context.Context, catalog, schema, sql string) (*Trino
 		return nil, err
 	}
 	return result, nil
+}
+
+// IsQueryCancelled 判断错误是否由查询取消引起
+func IsQueryCancelled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, trinoDriver.ErrQueryCancelled) || errors.Is(err, context.Canceled) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "cancel")
 }
 
 // FirstColumn 返回第一列的所有值(常用于 SHOW 类语句)

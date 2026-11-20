@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	_ "embed"
@@ -28,6 +29,9 @@ const (
 type SQLServer struct {
 	config *config.Config
 	port   int
+
+	mu      sync.Mutex
+	running map[string]context.CancelFunc // requestId -> cancel
 }
 
 func NewSQLServer(cfg *config.Config) *SQLServer {
@@ -35,7 +39,46 @@ func NewSQLServer(cfg *config.Config) *SQLServer {
 	if cfg != nil && cfg.Port > 0 {
 		port = cfg.Port
 	}
-	return &SQLServer{config: cfg, port: port}
+	return &SQLServer{config: cfg, port: port, running: make(map[string]context.CancelFunc)}
+}
+
+// register 登记一个运行中的查询，便于外部强制取消
+func (s *SQLServer) register(id string, cancel context.CancelFunc) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.running[id] = cancel
+}
+
+func (s *SQLServer) unregister(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.running, id)
+}
+
+// cancelQuery 取消指定查询，返回是否找到了对应的运行中查询
+func (s *SQLServer) cancelQuery(id string) bool {
+	s.mu.Lock()
+	cancel, ok := s.running[id]
+	s.mu.Unlock()
+	if !ok {
+		return false
+	}
+	cancel()
+	return true
+}
+
+// cancelAll 取消全部运行中的查询
+func (s *SQLServer) cancelAll() int {
+	s.mu.Lock()
+	cancels := make([]context.CancelFunc, 0, len(s.running))
+	for _, c := range s.running {
+		cancels = append(cancels, c)
+	}
+	s.mu.Unlock()
+	for _, c := range cancels {
+		c()
+	}
+	return len(cancels)
 }
 
 func (s *SQLServer) StartServer() {
@@ -46,6 +89,7 @@ func (s *SQLServer) StartServer() {
 	mux.HandleFunc("/api/v1/tables", s.tablesHandler)
 	mux.HandleFunc("/api/v1/columns", s.columnsHandler)
 	mux.HandleFunc("/api/v1/query", s.queryHandler)
+	mux.HandleFunc("/api/v1/query/cancel", s.cancelQueryHandler)
 
 	fmt.Println("SQL 查询页面启动成功！")
 	fmt.Printf("请访问: http://localhost:%d\n", s.port)
@@ -138,9 +182,10 @@ WHERE table_schema = '%s' AND table_name = '%s' ORDER BY ordinal_position`,
 }
 
 type sqlQueryRequest struct {
-	Catalog string `json:"catalog"`
-	Schema  string `json:"schema"`
-	SQL     string `json:"sql"`
+	Catalog   string `json:"catalog"`
+	Schema    string `json:"schema"`
+	SQL       string `json:"sql"`
+	RequestID string `json:"request_id"`
 }
 
 // queryHandler 执行前端构造的 SQL
@@ -162,14 +207,31 @@ func (s *SQLServer) queryHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Catalog == "" {
 		req.Catalog = defaultSQLCatalog
 	}
+	if req.RequestID == "" {
+		req.RequestID = fmt.Sprintf("q_%d", time.Now().UnixNano())
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), sqlQueryTimeout)
-	defer cancel()
+	s.register(req.RequestID, cancel)
+	defer func() {
+		s.unregister(req.RequestID)
+		cancel()
+	}()
 
 	start := time.Now()
 	rs, err := util.TrinoQueryRowsCtx(ctx, req.Catalog, req.Schema, req.SQL)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
+		if ctx.Err() == context.Canceled || util.IsQueryCancelled(err) {
+			log.Printf("sql query cancelled, requestId=%s elapsed=%dms sql=%s", req.RequestID, elapsed, req.SQL)
+			writeJSON(w, map[string]any{
+				"error":      "查询已取消",
+				"cancelled":  true,
+				"request_id": req.RequestID,
+				"elapsed_ms": elapsed,
+			})
+			return
+		}
 		log.Printf("sql query failed, catalog=%s schema=%s err=%v sql=%s", req.Catalog, req.Schema, err, req.SQL)
 		writeJSONError(w, err)
 		return
@@ -182,7 +244,36 @@ func (s *SQLServer) queryHandler(w http.ResponseWriter, r *http.Request) {
 		"row_count":  len(rs.Rows),
 		"elapsed_ms": elapsed,
 		"sql":        req.SQL,
+		"request_id": req.RequestID,
 	})
+}
+
+// cancelQueryHandler 强制停止正在执行的查询
+// POST /api/v1/query/cancel  {"request_id":"..."}；request_id 为空时取消全部运行中的查询
+func (s *SQLServer) cancelQueryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		RequestID string `json:"request_id"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	req.RequestID = strings.TrimSpace(req.RequestID)
+
+	if req.RequestID == "" {
+		n := s.cancelAll()
+		log.Printf("sql cancel all: %d running queries", n)
+		writeJSON(w, map[string]any{"cancelled": n > 0, "count": n})
+		return
+	}
+	ok := s.cancelQuery(req.RequestID)
+	count := 0
+	if ok {
+		count = 1
+	}
+	log.Printf("sql cancel requestId=%s found=%v", req.RequestID, ok)
+	writeJSON(w, map[string]any{"cancelled": ok, "count": count, "request_id": req.RequestID})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
