@@ -680,8 +680,10 @@ func (m *CommandManager) CmdSql() *Command {
 			"  - 「回源请求」复选框：勾选后追加 customersource = true\n" +
 			"  - 「转换时间」复选框(默认选中)：SELECT 首列追加\n" +
 			"    from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time\n" +
+			"  - 「排除字段」区域：勾选的字段不在结果中输出(含行详情弹窗)，默认排除\n" +
+			"    version、hitinfo、httpreferer、httplocation、latency；有排除时 SELECT 展开为字段清单\n" +
 			"  - SQL 输入框可直接手动编辑；Ctrl/Cmd+Enter 执行\n" +
-			"  - 结果表格支持分页，双击行弹出该行全部字段详情\n" +
+			"  - 结果表格支持分页，双击行弹出该行字段详情\n" +
 			"\n" +
 			"参数:\n" +
 			"  -port <port>              服务端口(默认: 8081)\n" +

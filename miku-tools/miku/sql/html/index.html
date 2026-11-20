@@ -155,6 +155,24 @@
     </div>
     <div class="cols" id="colsBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
 
+    <div class="section-title">排除字段（勾选的字段不在结果中输出）</div>
+    <div class="row" style="margin-bottom:6px">
+      <div class="chk"><input type="checkbox" id="chkAllExc"><label for="chkAllExc">全选</label></div>
+      <div style="flex:0 0 auto"><button class="ghost" id="btnClearExc" style="padding:2px 10px;font-size:12px">清空</button></div>
+      <div style="flex:0 0 auto"><button class="ghost" id="btnResetExc" style="padding:2px 10px;font-size:12px" title="恢复默认排除字段">默认</button></div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="position:relative">
+        <input type="text" id="excSearch" placeholder="搜索排除字段" autocomplete="off">
+        <button class="ghost" id="btnClearExcSearch" title="清除搜索"
+                style="position:absolute;right:2px;top:50%;transform:translateY(-50%);padding:0 6px;border:none;background:none;color:#999;font-size:14px;display:none">&times;</button>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:4px">
+      <div class="status" id="excSummary"></div>
+    </div>
+    <div class="cols" id="excBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
+
     <div class="section-title">筛选条件</div>
     <div class="row">
       <div>
@@ -318,10 +336,14 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
+  const DEFAULT_EXCLUDED = ['version', 'hitinfo', 'httpreferer', 'httplocation', 'latency'];
+
   const state = {
     columns: [],        // [{name, type}]
-    checked: new Set(), // 勾选字段名
+    checked: new Set(), // 勾选字段名（结果表左侧优先展示）
+    excluded: new Set(),// 排除字段名（不在结果中输出）
     colFilter: '',      // 字段搜索关键字
+    excFilter: '',      // 排除字段搜索关键字
     result: null,       // {columns, rows}
     page: 0,
     pageSize: 200,
@@ -406,10 +428,81 @@
     state.columns = data.columns || [];
     state.checked.clear();
     state.colFilter = '';
+    state.excFilter = '';
     $('colSearch').value = '';
     $('btnClearColSearch').style.display = 'none';
+    $('excSearch').value = '';
+    $('btnClearExcSearch').style.display = 'none';
+    resetExcluded();
     renderColumns();
+    renderExcludeColumns();
     buildSQL();
+  }
+
+  // 默认排除字段（只对当前表中真实存在的字段生效）
+  function resetExcluded() {
+    state.excluded.clear();
+    const names = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
+    DEFAULT_EXCLUDED.forEach((n) => {
+      if (names.has(n)) state.excluded.add(n);
+    });
+  }
+
+  function filteredExcludeColumns() {
+    const kw = state.excFilter.trim().toLowerCase();
+    if (!kw) return state.columns;
+    return state.columns.filter((c) =>
+      (c.name || '').toLowerCase().includes(kw) ||
+      (c.type || '').toLowerCase().includes(kw));
+  }
+
+  function renderExcludeColumns() {
+    const box = $('excBox');
+    box.innerHTML = '';
+    if (!state.columns.length) {
+      box.innerHTML = '<div class="cols-empty">请先选择表并点击「See table schema」</div>';
+      $('excSummary').textContent = '';
+      return;
+    }
+    const list = filteredExcludeColumns();
+    if (!list.length) {
+      box.innerHTML = '<div class="cols-empty">没有匹配的字段</div>';
+      $('excSummary').textContent = '已排除 ' + state.excluded.size + ' / ' + state.columns.length
+        + '，显示 0 个';
+      return;
+    }
+    list.forEach((col) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'chk';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.excluded.has(col.name.toLowerCase());
+      cb.addEventListener('change', () => {
+        const key = col.name.toLowerCase();
+        if (cb.checked) state.excluded.add(key);
+        else state.excluded.delete(key);
+        updateExcSummary();
+        buildSQL();
+      });
+      const lb = document.createElement('label');
+      lb.textContent = col.name;
+      const sm = document.createElement('small');
+      sm.textContent = ' ' + (col.type || '');
+      wrap.appendChild(cb);
+      wrap.appendChild(lb);
+      wrap.appendChild(sm);
+      box.appendChild(wrap);
+    });
+    updateExcSummary();
+  }
+
+  function updateExcSummary() {
+    const list = filteredExcludeColumns();
+    let text = '已排除 ' + state.excluded.size + ' / ' + state.columns.length
+      + '，显示 ' + list.length + ' 个';
+    if (state.excFilter.trim()) text += '（筛选：' + state.excFilter.trim() + '）';
+    $('excSummary').textContent = text;
+    $('chkAllExc').checked = list.length > 0 && list.every((c) => state.excluded.has(c.name.toLowerCase()));
   }
 
   // 按当前搜索关键字过滤后的字段列表
@@ -489,13 +582,22 @@
       return;
     }
 
-    // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）；
-    // SELECT 固定为 *，如需裁剪字段请直接在下方手动修改 SQL。
+    // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）。
+    // 有排除字段时展开为显式字段清单（* 无法排除列），否则用 *。
     // 「转换时间」勾选时在首列插入 time 列。
+    let selectList = '*';
+    if (state.columns.length) {
+      const keep = state.columns
+        .map((c) => c.name)
+        .filter((n) => !state.excluded.has((n || '').toLowerCase()));
+      if (state.excluded.size > 0 && keep.length > 0) {
+        selectList = keep.map(ident).join(', ');
+      }
+    }
     const lines = [];
     lines.push($('fTimeSelect').checked
-      ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, *"
-      : 'SELECT *');
+      ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, " + selectList
+      : 'SELECT ' + selectList);
 
     const parts = [];
     if (catalog) parts.push(ident(catalog));
@@ -579,10 +681,14 @@
     }
   }
 
-  /* 勾选字段排在结果表左侧；「转换时间」列固定在最前 */
+  /* 勾选字段排在结果表左侧；排除字段不展示；「转换时间」列固定在最前 */
   function orderedColumns() {
     if (!state.result) return [];
-    const cols = state.result.columns.slice();
+    let cols = state.result.columns
+      .slice()
+      .filter((c) => !state.excluded.has((c || '').toLowerCase()));
+    // 全部字段都被排除时不展示空白表格，退回展示全部列
+    if (!cols.length) cols = state.result.columns.slice();
     const pinned = [];
     const rest = [];
     cols.forEach((c) => {
@@ -778,6 +884,37 @@
       $('btnClearColSearch').style.display = 'none';
       renderColumns();
       $('colSearch').focus();
+    });
+
+    // 排除字段：全选/清空/恢复默认
+    $('chkAllExc').addEventListener('change', (e) => {
+      const list = filteredExcludeColumns();
+      if (e.target.checked) list.forEach((c) => state.excluded.add(c.name.toLowerCase()));
+      else list.forEach((c) => state.excluded.delete(c.name.toLowerCase()));
+      renderExcludeColumns();
+      buildSQL();
+    });
+    $('btnClearExc').addEventListener('click', () => {
+      state.excluded.clear();
+      renderExcludeColumns();
+      buildSQL();
+    });
+    $('btnResetExc').addEventListener('click', () => {
+      resetExcluded();
+      renderExcludeColumns();
+      buildSQL();
+    });
+    $('excSearch').addEventListener('input', (e) => {
+      state.excFilter = e.target.value;
+      $('btnClearExcSearch').style.display = state.excFilter ? 'block' : 'none';
+      renderExcludeColumns();
+    });
+    $('btnClearExcSearch').addEventListener('click', () => {
+      state.excFilter = '';
+      $('excSearch').value = '';
+      $('btnClearExcSearch').style.display = 'none';
+      renderExcludeColumns();
+      $('excSearch').focus();
     });
 
     $('btnRebuild').addEventListener('click', buildSQL);
