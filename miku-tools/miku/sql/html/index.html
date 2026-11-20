@@ -143,6 +143,16 @@
       <div class="chk"><input type="checkbox" id="chkAllCols"><label for="chkAllCols">全选</label></div>
       <div style="flex:0 0 auto"><button class="ghost" id="btnClearCols" style="padding:2px 10px;font-size:12px">清空</button></div>
     </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="position:relative">
+        <input type="text" id="colSearch" placeholder="搜索字段（回车无用，实时过滤）" autocomplete="off">
+        <button class="ghost" id="btnClearColSearch" title="清除搜索"
+                style="position:absolute;right:2px;top:50%;transform:translateY(-50%);padding:0 6px;border:none;background:none;color:#999;font-size:14px;display:none">&times;</button>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:4px">
+      <div class="status" id="colSummary"></div>
+    </div>
     <div class="cols" id="colsBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
 
     <div class="section-title">筛选条件</div>
@@ -286,6 +296,7 @@
   const state = {
     columns: [],        // [{name, type}]
     checked: new Set(), // 勾选字段名
+    colFilter: '',      // 字段搜索关键字
     result: null,       // {columns, rows}
     page: 0,
     pageSize: 200,
@@ -369,8 +380,20 @@
       + '&table=' + encodeURIComponent(table));
     state.columns = data.columns || [];
     state.checked.clear();
+    state.colFilter = '';
+    $('colSearch').value = '';
+    $('btnClearColSearch').style.display = 'none';
     renderColumns();
     buildSQL();
+  }
+
+  // 按当前搜索关键字过滤后的字段列表
+  function filteredColumns() {
+    const kw = state.colFilter.trim().toLowerCase();
+    if (!kw) return state.columns;
+    return state.columns.filter((c) =>
+      (c.name || '').toLowerCase().includes(kw) ||
+      (c.type || '').toLowerCase().includes(kw));
   }
 
   function renderColumns() {
@@ -378,9 +401,17 @@
     box.innerHTML = '';
     if (!state.columns.length) {
       box.innerHTML = '<div class="cols-empty">请先选择表并点击「See table schema」</div>';
+      $('colSummary').textContent = '';
       return;
     }
-    state.columns.forEach((col) => {
+    const list = filteredColumns();
+    if (!list.length) {
+      box.innerHTML = '<div class="cols-empty">没有匹配的字段</div>';
+      $('colSummary').textContent = '已选 ' + state.checked.size + ' / ' + state.columns.length
+        + '，显示 0 个';
+      return;
+    }
+    list.forEach((col) => {
       const wrap = document.createElement('div');
       wrap.className = 'chk';
       const cb = document.createElement('input');
@@ -389,6 +420,7 @@
       cb.addEventListener('change', () => {
         if (cb.checked) state.checked.add(col.name);
         else state.checked.delete(col.name);
+        updateColSummary();
         buildSQL();
       });
       const lb = document.createElement('label');
@@ -400,6 +432,17 @@
       wrap.appendChild(sm);
       box.appendChild(wrap);
     });
+    updateColSummary();
+  }
+
+  function updateColSummary() {
+    const list = filteredColumns();
+    const shown = list.length;
+    let text = '已选 ' + state.checked.size + ' / ' + state.columns.length + '，显示 ' + shown + ' 个';
+    if (state.colFilter.trim()) text += '（筛选：' + state.colFilter.trim() + '）';
+    $('colSummary').textContent = text;
+    // 同步「全选」复选框状态：当前过滤结果是否已全被勾选
+    $('chkAllCols').checked = shown > 0 && list.every((c) => state.checked.has(c.name));
   }
 
   /* ---------------- SQL 构建 ---------------- */
@@ -665,8 +708,10 @@
     });
 
     $('chkAllCols').addEventListener('change', (e) => {
-      if (e.target.checked) state.columns.forEach((c) => state.checked.add(c.name));
-      else state.checked.clear();
+      // 全选/取消作用于当前搜索过滤后的字段
+      const list = filteredColumns();
+      if (e.target.checked) list.forEach((c) => state.checked.add(c.name));
+      else list.forEach((c) => state.checked.delete(c.name));
       renderColumns();
       buildSQL();
     });
@@ -675,6 +720,20 @@
       $('chkAllCols').checked = false;
       renderColumns();
       buildSQL();
+    });
+
+    // 字段搜索
+    $('colSearch').addEventListener('input', (e) => {
+      state.colFilter = e.target.value;
+      $('btnClearColSearch').style.display = state.colFilter ? 'block' : 'none';
+      renderColumns();
+    });
+    $('btnClearColSearch').addEventListener('click', () => {
+      state.colFilter = '';
+      $('colSearch').value = '';
+      $('btnClearColSearch').style.display = 'none';
+      renderColumns();
+      $('colSearch').focus();
     });
 
     $('btnRebuild').addEventListener('click', buildSQL);
