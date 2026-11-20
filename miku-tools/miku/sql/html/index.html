@@ -235,6 +235,9 @@
       <div class="chk"><input type="checkbox" id="fCustomerSource"><label for="fCustomerSource">回源请求 (customersource = true)</label></div>
     </div>
     <div class="row">
+      <div class="chk"><input type="checkbox" id="fTimeSelect" checked><label for="fTimeSelect">转换时间 (ts → Asia/Shanghai，结果首列)</label></div>
+    </div>
+    <div class="row">
       <div>
         <label class="fl">排序字段 (order by)</label>
         <input type="text" id="fOrderBy" placeholder="如 ts">
@@ -466,8 +469,11 @@
 
     // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）；
     // SELECT 固定为 *，如需裁剪字段请直接在下方手动修改 SQL。
+    // 「转换时间」勾选时在首列插入 time 列。
     const lines = [];
-    lines.push('SELECT *');
+    lines.push($('fTimeSelect').checked
+      ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, *"
+      : 'SELECT *');
 
     const parts = [];
     if (catalog) parts.push(ident(catalog));
@@ -543,7 +549,7 @@
     }
   }
 
-  /* 勾选字段排在结果表左侧 */
+  /* 勾选字段排在结果表左侧；「转换时间」列固定在最前 */
   function orderedColumns() {
     if (!state.result) return [];
     const cols = state.result.columns.slice();
@@ -553,7 +559,14 @@
       if (state.checked.has(c.toLowerCase()) || state.checked.has(c)) pinned.push(c);
       else rest.push(c);
     });
-    return pinned.concat(rest);
+    const ordered = pinned.concat(rest);
+    // time 列固定排第一
+    const tIdx = ordered.indexOf('time');
+    if (tIdx > 0) {
+      ordered.splice(tIdx, 1);
+      ordered.unshift('time');
+    }
+    return ordered;
   }
 
   function cellText(v) {
@@ -648,7 +661,7 @@
   function bindInputs() {
     const autoIds = ['fStream', 'fApp', 'fDay', 'fHour', 'fMinute', 'fProtocol',
       'fType', 'fRequestId', 'fHttpCode', 'fHttpCodeOp', 'fStatus', 'fStatusOp',
-      'fCustomerSource', 'fOrderBy', 'fOrderDir', 'fLimit'];
+      'fCustomerSource', 'fTimeSelect', 'fOrderBy', 'fOrderDir', 'fLimit'];
     autoIds.forEach((id) => {
       const el = $(id);
       const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
