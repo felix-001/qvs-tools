@@ -200,13 +200,39 @@
         <label class="fl">day</label>
         <input type="text" id="fDay" placeholder="YYYYMMDD">
       </div>
+    </div>
+    <div class="row">
       <div>
         <label class="fl">hour</label>
         <input type="text" id="fHour" placeholder="00-23">
       </div>
+      <div style="flex:0 0 76px">
+        <label class="fl">模式</label>
+        <select id="fHourMode">
+          <option value="eq">=</option>
+          <option value="range">范围</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">hour 结束</label>
+        <input type="text" id="fHourEnd" placeholder="00-23" disabled>
+      </div>
+    </div>
+    <div class="row">
       <div>
         <label class="fl">minute</label>
         <input type="text" id="fMinute" placeholder="00-59">
+      </div>
+      <div style="flex:0 0 76px">
+        <label class="fl">模式</label>
+        <select id="fMinuteMode">
+          <option value="eq">=</option>
+          <option value="range">范围</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">minute 结束</label>
+        <input type="text" id="fMinuteEnd" placeholder="00-59" disabled>
       </div>
     </div>
     <div class="row">
@@ -605,6 +631,32 @@
     return '"' + String(name).replace(/"/g, '""') + '"';
   }
 
+  // 构建 = 或范围条件：范围模式生成 half >= 'xx' AND half <= 'yy'
+  function buildRangeCond(conds, field, startId, modeId, endId) {
+    const start = $(startId).value.trim();
+    const end = $(endId).value.trim();
+    if ($(modeId).value === 'range') {
+      if (start && end) {
+        conds.push(field + ' >= ' + sqlStr(start));
+        conds.push(field + ' <= ' + sqlStr(end));
+      } else if (start) {
+        conds.push(field + ' >= ' + sqlStr(start));
+      } else if (end) {
+        conds.push(field + ' <= ' + sqlStr(end));
+      }
+      return;
+    }
+    if (start) conds.push(field + ' = ' + sqlStr(start));
+  }
+
+  // 范围模式下才启用结束值输入框
+  function syncRangeInputs() {
+    const hourRange = $('fHourMode').value === 'range';
+    $('fHourEnd').disabled = !hourRange;
+    const minuteRange = $('fMinuteMode').value === 'range';
+    $('fMinuteEnd').disabled = !minuteRange;
+  }
+
   function buildSQL() {
     const catalog = $('catalog').value.trim();
     const schema = $('schema').value.trim();
@@ -647,10 +699,8 @@
     if (nodeid) conds.push('nodeid = ' + sqlStr(nodeid));
     const day = $('fDay').value.trim();
     if (day) conds.push('day = ' + sqlStr(day));
-    const hour = $('fHour').value.trim();
-    if (hour) conds.push('hour = ' + sqlStr(hour));
-    const minute = $('fMinute').value.trim();
-    if (minute) conds.push('minute = ' + sqlStr(minute));
+    buildRangeCond(conds, 'hour', 'fHour', 'fHourMode', 'fHourEnd');
+    buildRangeCond(conds, 'minute', 'fMinute', 'fMinuteMode', 'fMinuteEnd');
     const protocol = $('fProtocol').value;
     if (protocol) conds.push('protocol = ' + sqlStr(protocol));
     const requestid = $('fRequestId').value.trim();
@@ -874,7 +924,7 @@
 
   /* ---------------- 事件绑定 ---------------- */
   function bindInputs() {
-    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fDay', 'fHour', 'fMinute', 'fProtocol',
+    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
       'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
       'fHttpCodeOp', 'fStatus', 'fStatusOp',
       'fCustomerSource', 'fTimeSelect', 'fOrderBy', 'fOrderDir', 'fLimit'];
@@ -882,6 +932,14 @@
       const el = $(id);
       const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
       el.addEventListener(ev, buildSQL);
+    });
+
+    // hour/minute 模式切换
+    ['fHourMode', 'fMinuteMode'].forEach((id) => {
+      $(id).addEventListener('change', () => {
+        syncRangeInputs();
+        buildSQL();
+      });
     });
 
     // 修改库名 -> 重新拉 schema 列表
@@ -1044,6 +1102,7 @@
   async function init() {
     if (!$('fDay').value.trim()) $('fDay').value = todayDayStr();
     bindInputs();
+    syncRangeInputs();
     buildSQL();
     await loadCatalogs();
     loadSchemas($('catalog').value.trim() || 'hive_miku');

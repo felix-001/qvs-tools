@@ -673,7 +673,8 @@ func (m *CommandManager) CmdSql() *Command {
 			"页面能力:\n" +
 			"  - 选择 database(catalog) / schema / table，点击「See table schema」查询表全部字段\n" +
 			"  - 字段复选框：勾选字段会作为 SELECT 列表，并在结果表左侧优先展示\n" +
-			"  - 根据筛选条件动态重建 SQL：流id(streamname)、bucket(appname)、nodeid、day、hour、minute、\n" +
+			"  - 根据筛选条件动态重建 SQL：流id(streamname)、bucket(appname)、nodeid、day、\n" +
+			"    hour/minute(支持 = 与范围两种模式，范围生成 >= 与 <=)、\n" +
 			"    protocol(flv/hls)、type(puller/player/internal-player)、requestid、\n" +
 			"    request(包含)、localip(包含)、remoteip(包含)、\n" +
 			"    httpresponsecode(=或!=)、status(=或!=)、order by、limit\n" +
