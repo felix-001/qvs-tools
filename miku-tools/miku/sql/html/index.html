@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIKU SQL 查询</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: #f5f6f8; color: #333;
+  }
+  h1 { margin: 0 0 12px; font-size: 20px; }
+  h1 span { color: #007bff; }
+  .layout { display: flex; gap: 16px; align-items: flex-start; }
+  .panel {
+    background: #fff; border-radius: 8px; padding: 14px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.08);
+  }
+  .side { width: 330px; flex: 0 0 330px; max-height: calc(100vh - 90px); overflow: auto; }
+  .main { flex: 1; min-width: 0; }
+  .section-title {
+    font-size: 13px; font-weight: bold; color: #007bff;
+    margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #eee;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .row > div { flex: 1; min-width: 0; }
+  label.fl { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 6px 8px; border: 1px solid #ddd;
+    border-radius: 4px; font-size: 13px;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    outline: none; border-color: #007bff;
+  }
+  button {
+    padding: 6px 12px; border: 1px solid #007bff; border-radius: 4px;
+    background: #007bff; color: #fff; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: #0069d9; }
+  button.ghost { background: #fff; color: #007bff; }
+  button.ghost:hover { background: #f0f7ff; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .chk input[type=checkbox] { margin: 0; }
+  .cols {
+    border: 1px solid #eee; border-radius: 4px; padding: 8px;
+    max-height: 220px; overflow: auto; background: #fafafa;
+  }
+  .cols .chk { padding: 3px 0; }
+  .cols .chk small { color: #999; }
+  .cols-empty { color: #aaa; font-size: 12px; }
+  textarea {
+    width: 100%; height: 170px; padding: 10px; font-size: 13px;
+    font-family: Menlo, Consolas, monospace; border: 1px solid #ddd;
+    border-radius: 4px; resize: vertical; line-height: 1.5;
+    background: #fbfbfd;
+  }
+  textarea:focus { outline: none; border-color: #007bff; background: #fff; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .status { font-size: 12px; color: #666; }
+  .status.err { color: #d9534f; }
+  .status.ok { color: #2e8b57; }
+  .table-wrap {
+    max-height: calc(100vh - 430px); min-height: 220px; overflow: auto;
+    border: 1px solid #eee; border-radius: 4px; background: #fff;
+  }
+  table.result { border-collapse: collapse; width: 100%; font-size: 12px; }
+  table.result th, table.result td {
+    border: 1px solid #eee; padding: 5px 8px; text-align: left;
+    white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis;
+  }
+  table.result th {
+    position: sticky; top: 0; background: #f0f4fa; z-index: 1;
+    font-weight: bold; color: #335;
+  }
+  table.result th.pinned { background: #e3f0ff; }
+  table.result tbody tr:nth-child(even) { background: #fcfcfd; }
+  table.result tbody tr:hover { background: #eef6ff; cursor: pointer; }
+  .modal {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,.45); overflow: auto;
+  }
+  .modal.show { display: block; }
+  .modal-box {
+    background: #fff; margin: 5vh auto; width: min(860px, 92vw);
+    border-radius: 8px; padding: 16px 18px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;
+  }
+  .modal-head b { font-size: 15px; }
+  .modal-close {
+    border: none; background: none; font-size: 22px; line-height: 1;
+    cursor: pointer; color: #999; padding: 0 4px;
+  }
+  .modal-close:hover { color: #333; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .detail-table th, .detail-table td {
+    border: 1px solid #eee; padding: 6px 10px; vertical-align: top; text-align: left;
+  }
+  .detail-table th { width: 200px; background: #f7f9fc; font-weight: normal; color: #555; }
+  .detail-table td { word-break: break-all; white-space: pre-wrap; font-family: Menlo, Consolas, monospace; }
+  .pager { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #666; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>MIKU <span>SQL</span> 查询</h1>
+
+<div class="layout">
+  <!-- 左侧：数据源与筛选条件 -->
+  <div class="panel side">
+    <div class="section-title">数据源</div>
+    <div class="row">
+      <div>
+        <label class="fl">database (catalog)</label>
+        <input type="text" id="catalog" list="catalogList" value="hive_miku" placeholder="hive_miku">
+        <datalist id="catalogList"></datalist>
+      </div>
+      <div>
+        <label class="fl">schema</label>
+        <input type="text" id="schema" list="schemaList" value="miku" placeholder="miku">
+        <datalist id="schemaList"></datalist>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">table</label>
+        <select id="table"><option value="">-- 点击「加载表」 --</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div><button class="ghost" id="btnLoadTables" style="width:100%">加载表</button></div>
+      <div><button class="ghost" id="btnLoadSchema" style="width:100%">See table schema</button></div>
+    </div>
+
+    <div class="section-title">字段（勾选字段优先展示在结果表左侧）</div>
+    <div class="row" style="margin-bottom:6px">
+      <div class="chk"><input type="checkbox" id="chkAllCols"><label for="chkAllCols">全选</label></div>
+      <div style="flex:0 0 auto"><button class="ghost" id="btnClearCols" style="padding:2px 10px;font-size:12px">清空</button></div>
+    </div>
+    <div class="cols" id="colsBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
+
+    <div class="section-title">筛选条件</div>
+    <div class="row">
+      <div>
+        <label class="fl">流 id (streamname)</label>
+        <input type="text" id="fStream" placeholder="流 id">
+      </div>
+      <div>
+        <label class="fl">bucket id (appname)</label>
+        <input type="text" id="fApp" placeholder="bucket id">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">day</label>
+        <input type="text" id="fDay" placeholder="YYYYMMDD">
+      </div>
+      <div>
+        <label class="fl">hour</label>
+        <input type="text" id="fHour" placeholder="00-23">
+      </div>
+      <div>
+        <label class="fl">minute</label>
+        <input type="text" id="fMinute" placeholder="00-59">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">protocol</label>
+        <select id="fProtocol">
+          <option value="">空</option>
+          <option value="flv">flv</option>
+          <option value="hls">hls</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl">type</label>
+        <select id="fType">
+          <option value="">空</option>
+          <option value="puller">puller</option>
+          <option value="player">player</option>
+          <option value="internal-player">internal-player</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">requestid</label>
+        <input type="text" id="fRequestId" placeholder="requestid">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">httpresponsecode</label>
+        <input type="number" id="fHttpCode" placeholder="如 404">
+      </div>
+      <div style="flex:0 0 74px">
+        <label class="fl">比较</label>
+        <select id="fHttpCodeOp">
+          <option value="=">=</option>
+          <option value="!=">!=</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">status</label>
+        <input type="text" id="fStatus" placeholder="如 success">
+      </div>
+      <div style="flex:0 0 74px">
+        <label class="fl">比较</label>
+        <select id="fStatusOp">
+          <option value="=">=</option>
+          <option value="!=">!=</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="chk"><input type="checkbox" id="fCustomerSource"><label for="fCustomerSource">回源请求 (customersource = true)</label></div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">排序字段 (order by)</label>
+        <input type="text" id="fOrderBy" placeholder="如 ts">
+      </div>
+      <div style="flex:0 0 90px">
+        <label class="fl">排序方向</label>
+        <select id="fOrderDir">
+          <option value="">默认</option>
+          <option value="ASC">ASC</option>
+          <option value="DESC">DESC</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="fl">limit</label>
+        <input type="number" id="fLimit" value="1000" min="1">
+      </div>
+    </div>
+    <div class="row">
+      <div><button class="ghost" id="btnRebuild" style="width:100%">按条件重建 SQL</button></div>
+    </div>
+  </div>
+
+  <!-- 右侧：SQL 输入与结果 -->
+  <div class="panel main">
+    <div class="section-title">SQL（根据左侧条件自动构建，可手动修改）</div>
+    <textarea id="sqlBox" spellcheck="false" placeholder="SELECT * FROM ..."></textarea>
+    <div class="toolbar" style="margin-top:8px">
+      <button id="btnRun">执行查询</button>
+      <button class="ghost" id="btnRebuild2">重建 SQL</button>
+      <span class="spacer"></span>
+      <span class="status" id="status"></span>
+    </div>
+
+    <div class="section-title">结果</div>
+    <div class="table-wrap" id="resultWrap">
+      <div class="cols-empty" style="padding:16px">暂无数据</div>
+    </div>
+    <div class="pager" id="pager"></div>
+  </div>
+</div>
+
+<!-- 行详情弹窗 -->
+<div class="modal" id="detailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <b>行详情</b>
+      <button class="modal-close" id="btnCloseModal">&times;</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+
+  const state = {
+    columns: [],        // [{name, type}]
+    checked: new Set(), // 勾选字段名
+    result: null,       // {columns, rows}
+    page: 0,
+    pageSize: 200,
+  };
+
+  /* ---------------- 基础请求 ---------------- */
+  async function getJSON(url) {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function postJSON(url, body) {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  }
+
+  function setStatus(msg, cls) {
+    const el = $('status');
+    el.textContent = msg || '';
+    el.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  /* ---------------- 数据源加载 ---------------- */
+  async function loadCatalogs() {
+    try {
+      const data = await getJSON('/api/v1/catalogs');
+      const list = $('catalogList');
+      list.innerHTML = '';
+      (data.catalogs || []).forEach((name) => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    } catch (e) { /* 忽略：失败时保留默认值 */ }
+  }
+
+  async function loadSchemas(catalog) {
+    try {
+      const data = await getJSON('/api/v1/schemas?catalog=' + encodeURIComponent(catalog));
+      const list = $('schemaList');
+      list.innerHTML = '';
+      (data.schemas || []).forEach((name) => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+      });
+    } catch (e) {
+      setStatus('加载 schema 失败: ' + e.message, 'err');
+    }
+  }
+
+  async function loadTables(catalog, schema) {
+    const data = await getJSON('/api/v1/tables?catalog=' + encodeURIComponent(catalog)
+      + '&schema=' + encodeURIComponent(schema));
+    const sel = $('table');
+    sel.innerHTML = '';
+    const tables = data.tables || [];
+    if (!tables.length) {
+      sel.innerHTML = '<option value="">（无表）</option>';
+      return;
+    }
+    tables.forEach((name) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function loadColumns(catalog, schema, table) {
+    const data = await getJSON('/api/v1/columns?catalog=' + encodeURIComponent(catalog)
+      + '&schema=' + encodeURIComponent(schema)
+      + '&table=' + encodeURIComponent(table));
+    state.columns = data.columns || [];
+    state.checked.clear();
+    renderColumns();
+    buildSQL();
+  }
+
+  function renderColumns() {
+    const box = $('colsBox');
+    box.innerHTML = '';
+    if (!state.columns.length) {
+      box.innerHTML = '<div class="cols-empty">请先选择表并点击「See table schema」</div>';
+      return;
+    }
+    state.columns.forEach((col) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'chk';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.checked.has(col.name);
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.checked.add(col.name);
+        else state.checked.delete(col.name);
+        buildSQL();
+      });
+      const lb = document.createElement('label');
+      lb.textContent = col.name;
+      const sm = document.createElement('small');
+      sm.textContent = ' ' + (col.type || '');
+      wrap.appendChild(cb);
+      wrap.appendChild(lb);
+      wrap.appendChild(sm);
+      box.appendChild(wrap);
+    });
+  }
+
+  /* ---------------- SQL 构建 ---------------- */
+  function sqlStr(v) {
+    return "'" + String(v).replace(/'/g, "''") + "'";
+  }
+
+  function ident(name) {
+    return '"' + String(name).replace(/"/g, '""') + '"';
+  }
+
+  function buildSQL() {
+    const catalog = $('catalog').value.trim();
+    const schema = $('schema').value.trim();
+    const table = $('table').value;
+
+    if (!table) {
+      $('sqlBox').value = '-- 请先选择 table 后再构建 SQL；也可直接在此手工编写 SQL 并点击「执行查询」';
+      return;
+    }
+
+    // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）；
+    // SELECT 固定为 *，如需裁剪字段请直接在下方手动修改 SQL。
+    const lines = [];
+    lines.push('SELECT *');
+
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+    lines.push('FROM ' + parts.join('.'));
+
+    const conds = [];
+    const stream = $('fStream').value.trim();
+    if (stream) conds.push('streamname = ' + sqlStr(stream));
+    const app = $('fApp').value.trim();
+    if (app) conds.push('appname = ' + sqlStr(app));
+    const day = $('fDay').value.trim();
+    if (day) conds.push('day = ' + sqlStr(day));
+    const hour = $('fHour').value.trim();
+    if (hour) conds.push('hour = ' + sqlStr(hour));
+    const minute = $('fMinute').value.trim();
+    if (minute) conds.push('minute = ' + sqlStr(minute));
+    const protocol = $('fProtocol').value;
+    if (protocol) conds.push('protocol = ' + sqlStr(protocol));
+    const requestid = $('fRequestId').value.trim();
+    if (requestid) conds.push('requestid = ' + sqlStr(requestid));
+    const httpCode = $('fHttpCode').value.trim();
+    if (httpCode) conds.push('httpresponsecode ' + $('fHttpCodeOp').value + ' ' + httpCode);
+    const type = $('fType').value;
+    if (type) conds.push('type = ' + sqlStr(type));
+    const status = $('fStatus').value.trim();
+    if (status) conds.push('status ' + $('fStatusOp').value + ' ' + sqlStr(status));
+    if ($('fCustomerSource').checked) conds.push('customersource = true');
+
+    if (conds.length) {
+      lines.push('WHERE 1 = 1');
+      conds.forEach((c) => lines.push('  AND ' + c));
+    }
+
+    const orderBy = $('fOrderBy').value.trim();
+    if (orderBy) {
+      const dir = $('fOrderDir').value;
+      lines.push('ORDER BY ' + orderBy + (dir ? ' ' + dir : ''));
+    }
+
+    const limit = parseInt($('fLimit').value, 10);
+    if (!isNaN(limit) && limit > 0) lines.push('LIMIT ' + limit);
+
+    $('sqlBox').value = lines.join('\n');
+  }
+
+  /* ---------------- 执行查询 ---------------- */
+  async function runQuery() {
+    const sql = $('sqlBox').value.trim();
+    if (!sql) {
+      setStatus('SQL 不能为空', 'err');
+      return;
+    }
+    const btn = $('btnRun');
+    btn.disabled = true;
+    setStatus('查询中...');
+    try {
+      const data = await postJSON('/api/v1/query', {
+        catalog: $('catalog').value.trim(),
+        schema: $('schema').value.trim(),
+        sql,
+      });
+      state.result = { columns: data.columns || [], rows: data.rows || [] };
+      state.page = 0;
+      renderResult();
+      setStatus('返回 ' + (data.row_count || 0) + ' 行，耗时 '
+        + (data.elapsed_ms != null ? data.elapsed_ms + ' ms' : '-'), 'ok');
+    } catch (e) {
+      setStatus('查询失败: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* 勾选字段排在结果表左侧 */
+  function orderedColumns() {
+    if (!state.result) return [];
+    const cols = state.result.columns.slice();
+    const pinned = [];
+    const rest = [];
+    cols.forEach((c) => {
+      if (state.checked.has(c.toLowerCase()) || state.checked.has(c)) pinned.push(c);
+      else rest.push(c);
+    });
+    return pinned.concat(rest);
+  }
+
+  function cellText(v) {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  }
+
+  function renderResult() {
+    const wrap = $('resultWrap');
+    wrap.innerHTML = '';
+    const pager = $('pager');
+    pager.innerHTML = '';
+    if (!state.result || !state.result.columns.length) {
+      wrap.innerHTML = '<div class="cols-empty" style="padding:16px">暂无数据</div>';
+      return;
+    }
+
+    const cols = orderedColumns();
+    const idxMap = cols.map((c) => state.result.columns.indexOf(c));
+    const total = state.result.rows.length;
+    const start = state.page * state.pageSize;
+    const end = Math.min(start + state.pageSize, total);
+
+    const table = document.createElement('table');
+    table.className = 'result';
+
+    const thead = document.createElement('thead');
+    const htr = document.createElement('tr');
+    cols.forEach((c) => {
+      const th = document.createElement('th');
+      th.textContent = c;
+      if (state.checked.has(c)) th.classList.add('pinned');
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for (let i = start; i < end; i++) {
+      const row = state.result.rows[i];
+      const tr = document.createElement('tr');
+      tr.title = '双击查看详情';
+      idxMap.forEach((idx) => {
+        const td = document.createElement('td');
+        td.textContent = cellText(row[idx]);
+        tr.appendChild(td);
+      });
+      tr.addEventListener('dblclick', () => showDetail(cols, idxMap, row));
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+
+    // 分页
+    const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
+    pager.innerHTML = '<span>共 ' + total + ' 行，第 ' + (state.page + 1) + '/' + pageCount + ' 页</span>';
+    const prev = document.createElement('button');
+    prev.className = 'ghost';
+    prev.textContent = '上一页';
+    prev.disabled = state.page <= 0;
+    prev.onclick = () => { state.page--; renderResult(); };
+    const next = document.createElement('button');
+    next.className = 'ghost';
+    next.textContent = '下一页';
+    next.disabled = end >= total;
+    next.onclick = () => { state.page++; renderResult(); };
+    pager.appendChild(prev);
+    pager.appendChild(next);
+  }
+
+  function showDetail(cols, idxMap, row) {
+    const body = $('detailBody');
+    body.innerHTML = '';
+    const table = document.createElement('table');
+    table.className = 'detail-table';
+    cols.forEach((c, i) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = c;
+      const td = document.createElement('td');
+      td.textContent = cellText(row[idxMap[i]]);
+      tr.appendChild(th);
+      tr.appendChild(td);
+      table.appendChild(tr);
+    });
+    body.appendChild(table);
+    $('detailModal').classList.add('show');
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  function bindInputs() {
+    const autoIds = ['fStream', 'fApp', 'fDay', 'fHour', 'fMinute', 'fProtocol',
+      'fType', 'fRequestId', 'fHttpCode', 'fHttpCodeOp', 'fStatus', 'fStatusOp',
+      'fCustomerSource', 'fOrderBy', 'fOrderDir', 'fLimit'];
+    autoIds.forEach((id) => {
+      const el = $(id);
+      const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
+      el.addEventListener(ev, buildSQL);
+    });
+
+    // 修改库名 -> 重新拉 schema 列表
+    $('catalog').addEventListener('change', () => {
+      loadSchemas($('catalog').value.trim());
+      buildSQL();
+    });
+    $('schema').addEventListener('change', buildSQL);
+    $('table').addEventListener('change', async () => {
+      buildSQL();
+      // 选择表后自动查询字段(等价于点击「See table schema」)
+      const catalog = $('catalog').value.trim() || 'hive_miku';
+      const schema = $('schema').value.trim() || 'miku';
+      const table = $('table').value;
+      if (!table) return;
+      setStatus('查询字段中...');
+      try {
+        await loadColumns(catalog, schema, table);
+        setStatus('已加载 ' + state.columns.length + ' 个字段', 'ok');
+      } catch (e) {
+        setStatus('查询字段失败: ' + e.message, 'err');
+      }
+    });
+
+    $('btnLoadTables').addEventListener('click', async () => {
+      const catalog = $('catalog').value.trim() || 'hive_miku';
+      const schema = $('schema').value.trim() || 'miku';
+      setStatus('加载表列表中...');
+      try {
+        await loadTables(catalog, schema);
+        setStatus('已加载 ' + $('table').options.length + ' 张表', 'ok');
+        buildSQL();
+      } catch (e) {
+        setStatus('加载表失败: ' + e.message, 'err');
+      }
+    });
+
+    $('btnLoadSchema').addEventListener('click', async () => {
+      const catalog = $('catalog').value.trim() || 'hive_miku';
+      const schema = $('schema').value.trim() || 'miku';
+      const table = $('table').value;
+      if (!table) {
+        setStatus('请先选择表（可点击「加载表」）', 'err');
+        return;
+      }
+      setStatus('查询字段中...');
+      try {
+        await loadColumns(catalog, schema, table);
+        setStatus('已加载 ' + state.columns.length + ' 个字段', 'ok');
+      } catch (e) {
+        setStatus('查询字段失败: ' + e.message, 'err');
+      }
+    });
+
+    $('chkAllCols').addEventListener('change', (e) => {
+      if (e.target.checked) state.columns.forEach((c) => state.checked.add(c.name));
+      else state.checked.clear();
+      renderColumns();
+      buildSQL();
+    });
+    $('btnClearCols').addEventListener('click', () => {
+      state.checked.clear();
+      $('chkAllCols').checked = false;
+      renderColumns();
+      buildSQL();
+    });
+
+    $('btnRebuild').addEventListener('click', buildSQL);
+    $('btnRebuild2').addEventListener('click', buildSQL);
+    $('btnRun').addEventListener('click', runQuery);
+
+    $('btnCloseModal').addEventListener('click', () => {
+      $('detailModal').classList.remove('show');
+    });
+    $('detailModal').addEventListener('click', (e) => {
+      if (e.target.id === 'detailModal') {
+        $('detailModal').classList.remove('show');
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') $('detailModal').classList.remove('show');
+    });
+
+    // Ctrl/Cmd + Enter 执行
+    $('sqlBox').addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runQuery();
+      }
+    });
+  }
+
+  /* ---------------- 初始化 ---------------- */
+  async function init() {
+    bindInputs();
+    buildSQL();
+    await loadCatalogs();
+    loadSchemas($('catalog').value.trim() || 'hive_miku');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

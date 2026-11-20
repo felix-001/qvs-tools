@@ -1,8 +1,11 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/trinodb/trino-go-client/trino"
@@ -225,6 +228,111 @@ type HyLagRateByStreamsReport struct {
 	LagClientIps    []string `db:"lag_client_ips"`
 	NormalClientIps []string `db:"normal_client_ips"`
 	LagClientRate   float64  `db:"lag_client_rate"`
+}
+
+// TrinoHost 是 trino 网关地址（不含 scheme）
+const TrinoHost = "trino.jf-logverse.k8s.qiniu.io"
+
+// TrinoResultSet 通用查询结果：列名按 SQL 中的顺序返回，Rows 为对应的值
+// 这样前端可以自己决定列展示顺序（例如把勾选字段放前面）。
+type TrinoResultSet struct {
+	Columns []string `json:"columns"`
+	Rows    [][]any  `json:"rows"`
+}
+
+func trinoDSN(catalog, schema string) string {
+	dsn := fmt.Sprintf("http://superset@%s", TrinoHost)
+	var params []string
+	if catalog != "" {
+		params = append(params, "catalog="+catalog)
+	}
+	if schema != "" {
+		params = append(params, "schema="+schema)
+	}
+	if len(params) > 0 {
+		dsn += "?" + strings.Join(params, "&")
+	}
+	return dsn
+}
+
+// TrinoQueryRows 在指定 catalog/schema 下执行任意 SQL，返回列名与行数据
+func TrinoQueryRows(catalog, schema, sql string) (*TrinoResultSet, error) {
+	return TrinoQueryRowsCtx(context.Background(), catalog, schema, sql)
+}
+
+// TrinoQueryRowsCtx 与 TrinoQueryRows 相同，但支持超时/取消
+func TrinoQueryRowsCtx(ctx context.Context, catalog, schema, sql string) (*TrinoResultSet, error) {
+	db, err := sqlx.Open("trino", trinoDSN(catalog, schema))
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	rows, err := db.QueryContext(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	result := &TrinoResultSet{Columns: columns, Rows: [][]any{}}
+	for rows.Next() {
+		values := make([]any, len(columns))
+		ptrs := make([]any, len(columns))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+		if err := rows.Scan(ptrs...); err != nil {
+			return nil, err
+		}
+		row := make([]any, len(columns))
+		for i, v := range values {
+			row[i] = normalizeTrinoValue(v)
+		}
+		result.Rows = append(result.Rows, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// FirstColumn 返回第一列的所有值(常用于 SHOW 类语句)
+func (r *TrinoResultSet) FirstColumn() []string {
+	if r == nil {
+		return nil
+	}
+	out := make([]string, 0, len(r.Rows))
+	for _, row := range r.Rows {
+		if len(row) == 0 {
+			continue
+		}
+		out = append(out, fmt.Sprint(row[0]))
+	}
+	return out
+}
+
+// normalizeTrinoValue 把驱动返回值转成 JSON 友好类型
+func normalizeTrinoValue(v any) any {
+	switch val := v.(type) {
+	case nil:
+		return nil
+	case []byte:
+		return string(val)
+	case *[]byte:
+		if val == nil {
+			return nil
+		}
+		return string(*val)
+	case time.Time:
+		return val.Format("2006-01-02 15:04:05.000")
+	default:
+		return val
+	}
 }
 
 func TrinoQuery(schema, sql string, dest interface{}) error {
