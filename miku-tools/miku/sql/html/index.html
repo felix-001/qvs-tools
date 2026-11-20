@@ -446,6 +446,8 @@
   }
 
   const DEFAULT_TABLE = 'dwd_flowd_miku_streamd_log';
+  // 默认优先展示在结果表左侧的字段（按此处顺序排列）
+  const DEFAULT_PINNED = ['httpresponsecode', 'status'];
 
   async function loadTables(catalog, schema) {
     const data = await getJSON('/api/v1/tables?catalog=' + encodeURIComponent(catalog)
@@ -477,6 +479,12 @@
       + '&table=' + encodeURIComponent(table));
     state.columns = data.columns || [];
     state.checked.clear();
+    // 默认勾选优先展示字段（仅对当前表真实存在的字段生效）
+    const colNames = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
+    const nameMap = new Map(state.columns.map((c) => [(c.name || '').toLowerCase(), c.name]));
+    DEFAULT_PINNED.forEach((n) => {
+      if (colNames.has(n)) state.checked.add(nameMap.get(n));
+    });
     state.colFilter = '';
     state.excFilter = '';
     $('colSearch').value = '';
@@ -823,6 +831,14 @@
     cols.forEach((c) => {
       if (state.checked.has(c.toLowerCase()) || state.checked.has(c)) pinned.push(c);
       else rest.push(c);
+    });
+    // 默认优先字段按 DEFAULT_PINNED 顺序前置，其余勾选字段保持原列序
+    pinned.sort((a, b) => {
+      const ai = DEFAULT_PINNED.indexOf((a || '').toLowerCase());
+      const bi = DEFAULT_PINNED.indexOf((b || '').toLowerCase());
+      const av = ai < 0 ? Number.MAX_SAFE_INTEGER : ai;
+      const bv = bi < 0 ? Number.MAX_SAFE_INTEGER : bi;
+      return av - bv;
     });
     const ordered = pinned.concat(rest);
     // time 列固定排第一
