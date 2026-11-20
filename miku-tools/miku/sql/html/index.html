@@ -285,7 +285,7 @@
     <div class="row">
       <div>
         <label class="fl">排序字段 (order by)</label>
-        <input type="text" id="fOrderBy" placeholder="如 ts">
+        <input type="text" id="fOrderBy" value="ts" placeholder="如 ts">
       </div>
       <div style="flex:0 0 90px">
         <label class="fl">排序方向</label>
@@ -419,6 +419,8 @@
     }
   }
 
+  const DEFAULT_TABLE = 'dwd_flowd_miku_streamd_log';
+
   async function loadTables(catalog, schema) {
     const data = await getJSON('/api/v1/tables?catalog=' + encodeURIComponent(catalog)
       + '&schema=' + encodeURIComponent(schema));
@@ -427,7 +429,7 @@
     const tables = data.tables || [];
     if (!tables.length) {
       sel.innerHTML = '<option value="">（无表）</option>';
-      return;
+      return '';
     }
     tables.forEach((name) => {
       const opt = document.createElement('option');
@@ -435,6 +437,12 @@
       opt.textContent = name;
       sel.appendChild(opt);
     });
+    // 默认选中主表
+    if (tables.includes(DEFAULT_TABLE)) {
+      sel.value = DEFAULT_TABLE;
+      return DEFAULT_TABLE;
+    }
+    return sel.value;
   }
 
   async function loadColumns(catalog, schema, table) {
@@ -450,6 +458,15 @@
     $('excSearch').value = '';
     $('btnClearExcSearch').style.display = 'none';
     resetExcluded();
+    // 排序字段校验：默认 ts，若当前表没有该字段则清空，避免生成无效 SQL；
+    // 切回主表且排序为空时恢复默认 ts。
+    const names = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
+    const orderBy = $('fOrderBy').value.trim().toLowerCase();
+    if (orderBy && !names.has(orderBy)) {
+      $('fOrderBy').value = '';
+    } else if (!orderBy && table === DEFAULT_TABLE && names.has('ts')) {
+      $('fOrderBy').value = 'ts';
+    }
     renderColumns();
     renderExcludeColumns();
     buildSQL();
@@ -894,8 +911,14 @@
       const schema = $('schema').value.trim() || 'miku';
       setStatus('加载表列表中...');
       try {
-        await loadTables(catalog, schema);
+        const selected = await loadTables(catalog, schema);
         setStatus('已加载 ' + $('table').options.length + ' 张表', 'ok');
+        // 默认表自动加载字段（等价于点击「See table schema」）
+        if (selected) {
+          await loadColumns(catalog, schema, selected);
+          setStatus('已加载 ' + $('table').options.length + ' 张表，默认选中 '
+            + selected + '（' + state.columns.length + ' 个字段）', 'ok');
+        }
         buildSQL();
       } catch (e) {
         setStatus('加载表失败: ' + e.message, 'err');
