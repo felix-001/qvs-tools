@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MIKU SQL 查询</title>
+<script>
+  /* UA 判定移动端：仅在移动端追加 html.mobile，PC 端样式保持原样 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    var isMobile = /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|Windows Phone|MicroMessenger/i.test(ua)
+      || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+    if (isMobile) document.documentElement.classList.add('mobile');
+  })();
+</script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -25,6 +34,17 @@
     margin: 14px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #eee;
   }
   .section-title:first-child { margin-top: 0; }
+  /* 可折叠分区标题（字段 / 排除字段） */
+  .section-title.collapsible {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; user-select: none;
+  }
+  .section-title.collapsible:hover { color: #0056b3; }
+  .section-title .caret {
+    flex: 0 0 auto; font-size: 9px; line-height: 1;
+    color: #007bff; transition: transform .15s ease;
+  }
+  .section-body.collapsed { display: none; }
   .row { display: flex; gap: 8px; margin-bottom: 8px; }
   .row > div { flex: 1; min-width: 0; }
   label.fl { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
@@ -50,6 +70,16 @@
   .status.running { color: #007bff; animation: blink 1.2s ease-in-out infinite; }
   .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; }
   .chk input[type=checkbox] { margin: 0; }
+  /* 预设模式（单选框） */
+  .preset-box {
+    border: 1px solid #d9e6f7; background: #f6faff;
+    border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;
+  }
+  .preset-box .preset-title { font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; }
+  .preset-box .chk { padding: 3px 0; align-items: flex-start; }
+  .preset-box .chk input[type=radio] { margin: 3px 0 0; flex: 0 0 auto; }
+  .preset-box .chk label { flex: 1; min-width: 0; line-height: 1.45; cursor: pointer; }
+  .preset-box .chk small { display: block; color: #999; font-size: 11px; line-height: 1.4; }
   .cols {
     border: 1px solid #eee; border-radius: 4px; padding: 8px;
     max-height: 220px; overflow: auto; background: #fafafa;
@@ -79,12 +109,62 @@
     white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis;
   }
   table.result th {
-    position: sticky; top: 0; background: #f0f4fa; z-index: 1;
-    font-weight: bold; color: #335;
+    position: sticky; top: 0; background: #f0f4fa; z-index: 2;
+    font-weight: bold; color: #335; vertical-align: top;
   }
   table.result th.pinned { background: #e3f0ff; }
+  table.result th .th-box { display: flex; align-items: center; gap: 4px; }
+  table.result th .th-inner {
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+    user-select: none; white-space: nowrap;
+  }
+  table.result th .th-inner:hover { color: #007bff; }
+  table.result th .sort-mark { color: #007bff; font-size: 10px; }
+  table.result th.sorted { background: #dbeaff; }
+  table.result th .th-filter {
+    flex: 0 0 auto; cursor: pointer; color: #9aabc2; font-size: 10px;
+    line-height: 1.35; padding: 0 3px; border-radius: 3px; border: 1px solid #dfe6ef;
+    user-select: none; background: #fff;
+  }
+  table.result th .th-filter:hover { color: #007bff; background: #dbeaff; border-color: #b6d4fe; }
+  table.result th .th-filter.on { color: #fff; background: #ff9800; border-color: #ff9800; }
   table.result tbody tr:nth-child(even) { background: #fcfcfd; }
   table.result tbody tr:hover { background: #eef6ff; cursor: pointer; }
+  /* 列筛选下拉面板 */
+  .col-pop {
+    display: none; position: fixed; z-index: 300; width: 250px;
+    background: #fff; border: 1px solid #c9d6e6; border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 8px; font-size: 12px;
+  }
+  .col-pop.show { display: block; }
+  .col-pop-head {
+    display: flex; align-items: center; gap: 6px; font-weight: bold; color: #335;
+    padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid #eef2f7;
+  }
+  .col-pop-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col-pop-head .col-pop-close {
+    margin-left: auto; border: none; background: none; color: #999;
+    font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px;
+  }
+  .col-pop-head .col-pop-close:hover { color: #333; }
+  .col-pop-search {
+    width: 100%; padding: 4px 6px; font-size: 12px; margin-bottom: 6px;
+    border: 1px solid #ddd; border-radius: 4px;
+  }
+  .col-pop-search:focus { outline: none; border-color: #007bff; }
+  .col-pop-actions { display: flex; gap: 6px; margin-bottom: 6px; }
+  .col-pop-actions button { padding: 2px 8px; font-size: 11px; }
+  .col-pop-list {
+    max-height: 240px; overflow: auto; border: 1px solid #eef2f7;
+    border-radius: 4px; padding: 4px; background: #fafbfd;
+  }
+  .col-pop-list .chk { padding: 2px 0; }
+  .col-pop-list .chk label {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 150px; display: inline-block; vertical-align: middle;
+  }
+  .col-pop-list .chk small { color: #999; }
+  .col-pop-empty { color: #aaa; padding: 6px; text-align: center; }
   .modal {
     display: none; position: fixed; inset: 0; z-index: 100;
     background: rgba(0,0,0,.45); overflow: auto;
@@ -111,6 +191,79 @@
   .detail-table th { width: 200px; background: #f7f9fc; font-weight: normal; color: #555; }
   .detail-table td { word-break: break-all; white-space: pre-wrap; font-family: Menlo, Consolas, monospace; }
   .pager { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #666; margin-top: 8px; }
+
+  /* ================= 移动端适配（仅 html.mobile 生效，PC 端完全不受影响） ================= */
+  html.mobile { -webkit-text-size-adjust: 100%; }
+  html.mobile body { padding: 8px 8px 18px; }
+  html.mobile h1 { font-size: 17px; margin-bottom: 8px; }
+  html.mobile .layout { flex-direction: column; gap: 10px; }
+  html.mobile .panel { padding: 10px; border-radius: 6px; }
+  html.mobile .side { width: 100%; flex: none; max-height: none; overflow: visible; }
+  html.mobile .main { width: 100%; }
+  /* 输入控件统一 16px，避免 iOS 聚焦时页面自动放大 */
+  html.mobile input[type=text], html.mobile input[type=number], html.mobile select,
+  html.mobile textarea { font-size: 16px; }
+  html.mobile input[type=text], html.mobile input[type=number], html.mobile select { padding: 8px 10px; }
+  html.mobile textarea { height: 132px; }
+  html.mobile button { padding: 9px 14px; font-size: 14px; }
+  html.mobile .chk { font-size: 14px; gap: 8px; }
+  html.mobile .chk input[type=checkbox] { width: 18px; height: 18px; }
+  html.mobile .preset-box .chk input[type=radio] { width: 18px; height: 18px; margin-top: 1px; }
+  html.mobile .cols { max-height: 168px; }
+  html.mobile .section-title { font-size: 14px; margin: 16px 0 8px; }
+  /* 小号下拉（模式/比较/排序方向）放宽，避免文字被挤压 */
+  html.mobile .row > div[style*="flex:0 0 76px"],
+  html.mobile .row > div[style*="flex:0 0 74px"],
+  html.mobile .row > div[style*="flex:0 0 90px"] { flex: 0 0 86px !important; }
+  /* 操作按钮：执行查询独占一行，停止/重建各占一半 */
+  html.mobile .toolbar .spacer { display: none; }
+  html.mobile .toolbar #btnRun { flex: 1 1 100%; font-size: 15px; padding: 11px 14px; }
+  html.mobile .toolbar #btnStop,
+  html.mobile .toolbar #btnRebuild2 { flex: 1 1 calc(50% - 4px); }
+  html.mobile .toolbar .status { flex: 1 1 100%; }
+  /* 结果表：固定高度视口内滚动，横向可滑动 */
+  html.mobile .table-wrap {
+    max-height: 62vh; min-height: 160px;
+    -webkit-overflow-scrolling: touch;
+  }
+  html.mobile table.result th, html.mobile table.result td { padding: 7px 9px; max-width: 62vw; }
+  html.mobile table.result th .th-filter { padding: 3px 5px; font-size: 11px; }
+  html.mobile .pager { flex-wrap: wrap; gap: 8px; font-size: 12px; }
+  html.mobile .pager span { flex: 1 1 100%; }
+  html.mobile .pager button { flex: 1 1 0; padding: 9px 14px; }
+  /* 列筛选面板：改为底部弹层，铺满屏宽 */
+  html.mobile .col-pop {
+    left: 0 !important; right: 0; bottom: 0; top: auto !important;
+    width: auto !important; max-height: 74vh; font-size: 14px; padding: 12px 14px 14px;
+    border-radius: 14px 14px 0 0; border-bottom: none;
+    box-shadow: 0 -8px 24px rgba(0,0,0,.2);
+  }
+  html.mobile .col-pop-head { font-size: 14px; }
+  html.mobile .col-pop-search { font-size: 16px; padding: 8px 10px; }
+  html.mobile .col-pop-actions button { padding: 6px 12px; font-size: 13px; }
+  html.mobile .col-pop-list { max-height: 42vh; }
+  html.mobile .col-pop-list .chk { padding: 5px 0; }
+  html.mobile .col-pop-list .chk label { max-width: none; font-size: 14px; }
+  html.mobile .col-pop-list .chk input[type=checkbox] { width: 18px; height: 18px; }
+  /* 行详情：全屏展示 */
+  html.mobile .modal-box {
+    width: 100%; min-height: 100vh; margin: 0; padding: 14px 12px 24px; border-radius: 0;
+  }
+  html.mobile .modal-head b { font-size: 16px; }
+  html.mobile .modal-close { font-size: 28px; padding: 2px 8px; }
+  html.mobile .detail-table { font-size: 13px; }
+  html.mobile .detail-table th { width: 36%; padding: 8px; }
+  html.mobile .detail-table td { padding: 8px; }
+  /* 侧栏折叠开关（仅移动端渲染） */
+  .side-toggle { display: none; }
+  html.mobile .side-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; padding: 10px 12px; margin-bottom: 10px;
+    font-size: 14px; font-weight: bold; color: #007bff;
+    background: #f0f7ff; border: 1px solid #cfe4ff; border-radius: 6px;
+  }
+  html.mobile .side-body { display: none; }
+  html.mobile .side.expanded .side-body { display: block; }
 </style>
 </head>
 <body>
@@ -120,6 +273,15 @@
   <!-- 左侧：数据源与筛选条件 -->
   <div class="panel side">
     <div class="section-title">数据源</div>
+    <div class="row">
+      <div>
+        <label class="fl">集群 (trino)</label>
+        <select id="cluster">
+          <option value="jf" selected>jf（hive_miku.miku）</option>
+          <option value="yzh">yzh（hive.kodofs2）</option>
+        </select>
+      </div>
+    </div>
     <div class="row">
       <div>
         <label class="fl">database (catalog)</label>
@@ -143,7 +305,10 @@
       <div><button class="ghost" id="btnLoadSchema" style="width:100%">See table schema</button></div>
     </div>
 
-    <div class="section-title">字段（勾选字段优先展示在结果表左侧）</div>
+    <div class="section-title collapsible" data-target="colsBody">
+      <span class="caret">▶</span><span>字段（勾选字段优先展示在结果表左侧）</span>
+    </div>
+    <div class="section-body collapsed" id="colsBody">
     <div class="row" style="margin-bottom:6px">
       <div class="chk"><input type="checkbox" id="chkAllCols"><label for="chkAllCols">全选</label></div>
       <div style="flex:0 0 auto"><button class="ghost" id="btnClearCols" style="padding:2px 10px;font-size:12px">清空</button></div>
@@ -159,8 +324,12 @@
       <div class="status" id="colSummary"></div>
     </div>
     <div class="cols" id="colsBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
+    </div>
 
-    <div class="section-title">排除字段（勾选的字段不在结果中输出）</div>
+    <div class="section-title collapsible" data-target="excBody">
+      <span class="caret">▶</span><span>排除字段（勾选的字段不在结果中输出）</span>
+    </div>
+    <div class="section-body collapsed" id="excBody">
     <div class="row" style="margin-bottom:6px">
       <div class="chk"><input type="checkbox" id="chkAllExc"><label for="chkAllExc">全选</label></div>
       <div style="flex:0 0 auto"><button class="ghost" id="btnClearExc" style="padding:2px 10px;font-size:12px">清空</button></div>
@@ -177,8 +346,24 @@
       <div class="status" id="excSummary"></div>
     </div>
     <div class="cols" id="excBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
+    </div>
 
     <div class="section-title">筛选条件</div>
+
+    <!-- 宽表（默认表 dwd_flowd_miku_streamd_log 等）的筛选条件 -->
+    <div id="filterFlowd">
+    <div class="preset-box">
+      <div class="preset-title">预设模式</div>
+      <div class="chk"><input type="radio" name="fPreset" id="fPresetNone" value="" checked><label for="fPresetNone">自定义（不套用预设）</label></div>
+      <div class="chk"><input type="radio" name="fPreset" id="fPresetPlayFail" value="play-fail"><label for="fPresetPlayFail">排查播放失败 <small>httpresponsecode not in (200, 302)、type = player</small></label></div>
+      <div class="chk"><input type="radio" name="fPreset" id="fPresetOrigin" value="origin"><label for="fPresetOrigin">排查回源 <small>type = puller、勾选回源请求</small></label></div>
+    </div>
+    <div class="row">
+      <div class="chk"><input type="checkbox" id="fRemoteIsp" checked><label for="fRemoteIsp" title="ipresolve(remoteaddr 的 IP 部分, 'isp')，兼容 1.2.3.4:port 与 [ipv6]:port">附加列 remote-isp（运营商）</label></div>
+    </div>
+    <div class="row">
+      <div class="chk"><input type="checkbox" id="fRemoteRegion" checked><label for="fRemoteRegion" title="ipresolve(remoteaddr 的 IP 部分, 'region')，兼容 1.2.3.4:port 与 [ipv6]:port">附加列 remote-region（省份）</label></div>
+    </div>
     <div class="row">
       <div>
         <label class="fl">流 id (streamname)</label>
@@ -278,14 +463,16 @@
     </div>
     <div class="row">
       <div>
-        <label class="fl">httpresponsecode</label>
-        <input type="number" id="fHttpCode" placeholder="如 404">
+        <label class="fl">httpresponsecode（多值用逗号分隔）</label>
+        <input type="text" id="fHttpCode" placeholder="如 404 或 200,302">
       </div>
       <div style="flex:0 0 74px">
         <label class="fl">比较</label>
         <select id="fHttpCodeOp">
           <option value="=">=</option>
           <option value="!=">!=</option>
+          <option value="in">in</option>
+          <option value="not in">not in</option>
         </select>
       </div>
     </div>
@@ -308,6 +495,40 @@
     <div class="row">
       <div class="chk"><input type="checkbox" id="fTimeSelect" checked><label for="fTimeSelect">转换时间 (ts → Asia/Shanghai，结果首列)</label></div>
     </div>
+    </div><!-- /#filterFlowd -->
+
+    <!-- 窄表（kodofs2.ods_app_miku_streamd 等只有 event_time/body/day/minute 的表）筛选条件 -->
+    <div id="filterOds" style="display:none">
+      <div class="row">
+        <div>
+          <label class="fl">body（包含）</label>
+          <input type="text" id="fOdsBody" placeholder="body like '%关键词%'">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label class="fl">day</label>
+          <input type="text" id="fOdsDay" placeholder="YYYYMMDD">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label class="fl">minute</label>
+          <input type="text" id="fOdsMinute" placeholder="如 12-10">
+        </div>
+        <div style="flex:0 0 76px">
+          <label class="fl">模式</label>
+          <select id="fOdsMinuteMode">
+            <option value="range">范围</option>
+            <option value="eq">=</option>
+          </select>
+        </div>
+        <div>
+          <label class="fl">minute 结束</label>
+          <input type="text" id="fOdsMinuteEnd" placeholder="如 13-50">
+        </div>
+      </div>
+    </div><!-- /#filterOds -->
     <div class="row">
       <div>
         <label class="fl">排序字段 (order by)</label>
@@ -345,7 +566,13 @@
       <span class="status" id="status"></span>
     </div>
 
-    <div class="section-title">结果</div>
+    <div class="section-title" style="display:flex;align-items:center;gap:8px">
+      <span>结果</span>
+      <span class="status" id="resultHint" style="font-weight:normal"></span>
+      <button class="ghost" id="btnClearResultFilter"
+              style="margin-left:auto;padding:2px 8px;font-size:11px"
+              title="清空所有列筛选与排序">清空筛选/排序</button>
+    </div>
     <div class="table-wrap" id="resultWrap">
       <div class="cols-empty" style="padding:16px">暂无数据</div>
     </div>
@@ -364,9 +591,25 @@
   </div>
 </div>
 
+<!-- 列筛选下拉面板 -->
+<div class="col-pop" id="colPop">
+  <div class="col-pop-head">
+    <span>筛选列</span><b id="colPopName"></b>
+    <button class="col-pop-close" id="colPopClose">&times;</button>
+  </div>
+  <input type="text" class="col-pop-search" id="colPopSearch" placeholder="搜索值" autocomplete="off">
+  <div class="col-pop-actions">
+    <button class="ghost" id="colPopAll" style="padding:2px 8px;font-size:11px">全选</button>
+    <button class="ghost" id="colPopNone" style="padding:2px 8px;font-size:11px">清空</button>
+    <button class="ghost" id="colPopReset" style="padding:2px 8px;font-size:11px" title="取消该列筛选">重置</button>
+  </div>
+  <div class="col-pop-list" id="colPopList"></div>
+</div>
+
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
+  const IS_MOBILE = document.documentElement.classList.contains('mobile');
 
   const DEFAULT_EXCLUDED = ['version', 'hitinfo', 'httpreferer', 'httplocation', 'latency'];
 
@@ -377,10 +620,19 @@
     colFilter: '',      // 字段搜索关键字
     excFilter: '',      // 排除字段搜索关键字
     result: null,       // {columns, rows}
+    colFilters: {},     // 结果表列筛选：{列名: Set(选中的值文本)}
+    sortCol: '',        // 结果表排序字段
+    sortDir: '',        // '' | 'asc' | 'desc'
+    popCol: '',         // 当前打开的列筛选面板对应列
+    popSel: new Set(),  // 面板中选中的值
+    popSearch: '',      // 面板内值搜索关键字
     page: 0,
     pageSize: 200,
     running: false,     // 是否有查询进行中
     abortCtl: null,     // 当前查询的 AbortController
+    narrow: false,      // 当前表是否为窄表（event_time/body/day/minute 表）
+    narrowTable: '',    // 窄表名，用于 SQL 构建分支
+    columnsTable: '',   // state.columns 对应的表名，避免切表时用旧字段误判
     requestId: '',      // 当前查询 id，用于服务端强制取消
     stopping: false,    // 是否为用户主动停止
     cancelOk: false,    // 后端是否确认取消
@@ -417,9 +669,18 @@
   }
 
   /* ---------------- 数据源加载 ---------------- */
+  // 当前选中的 trino 集群（jf / yzh），所有元数据接口都要带上
+  function clusterName() {
+    return ($('cluster') && $('cluster').value) || 'jf';
+  }
+
+  function clusterQS() {
+    return '&cluster=' + encodeURIComponent(clusterName());
+  }
+
   async function loadCatalogs() {
     try {
-      const data = await getJSON('/api/v1/catalogs');
+      const data = await getJSON('/api/v1/catalogs?cluster=' + encodeURIComponent(clusterName()));
       const list = $('catalogList');
       list.innerHTML = '';
       (data.catalogs || []).forEach((name) => {
@@ -432,7 +693,7 @@
 
   async function loadSchemas(catalog) {
     try {
-      const data = await getJSON('/api/v1/schemas?catalog=' + encodeURIComponent(catalog));
+      const data = await getJSON('/api/v1/schemas?catalog=' + encodeURIComponent(catalog) + clusterQS());
       const list = $('schemaList');
       list.innerHTML = '';
       (data.schemas || []).forEach((name) => {
@@ -440,18 +701,40 @@
         opt.value = name;
         list.appendChild(opt);
       });
+      // 当前 schema 不在该 catalog 下时自动切换（不同 catalog 的 schema 名不同，
+      // 如 yzh-kodofs2 的 schema 是 kodofs2 而不是 miku），否则「加载表」会一直失败。
+      const schemas = data.schemas || [];
+      const cur = $('schema').value.trim();
+      if (schemas.length && !schemas.includes(cur)) {
+        const pick = schemas.includes(data.default) ? data.default : schemas[0];
+        $('schema').value = pick;
+        buildSQL();
+      }
     } catch (e) {
       setStatus('加载 schema 失败: ' + e.message, 'err');
     }
   }
 
   const DEFAULT_TABLE = 'dwd_flowd_miku_streamd_log';
+  // 窄表（只有 event_time/body/day/minute 的表）候选：加载表时优先选中
+  const DEFAULT_TABLE_ALT = 'ods_app_miku_streamd';
+  // 窄表的筛选条件与默认排序与宽表完全不同，按表名匹配
+  const NARROW_TABLE_RE = /^ods_app_miku_streamd/i;
   // 默认优先展示在结果表左侧的字段（按此处顺序排列）
-  const DEFAULT_PINNED = ['httpresponsecode', 'status'];
+  const DEFAULT_PINNED = ['requestid', 'httpresponsecode', 'status'];
+  // 附加计算列（remote-isp / remote-region）不存在于表字段中，单独标记为优先列
+  const PINNED_EXTRA = ['remote-isp', 'remote-region'];
+  // 结果表左侧固定顺序：优先字段 + 附加计算列
+  const PINNED_ORDER = DEFAULT_PINNED.concat(PINNED_EXTRA);
+
+  // 附加计算列是否固定展示在左侧
+  function isPinnedExtra(name) {
+    return PINNED_EXTRA.indexOf((name || '').toLowerCase()) >= 0;
+  }
 
   async function loadTables(catalog, schema) {
     const data = await getJSON('/api/v1/tables?catalog=' + encodeURIComponent(catalog)
-      + '&schema=' + encodeURIComponent(schema));
+      + '&schema=' + encodeURIComponent(schema) + clusterQS());
     const sel = $('table');
     sel.innerHTML = '';
     const tables = data.tables || [];
@@ -465,19 +748,87 @@
       opt.textContent = name;
       sel.appendChild(opt);
     });
-    // 默认选中主表
+    // 默认选中主表；主表不存在时退化为窄表（kodofs2 只有 ods_app_miku_streamd）
     if (tables.includes(DEFAULT_TABLE)) {
       sel.value = DEFAULT_TABLE;
       return DEFAULT_TABLE;
     }
+    if (tables.includes(DEFAULT_TABLE_ALT)) {
+      sel.value = DEFAULT_TABLE_ALT;
+      return DEFAULT_TABLE_ALT;
+    }
     return sel.value;
+  }
+
+  /* ---------------- 表形态：宽表 / 窄表 ---------------- */
+  // 表名匹配，或字段特征（有 event_time+body 且没有 ts）
+  function isNarrowTableName(table) {
+    return NARROW_TABLE_RE.test(table || '');
+  }
+
+  function isNarrowTable(table) {
+    if (isNarrowTableName(table)) return true;
+    // 字段特征仅在「columns 确实是当前表」时生效，否则旧字段会误判
+    if (state.columnsTable !== table) return false;
+    const names = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
+    return names.has('event_time') && names.has('body') && !names.has('ts');
+  }
+
+  // 当前表的字段名集合；字段还没加载（或属于别的表）时返回 null 表示未知
+  function currentColumnNames(table) {
+    if (state.columnsTable !== table) return null;
+    return new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
+  }
+
+  // 根据表切换左侧筛选条件面板与默认排序
+  function applyFilterLayout(table) {
+    const narrow = isNarrowTable(table);
+    state.narrow = narrow;
+    state.narrowTable = table;
+    $('filterFlowd').style.display = narrow ? 'none' : '';
+    $('filterOds').style.display = narrow ? '' : 'none';
+
+    const names = currentColumnNames(table);
+    const orderByNow = $('fOrderBy').value.trim().toLowerCase();
+    if (narrow) {
+      // 窄表：默认按 event_time 升序，day 用 YYYY-MM-DD
+      // 字段未知时（按表名判定）可假定存在 event_time
+      const hasEventTime = names ? names.has('event_time') : true;
+      if (hasEventTime) {
+        // 字段已知时按字段校验，未知时只认 event_time，避免沿用宽表的 ts
+        const validNow = names ? names.has(orderByNow) : orderByNow === 'event_time';
+        if (!validNow) {
+          $('fOrderBy').value = 'event_time';
+          $('fOrderDir').value = 'ASC';
+        }
+      } else {
+        // 该窄表没有 event_time：清掉不适用的排序，避免生成无效 SQL
+        $('fOrderBy').value = '';
+        $('fOrderDir').value = '';
+      }
+      if (!$('fOdsDay').value.trim()) $('fOdsDay').value = todayDayStr();
+      return;
+    }
+
+    // 宽表：默认 ts，若当前表没有该字段则清空，避免生成无效 SQL；
+    // 切回主表且排序为空时恢复默认 ts。
+    if (names && orderByNow && !names.has(orderByNow)) {
+      $('fOrderBy').value = '';
+      $('fOrderDir').value = '';
+    }
+    if (!$('fOrderBy').value.trim() && table === DEFAULT_TABLE && (!names || names.has('ts'))) {
+      $('fOrderBy').value = 'ts';
+      $('fOrderDir').value = '';
+    }
+    if (!$('fDay').value.trim()) $('fDay').value = todayDayStr();
   }
 
   async function loadColumns(catalog, schema, table) {
     const data = await getJSON('/api/v1/columns?catalog=' + encodeURIComponent(catalog)
       + '&schema=' + encodeURIComponent(schema)
-      + '&table=' + encodeURIComponent(table));
+      + '&table=' + encodeURIComponent(table) + clusterQS());
     state.columns = data.columns || [];
+    state.columnsTable = table;
     state.checked.clear();
     // 默认勾选优先展示字段（仅对当前表真实存在的字段生效）
     const colNames = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
@@ -492,15 +843,12 @@
     $('excSearch').value = '';
     $('btnClearExcSearch').style.display = 'none';
     resetExcluded();
-    // 排序字段校验：默认 ts，若当前表没有该字段则清空，避免生成无效 SQL；
-    // 切回主表且排序为空时恢复默认 ts。
-    const names = new Set(state.columns.map((c) => (c.name || '').toLowerCase()));
-    const orderBy = $('fOrderBy').value.trim().toLowerCase();
-    if (orderBy && !names.has(orderBy)) {
-      $('fOrderBy').value = '';
-    } else if (!orderBy && table === DEFAULT_TABLE && names.has('ts')) {
-      $('fOrderBy').value = 'ts';
-    }
+    // 表内没有 remoteaddr 时附加计算列无法生成，禁用对应复选框
+    const hasRemoteAddr = state.columns.some((c) => (c.name || '').toLowerCase() === 'remoteaddr');
+    $('fRemoteIsp').disabled = !hasRemoteAddr;
+    $('fRemoteRegion').disabled = !hasRemoteAddr;
+    // 按表名/字段切换筛选条件面板与默认排序
+    applyFilterLayout(table);
     renderColumns();
     renderExcludeColumns();
     buildSQL();
@@ -639,6 +987,30 @@
     return '"' + String(name).replace(/"/g, '""') + '"';
   }
 
+  // remoteaddr 形如 "1.2.3.4:5678" 或 "[2408:xxxx::1]:5678"。
+  // Trino 的 split_part(remoteaddr, ':', 1) 对 IPv6 会被第一个 ':' 截断（得到 "[2408"），
+  // 因此用正则整体匹配：[ 可选 ] + IP(:六进制字符) + 可选 ] + ':' + 端口(可为空)。
+  // 端口用 \\d* 而非 \\d+，以兼容 "1.2.3.4:" 这种端口为空的值；
+  // COALESCE 兜底到原值，保证空串等异常值的行为与旧实现一致。
+  const REMOTE_IP_EXPR = "COALESCE(REGEXP_EXTRACT(remoteaddr,"
+    + " '^(?:\\[)?([0-9a-fA-F:.]+)(?:\\])?:\\d*$', 1), remoteaddr)";
+
+  // 附加计算列（默认勾选）：追加到 SELECT 末尾输出
+  function extraSelectExprs() {
+    const out = [];
+    // 只有确认当前表存在 remoteaddr 才追加，避免生成无法解析列的 SQL
+    const hasRemoteAddr = state.columns
+      .some((c) => (c.name || '').toLowerCase() === 'remoteaddr');
+    if (!hasRemoteAddr) return out;
+    if ($('fRemoteIsp').checked) {
+      out.push('ipresolve(' + REMOTE_IP_EXPR + ", 'isp') AS " + ident('remote-isp'));
+    }
+    if ($('fRemoteRegion').checked) {
+      out.push('ipresolve(' + REMOTE_IP_EXPR + ", 'region') AS " + ident('remote-region'));
+    }
+    return out;
+  }
+
   // 构建 = 或范围条件：范围模式生成 half >= 'xx' AND half <= 'yy'
   function buildRangeCond(conds, field, startId, modeId, endId) {
     const start = $(startId).value.trim();
@@ -663,6 +1035,66 @@
     $('fHourEnd').disabled = !hourRange;
     const minuteRange = $('fMinuteMode').value === 'range';
     $('fMinuteEnd').disabled = !minuteRange;
+    const odsMinuteRange = $('fOdsMinuteMode').value === 'range';
+    $('fOdsMinuteEnd').disabled = !odsMinuteRange;
+  }
+
+  // 当前表是否走窄表分支（event_time/body/day/minute）
+  function currentIsNarrow() {
+    return isNarrowTable($('table').value);
+  }
+
+  // 窄表 SQL：body 包含 + day + minute 范围 + 排序（默认 event_time ASC）
+  // 窄表 day 分区实际格式为 YYYY-MM-DD（kodofs2），输入框用 YYYYMMDD 更顺手，
+  // 这里把 8 位数字统一补成带横线的分区值；已带横线或其他格式原样保留。
+  function odsDayValue() {
+    const raw = $('fOdsDay').value.trim();
+    const m = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m) return m[1] + '-' + m[2] + '-' + m[3];
+    return raw;
+  }
+
+  function buildNarrowSQL(catalog, schema, table) {
+    let selectList = '*';
+    if (state.columns.length) {
+      const keep = state.columns
+        .map((c) => c.name)
+        .filter((n) => !state.excluded.has((n || '').toLowerCase()));
+      if (state.excluded.size > 0 && keep.length > 0) {
+        selectList = keep.map(ident).join(', ');
+      }
+    }
+    const lines = [];
+    lines.push('SELECT ' + selectList);
+
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+    lines.push('FROM ' + parts.join('.'));
+
+    const conds = [];
+    const body = $('fOdsBody').value.trim();
+    if (body) conds.push('body LIKE ' + sqlStr('%' + body + '%'));
+    const day = odsDayValue();
+    if (day) conds.push('day = ' + sqlStr(day));
+    buildRangeCond(conds, 'minute', 'fOdsMinute', 'fOdsMinuteMode', 'fOdsMinuteEnd');
+
+    if (conds.length) {
+      lines.push('WHERE 1 = 1');
+      conds.forEach((c) => lines.push('  AND ' + c));
+    }
+
+    const orderBy = $('fOrderBy').value.trim();
+    if (orderBy) {
+      const dir = $('fOrderDir').value;
+      lines.push('ORDER BY ' + orderBy + (dir ? ' ' + dir : ''));
+    }
+
+    const limit = parseInt($('fLimit').value, 10);
+    if (!isNaN(limit) && limit > 0) lines.push('LIMIT ' + limit);
+
+    $('sqlBox').value = lines.join('\n');
   }
 
   function buildSQL() {
@@ -672,6 +1104,11 @@
 
     if (!table) {
       $('sqlBox').value = '-- 请先选择 table 后再构建 SQL；也可直接在此手工编写 SQL 并点击「执行查询」';
+      return;
+    }
+
+    if (currentIsNarrow()) {
+      buildNarrowSQL(catalog, schema, table);
       return;
     }
 
@@ -687,6 +1124,9 @@
         selectList = keep.map(ident).join(', ');
       }
     }
+    // 追加附加计算列（remote-isp / remote-region）
+    const extras = extraSelectExprs();
+    if (extras.length) selectList += ', ' + extras.join(', ');
     const lines = [];
     lines.push($('fTimeSelect').checked
       ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, " + selectList
@@ -720,7 +1160,20 @@
     const remoteIp = $('fRemoteIp').value.trim();
     if (remoteIp) conds.push('remoteaddr LIKE ' + sqlStr('%' + remoteIp + '%'));
     const httpCode = $('fHttpCode').value.trim();
-    if (httpCode) conds.push('httpresponsecode ' + $('fHttpCodeOp').value + ' ' + httpCode);
+    if (httpCode) {
+      // 支持多值：逗号/空格分隔；in / not in 生成括号列表
+      const codes = httpCode.split(/[\s,]+/).filter(Boolean)
+        .filter((v) => /^\d+$/.test(v));
+      const op = $('fHttpCodeOp').value;
+      if (codes.length) {
+        if (op === 'in' || op === 'not in') {
+          conds.push('httpresponsecode ' + op.toUpperCase() + ' (' + codes.join(', ') + ')');
+        } else {
+          // = / != 只取第一个值，与旧行为保持一致
+          conds.push('httpresponsecode ' + op + ' ' + codes[0]);
+        }
+      }
+    }
     const type = $('fType').value;
     if (type) conds.push('type = ' + sqlStr(type));
     const status = $('fStatus').value.trim();
@@ -742,6 +1195,33 @@
     if (!isNaN(limit) && limit > 0) lines.push('LIMIT ' + limit);
 
     $('sqlBox').value = lines.join('\n');
+  }
+
+  /* ---------------- 预设模式 ---------------- */
+  // 预设模式只负责把对应筛选条件填好，其余条件（时间、流、bucket 等）由用户自行补充。
+  // 切换预设前先复位预设涉及的三个条件，避免上一个预设残留（如回源仍带着
+  // httpresponsecode not in (200,302)）。
+  function resetPresetFields() {
+    $('fHttpCode').value = '';
+    $('fHttpCodeOp').value = '=';
+    $('fType').value = '';
+    $('fCustomerSource').checked = false;
+  }
+
+  function applyPreset(name) {
+    if (!name) return; // 自定义：保留用户已填的条件
+    resetPresetFields();
+    if (name === 'play-fail') {
+      // 排查播放失败：非 200/302 的播放请求
+      $('fHttpCodeOp').value = 'not in';
+      $('fHttpCode').value = '200,302';
+      $('fType').value = 'player';
+    } else if (name === 'origin') {
+      // 排查回源：回源拉流请求
+      $('fType').value = 'puller';
+      $('fCustomerSource').checked = true;
+    }
+    buildSQL();
   }
 
   /* ---------------- 执行查询 ---------------- */
@@ -788,12 +1268,18 @@
     setStatus('查询中...', 'running');
     try {
       const data = await postJSON('/api/v1/query', {
+        cluster: clusterName(),
         catalog: $('catalog').value.trim(),
         schema: $('schema').value.trim(),
         sql,
         request_id: requestId,
       }, state.abortCtl.signal);
       state.result = { columns: data.columns || [], rows: data.rows || [] };
+      // 新结果重置列筛选与排序
+      state.colFilters = {};
+      state.sortCol = '';
+      state.sortDir = '';
+      closeFilterPop();
       state.page = 0;
       renderResult();
       setStatus('返回 ' + (data.row_count || 0) + ' 行，耗时 '
@@ -829,13 +1315,13 @@
     const pinned = [];
     const rest = [];
     cols.forEach((c) => {
-      if (state.checked.has(c.toLowerCase()) || state.checked.has(c)) pinned.push(c);
+      if (state.checked.has(c.toLowerCase()) || state.checked.has(c) || isPinnedExtra(c)) pinned.push(c);
       else rest.push(c);
     });
-    // 默认优先字段按 DEFAULT_PINNED 顺序前置，其余勾选字段保持原列序
+    // 默认优先字段按 PINNED_ORDER 顺序前置，其余勾选字段保持原列序
     pinned.sort((a, b) => {
-      const ai = DEFAULT_PINNED.indexOf((a || '').toLowerCase());
-      const bi = DEFAULT_PINNED.indexOf((b || '').toLowerCase());
+      const ai = PINNED_ORDER.indexOf((a || '').toLowerCase());
+      const bi = PINNED_ORDER.indexOf((b || '').toLowerCase());
       const av = ai < 0 ? Number.MAX_SAFE_INTEGER : ai;
       const bv = bi < 0 ? Number.MAX_SAFE_INTEGER : bi;
       return av - bv;
@@ -856,6 +1342,169 @@
     return String(v);
   }
 
+  /* 排序比较：数字优先按数值，其余按字符串本地化比较 */
+  function compareCell(a, b) {
+    const an = typeof a === 'number' ? a : (a === null || a === undefined || a === '' ? NaN : Number(a));
+    const bn = typeof b === 'number' ? b : (b === null || b === undefined || b === '' ? NaN : Number(b));
+    const aNum = !isNaN(an);
+    const bNum = !isNaN(bn);
+    if (aNum && bNum) return an - bn;
+    if (aNum !== bNum) return aNum ? -1 : 1; // 数字排在字符串前面
+    const as = cellText(a);
+    const bs = cellText(b);
+    return as.localeCompare(bs, 'zh-CN', { numeric: true });
+  }
+
+  /* 按列筛选（枚举多选）+ 排序后得到用于展示的行索引数组 */
+  function visibleRowIndices(cols, idxMap) {
+    const rows = state.result.rows;
+    const filters = [];
+    cols.forEach((c, i) => {
+      const sel = state.colFilters[c];
+      if (sel && sel.size) filters.push({ idx: idxMap[i], sel });
+    });
+
+    let indices = rows.map((_, i) => i);
+    if (filters.length) {
+      indices = indices.filter((i) => {
+        const row = rows[i];
+        return filters.every((f) => f.sel.has(cellText(row[f.idx])));
+      });
+    }
+
+    if (state.sortCol && state.sortDir) {
+      const si = cols.indexOf(state.sortCol);
+      if (si >= 0) {
+        const sIdx = idxMap[si];
+        const dir = state.sortDir === 'desc' ? -1 : 1;
+        indices.sort((x, y) => {
+          const r = compareCell(rows[x][sIdx], rows[y][sIdx]);
+          return r === 0 ? x - y : r * dir;
+        });
+      }
+    }
+    return indices;
+  }
+
+  /* 取某列在全部结果中的去重值（带出现次数），按值排序 */
+  function columnValues(col) {
+    const ci = state.result ? state.result.columns.indexOf(col) : -1;
+    if (ci < 0) return [];
+    const map = new Map();
+    state.result.rows.forEach((row) => {
+      const v = cellText(row[ci]);
+      map.set(v, (map.get(v) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([v, n]) => ({ v, n }))
+      .sort((a, b) => compareCell(a.v, b.v));
+  }
+
+  function openFilterPop(col, anchor) {
+    state.popCol = col;
+    state.popSearch = '';
+    // 未设置筛选时默认全选
+    const existing = state.colFilters[col];
+    state.popSel = existing ? new Set(existing) : new Set(columnValues(col).map((x) => x.v));
+    $('colPopName').textContent = col;
+    $('colPopSearch').value = '';
+    renderFilterPop();
+    $('colPop').classList.add('show');
+    positionFilterPop(anchor);
+    $('colPopSearch').focus();
+  }
+
+  /* 把面板定位到表头按钮下方，必要时向上/向左避让视口 */
+  function positionFilterPop(anchor) {
+    const pop = $('colPop');
+    if (!pop) return;
+    const r = anchor.getBoundingClientRect();
+    const pw = pop.offsetWidth || 250;
+    const ph = pop.offsetHeight || 200;
+    let left = Math.min(r.left, window.innerWidth - pw - 10);
+    if (left < 6) left = 6;
+    let top = r.bottom + 2;
+    if (top + ph > window.innerHeight - 6) {
+      top = Math.max(6, r.top - ph - 2);
+    }
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+  }
+
+  function closeFilterPop() {
+    state.popCol = '';
+    state.popSel = new Set();
+    state.popSearch = '';
+    const pop = $('colPop');
+    if (pop) pop.classList.remove('show');
+  }
+
+  /* 把面板当前选中项写回筛选状态并重绘结果 */
+  function applyFilterPop(reset) {
+    const col = state.popCol;
+    if (!col) return;
+    const all = columnValues(col).map((x) => x.v);
+    if (reset) {
+      delete state.colFilters[col];
+    } else if (state.popSel.size === all.length) {
+      // 全选等同于不筛选
+      delete state.colFilters[col];
+    } else {
+      state.colFilters[col] = new Set(state.popSel);
+    }
+    state.page = 0;
+    renderResult();
+  }
+
+  function renderFilterPop() {
+    const list = $('colPopList');
+    list.innerHTML = '';
+    const kw = state.popSearch.trim().toLowerCase();
+    const vals = columnValues(state.popCol);
+    const shown = kw ? vals.filter((x) => x.v.toLowerCase().includes(kw)) : vals;
+    if (!shown.length) {
+      list.innerHTML = '<div class="col-pop-empty">没有匹配的值</div>';
+      return;
+    }
+    shown.forEach((item) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'chk';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.popSel.has(item.v);
+      cb.addEventListener('change', () => {
+        if (cb.checked) state.popSel.add(item.v);
+        else state.popSel.delete(item.v);
+        applyFilterPop(false);
+      });
+      const lb = document.createElement('label');
+      lb.textContent = item.v === '' ? '(空)' : item.v;
+      lb.title = item.v;
+      const sm = document.createElement('small');
+      sm.textContent = ' ' + item.n;
+      wrap.appendChild(cb);
+      wrap.appendChild(lb);
+      wrap.appendChild(sm);
+      list.appendChild(wrap);
+    });
+  }
+
+  function toggleSort(col) {
+    if (state.sortCol !== col) {
+      state.sortCol = col;
+      state.sortDir = 'asc';
+    } else if (state.sortDir === 'asc') {
+      state.sortDir = 'desc';
+    } else if (state.sortDir === 'desc') {
+      state.sortCol = '';
+      state.sortDir = '';
+    } else {
+      state.sortDir = 'asc';
+    }
+    state.page = 0;
+    renderResult();
+  }
+
   function renderResult() {
     const wrap = $('resultWrap');
     wrap.innerHTML = '';
@@ -863,12 +1512,18 @@
     pager.innerHTML = '';
     if (!state.result || !state.result.columns.length) {
       wrap.innerHTML = '<div class="cols-empty" style="padding:16px">暂无数据</div>';
+      $('resultHint').textContent = '';
       return;
     }
 
     const cols = orderedColumns();
     const idxMap = cols.map((c) => state.result.columns.indexOf(c));
-    const total = state.result.rows.length;
+    const allTotal = state.result.rows.length;
+    const indices = visibleRowIndices(cols, idxMap);
+    const total = indices.length;
+    const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
+    if (state.page >= pageCount) state.page = pageCount - 1;
+    if (state.page < 0) state.page = 0;
     const start = state.page * state.pageSize;
     const end = Math.min(start + state.pageSize, total);
 
@@ -879,8 +1534,44 @@
     const htr = document.createElement('tr');
     cols.forEach((c) => {
       const th = document.createElement('th');
-      th.textContent = c;
-      if (state.checked.has(c)) th.classList.add('pinned');
+      if (state.checked.has(c) || isPinnedExtra(c)) th.classList.add('pinned');
+      if (state.sortCol === c && state.sortDir) th.classList.add('sorted');
+
+      const box = document.createElement('div');
+      box.className = 'th-box';
+
+      const inner = document.createElement('span');
+      inner.className = 'th-inner';
+      inner.title = '点击切换排序：升序 / 降序 / 取消';
+      inner.textContent = c;
+      if (state.sortCol === c && state.sortDir) {
+        const mark = document.createElement('span');
+        mark.className = 'sort-mark';
+        mark.textContent = state.sortDir === 'asc' ? '▲' : '▼';
+        inner.appendChild(mark);
+      }
+      inner.addEventListener('click', () => toggleSort(c));
+      box.appendChild(inner);
+
+      // 列筛选：点击展开枚举值多选面板
+      const flt = document.createElement('span');
+      const filterOn = !!(state.colFilters[c] && state.colFilters[c].size);
+      flt.className = 'th-filter' + (filterOn ? ' on' : '');
+      flt.textContent = '筛';
+      flt.title = filterOn
+        ? '已筛选：' + state.colFilters[c].size + ' 个值（点击修改）'
+        : '点击按该列的值筛选';
+      flt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (state.popCol === c && $('colPop').classList.contains('show')) {
+          closeFilterPop();
+          return;
+        }
+        openFilterPop(c, flt);
+      });
+      box.appendChild(flt);
+
+      th.appendChild(box);
       htr.appendChild(th);
     });
     thead.appendChild(htr);
@@ -888,23 +1579,41 @@
 
     const tbody = document.createElement('tbody');
     for (let i = start; i < end; i++) {
-      const row = state.result.rows[i];
+      const row = state.result.rows[indices[i]];
       const tr = document.createElement('tr');
-      tr.title = '双击查看详情';
+      tr.title = IS_MOBILE ? '点击查看详情' : '双击查看详情';
       idxMap.forEach((idx) => {
         const td = document.createElement('td');
         td.textContent = cellText(row[idx]);
         tr.appendChild(td);
       });
-      tr.addEventListener('dblclick', () => showDetail(cols, idxMap, row));
+      // 移动端无悬停/双击习惯，改为点击行直接查看详情
+      tr.addEventListener(IS_MOBILE ? 'click' : 'dblclick', () => showDetail(cols, idxMap, row));
       tbody.appendChild(tr);
     }
     table.appendChild(tbody);
     wrap.appendChild(table);
 
+    // 结果提示
+    const filtered = total !== allTotal;
+    $('resultHint').textContent = filtered
+      ? '筛选后 ' + total + ' / ' + allTotal + ' 行'
+      : '';
+
+    // 面板打开时跟随表头重新定位（表格重建后原锚点已失效）
+    if (state.popCol && $('colPop').classList.contains('show')) {
+      const box = Array.from(wrap.querySelectorAll('th .th-filter')).find((el) => {
+        const inner = el.parentElement && el.parentElement.querySelector('.th-inner');
+        return inner && inner.textContent.replace(/[▲▼]/g, '') === state.popCol;
+      });
+      if (box) positionFilterPop(box);
+      else closeFilterPop();
+    }
+
     // 分页
-    const pageCount = Math.max(1, Math.ceil(total / state.pageSize));
-    pager.innerHTML = '<span>共 ' + total + ' 行，第 ' + (state.page + 1) + '/' + pageCount + ' 页</span>';
+    pager.innerHTML = '<span>共 ' + total + ' 行'
+      + (filtered ? '（原始 ' + allTotal + ' 行）' : '')
+      + '，第 ' + (state.page + 1) + '/' + pageCount + ' 页</span>';
     const prev = document.createElement('button');
     prev.className = 'ghost';
     prev.textContent = '上一页';
@@ -943,6 +1652,8 @@
     const autoIds = ['fStream', 'fApp', 'fNodeId', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
       'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
       'fHttpCodeOp', 'fStatus', 'fStatusOp',
+      'fOdsBody', 'fOdsDay', 'fOdsMinute', 'fOdsMinuteEnd',
+      'fRemoteIsp', 'fRemoteRegion',
       'fCustomerSource', 'fTimeSelect', 'fOrderBy', 'fOrderDir', 'fLimit'];
     autoIds.forEach((id) => {
       const el = $(id);
@@ -951,25 +1662,55 @@
     });
 
     // hour/minute 模式切换
-    ['fHourMode', 'fMinuteMode'].forEach((id) => {
+    ['fHourMode', 'fMinuteMode', 'fOdsMinuteMode'].forEach((id) => {
       $(id).addEventListener('change', () => {
         syncRangeInputs();
         buildSQL();
       });
     });
 
-    // 修改库名 -> 重新拉 schema 列表
-    $('catalog').addEventListener('change', () => {
-      loadSchemas($('catalog').value.trim());
-      buildSQL();
+    // 预设模式：选中后自动填充对应筛选条件
+    document.querySelectorAll('input[name="fPreset"]').forEach((el) => {
+      el.addEventListener('change', () => {
+        if (el.checked) applyPreset(el.value);
+      });
     });
-    $('schema').addEventListener('change', buildSQL);
-    $('table').addEventListener('change', async () => {
+
+    // 切换 trino 集群：重置数据源为集群默认值后重新加载
+    $('cluster').addEventListener('change', async () => {
+      const yzh = clusterName() === 'yzh';
+      $('catalog').value = yzh ? 'hive' : 'hive_miku';
+      $('schema').value = yzh ? 'kodofs2' : 'miku';
+      state.columns = [];
+      state.columnsTable = '';
+      state.checked.clear();
+      state.excluded.clear();
+      renderColumns();
+      renderExcludeColumns();
+      await loadCatalogs();
+      await loadSchemas($('catalog').value.trim());
+      $('btnLoadTables').click();
+    });
+
+    // 修改库名 -> 重新拉 schema 列表，并重新加载该库下的表
+    $('catalog').addEventListener('change', async () => {
+      await loadSchemas($('catalog').value.trim());
       buildSQL();
+      $('btnLoadTables').click();
+    });
+    // 切换 schema 同样需要重新加载表（不同 schema 的表完全不同）
+    $('schema').addEventListener('change', () => {
+      buildSQL();
+      $('btnLoadTables').click();
+    });
+    $('table').addEventListener('change', async () => {
       // 选择表后自动查询字段(等价于点击「See table schema」)
       const catalog = $('catalog').value.trim() || 'hive_miku';
       const schema = $('schema').value.trim() || 'miku';
       const table = $('table').value;
+      // 先按表名切筛选条件面板与默认排序，避免用旧字段（如 ts）生成无效 SQL
+      applyFilterLayout(table);
+      buildSQL();
       if (!table) return;
       setStatus('查询字段中...');
       try {
@@ -1080,6 +1821,64 @@
     $('btnRebuild2').addEventListener('click', buildSQL);
     $('btnRun').addEventListener('click', runQuery);
     $('btnStop').addEventListener('click', stopQuery);
+    $('btnClearResultFilter').addEventListener('click', () => {
+      state.colFilters = {};
+      state.sortCol = '';
+      state.sortDir = '';
+      closeFilterPop();
+      state.page = 0;
+      renderResult();
+    });
+
+    /* 列筛选下拉面板 */
+    $('colPopClose').addEventListener('click', closeFilterPop);
+    $('colPopReset').addEventListener('click', () => {
+      applyFilterPop(true);
+      closeFilterPop();
+    });
+    $('colPopSearch').addEventListener('input', (e) => {
+      state.popSearch = e.target.value;
+      renderFilterPop();
+    });
+    $('colPopSearch').addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Escape') closeFilterPop();
+    });
+    $('colPopAll').addEventListener('click', () => {
+      // 仅全选当前搜索结果，便于先搜索再全选
+      const kw = state.popSearch.trim().toLowerCase();
+      columnValues(state.popCol).forEach((x) => {
+        if (!kw || x.v.toLowerCase().includes(kw)) state.popSel.add(x.v);
+      });
+      renderFilterPop();
+      applyFilterPop(false);
+    });
+    $('colPopNone').addEventListener('click', () => {
+      const kw = state.popSearch.trim().toLowerCase();
+      columnValues(state.popCol).forEach((x) => {
+        if (!kw || x.v.toLowerCase().includes(kw)) state.popSel.delete(x.v);
+      });
+      renderFilterPop();
+      applyFilterPop(false);
+    });
+    // 点击面板外部关闭
+    document.addEventListener('mousedown', (e) => {
+      const pop = $('colPop');
+      if (!pop.classList.contains('show')) return;
+      if (pop.contains(e.target)) return;
+      // 点击表头筛选按钮本身交给按钮处理，避免先关后开
+      if (e.target.closest && e.target.closest('.th-filter')) return;
+      closeFilterPop();
+    });
+    window.addEventListener('resize', () => {
+      // 移动端底部弹层不依赖锚点定位，且软键盘弹出会触发 resize，不能因此关闭面板
+      if (IS_MOBILE) return;
+      if ($('colPop').classList.contains('show')) closeFilterPop();
+    });
+    // 结果区滚动时锚点位置变化，直接关闭面板避免错位
+    $('resultWrap').addEventListener('scroll', () => {
+      if ($('colPop').classList.contains('show')) closeFilterPop();
+    }, { passive: true });
 
     $('btnCloseModal').addEventListener('click', () => {
       $('detailModal').classList.remove('show');
@@ -1103,6 +1902,49 @@
   }
 
   /* ---------------- 初始化 ---------------- */
+  /* 字段 / 排除字段分区：可折叠，默认收起 */
+  function setupCollapsibles() {
+    document.querySelectorAll('.section-title.collapsible').forEach((title) => {
+      const body = document.getElementById(title.dataset.target);
+      if (!body) return;
+      const caret = title.querySelector('.caret');
+      const setCollapsed = (collapsed) => {
+        body.classList.toggle('collapsed', collapsed);
+        if (caret) caret.textContent = collapsed ? '▶' : '▼';
+      };
+      title.addEventListener('click', () => setCollapsed(!body.classList.contains('collapsed')));
+      setCollapsed(true);
+    });
+  }
+
+  /* 移动端：把侧栏内容收进可折叠容器，默认收起，让 SQL 与结果优先可见 */
+  function setupMobileSide() {
+    if (!IS_MOBILE) return;
+    const side = document.querySelector('.side');
+    if (!side) return;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'side-toggle';
+    const label = document.createElement('span');
+    const arrow = document.createElement('span');
+    toggle.appendChild(label);
+    toggle.appendChild(arrow);
+
+    const body = document.createElement('div');
+    body.className = 'side-body';
+    while (side.firstChild) body.appendChild(side.firstChild);
+    side.appendChild(toggle);
+    side.appendChild(body);
+
+    const setExpanded = (expanded) => {
+      side.classList.toggle('expanded', expanded);
+      label.textContent = expanded ? '收起筛选条件' : '筛选条件 / 字段（点击展开）';
+      arrow.textContent = expanded ? '▲' : '▼';
+    };
+    toggle.addEventListener('click', () => setExpanded(!side.classList.contains('expanded')));
+    setExpanded(false);
+  }
+
   function todayDayStr() {
     // day 字段按北京时间分天，格式 YYYYMMDD
     try {
@@ -1116,12 +1958,15 @@
   }
 
   async function init() {
-    if (!$('fDay').value.trim()) $('fDay').value = todayDayStr();
+    setupCollapsibles();
+    setupMobileSide();
     bindInputs();
     syncRangeInputs();
     buildSQL();
     await loadCatalogs();
     loadSchemas($('catalog').value.trim() || 'hive_miku');
+    // 页面加载后自动触发一次「加载表」，并自动选中默认表、拉取字段
+    $('btnLoadTables').click();
   }
 
   init();

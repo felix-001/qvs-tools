@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +25,29 @@ const (
 	defaultSQLPort    = 8081
 	sqlQueryTimeout   = 3 * time.Minute
 )
+
+// trinoHost 返回集群对应的 trino 网关；YZH 集群有 kodofs2(ods_app_miku_streamd) 表
+type trinoCluster struct {
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Catalog string `json:"catalog"`
+	Schema  string `json:"schema"`
+}
+
+var trinoClusters = []trinoCluster{
+	{Name: "jf", Host: util.TrinoHost, Catalog: defaultSQLCatalog, Schema: defaultSQLSchema},
+	{Name: "yzh", Host: util.TrinoHostYZH, Catalog: "hive", Schema: "kodofs2"},
+}
+
+// resolveCluster 按名称找到集群配置，未知名称回落到 jf
+func resolveCluster(name string) trinoCluster {
+	for _, c := range trinoClusters {
+		if strings.EqualFold(c.Name, name) {
+			return c
+		}
+	}
+	return trinoClusters[0]
+}
 
 // SQLServer SQL 查询页面 (前端构造 SQL，后端执行 trino 查询)
 type SQLServer struct {
@@ -107,63 +131,72 @@ func (s *SQLServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 
 // catalogsHandler 返回 trino 中所有 catalog(database)
 func (s *SQLServer) catalogsHandler(w http.ResponseWriter, r *http.Request) {
-	rs, err := util.TrinoQueryRows("", "", "SHOW CATALOGS")
+	cl := resolveCluster(queryParam(r, "cluster", ""))
+	rs, err := util.TrinoQueryRowsHostCtx(r.Context(), cl.Host, "", "", "SHOW CATALOGS")
 	if err != nil {
 		writeJSONError(w, err)
 		return
 	}
 	names := rs.FirstColumn()
 	if len(names) == 0 {
-		names = []string{defaultSQLCatalog}
+		names = []string{cl.Catalog}
 	}
 	writeJSON(w, map[string]any{
 		"catalogs": names,
-		"default":  defaultSQLCatalog,
+		"default":  cl.Catalog,
+		"clusters": trinoClusters,
+		"cluster":  cl.Name,
 	})
 }
 
 // schemasHandler 返回指定 catalog 下的 schema
 func (s *SQLServer) schemasHandler(w http.ResponseWriter, r *http.Request) {
-	catalog := queryParam(r, "catalog", defaultSQLCatalog)
+	cl := resolveCluster(queryParam(r, "cluster", ""))
+	catalog := queryParam(r, "catalog", cl.Catalog)
 	sql := fmt.Sprintf("SHOW SCHEMAS FROM %s", quoteIdent(catalog))
-	rs, err := util.TrinoQueryRows("", "", sql)
+	rs, err := util.TrinoQueryRowsHostCtx(r.Context(), cl.Host, "", "", sql)
 	if err != nil {
 		writeJSONError(w, err)
 		return
 	}
 	writeJSON(w, map[string]any{
 		"schemas": rs.FirstColumn(),
-		"default": defaultSQLSchema,
+		"default": cl.Schema,
 	})
 }
 
 // tablesHandler 列出 schema 下的所有表
+// 用 SHOW TABLES 而不是 information_schema：YZH 集群的网关会拦截不含 day/ts
+// 分区字段的 information_schema 查询（报「Query killed」），SHOW 语句不受限。
 func (s *SQLServer) tablesHandler(w http.ResponseWriter, r *http.Request) {
-	catalog := queryParam(r, "catalog", defaultSQLCatalog)
-	schema := queryParam(r, "schema", defaultSQLSchema)
-	sql := fmt.Sprintf(`SELECT table_name FROM %s.information_schema.tables
-WHERE table_schema = '%s' ORDER BY table_name`, quoteIdent(catalog), escSQL(schema))
-	rs, err := util.TrinoQueryRows("", "", sql)
+	cl := resolveCluster(queryParam(r, "cluster", ""))
+	catalog := queryParam(r, "catalog", cl.Catalog)
+	schema := queryParam(r, "schema", cl.Schema)
+	sql := fmt.Sprintf("SHOW TABLES FROM %s.%s", quoteIdent(catalog), quoteIdent(schema))
+	rs, err := util.TrinoQueryRowsHostCtx(r.Context(), cl.Host, "", "", sql)
 	if err != nil {
 		writeJSONError(w, err)
 		return
 	}
-	writeJSON(w, map[string]any{"tables": rs.FirstColumn()})
+	tables := rs.FirstColumn()
+	sort.Strings(tables)
+	writeJSON(w, map[string]any{"tables": tables})
 }
 
 // columnsHandler 返回表的全部字段名(供前端复选框展示)
+// 同样使用 SHOW COLUMNS，兼容 YZH 网关的分区字段拦截。
 func (s *SQLServer) columnsHandler(w http.ResponseWriter, r *http.Request) {
-	catalog := queryParam(r, "catalog", defaultSQLCatalog)
-	schema := queryParam(r, "schema", defaultSQLSchema)
+	cl := resolveCluster(queryParam(r, "cluster", ""))
+	catalog := queryParam(r, "catalog", cl.Catalog)
+	schema := queryParam(r, "schema", cl.Schema)
 	table := queryParam(r, "table", "")
 	if table == "" {
 		writeJSON(w, map[string]any{"columns": []any{}})
 		return
 	}
-	sql := fmt.Sprintf(`SELECT column_name, data_type FROM %s.information_schema.columns
-WHERE table_schema = '%s' AND table_name = '%s' ORDER BY ordinal_position`,
-		quoteIdent(catalog), escSQL(schema), escSQL(table))
-	rs, err := util.TrinoQueryRowsCtx(r.Context(), "", "", sql)
+	sql := fmt.Sprintf("SHOW COLUMNS FROM %s.%s.%s",
+		quoteIdent(catalog), quoteIdent(schema), quoteIdent(table))
+	rs, err := util.TrinoQueryRowsHostCtx(r.Context(), cl.Host, "", "", sql)
 	if err != nil {
 		writeJSONError(w, err)
 		return
@@ -182,6 +215,7 @@ WHERE table_schema = '%s' AND table_name = '%s' ORDER BY ordinal_position`,
 }
 
 type sqlQueryRequest struct {
+	Cluster   string `json:"cluster"`
 	Catalog   string `json:"catalog"`
 	Schema    string `json:"schema"`
 	SQL       string `json:"sql"`
@@ -210,6 +244,7 @@ func (s *SQLServer) queryHandler(w http.ResponseWriter, r *http.Request) {
 	if req.RequestID == "" {
 		req.RequestID = fmt.Sprintf("q_%d", time.Now().UnixNano())
 	}
+	cl := resolveCluster(req.Cluster)
 
 	ctx, cancel := context.WithTimeout(r.Context(), sqlQueryTimeout)
 	s.register(req.RequestID, cancel)
@@ -219,7 +254,7 @@ func (s *SQLServer) queryHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	start := time.Now()
-	rs, err := util.TrinoQueryRowsCtx(ctx, req.Catalog, req.Schema, req.SQL)
+	rs, err := util.TrinoQueryRowsHostCtx(ctx, cl.Host, req.Catalog, req.Schema, req.SQL)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
 		if ctx.Err() == context.Canceled || util.IsQueryCancelled(err) {
@@ -296,11 +331,6 @@ func queryParam(r *http.Request, key, def string) string {
 // quoteIdent 双引号包裹标识符，避免特殊字符或关键字冲突
 func quoteIdent(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
-}
-
-// escSQL 转义字符串字面量中的单引号
-func escSQL(s string) string {
-	return strings.ReplaceAll(s, "'", "''")
 }
 
 // SQL 启动 SQL 查询页面

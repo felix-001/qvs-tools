@@ -679,6 +679,10 @@ func (m *CommandManager) CmdSql() *Command {
 			"    request(包含)、localip(包含)、remoteip(包含)、\n" +
 			"    httpresponsecode(=或!=)、status(=或!=)、order by、limit\n" +
 			"  - 「回源请求」复选框：勾选后追加 customersource = true\n" +
+			"  - 「附加列 remote-isp / remote-region」复选框(默认勾选)：追加\n" +
+			"    ipresolve(remoteaddr 的 IP 部分, 'isp'/'region') AS \"remote-isp\"/\"remote-region\"，\n" +
+			"    IP 部分用 REGEXP_EXTRACT 提取(兼容 1.2.3.4:port 与 [ipv6]:port；\n" +
+			"    split_part 对 IPv6 会被首个 ':' 截断)；两列默认固定在结果表左侧优先展示\n" +
 			"  - 「转换时间」复选框(默认选中)：SELECT 首列追加\n" +
 			"    from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time\n" +
 			"  - 「排除字段」区域：勾选的字段不在结果中输出(含行详情弹窗)，默认排除\n" +

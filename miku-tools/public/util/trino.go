@@ -234,6 +234,9 @@ type HyLagRateByStreamsReport struct {
 // TrinoHost 是 trino 网关地址（不含 scheme）
 const TrinoHost = "trino.jf-logverse.k8s.qiniu.io"
 
+// TrinoHostYZH 是 YZH 集群的 trino 网关地址（含 kodofs2 库）
+const TrinoHostYZH = "trino.yzh-logverse.k8s.qiniu.io"
+
 // TrinoResultSet 通用查询结果：列名按 SQL 中的顺序返回，Rows 为对应的值
 // 这样前端可以自己决定列展示顺序（例如把勾选字段放前面）。
 type TrinoResultSet struct {
@@ -241,8 +244,11 @@ type TrinoResultSet struct {
 	Rows    [][]any  `json:"rows"`
 }
 
-func trinoDSN(catalog, schema string) string {
-	dsn := fmt.Sprintf("http://superset@%s", TrinoHost)
+func trinoDSN(host, catalog, schema string) string {
+	if host == "" {
+		host = TrinoHost
+	}
+	dsn := fmt.Sprintf("http://superset@%s", host)
 	var params []string
 	if catalog != "" {
 		params = append(params, "catalog="+catalog)
@@ -263,7 +269,12 @@ func TrinoQueryRows(catalog, schema, sql string) (*TrinoResultSet, error) {
 
 // TrinoQueryRowsCtx 与 TrinoQueryRows 相同，但支持超时/取消
 func TrinoQueryRowsCtx(ctx context.Context, catalog, schema, sql string) (*TrinoResultSet, error) {
-	db, err := sqlx.Open("trino", trinoDSN(catalog, schema))
+	return TrinoQueryRowsHostCtx(ctx, TrinoHost, catalog, schema, sql)
+}
+
+// TrinoQueryRowsHostCtx 指定 trino 网关执行 SQL（用于切换 jf / yzh 集群）
+func TrinoQueryRowsHostCtx(ctx context.Context, host, catalog, schema, sql string) (*TrinoResultSet, error) {
+	db, err := sqlx.Open("trino", trinoDSN(host, catalog, schema))
 	if err != nil {
 		return nil, err
 	}
