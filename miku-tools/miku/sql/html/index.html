@@ -556,7 +556,12 @@
 
   <!-- 右侧：SQL 输入与结果 -->
   <div class="panel main">
-    <div class="section-title">SQL（根据左侧条件自动构建，可手动修改）</div>
+    <div class="section-title" style="display:flex;align-items:center;gap:8px">
+      <span>SQL（根据左侧条件自动构建，可手动修改）</span>
+      <button class="ghost" id="btnCopySQL"
+              style="margin-left:auto;padding:2px 8px;font-size:11px"
+              title="复制 SQL 到剪贴板">复制</button>
+    </div>
     <textarea id="sqlBox" spellcheck="false" placeholder="SELECT * FROM ..."></textarea>
     <div class="toolbar" style="margin-top:8px">
       <button id="btnRun">执行查询</button>
@@ -566,11 +571,17 @@
       <span class="status" id="status"></span>
     </div>
 
-    <div class="section-title" style="display:flex;align-items:center;gap:8px">
+    <div class="section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span>结果</span>
       <span class="status" id="resultHint" style="font-weight:normal"></span>
-      <button class="ghost" id="btnClearResultFilter"
+      <button class="ghost" id="btnCopyResult" disabled
               style="margin-left:auto;padding:2px 8px;font-size:11px"
+              title="复制当前结果到剪贴板（字段以空格分隔）">复制</button>
+      <button class="ghost" id="btnExportCSV" disabled
+              style="padding:2px 8px;font-size:11px"
+              title="把当前结果导出为 CSV 文件">导出 CSV</button>
+      <button class="ghost" id="btnClearResultFilter"
+              style="padding:2px 8px;font-size:11px"
               title="清空所有列筛选与排序">清空筛选/排序</button>
     </div>
     <div class="table-wrap" id="resultWrap">
@@ -1342,6 +1353,140 @@
     return String(v);
   }
 
+  /* ---------------- 复制 / 导出 ---------------- */
+  function setResultActionsEnabled(on) {
+    const c = $('btnCopyResult');
+    const e = $('btnExportCSV');
+    if (c) c.disabled = !on;
+    if (e) e.disabled = !on;
+  }
+
+  /* 当前筛选 + 排序后的全部行（不限于当前页），供复制与导出使用 */
+  function currentResultView() {
+    if (!state.result || !state.result.columns.length) return null;
+    const cols = orderedColumns();
+    const idxMap = cols.map((c) => state.result.columns.indexOf(c));
+    const indices = visibleRowIndices(cols, idxMap);
+    return { cols, idxMap, indices };
+  }
+
+  /* 复制内容：首行字段名，其后每行一条记录，字段之间以空格分隔 */
+  function buildCopyText(view) {
+    const lines = [view.cols.join(' ')];
+    view.indices.forEach((i) => {
+      const row = state.result.rows[i];
+      lines.push(view.idxMap.map((idx) => cellText(row[idx])).join(' '));
+    });
+    return lines.join('\n');
+  }
+
+  /* CSV 字段转义：含逗号/引号/换行的值用双引号包裹，内部双引号双写 */
+  function csvCell(v) {
+    const s = cellText(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function buildCSV(view) {
+    const lines = [view.cols.map(csvCell).join(',')];
+    view.indices.forEach((i) => {
+      const row = state.result.rows[i];
+      lines.push(view.idxMap.map((idx) => csvCell(row[idx])).join(','));
+    });
+    // 前缀 BOM，避免 Excel 打开中文乱码
+    return '\ufeff' + lines.join('\r\n');
+  }
+
+  /* 写入剪贴板：优先 Clipboard API，非安全上下文回退 execCommand */
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) { /* 回退到 execCommand */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /* 按钮文案短暂变“已复制”，给用户反馈 */
+  function flashButton(btn, text) {
+    if (!btn) return;
+    if (btn.dataset.flashing === '1') return;
+    btn.dataset.flashing = '1';
+    const old = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => {
+      btn.textContent = old;
+      btn.dataset.flashing = '';
+    }, 1200);
+  }
+
+  async function copySQL() {
+    const sql = $('sqlBox').value || '';
+    if (!sql.trim()) {
+      setStatus('SQL 为空，无可复制内容', 'err');
+      return;
+    }
+    const ok = await copyText(sql);
+    if (ok) {
+      flashButton($('btnCopySQL'), '已复制');
+      setStatus('SQL 已复制到剪贴板', 'ok');
+    } else {
+      setStatus('复制失败：浏览器拒绝了剪贴板写入', 'err');
+    }
+  }
+
+  async function copyResult() {
+    const view = currentResultView();
+    if (!view || !view.indices.length) {
+      setStatus('无可复制的结果', 'err');
+      return;
+    }
+    const ok = await copyText(buildCopyText(view));
+    if (ok) {
+      flashButton($('btnCopyResult'), '已复制');
+      setStatus('已复制 ' + view.indices.length + ' 行结果', 'ok');
+    } else {
+      setStatus('复制失败：浏览器拒绝了剪贴板写入', 'err');
+    }
+  }
+
+  function exportCSV() {
+    const view = currentResultView();
+    if (!view || !view.indices.length) {
+      setStatus('无可导出的结果', 'err');
+      return;
+    }
+    const blob = new Blob([buildCSV(view)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const stamp = '' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
+      + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'miku-sql-' + stamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setStatus('已导出 ' + view.indices.length + ' 行 CSV', 'ok');
+  }
+
   /* 排序比较：数字优先按数值，其余按字符串本地化比较 */
   function compareCell(a, b) {
     const an = typeof a === 'number' ? a : (a === null || a === undefined || a === '' ? NaN : Number(a));
@@ -1513,8 +1658,10 @@
     if (!state.result || !state.result.columns.length) {
       wrap.innerHTML = '<div class="cols-empty" style="padding:16px">暂无数据</div>';
       $('resultHint').textContent = '';
+      setResultActionsEnabled(false);
       return;
     }
+    setResultActionsEnabled(true);
 
     const cols = orderedColumns();
     const idxMap = cols.map((c) => state.result.columns.indexOf(c));
@@ -1821,6 +1968,9 @@
     $('btnRebuild2').addEventListener('click', buildSQL);
     $('btnRun').addEventListener('click', runQuery);
     $('btnStop').addEventListener('click', stopQuery);
+    $('btnCopySQL').addEventListener('click', copySQL);
+    $('btnCopyResult').addEventListener('click', copyResult);
+    $('btnExportCSV').addEventListener('click', exportCSV);
     $('btnClearResultFilter').addEventListener('click', () => {
       state.colFilters = {};
       state.sortCol = '';
