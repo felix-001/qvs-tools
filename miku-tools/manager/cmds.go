@@ -469,6 +469,28 @@ func (m *CommandManager) CmdDnslog() *Command {
 	return cmd
 }
 
+func (m *CommandManager) CmdDnscover() *Command {
+	handler := func() {
+		m.miku.DnsCover()
+	}
+	cmd := &Command{
+		Desc: "统计 DNS 探测结果的大区ISP覆盖率，检查解析结果与探测点是否落在同一大区+ISP\n" +
+			"  -f <csv_file>   探测结果 CSV(必填)\n" +
+			"\n" +
+			"CSV 列格式(带表头，分隔符逗号):\n" +
+			"  探测点,探测源IP,DNS服务器,解析时间,解析结果,预期解析结果\n" +
+			"  - 探测点如「贵州贵阳移动」，从中提取省份与 ISP，省份映射为「西南」，即探测大区ISP = 西南移动\n" +
+			"  - 解析结果为多行文本，取第一个合法 IP，用 ipdb 解析其省份/ISP/大区\n" +
+			"  - 两者大区+ISP 不一致时列为异常；最后输出各大区ISP 覆盖率与总覆盖率\n" +
+			"\n" +
+			"example:\n" +
+			"  miku -cmd dnscover -f /tmp/probe.csv",
+		Handler:      handler,
+		NeedIpParser: true,
+	}
+	return cmd
+}
+
 func (m *CommandManager) CmdTy() *Command {
 	handler := func() {
 		m.miku.TingYunErrNodes()
