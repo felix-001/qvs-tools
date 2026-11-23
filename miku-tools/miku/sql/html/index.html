@@ -12,6 +12,17 @@
       || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
     if (isMobile) document.documentElement.classList.add('mobile');
   })();
+  /*
+   * 多标签模式：顶层页面只渲染标签栏，每个标签内用 iframe 承载一份完整查询页面。
+   * iframe 内（self !== top，或带 embed=1）保持原样，渲染完整查询界面。
+   * 提前打标记，避免顶层页面先闪一下查询界面。
+   */
+  (function () {
+    var embedded = false;
+    try { embedded = (window.self !== window.top); } catch (e) { embedded = true; }
+    if (embedded || /[?&]embed=1(?:[&#]|$)/.test(location.search)) return;
+    document.documentElement.classList.add('tab-root');
+  })();
 </script>
 <style>
   * { box-sizing: border-box; }
@@ -264,9 +275,81 @@
   }
   html.mobile .side-body { display: none; }
   html.mobile .side.expanded .side-body { display: block; }
+
+  /* ================= 多标签模式（仅顶层页面生效） ================= */
+  /* 标签栏容器默认隐藏，只有顶层页面（html.tab-root）展示 */
+  #tabShell { display: none; }
+  html.tab-root #tabShell {
+    display: flex; flex-direction: column; flex: 1; min-height: 0;
+  }
+  html.tab-root body {
+    height: 100vh; padding: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  /* 顶层页面不渲染查询界面本体，只保留标签栏 */
+  html.tab-root > body > h1,
+  html.tab-root > body > .layout,
+  html.tab-root > body > .modal,
+  html.tab-root > body > .col-pop { display: none !important; }
+
+  .tabbar {
+    display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+    padding: 8px 10px; background: #fff; border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  }
+  .tab-list {
+    display: flex; align-items: center; gap: 6px;
+    flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+  .tab {
+    display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    padding: 6px 10px; border: 1px solid #dbe3ee; border-radius: 6px;
+    background: #f7f9fc; color: #555; font-size: 13px;
+    cursor: pointer; user-select: none; white-space: nowrap;
+    transition: background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  .tab:hover { background: #eef6ff; border-color: #b6d4fe; }
+  .tab.active { background: #007bff; border-color: #007bff; color: #fff; }
+  .tab .tab-title {
+    max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tab .tab-close {
+    border: none; background: none; color: inherit; opacity: .55;
+    font-size: 15px; line-height: 1; padding: 0 2px; cursor: pointer;
+    border-radius: 3px;
+  }
+  .tab .tab-close:hover { opacity: 1; background: rgba(0,0,0,.08); }
+  .tab.active .tab-close:hover { background: rgba(255,255,255,.25); }
+  .tab-new {
+    flex: 0 0 auto; padding: 6px 12px; font-size: 13px;
+  }
+  .frames { flex: 1; min-height: 0; position: relative; }
+  .tab-frame { position: absolute; inset: 0; display: none; }
+  .tab-frame.active { display: block; }
+  .tab-frame > iframe {
+    display: block; width: 100%; height: 100%; border: 0;
+    background: #f5f6f8;
+  }
+  /* 移动端：标签栏更紧凑，标题宽度收窄 */
+  html.mobile.tab-root body { padding: 0; }
+  html.mobile .tabbar { padding: 6px 8px; gap: 6px; }
+  html.mobile .tab { padding: 8px 10px; font-size: 14px; }
+  html.mobile .tab .tab-title { max-width: 120px; }
+  html.mobile .tab-new { padding: 8px 12px; font-size: 14px; }
 </style>
 </head>
 <body>
+<!-- 多标签模式容器（仅顶层页面展示，标签内 iframe 承载完整查询页面） -->
+<div id="tabShell">
+  <div class="tabbar">
+    <div class="tab-list" id="tabList"></div>
+    <button class="ghost tab-new" id="btnNewTab" type="button"
+            title="新建一个查询标签（每个标签是一份独立的查询页面）">＋ 新建查询</button>
+  </div>
+  <div class="frames" id="tabFrames"></div>
+</div>
+
 <h1>MIKU <span>SQL</span> 查询</h1>
 
 <div class="layout">
@@ -376,8 +459,17 @@
     </div>
     <div class="row">
       <div>
-        <label class="fl">nodeid</label>
-        <input type="text" id="fNodeId" placeholder="节点 id（精确匹配）">
+        <label class="fl">nodeid（多值用逗号分隔）</label>
+        <input type="text" id="fNodeId" placeholder="如 node1 或 node1,node2">
+      </div>
+      <div style="flex:0 0 74px">
+        <label class="fl">比较</label>
+        <select id="fNodeIdOp">
+          <option value="=">=</option>
+          <option value="!=">!=</option>
+          <option value="in">in</option>
+          <option value="not in">not in</option>
+        </select>
       </div>
     </div>
     <div class="row">
@@ -478,14 +570,16 @@
     </div>
     <div class="row">
       <div>
-        <label class="fl">status</label>
-        <input type="text" id="fStatus" placeholder="如 success">
+        <label class="fl">status（多值用逗号分隔）</label>
+        <input type="text" id="fStatus" placeholder="如 success 或 success,failed">
       </div>
       <div style="flex:0 0 74px">
         <label class="fl">比较</label>
         <select id="fStatusOp">
           <option value="=">=</option>
           <option value="!=">!=</option>
+          <option value="in">in</option>
+          <option value="not in">not in</option>
         </select>
       </div>
     </div>
@@ -621,6 +715,15 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const IS_MOBILE = document.documentElement.classList.contains('mobile');
+
+  /*
+   * 顶层页面：只渲染标签栏，每个标签用 iframe 承载一份完整的查询页面。
+   * 标签内的 iframe 走正常初始化流程（下面所有查询界面逻辑原样保留）。
+   */
+  if (document.documentElement.classList.contains('tab-root')) {
+    setupTabShell();
+    return;
+  }
 
   const DEFAULT_EXCLUDED = ['version', 'hitinfo', 'httpreferer', 'httplocation', 'latency'];
 
@@ -1155,7 +1258,19 @@
     const app = $('fApp').value.trim();
     if (app) conds.push('appname = ' + sqlStr(app));
     const nodeid = $('fNodeId').value.trim();
-    if (nodeid) conds.push('nodeid = ' + sqlStr(nodeid));
+    if (nodeid) {
+      // 支持多值：逗号/空格分隔；in / not in 生成括号列表
+      const nodeids = nodeid.split(/[\s,]+/).filter(Boolean);
+      const op = $('fNodeIdOp').value;
+      if (nodeids.length) {
+        if (op === 'in' || op === 'not in') {
+          conds.push('nodeid ' + op.toUpperCase() + ' (' + nodeids.map(sqlStr).join(', ') + ')');
+        } else {
+          // = / != 只取第一个值
+          conds.push('nodeid ' + op + ' ' + sqlStr(nodeids[0]));
+        }
+      }
+    }
     const day = $('fDay').value.trim();
     if (day) conds.push('day = ' + sqlStr(day));
     buildRangeCond(conds, 'hour', 'fHour', 'fHourMode', 'fHourEnd');
@@ -1188,7 +1303,19 @@
     const type = $('fType').value;
     if (type) conds.push('type = ' + sqlStr(type));
     const status = $('fStatus').value.trim();
-    if (status) conds.push('status ' + $('fStatusOp').value + ' ' + sqlStr(status));
+    if (status) {
+      // 支持多值：逗号/空格分隔；in / not in 生成括号列表
+      const statuses = status.split(/[\s,]+/).filter(Boolean);
+      const op = $('fStatusOp').value;
+      if (statuses.length) {
+        if (op === 'in' || op === 'not in') {
+          conds.push('status ' + op.toUpperCase() + ' (' + statuses.map(sqlStr).join(', ') + ')');
+        } else {
+          // = / != 只取第一个值
+          conds.push('status ' + op + ' ' + sqlStr(statuses[0]));
+        }
+      }
+    }
     if ($('fCustomerSource').checked) conds.push('customersource = true');
 
     if (conds.length) {
@@ -1796,7 +1923,7 @@
 
   /* ---------------- 事件绑定 ---------------- */
   function bindInputs() {
-    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
+    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fNodeIdOp', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
       'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
       'fHttpCodeOp', 'fStatus', 'fStatusOp',
       'fOdsBody', 'fOdsDay', 'fOdsMinute', 'fOdsMinuteEnd',
@@ -2105,6 +2232,112 @@
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return '' + d.getFullYear() + mm + dd;
+  }
+
+  /* ---------------- 多标签模式（顶层页面） ---------------- */
+  /*
+   * 顶层页面只负责标签栏与 iframe 容器；每个标签内嵌一个完整的查询页面，
+   * 各自独立维护 SQL、筛选条件与结果。切换标签只切显示，不销毁 iframe，
+   * 因此未激活标签里的查询状态与正在执行的请求都会保留。
+   */
+  function setupTabShell() {
+    const listEl = $('tabList');
+    const framesEl = $('tabFrames');
+    const btnNew = $('btnNewTab');
+    if (!listEl || !framesEl) return;
+
+    const tabs = [];   // [{id, title}]，顺序与标签栏一致
+    let activeId = '';
+
+    function frameEl(id) {
+      return framesEl.querySelector('.tab-frame[data-tab-id="' + id + '"]');
+    }
+
+    function renderTabs() {
+      listEl.innerHTML = '';
+      tabs.forEach((t) => {
+        const el = document.createElement('div');
+        el.className = 'tab' + (t.id === activeId ? ' active' : '');
+        el.title = t.title;
+        el.addEventListener('click', () => activate(t.id));
+
+        const title = document.createElement('span');
+        title.className = 'tab-title';
+        title.textContent = t.title;
+        el.appendChild(title);
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'tab-close';
+        close.title = '关闭该标签';
+        close.textContent = '×';
+        close.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeTab(t.id);
+        });
+        el.appendChild(close);
+
+        listEl.appendChild(el);
+      });
+    }
+
+    function activate(id) {
+      if (!frameEl(id)) return;
+      activeId = id;
+      Array.from(framesEl.children).forEach((f) => {
+        f.classList.toggle('active', f.dataset.tabId === id);
+      });
+      renderTabs();
+    }
+
+    function newTab() {
+      // 取当前未被占用的最小编号，关掉再新建时标题不跳号
+      const used = new Set(tabs.map((t) => t.title));
+      let n = 1;
+      while (used.has('查询 ' + n)) n += 1;
+      const id = 't' + Date.now() + '_' + n + '_' + Math.random().toString(36).slice(2, 6);
+      const tab = { id, title: '查询 ' + n };
+
+      const frame = document.createElement('div');
+      frame.className = 'tab-frame';
+      frame.dataset.tabId = id;
+      const iframe = document.createElement('iframe');
+      // embed=1 让内嵌页面跳过标签栏，渲染完整查询界面
+      iframe.src = '?embed=1&tab=' + encodeURIComponent(id);
+      iframe.title = tab.title;
+      frame.appendChild(iframe);
+      framesEl.appendChild(frame);
+
+      tabs.push(tab);
+      activate(id);
+      return tab;
+    }
+
+    function closeTab(id) {
+      const idx = tabs.findIndex((t) => t.id === id);
+      if (idx < 0) return;
+      const frame = frameEl(id);
+      if (frame) {
+        // 先清空 src 再移除，避免 iframe 内的挂在请求继续占用资源
+        const iframe = frame.querySelector('iframe');
+        if (iframe) { try { iframe.src = 'about:blank'; } catch (e) { /* ignore */ } }
+        frame.remove();
+      }
+      tabs.splice(idx, 1);
+      if (!tabs.length) {
+        newTab();          // 关掉最后一个标签时自动补一个，页面不留空白
+        return;
+      }
+      if (activeId === id) {
+        const next = tabs[Math.min(idx, tabs.length - 1)];
+        activate(next.id);
+      } else {
+        renderTabs();
+      }
+    }
+
+    btnNew.addEventListener('click', newTab);
+    newTab();
   }
 
   async function init() {
