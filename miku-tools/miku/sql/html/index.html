@@ -195,6 +195,9 @@
     cursor: pointer; color: #999; padding: 0 4px;
   }
   .modal-close:hover { color: #333; }
+  /* 行详情弹窗头部右侧操作区（如「排查回源」） */
+  .modal-actions { display: flex; align-items: center; gap: 8px; }
+  .modal-actions .ghost { padding: 3px 10px; font-size: 12px; }
   .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .detail-table th, .detail-table td {
     border: 1px solid #eee; padding: 6px 10px; vertical-align: top; text-align: left;
@@ -431,7 +434,10 @@
     <div class="cols" id="excBox"><div class="cols-empty">请先选择表并点击「See table schema」</div></div>
     </div>
 
-    <div class="section-title">筛选条件</div>
+    <div class="section-title collapsible" data-target="filterBody" data-collapsed="false">
+      <span class="caret">▶</span><span>筛选条件</span>
+    </div>
+    <div class="section-body" id="filterBody">
 
     <!-- 宽表（默认表 dwd_flowd_miku_streamd_log 等）的筛选条件 -->
     <div id="filterFlowd">
@@ -623,10 +629,64 @@
         </div>
       </div>
     </div><!-- /#filterOds -->
+    </div><!-- /#filterBody -->
+
+    <!-- 聚合统计（GROUP BY）：按分组字段聚合，可计数任意字段并计算占比 -->
+    <div id="aggPanel">
+      <div class="section-title collapsible" data-target="aggCollapse">
+        <span class="caret">▶</span><span>聚合统计（GROUP BY）</span>
+      </div>
+      <div class="section-body collapsed" id="aggCollapse">
+      <div class="row">
+        <div class="chk"><input type="checkbox" id="fAggOn"><label for="fAggOn" title="勾选后生成 WITH data AS (...) SELECT 分组字段, 聚合函数 FROM data GROUP BY ...">启用聚合（分组 + 计数）</label></div>
+      </div>
+      <div id="aggBody" style="display:none">
+        <div class="row">
+          <div>
+            <label class="fl">分组字段（多值用逗号分隔，支持 expr AS 别名）</label>
+            <input type="text" id="fAggGroup" list="aggGroupList" placeholder="如 remote-region,type">
+            <datalist id="aggGroupList"></datalist>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="fl">聚合函数</label>
+            <select id="fAggFunc">
+              <option value="count_star" selected>COUNT(*)</option>
+              <option value="count">COUNT(字段)</option>
+              <option value="count_distinct">COUNT(DISTINCT 字段)</option>
+              <option value="sum">SUM(字段)</option>
+              <option value="avg">AVG(字段)</option>
+              <option value="min">MIN(字段)</option>
+              <option value="max">MAX(字段)</option>
+            </select>
+          </div>
+          <div>
+            <label class="fl">字段</label>
+            <input type="text" id="fAggField" list="aggColList" placeholder="计数/汇总字段" disabled>
+            <datalist id="aggColList"></datalist>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="fl">聚合别名（空则自动）</label>
+            <input type="text" id="fAggAlias" placeholder="如 sample_count">
+          </div>
+        </div>
+        <div class="row">
+          <div class="chk"><input type="checkbox" id="fAggPercent" checked><label for="fAggPercent" title="ROUND(聚合值 * 100.0 / NULLIF(SUM(聚合值) OVER (), 0), 2) AS percentage">计算百分比（占比，保留 2 位小数）</label></div>
+        </div>
+        <div class="row">
+          <div class="status" id="aggHint"></div>
+        </div>
+      </div>
+      </div><!-- /#aggCollapse -->
+    </div><!-- /#aggPanel -->
+
     <div class="row">
       <div>
         <label class="fl">排序字段 (order by)</label>
-        <input type="text" id="fOrderBy" value="ts" placeholder="如 ts">
+        <input type="text" id="fOrderBy" value="ts" placeholder="如 ts；聚合模式留空=按聚合列降序">
       </div>
       <div style="flex:0 0 90px">
         <label class="fl">排序方向</label>
@@ -690,8 +750,13 @@
   <div class="modal-box">
     <div class="modal-head">
       <b>行详情</b>
-      <button class="modal-close" id="btnCloseModal">&times;</button>
+      <div class="modal-actions">
+        <button class="ghost" id="btnOriginTrace" type="button"
+                title="用当前行的 upstreamrequestid 在新标签中排查回源">排查回源</button>
+        <button class="modal-close" id="btnCloseModal">&times;</button>
+      </div>
     </div>
+    <div class="status" id="detailHint" style="margin-bottom:8px"></div>
     <div id="detailBody"></div>
   </div>
 </div>
@@ -750,6 +815,7 @@
     requestId: '',      // 当前查询 id，用于服务端强制取消
     stopping: false,    // 是否为用户主动停止
     cancelOk: false,    // 后端是否确认取消
+    detailKV: null,     // 行详情弹窗当前行的 {列名: 值}，供「排查回源」使用
   };
 
   /* ---------------- 基础请求 ---------------- */
@@ -835,15 +901,16 @@
   // 窄表的筛选条件与默认排序与宽表完全不同，按表名匹配
   const NARROW_TABLE_RE = /^ods_app_miku_streamd/i;
   // 默认优先展示在结果表左侧的字段（按此处顺序排列）
-  const DEFAULT_PINNED = ['requestid', 'httpresponsecode', 'status'];
+  const DEFAULT_PINNED = ['requestid', 'protocol', 'httpresponsecode', 'status', 'sendbytes'];
   // 附加计算列（remote-isp / remote-region）不存在于表字段中，单独标记为优先列
   const PINNED_EXTRA = ['remote-isp', 'remote-region'];
   // 结果表左侧固定顺序：优先字段 + 附加计算列
   const PINNED_ORDER = DEFAULT_PINNED.concat(PINNED_EXTRA);
 
-  // 附加计算列是否固定展示在左侧
+  // 附加计算列是否固定展示在左侧（含聚合模式输出的 remote_isp / remote_region 别名）
   function isPinnedExtra(name) {
-    return PINNED_EXTRA.indexOf((name || '').toLowerCase()) >= 0;
+    const s = (name || '').toLowerCase();
+    return PINNED_EXTRA.indexOf(s) >= 0 || s === 'remote_isp' || s === 'remote_region';
   }
 
   async function loadTables(catalog, schema) {
@@ -874,6 +941,28 @@
     return sel.value;
   }
 
+  // 加载表列表 + 默认表的字段（按钮点击与初始化共用，便于 await 后再自动执行）
+  async function loadTablesFlow() {
+    const catalog = $('catalog').value.trim() || 'hive_miku';
+    const schema = $('schema').value.trim() || 'miku';
+    setStatus('加载表列表中...');
+    try {
+      const selected = await loadTables(catalog, schema);
+      setStatus('已加载 ' + $('table').options.length + ' 张表', 'ok');
+      // 默认表自动加载字段（等价于点击「See table schema」）
+      if (selected) {
+        await loadColumns(catalog, schema, selected);
+        setStatus('已加载 ' + $('table').options.length + ' 张表，默认选中 '
+          + selected + '（' + state.columns.length + ' 个字段）', 'ok');
+      }
+      buildSQL();
+      return selected;
+    } catch (e) {
+      setStatus('加载表失败: ' + e.message, 'err');
+      return '';
+    }
+  }
+
   /* ---------------- 表形态：宽表 / 窄表 ---------------- */
   // 表名匹配，或字段特征（有 event_time+body 且没有 ts）
   function isNarrowTableName(table) {
@@ -901,6 +990,12 @@
     state.narrowTable = table;
     $('filterFlowd').style.display = narrow ? 'none' : '';
     $('filterOds').style.display = narrow ? '' : 'none';
+    // 聚合统计只对宽表生效（窄表是原始日志体，不做分组统计）
+    if ($('aggPanel')) $('aggPanel').style.display = narrow ? 'none' : '';
+    if (narrow) {
+      $('fAggOn').checked = false;
+      syncAggInputs();
+    }
 
     const names = currentColumnNames(table);
     const orderByNow = $('fOrderBy').value.trim().toLowerCase();
@@ -963,6 +1058,7 @@
     $('fRemoteRegion').disabled = !hasRemoteAddr;
     // 按表名/字段切换筛选条件面板与默认排序
     applyFilterLayout(table);
+    syncAggInputs();
     renderColumns();
     renderExcludeColumns();
     buildSQL();
@@ -1168,6 +1264,17 @@
     return raw;
   }
 
+  // 窄表 WHERE 条件（body 包含 + day + minute 范围）
+  function buildNarrowConds() {
+    const conds = [];
+    const body = $('fOdsBody').value.trim();
+    if (body) conds.push('body LIKE ' + sqlStr('%' + body + '%'));
+    const day = odsDayValue();
+    if (day) conds.push('day = ' + sqlStr(day));
+    buildRangeCond(conds, 'minute', 'fOdsMinute', 'fOdsMinuteMode', 'fOdsMinuteEnd');
+    return conds;
+  }
+
   function buildNarrowSQL(catalog, schema, table) {
     let selectList = '*';
     if (state.columns.length) {
@@ -1187,12 +1294,7 @@
     parts.push(ident(table));
     lines.push('FROM ' + parts.join('.'));
 
-    const conds = [];
-    const body = $('fOdsBody').value.trim();
-    if (body) conds.push('body LIKE ' + sqlStr('%' + body + '%'));
-    const day = odsDayValue();
-    if (day) conds.push('day = ' + sqlStr(day));
-    buildRangeCond(conds, 'minute', 'fOdsMinute', 'fOdsMinuteMode', 'fOdsMinuteEnd');
+    const conds = buildNarrowConds();
 
     if (conds.length) {
       lines.push('WHERE 1 = 1');
@@ -1211,47 +1313,8 @@
     $('sqlBox').value = lines.join('\n');
   }
 
-  function buildSQL() {
-    const catalog = $('catalog').value.trim();
-    const schema = $('schema').value.trim();
-    const table = $('table').value;
-
-    if (!table) {
-      $('sqlBox').value = '-- 请先选择 table 后再构建 SQL；也可直接在此手工编写 SQL 并点击「执行查询」';
-      return;
-    }
-
-    if (currentIsNarrow()) {
-      buildNarrowSQL(catalog, schema, table);
-      return;
-    }
-
-    // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）。
-    // 有排除字段时展开为显式字段清单（* 无法排除列），否则用 *。
-    // 「转换时间」勾选时在首列插入 time 列。
-    let selectList = '*';
-    if (state.columns.length) {
-      const keep = state.columns
-        .map((c) => c.name)
-        .filter((n) => !state.excluded.has((n || '').toLowerCase()));
-      if (state.excluded.size > 0 && keep.length > 0) {
-        selectList = keep.map(ident).join(', ');
-      }
-    }
-    // 追加附加计算列（remote-isp / remote-region）
-    const extras = extraSelectExprs();
-    if (extras.length) selectList += ', ' + extras.join(', ');
-    const lines = [];
-    lines.push($('fTimeSelect').checked
-      ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, " + selectList
-      : 'SELECT ' + selectList);
-
-    const parts = [];
-    if (catalog) parts.push(ident(catalog));
-    if (schema) parts.push(ident(schema));
-    parts.push(ident(table));
-    lines.push('FROM ' + parts.join('.'));
-
+  // 宽表 WHERE 条件
+  function buildFlowdConds() {
     const conds = [];
     const stream = $('fStream').value.trim();
     if (stream) conds.push('streamname = ' + sqlStr(stream));
@@ -1317,6 +1380,287 @@
       }
     }
     if ($('fCustomerSource').checked) conds.push('customersource = true');
+    return conds;
+  }
+
+  /* ---------------- 聚合（GROUP BY） ---------------- */
+
+  // 附加计算列可同时作为分组字段使用：把别名映射回原始表达式
+  const EXTRA_ALIAS = {
+    'remote-isp': { expr: () => 'ipresolve(' + REMOTE_IP_EXPR + ", 'isp')", alias: 'remote_isp' },
+    'remote-region': { expr: () => 'ipresolve(' + REMOTE_IP_EXPR + ", 'region')", alias: 'remote_region' },
+  };
+
+  function hasRemoteAddrColumn() {
+    return state.columns.some((c) => (c.name || '').toLowerCase() === 'remoteaddr');
+  }
+
+  const SIMPLE_IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+  // 简单的标识符加引号，其余（表达式）原样保留
+  function fieldExpr(v) {
+    const s = String(v || '').trim();
+    if (!s) return '';
+    const ext = EXTRA_ALIAS[s.toLowerCase()];
+    if (ext && hasRemoteAddrColumn()) return ext.expr();
+    return SIMPLE_IDENT_RE.test(s) ? ident(s) : s;
+  }
+
+  function sanitizeAlias(v) {
+    return String(v || '').replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '') || 'agg';
+  }
+
+  // 按顶层逗号切分（忽略括号内与引号内的逗号），用于分组字段列表
+  function splitTopLevel(raw) {
+    const out = [];
+    let buf = '';
+    let depth = 0;
+    let quote = '';
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (quote) {
+        buf += ch;
+        if (ch === quote) quote = '';
+        continue;
+      }
+      if (ch === "'" || ch === '"') { quote = ch; buf += ch; continue; }
+      if (ch === '(') { depth++; buf += ch; continue; }
+      if (ch === ')') { depth = Math.max(0, depth - 1); buf += ch; continue; }
+      if (ch === ',' && depth === 0) { out.push(buf); buf = ''; continue; }
+      buf += ch;
+    }
+    if (buf.trim()) out.push(buf);
+    return out.map((s) => s.trim()).filter(Boolean);
+  }
+
+  // 解析分组字段：支持列名、remote-isp/remote-region 别名、expr AS alias、纯表达式
+  function parseGroupFields() {
+    const raw = $('fAggGroup').value.trim();
+    if (!raw) return [];
+    return splitTopLevel(raw).map((tok, i) => {
+      const m = tok.match(/^(.+?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$/i);
+      if (m) return { expr: fieldExpr(m[1].trim()), alias: m[2] };
+      const ext = EXTRA_ALIAS[tok.toLowerCase()];
+      if (ext && hasRemoteAddrColumn()) {
+        return { expr: ext.expr(), alias: ext.alias };
+      }
+      if (SIMPLE_IDENT_RE.test(tok)) {
+        return { expr: ident(tok), alias: tok };
+      }
+      // 无别名的复杂表达式：自动生成 grpN，用户可用 expr AS alias 自定义
+      return { expr: tok, alias: 'grp' + (i + 1), autoNamed: true };
+    });
+  }
+
+  // 聚合函数表达式：返回 { expr, alias, percentable, missingField }
+  function aggExpression() {
+    const fn = $('fAggFunc').value;
+    const fieldRaw = $('fAggField').value.trim();
+    const field = fieldRaw ? fieldExpr(fieldRaw) : '';
+    const aliasInput = $('fAggAlias').value.trim();
+    let expr = '';
+    let autoAlias = 'cnt';
+    let percentable = true;
+    let missingField = false;
+    const needField = ['count_distinct', 'sum', 'avg', 'min', 'max'].indexOf(fn) >= 0;
+    if (needField && !field) {
+      // 需要字段却留空：退化为 COUNT(*)，避免生成 SUM(*)/MIN(*) 这类非法 SQL
+      missingField = true;
+      return { expr: 'COUNT(*)', alias: aliasInput || 'cnt', percentable: true, missingField };
+    }
+    switch (fn) {
+      case 'count_star':
+        expr = 'COUNT(*)';
+        autoAlias = 'cnt';
+        break;
+      case 'count_distinct':
+        expr = 'COUNT(DISTINCT ' + field + ')';
+        autoAlias = 'distinct_' + sanitizeAlias(fieldRaw);
+        break;
+      case 'count':
+        expr = 'COUNT(' + (field || '*') + ')';
+        autoAlias = field ? 'count_' + sanitizeAlias(fieldRaw) : 'cnt';
+        break;
+      case 'sum':
+        expr = 'SUM(' + field + ')';
+        autoAlias = 'sum_' + sanitizeAlias(fieldRaw);
+        break;
+      case 'avg':
+        expr = 'AVG(' + field + ')';
+        autoAlias = 'avg_' + sanitizeAlias(fieldRaw);
+        percentable = false;
+        break;
+      case 'min':
+        expr = 'MIN(' + field + ')';
+        autoAlias = 'min_' + sanitizeAlias(fieldRaw);
+        percentable = false;
+        break;
+      case 'max':
+        expr = 'MAX(' + field + ')';
+        autoAlias = 'max_' + sanitizeAlias(fieldRaw);
+        percentable = false;
+        break;
+      default:
+        expr = 'COUNT(*)';
+        autoAlias = 'cnt';
+    }
+    return { expr, alias: aliasInput || autoAlias, percentable, missingField };
+  }
+
+  // 聚合模式下：分组 + 计数 + 可选百分比的 SQL
+  function buildAggSQL(catalog, schema, table) {
+    const groups = parseGroupFields();
+    const agg = aggExpression();
+    const wantPercent = $('fAggPercent').checked && agg.percentable;
+
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+
+    const conds = buildFlowdConds();
+    const hints = [];
+
+    const lines = [];
+    // 无分组字段时退化为整体汇总（不加 GROUP BY，百分比无意义）
+    if (!groups.length) {
+      lines.push('-- 未填分组字段：仅输出整体汇总');
+      lines.push('SELECT ' + agg.expr + ' AS ' + ident(agg.alias));
+      lines.push('FROM ' + parts.join('.'));
+      if (conds.length) {
+        lines.push('WHERE 1 = 1');
+        conds.forEach((c) => lines.push('  AND ' + c));
+      }
+      $('sqlBox').value = lines.join('\n');
+      $('aggHint').textContent = '未填分组字段：仅统计整体汇总';
+      return;
+    }
+
+    lines.push('WITH data AS (');
+    lines.push('  SELECT ' + groups.map((g) => g.expr + ' AS ' + ident(g.alias)).join(', '));
+    lines.push('  FROM ' + parts.join('.'));
+    if (conds.length) {
+      lines.push('  WHERE 1 = 1');
+      conds.forEach((c) => lines.push('    AND ' + c));
+    }
+    lines.push(')');
+
+    const outer = groups.map((g) => ident(g.alias));
+    outer.push(agg.expr + ' AS ' + ident(agg.alias));
+    if (wantPercent) {
+      outer.push('ROUND(' + agg.expr + ' * 100.0 / NULLIF(SUM(' + agg.expr + ') OVER (), 0), 2)'
+        + ' AS ' + ident('percentage'));
+    }
+    lines.push('SELECT');
+    outer.forEach((o, i) => lines.push('  ' + o + (i < outer.length - 1 ? ',' : '')));
+    lines.push('FROM data');
+    lines.push('GROUP BY ' + groups.map((g) => ident(g.alias)).join(', '));
+
+    const orderBy = $('fOrderBy').value.trim();
+    const dir = $('fOrderDir').value;
+    // 外层只能引用分组别名/聚合别名/percentage，无效的排序字段会让 Trino 报错
+    const outerNames = groups.map((g) => g.alias.toLowerCase())
+      .concat([agg.alias.toLowerCase(), 'percentage']);
+    if (orderBy && outerNames.indexOf(orderBy.replace(/^"|"$/g, '').toLowerCase()) >= 0) {
+      lines.push('ORDER BY ' + orderBy + (dir ? ' ' + dir : ''));
+    } else {
+      if (orderBy) hints.push('排序字段 ' + orderBy + ' 不在聚合结果中，已改为按聚合值降序');
+      lines.push('ORDER BY ' + ident(agg.alias) + ' DESC');
+    }
+
+    const limit = parseInt($('fLimit').value, 10);
+    if (!isNaN(limit) && limit > 0) lines.push('LIMIT ' + limit);
+
+    $('sqlBox').value = lines.join('\n');
+
+    // 提示：无别名表达式、百分比对 avg/min/max 无效
+    if (agg.missingField) {
+      hints.push('聚合函数需要字段，已退化为 COUNT(*)');
+    }
+    if (!agg.percentable && $('fAggPercent').checked) {
+      hints.push('当前聚合函数不支持百分比，已忽略');
+    }
+    if (groups.some((g) => g.autoNamed)) {
+      hints.push('复杂分组表达式已自动命名 grpN，可用 expr AS alias 自定义');
+    }
+    $('aggHint').textContent = hints.join('；');
+  }
+
+  // 聚合相关控件联动
+  function syncAggInputs() {
+    const on = $('fAggOn').checked;
+    $('aggBody').style.display = on ? '' : 'none';
+    const fn = $('fAggFunc').value;
+    $('fAggField').disabled = fn === 'count_star';
+    if (fn === 'count_star') $('fAggField').value = '';
+    // 分组字段候选：表字段 + 附加计算列
+    const gl = $('aggGroupList');
+    gl.innerHTML = '';
+    const names = state.columns.map((c) => c.name);
+    PINNED_EXTRA.concat([]).forEach((n) => names.push(n));
+    names.forEach((n) => {
+      if (!n) return;
+      const opt = document.createElement('option');
+      opt.value = n;
+      gl.appendChild(opt);
+    });
+    const cl = $('aggColList');
+    cl.innerHTML = '';
+    state.columns.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      cl.appendChild(opt);
+    });
+  }
+
+  function buildSQL() {
+    const catalog = $('catalog').value.trim();
+    const schema = $('schema').value.trim();
+    const table = $('table').value;
+
+    if (!table) {
+      $('sqlBox').value = '-- 请先选择 table 后再构建 SQL；也可直接在此手工编写 SQL 并点击「执行查询」';
+      return;
+    }
+
+    if (currentIsNarrow()) {
+      buildNarrowSQL(catalog, schema, table);
+      return;
+    }
+
+    // 聚合模式：WITH data AS (原始查询) SELECT 分组, 聚合值[, 百分比] FROM data GROUP BY ...
+    if ($('fAggOn').checked) {
+      buildAggSQL(catalog, schema, table);
+      return;
+    }
+
+    // 字段复选框只用于结果表列的展示顺序（勾选字段在最左侧）。
+    // 有排除字段时展开为显式字段清单（* 无法排除列），否则用 *。
+    // 「转换时间」勾选时在首列插入 time 列。
+    let selectList = '*';
+    if (state.columns.length) {
+      const keep = state.columns
+        .map((c) => c.name)
+        .filter((n) => !state.excluded.has((n || '').toLowerCase()));
+      if (state.excluded.size > 0 && keep.length > 0) {
+        selectList = keep.map(ident).join(', ');
+      }
+    }
+    // 追加附加计算列（remote-isp / remote-region）
+    const extras = extraSelectExprs();
+    if (extras.length) selectList += ', ' + extras.join(', ');
+    const lines = [];
+    lines.push($('fTimeSelect').checked
+      ? "SELECT from_unixtime(ts / 1000000000.0) AT TIME ZONE 'Asia/Shanghai' AS time, " + selectList
+      : 'SELECT ' + selectList);
+
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+    lines.push('FROM ' + parts.join('.'));
+
+    const conds = buildFlowdConds();
 
     if (conds.length) {
       lines.push('WHERE 1 = 1');
@@ -1902,23 +2246,107 @@
     pager.appendChild(next);
   }
 
+  function setDetailHint(msg, cls) {
+    const el = $('detailHint');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
   function showDetail(cols, idxMap, row) {
     const body = $('detailBody');
     body.innerHTML = '';
+    const kv = {};
+    // 完整行缓存（含被「排除字段」隐藏的列），供「排查回源」读取 upstreamrequestid
+    if (state.result && state.result.columns) {
+      state.result.columns.forEach((name, i) => { kv[name] = cellText(row[i]); });
+    }
     const table = document.createElement('table');
     table.className = 'detail-table';
     cols.forEach((c, i) => {
+      const v = cellText(row[idxMap[i]]);
+      kv[c] = v;
       const tr = document.createElement('tr');
       const th = document.createElement('th');
       th.textContent = c;
       const td = document.createElement('td');
-      td.textContent = cellText(row[idxMap[i]]);
+      td.textContent = v;
       tr.appendChild(th);
       tr.appendChild(td);
       table.appendChild(tr);
     });
+    state.detailKV = kv;
     body.appendChild(table);
+    const reqid = detailValue('upstreamrequestid');
+    setDetailHint(reqid
+      ? 'upstreamrequestid: ' + reqid
+      : '当前行没有 upstreamrequestid，无法排查回源', reqid ? '' : 'err');
+    $('btnOriginTrace').disabled = !reqid;
     $('detailModal').classList.add('show');
+  }
+
+  // 详情弹窗缓存行中的某列值（大小写不敏感）
+  function detailValue(name) {
+    const kv = state.detailKV || {};
+    const key = Object.keys(kv).find((k) => (k || '').toLowerCase() === name);
+    if (!key) return '';
+    return (kv[key] || '').trim();
+  }
+
+  /* 「排查回源」：用本行 upstreamrequestid + 当前页面的 day/hour/minute
+     （以及预设「排查回源」= type=puller + customersource）开一个新标签并自动执行 */
+  function traceOrigin() {
+    const reqid = detailValue('upstreamrequestid');
+    if (!reqid) {
+      setDetailHint('当前行没有 upstreamrequestid，无法排查回源', 'err');
+      return;
+    }
+    const params = {
+      requestid: reqid,
+      day: $('fDay').value.trim(),
+      hour: $('fHour').value.trim(),
+      hourMode: $('fHourMode').value,
+      hourEnd: $('fHourEnd').value.trim(),
+      minute: $('fMinute').value.trim(),
+      minuteMode: $('fMinuteMode').value,
+      minuteEnd: $('fMinuteEnd').value.trim(),
+      preset: 'origin',
+      autorun: '1',
+      title: '回源 ' + (reqid.length > 10 ? reqid.slice(0, 10) + '…' : reqid),
+    };
+    $('detailModal').classList.remove('show');
+    // 顶层标签页由 iframe 通过 postMessage 新建标签；直接打开查询页时退化为新窗口
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'miku:new-tab', params }, '*');
+      return;
+    }
+    const qs = new URLSearchParams(Object.assign({ embed: '1' }, params));
+    window.open(location.pathname + '?' + qs.toString(), '_blank');
+  }
+
+  // 应用「排查回源」带来的 URL 参数；返回是否需要自动执行查询
+  function applyOriginTraceParams() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('autorun') !== '1') return false;
+    const setVal = (id, v) => {
+      if (v === null || v === undefined || v === '') return;
+      $(id).value = v;
+    };
+    setVal('fRequestId', q.get('requestid'));
+    setVal('fDay', q.get('day'));
+    setVal('fHour', q.get('hour'));
+    setVal('fHourEnd', q.get('hourEnd'));
+    setVal('fMinute', q.get('minute'));
+    setVal('fMinuteEnd', q.get('minuteEnd'));
+    if (q.get('hourMode')) $('fHourMode').value = q.get('hourMode');
+    if (q.get('minuteMode')) $('fMinuteMode').value = q.get('minuteMode');
+    syncRangeInputs();
+    // 预设「排查回源」：type = puller + customersource = true
+    const preset = document.querySelector('input[name="fPreset"][value="origin"]');
+    if (preset) preset.checked = true;
+    applyPreset('origin');
+    buildSQL();
+    return true;
   }
 
   /* ---------------- 事件绑定 ---------------- */
@@ -1934,6 +2362,40 @@
       const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
       el.addEventListener(ev, buildSQL);
     });
+
+    // 聚合统计控件：勾选/函数切换需要联动控件可用状态
+    $('fAggOn').addEventListener('change', () => {
+      // 启用聚合时给个合理默认分组，减少手工输入
+      if ($('fAggOn').checked) {
+        if (!$('fAggGroup').value.trim()) {
+          if ($('fRemoteRegion').checked && !$('fRemoteRegion').disabled) {
+            $('fAggGroup').value = 'remote-region';
+          } else if ($('fType').value) {
+            $('fAggGroup').value = 'type';
+          }
+        }
+        // 聚合结果里的列已换成别名，宽表的默认排序字段（ts）在此无效，清掉
+        const orderByNow = $('fOrderBy').value.trim().toLowerCase();
+        if (orderByNow === 'ts') {
+          $('fOrderBy').value = '';
+          $('fOrderDir').value = '';
+        }
+      } else if (!$('fOrderBy').value.trim() && !currentIsNarrow()) {
+        // 关闭聚合：恢复宽表默认按 ts 排序
+        const names = currentColumnNames($('table').value);
+        if (!names || names.has('ts')) $('fOrderBy').value = 'ts';
+      }
+      syncAggInputs();
+      buildSQL();
+    });
+    $('fAggFunc').addEventListener('change', () => {
+      syncAggInputs();
+      buildSQL();
+    });
+    ['fAggGroup', 'fAggField', 'fAggAlias'].forEach((id) => {
+      $(id).addEventListener('input', buildSQL);
+    });
+    $('fAggPercent').addEventListener('change', buildSQL);
 
     // hour/minute 模式切换
     ['fHourMode', 'fMinuteMode', 'fOdsMinuteMode'].forEach((id) => {
@@ -1995,24 +2457,7 @@
       }
     });
 
-    $('btnLoadTables').addEventListener('click', async () => {
-      const catalog = $('catalog').value.trim() || 'hive_miku';
-      const schema = $('schema').value.trim() || 'miku';
-      setStatus('加载表列表中...');
-      try {
-        const selected = await loadTables(catalog, schema);
-        setStatus('已加载 ' + $('table').options.length + ' 张表', 'ok');
-        // 默认表自动加载字段（等价于点击「See table schema」）
-        if (selected) {
-          await loadColumns(catalog, schema, selected);
-          setStatus('已加载 ' + $('table').options.length + ' 张表，默认选中 '
-            + selected + '（' + state.columns.length + ' 个字段）', 'ok');
-        }
-        buildSQL();
-      } catch (e) {
-        setStatus('加载表失败: ' + e.message, 'err');
-      }
-    });
+    $('btnLoadTables').addEventListener('click', () => loadTablesFlow());
 
     $('btnLoadSchema').addEventListener('click', async () => {
       const catalog = $('catalog').value.trim() || 'hive_miku';
@@ -2160,6 +2605,7 @@
     $('btnCloseModal').addEventListener('click', () => {
       $('detailModal').classList.remove('show');
     });
+    $('btnOriginTrace').addEventListener('click', traceOrigin);
     $('detailModal').addEventListener('click', (e) => {
       if (e.target.id === 'detailModal') {
         $('detailModal').classList.remove('show');
@@ -2190,7 +2636,8 @@
         if (caret) caret.textContent = collapsed ? '▶' : '▼';
       };
       title.addEventListener('click', () => setCollapsed(!body.classList.contains('collapsed')));
-      setCollapsed(true);
+      // data-collapsed="false" 表示默认展开（如「筛选条件」是主要操作区），其余默认收起
+      setCollapsed(title.dataset.collapsed !== 'false');
     });
   }
 
@@ -2290,27 +2737,44 @@
       renderTabs();
     }
 
-    function newTab() {
+    function newTab(opts) {
+      const o = opts || {};
+      const params = o.params || null;
+      if (params && params.title) {
+        // 指定标题（如「回源 xxx」）的标签，标题直接用参数，不占编号
+        const id = 't' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        appendTab({ id, title: String(params.title) }, params);
+        return;
+      }
       // 取当前未被占用的最小编号，关掉再新建时标题不跳号
       const used = new Set(tabs.map((t) => t.title));
       let n = 1;
       while (used.has('查询 ' + n)) n += 1;
       const id = 't' + Date.now() + '_' + n + '_' + Math.random().toString(36).slice(2, 6);
-      const tab = { id, title: '查询 ' + n };
+      appendTab({ id, title: '查询 ' + n }, params);
+    }
 
+    // 真正创建 iframe 容器并加入标签栏；params 会拼进 iframe 的 query
+    function appendTab(tab, params) {
       const frame = document.createElement('div');
       frame.className = 'tab-frame';
-      frame.dataset.tabId = id;
+      frame.dataset.tabId = tab.id;
       const iframe = document.createElement('iframe');
       // embed=1 让内嵌页面跳过标签栏，渲染完整查询界面
-      iframe.src = '?embed=1&tab=' + encodeURIComponent(id);
+      const qs = new URLSearchParams({ embed: '1', tab: tab.id });
+      // 追加额外参数（如排查回源的 requestid / day / hour / minute / autorun）
+      Object.keys(params || {}).forEach((k) => {
+        const v = params[k];
+        if (v === null || v === undefined || v === '') return;
+        qs.set(k, String(v));
+      });
+      iframe.src = '?' + qs.toString();
       iframe.title = tab.title;
       frame.appendChild(iframe);
       framesEl.appendChild(frame);
 
       tabs.push(tab);
-      activate(id);
-      return tab;
+      activate(tab.id);
     }
 
     function closeTab(id) {
@@ -2336,7 +2800,14 @@
       }
     }
 
-    btnNew.addEventListener('click', newTab);
+    btnNew.addEventListener('click', () => newTab());
+    // 标签内页面（iframe）请求新建带参数的标签（如「排查回源」）
+    window.addEventListener('message', (ev) => {
+      if (ev.origin !== location.origin) return;
+      const d = ev.data;
+      if (!d || d.type !== 'miku:new-tab') return;
+      newTab({ params: d.params || null });
+    });
     newTab();
   }
 
@@ -2345,11 +2816,14 @@
     setupMobileSide();
     bindInputs();
     syncRangeInputs();
+    syncAggInputs();
     buildSQL();
     await loadCatalogs();
-    loadSchemas($('catalog').value.trim() || 'hive_miku');
+    await loadSchemas($('catalog').value.trim() || 'hive_miku');
     // 页面加载后自动触发一次「加载表」，并自动选中默认表、拉取字段
-    $('btnLoadTables').click();
+    await loadTablesFlow();
+    // 「排查回源」新标签：填充 requestid / day / hour / minute / 预设后自动执行
+    if (applyOriginTraceParams()) await runQuery();
   }
 
   init();
