@@ -701,6 +701,9 @@ func (m *CommandManager) CmdSql() *Command {
 			"    request(包含)、localip(包含)、remoteip(包含)、\n" +
 			"    httpresponsecode(=或!=)、status(=或!=)、order by、limit\n" +
 			"  - 「回源请求」复选框：勾选后追加 customersource = true\n" +
+			"  - 输出模式：明细（默认，明细行 + 排序 + limit）或「仅计数」（生成\n" +
+			"    SELECT COUNT(*) AS cnt FROM ... WHERE <完全相同的筛选条件>，此时排序/limit/\n" +
+			"    分组统计/流提取不参与，控件自动禁用）\n" +
 			"  - 「附加列 remote-isp / remote-region」复选框(默认勾选)：追加\n" +
 			"    ipresolve(remoteaddr 的 IP 部分, 'isp'/'region') AS \"remote-isp\"/\"remote-region\"，\n" +
 			"    IP 部分用 REGEXP_EXTRACT 提取(兼容 1.2.3.4:port 与 [ipv6]:port；\n" +

@@ -462,6 +462,20 @@
     </div>
     <div class="section-body" id="filterBody">
 
+    <!-- 输出模式：明细行 或 仅计数。计数模式复用下方全部筛选条件，只输出 COUNT(*) -->
+    <div class="row">
+      <div>
+        <label class="fl">输出模式</label>
+        <select id="fOutMode" title="计数模式：SELECT COUNT(*) + 下方全部筛选条件；会自动忽略分组统计/流提取/排序/limit">
+          <option value="detail" selected>明细（明细行 + 排序 + limit）</option>
+          <option value="count">仅计数 COUNT(*)（复用下方筛选条件）</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:4px">
+      <div class="status" id="fOutModeHint"></div>
+    </div>
+
     <!-- 宽表（默认表 dwd_flowd_miku_streamd_log 等）的筛选条件 -->
     <div id="filterFlowd">
     <div class="preset-box">
@@ -816,6 +830,8 @@
     <div class="modal-head">
       <b>行详情</b>
       <div class="modal-actions">
+        <button class="ghost" id="btnRawLog" type="button"
+                title="用当前行的 requestid 在新标签中到 hive.kodofs2 查询原始日志">获取原始日志</button>
         <button class="ghost" id="btnOriginTrace" type="button"
                 title="用当前行的 upstreamrequestid 在新标签中排查回源">排查回源</button>
         <button class="modal-close" id="btnCloseModal">&times;</button>
@@ -1876,6 +1892,28 @@
     $('aggHint').textContent = hints.join('；');
   }
 
+  /* ---------------- 输出模式控件联动 ---------------- */
+  // 计数模式下：分组统计、流提取、排序、limit、时间列都不参与 SQL，禁用并提示，
+  // 避免用户在界面上看到这些控件以为仍然生效。
+  // 只禁用、不清空勾选：切回明细模式时用户原有的配置（分组字段、流提取等）原样保留。
+  function syncCountMode() {
+    const on = isCountMode();
+    ['fAggOn', 'fExtractStream', 'fTimeSelect'].forEach((id) => {
+      if ($(id)) $(id).disabled = on;
+    });
+    if ($('aggPanel')) $('aggPanel').style.opacity = on ? '0.55' : '';
+    ['fOrderBy', 'fOrderDir', 'fLimit'].forEach((id) => {
+      if ($(id)) $(id).disabled = on;
+    });
+    const hint = $('fOutModeHint');
+    if (hint) {
+      hint.textContent = on
+        ? '仅输出 COUNT(*)；下方筛选条件全部生效，排序/limit/分组统计/流提取不参与'
+        : '';
+      hint.style.display = on ? '' : 'none';
+    }
+  }
+
   // 聚合相关控件联动
   function syncAggInputs() {
     const on = $('fAggOn').checked;
@@ -1903,6 +1941,35 @@
     });
   }
 
+  /* ---------------- 输出模式：明细 / 仅计数 ---------------- */
+  function outputMode() {
+    return ($('fOutMode') && $('fOutMode').value) || 'detail';
+  }
+
+  function isCountMode() {
+    return outputMode() === 'count';
+  }
+
+  // 计数模式：SELECT COUNT(*) + 与明细完全相同的 WHERE 条件（宽表/窄表都适用）。
+  // 排序、limit、时间列、分组统计、流提取都不参与构建。
+  function buildCountSQL(catalog, schema, table) {
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+
+    const conds = currentIsNarrow() ? buildNarrowConds() : buildFlowdConds();
+
+    const lines = [];
+    lines.push('SELECT COUNT(*) AS ' + ident('cnt'));
+    lines.push('FROM ' + parts.join('.'));
+    if (conds.length) {
+      lines.push('WHERE 1 = 1');
+      conds.forEach((c) => lines.push('  AND ' + c));
+    }
+    $('sqlBox').value = lines.join('\n');
+  }
+
   function buildSQL() {
     const catalog = $('catalog').value.trim();
     const schema = $('schema').value.trim();
@@ -1910,6 +1977,12 @@
 
     if (!table) {
       $('sqlBox').value = '-- 请先选择 table 后再构建 SQL；也可直接在此手工编写 SQL 并点击「执行查询」';
+      return;
+    }
+
+    // 计数模式优先：只输出 COUNT(*)，不再展开明细/分组/流提取
+    if (isCountMode()) {
+      buildCountSQL(catalog, schema, table);
       return;
     }
 
@@ -2573,11 +2646,16 @@
     });
     state.detailKV = kv;
     body.appendChild(table);
-    const reqid = detailValue('upstreamrequestid');
-    setDetailHint(reqid
-      ? 'upstreamrequestid: ' + reqid
-      : '当前行没有 upstreamrequestid，无法排查回源', reqid ? '' : 'err');
-    $('btnOriginTrace').disabled = !reqid;
+    const upreq = detailValue('upstreamrequestid');
+    const reqid = detailValue('requestid');
+    const hints = [];
+    if (upreq) hints.push('upstreamrequestid: ' + upreq);
+    else hints.push('当前行没有 upstreamrequestid，无法排查回源');
+    if (reqid) hints.push('requestid: ' + reqid);
+    else hints.push('当前行没有 requestid，无法获取原始日志');
+    setDetailHint(hints.join('；'), upreq ? '' : 'err');
+    $('btnOriginTrace').disabled = !upreq;
+    $('btnRawLog').disabled = !reqid;
     $('detailModal').classList.add('show');
   }
 
@@ -2620,6 +2698,136 @@
     window.open(location.pathname + '?' + qs.toString(), '_blank');
   }
 
+  // 把两位数字补零（hour/minute 输入可能写成 9 而不是 09）
+  function pad2(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (!/^\d+$/.test(s)) return s;
+    return s.padStart(2, '0');
+  }
+
+  // 当前页面的 day 值（窄表用 fOdsDay，宽表用 fDay）
+  function currentDayValue() {
+    return currentIsNarrow()
+      ? $('fOdsDay').value.trim()
+      : $('fDay').value.trim();
+  }
+
+  /* 把当前页面的时间条件换算成 kodofs2 窄表的 minute 分区（HH-MM）。
+     窄表的 minute 是「小时-分钟」合成值：当前页面 hour 范围 11~16 → 11-00 ~ 16-00。 */
+  function rawLogMinuteParams() {
+    // 当前页面本身就是窄表：直接沿用 minute 条件
+    if (currentIsNarrow()) {
+      const start = $('fOdsMinute').value.trim();
+      if (!start) return null;
+      return {
+        start: start,
+        end: $('fOdsMinuteMode').value === 'range' ? $('fOdsMinuteEnd').value.trim() : '',
+        mode: $('fOdsMinuteMode').value === 'range' ? 'range' : 'eq',
+      };
+    }
+    const hour = $('fHour').value.trim();
+    if (!hour) return null;
+    const hourRange = $('fHourMode').value === 'range';
+    const hourEnd = hourRange ? $('fHourEnd').value.trim() : '';
+    const minute = $('fMinute').value.trim();
+    const minuteEnd = $('fMinuteMode').value === 'range' ? $('fMinuteEnd').value.trim() : '';
+    if (hourRange) {
+      // 当前页面是小时范围（如 11~16）：窄表 minute 取「小时-分钟」，
+      // 未填 minute 时两侧都用 00 → 11-00 ~ 16-00；填了 minute 则两侧对齐该分钟。
+      const mm = minute ? pad2(minute) : '00';
+      const start = pad2(hour) + '-' + mm;
+      const end = hourEnd ? pad2(hourEnd) + '-' + (minuteEnd ? pad2(minuteEnd) : mm) : '';
+      return { start: start, end: end, mode: 'range' };
+    }
+    // 单个小时：有 minute 就精确到该分钟，否则覆盖整点这一小时
+    if (minute) {
+      if (minuteEnd) {
+        return {
+          start: pad2(hour) + '-' + pad2(minute),
+          end: pad2(hour) + '-' + pad2(minuteEnd),
+          mode: 'range',
+        };
+      }
+      return { start: pad2(hour) + '-' + pad2(minute), end: '', mode: 'eq' };
+    }
+    return { start: pad2(hour) + '-00', end: pad2(hour) + '-59', mode: 'range' };
+  }
+
+  /* 「获取原始日志」：用本行 requestid + 当前页面的 day/hour/minute
+     在新标签里切到 hive.kodofs2、查询 ods_app_miku_streamd 原始日志 */
+  function traceRawLog() {
+    const reqid = detailValue('requestid');
+    if (!reqid) {
+      setDetailHint('当前行没有 requestid，无法获取原始日志', 'err');
+      return;
+    }
+    const params = {
+      rawlog: '1',
+      cluster: 'yzh',
+      catalog: 'hive',
+      schema: 'kodofs2',
+      table: DEFAULT_TABLE_ALT,
+      day: currentDayValue(),
+      body: reqid,
+      autorun: '1',
+      title: '原始日志 ' + (reqid.length > 10 ? reqid.slice(0, 10) + '…' : reqid),
+    };
+    const r = rawLogMinuteParams();
+    if (r && r.start) {
+      params.minute = r.start;
+      if (r.end) params.minuteEnd = r.end;
+      params.minuteMode = r.mode;
+    }
+    $('detailModal').classList.remove('show');
+    // 顶层标签页由 iframe 通过 postMessage 新建标签；直接打开查询页时退化为新窗口
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'miku:new-tab', params }, '*');
+      return;
+    }
+    const qs = new URLSearchParams(Object.assign({ embed: '1' }, params));
+    window.open(location.pathname + '?' + qs.toString(), '_blank');
+  }
+
+  // 读取「获取原始日志」的 URL 参数；非该模式返回 null
+  function readRawLogParams() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('rawlog') !== '1') return null;
+    return {
+      cluster: q.get('cluster') || 'yzh',
+      catalog: q.get('catalog') || 'hive',
+      schema: q.get('schema') || 'kodofs2',
+      table: q.get('table') || DEFAULT_TABLE_ALT,
+      day: q.get('day') || '',
+      body: q.get('body') || '',
+      minute: q.get('minute') || '',
+      minuteEnd: q.get('minuteEnd') || '',
+      minuteMode: q.get('minuteMode') || 'eq',
+      autorun: q.get('autorun') === '1',
+    };
+  }
+
+  // 应用「获取原始日志」参数：切表（如未自动选中）+ 填 day/minute/body，返回后由 init 执行查询
+  async function applyRawLogParams(p) {
+    const catalog = $('catalog').value.trim();
+    const schema = $('schema').value.trim();
+    if (p.table && $('table').value !== p.table) {
+      const exists = Array.from($('table').options).some((o) => o.value === p.table);
+      if (exists) {
+        $('table').value = p.table;
+        try {
+          await loadColumns(catalog, schema, p.table);
+        } catch (e) { /* 字段加载失败不影响下面填条件 */ }
+      }
+    }
+    if (p.day) $('fOdsDay').value = p.day;
+    if (p.body) $('fOdsBody').value = p.body;
+    if (p.minute) $('fOdsMinute').value = p.minute;
+    if (p.minuteEnd) $('fOdsMinuteEnd').value = p.minuteEnd;
+    $('fOdsMinuteMode').value = p.minuteMode === 'range' ? 'range' : 'eq';
+    syncRangeInputs();
+    buildSQL();
+  }
+
   // 应用「排查回源」带来的 URL 参数；返回是否需要自动执行查询
   function applyOriginTraceParams() {
     const q = new URLSearchParams(location.search);
@@ -2657,6 +2865,12 @@
       const el = $(id);
       const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
       el.addEventListener(ev, buildSQL);
+    });
+
+    // 输出模式：明细 / 仅计数；切换后重新构建 SQL 并联动禁用无关控件
+    $('fOutMode').addEventListener('change', () => {
+      syncCountMode();
+      buildSQL();
     });
 
     // 聚合统计控件：勾选/函数切换需要联动控件可用状态
@@ -2907,6 +3121,7 @@
       $('detailModal').classList.remove('show');
     });
     $('btnOriginTrace').addEventListener('click', traceOrigin);
+    $('btnRawLog').addEventListener('click', traceRawLog);
     $('detailModal').addEventListener('click', (e) => {
       if (e.target.id === 'detailModal') {
         $('detailModal').classList.remove('show');
@@ -3118,13 +3333,29 @@
     bindInputs();
     syncRangeInputs();
     syncAggInputs();
+    syncCountMode();
     // 预置一条空白追加筛选行，避免用户不知道可以自己加条件
     if ($('extraFilterList') && !extraFilterRows().length) addExtraFilterRow();
+    // 「获取原始日志」新标签：先把数据源切到 hive.kodofs2，再加载目录/表
+    const rawlog = readRawLogParams();
+    if (rawlog) {
+      if ($('cluster') && Array.from($('cluster').options).some((o) => o.value === rawlog.cluster)) {
+        $('cluster').value = rawlog.cluster;
+      }
+      $('catalog').value = rawlog.catalog;
+      $('schema').value = rawlog.schema;
+    }
     buildSQL();
     await loadCatalogs();
     await loadSchemas($('catalog').value.trim() || 'hive_miku');
     // 页面加载后自动触发一次「加载表」，并自动选中默认表、拉取字段
     await loadTablesFlow();
+    // 「获取原始日志」新标签：填 day/minute/body 后自动执行
+    if (rawlog) {
+      await applyRawLogParams(rawlog);
+      if (rawlog.autorun) await runQuery();
+      return;
+    }
     // 「排查回源」新标签：填充 requestid / day / hour / minute / 预设后自动执行
     if (applyOriginTraceParams()) await runQuery();
   }
