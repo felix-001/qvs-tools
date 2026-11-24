@@ -92,6 +92,22 @@
   .preset-box .chk input[type=radio] { margin: 3px 0 0; flex: 0 0 auto; }
   .preset-box .chk label { flex: 1; min-width: 0; line-height: 1.45; cursor: pointer; }
   .preset-box .chk small { display: block; color: #999; font-size: 11px; line-height: 1.4; }
+  /* 通用追加筛选：字段 / 比较 / 值 / 删除 */
+  .extra-filter-row { flex-wrap: wrap; margin-bottom: 8px; }
+  .extra-filter-row > .ef-field-box { flex: 1 1 0; min-width: 0; order: 1; }
+  .extra-filter-row > .ef-op-box { flex: 0 0 70px; order: 2; }
+  .extra-filter-row > .ef-del-box { flex: 0 0 26px; order: 3; }
+  .extra-filter-row > .ef-val-box { flex: 1 1 100%; order: 4; }
+  .extra-filter-row .ef-del {
+    width: 100%; padding: 6px 0; font-size: 15px; line-height: 1;
+  }
+  .extra-filter-box {
+    border: 1px solid #e3ebf5; background: #fafcff;
+    border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;
+  }
+  .extra-filter-box .extra-filter-title {
+    font-size: 12px; font-weight: bold; color: #666; margin-bottom: 6px;
+  }
   .cols {
     border: 1px solid #eee; border-radius: 4px; padding: 8px;
     max-height: 220px; overflow: auto; background: #fafafa;
@@ -226,6 +242,12 @@
   html.mobile .preset-box .chk input[type=radio] { width: 18px; height: 18px; margin-top: 1px; }
   html.mobile .cols { max-height: 168px; }
   html.mobile .section-title { font-size: 14px; margin: 16px 0 8px; }
+  /* 追加筛选：移动端字段占满一行，比较与删除同行，值占满一行 */
+  html.mobile .extra-filter-row { flex-wrap: wrap; }
+  html.mobile .extra-filter-row > .ef-field-box { flex: 1 1 100%; }
+  html.mobile .extra-filter-row > .ef-op-box { flex: 1 1 auto; }
+  html.mobile .extra-filter-row > .ef-del-box { flex: 0 0 48px; }
+  html.mobile .extra-filter-row > .ef-val-box { flex: 1 1 100%; }
   /* 小号下拉（模式/比较/排序方向）放宽，避免文字被挤压 */
   html.mobile .row > div[style*="flex:0 0 76px"],
   html.mobile .row > div[style*="flex:0 0 74px"],
@@ -602,6 +624,24 @@
       </div>
     </div>
     <div class="row">
+      <div>
+        <label class="fl">errdetail（多值用逗号分隔）</label>
+        <input type="text" id="fErrDetail" placeholder="如 code_1140 或 code_1140,code_1076">
+      </div>
+      <div style="flex:0 0 74px">
+        <label class="fl">比较</label>
+        <select id="fErrDetailOp">
+          <option value="=">=</option>
+          <option value="!=">!=</option>
+          <option value="in">in</option>
+          <option value="not in">not in</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="chk"><input type="checkbox" id="fExtractStream"><label for="fExtractStream" title="从 request 按 /(bucket)/(stream).(flv|m3u8) 正则提取流 id，并按流分组统计次数与占比；bucket 列表取自上方 bucket id">提取流 id（从 request 正则提取并分组统计）</label></div>
+    </div>
+    <div class="row">
       <div class="chk"><input type="checkbox" id="fCustomerSource"><label for="fCustomerSource">回源请求 (customersource = true)</label></div>
     </div>
     <div class="row">
@@ -641,6 +681,19 @@
         </div>
       </div>
     </div><!-- /#filterOds -->
+
+    <!-- 通用追加筛选：先选字段，再选比较（= / != / in / not in），最后填值；可追加多条 -->
+    <div class="extra-filter-box" id="filterExtra">
+      <div class="extra-filter-title">追加筛选（字段 + 比较 + 值，可添加多条）</div>
+      <div id="extraFilterList"></div>
+      <datalist id="extraFilterFieldList"></datalist>
+      <div class="row" style="margin-bottom:0">
+        <div>
+          <button class="ghost" id="btnAddExtraFilter" type="button"
+                  style="width:100%" title="追加一条自定义筛选条件">＋ 追加筛选条件</button>
+        </div>
+      </div>
+    </div>
     </div><!-- /#filterBody -->
 
     <!-- 聚合统计（GROUP BY）：按分组字段聚合，可计数任意字段并计算占比 -->
@@ -1071,6 +1124,7 @@
     // 按表名/字段切换筛选条件面板与默认排序
     applyFilterLayout(table);
     syncAggInputs();
+    syncExtraFilterFields();
     renderColumns();
     renderExcludeColumns();
     buildSQL();
@@ -1276,7 +1330,7 @@
     return raw;
   }
 
-  // 窄表 WHERE 条件（body 包含 + day + minute 范围）
+  // 窄表 WHERE 条件（body 包含 + day + minute 范围 + 追加筛选）
   function buildNarrowConds() {
     const conds = [];
     const body = $('fOdsBody').value.trim();
@@ -1284,7 +1338,7 @@
     const day = odsDayValue();
     if (day) conds.push('day = ' + sqlStr(day));
     buildRangeCond(conds, 'minute', 'fOdsMinute', 'fOdsMinuteMode', 'fOdsMinuteEnd');
-    return conds;
+    return conds.concat(extraFilterConds());
   }
 
   function buildNarrowSQL(catalog, schema, table) {
@@ -1409,8 +1463,145 @@
         }
       }
     }
+    const errDetail = $('fErrDetail').value.trim();
+    if (errDetail) {
+      // 只按逗号分隔：errdetail 取值可含空格（如 "Stream connected successfully!"）
+      const details = splitCommaList(errDetail);
+      const op = $('fErrDetailOp').value;
+      if (details.length) {
+        if (op === 'in' || op === 'not in') {
+          conds.push('errordetail ' + op.toUpperCase() + ' (' + details.map(sqlStr).join(', ') + ')');
+        } else {
+          // = / != 只取第一个值
+          conds.push('errordetail ' + op + ' ' + sqlStr(details[0]));
+        }
+      }
+    }
     if ($('fCustomerSource').checked) conds.push('customersource = true');
+    return conds.concat(extraFilterConds());
+  }
+
+  /* ---------------- 通用追加筛选（字段 + 比较 + 值，可多条） ---------------- */
+  // 追加筛选区域位于 #filterBody 内、宽表/窄表条件之外，因此两种表都可见，
+  // 生成的条件一律追加到 WHERE 末尾。
+  function extraFilterRows() {
+    return Array.from(document.querySelectorAll('#extraFilterList .extra-filter-row'));
+  }
+
+  // 字段候选：表字段 + 附加计算列（仅当前表存在 remoteaddr 时才有意义）
+  function syncExtraFilterFields() {
+    const dl = $('extraFilterFieldList');
+    if (!dl) return;
+    dl.innerHTML = '';
+    const names = state.columns.map((c) => c.name);
+    if (hasRemoteAddrColumn()) PINNED_EXTRA.forEach((n) => names.push(n));
+    names.forEach((n) => {
+      if (!n) return;
+      const opt = document.createElement('option');
+      opt.value = n;
+      dl.appendChild(opt);
+    });
+  }
+
+  // 取字段类型：仅当 state.columns 确实属于当前表时才可信，否则返回空（按字符串处理）
+  function columnTypeOf(field) {
+    if (state.columnsTable !== $('table').value) return '';
+    const key = String(field || '').trim().toLowerCase();
+    const col = state.columns.find((c) => (c.name || '').toLowerCase() === key);
+    return col ? String(col.type || '').toLowerCase() : '';
+  }
+
+  // 追加筛选的字段表达式：与页面其他筛选保持一致用裸字段名（Trino 中大小写不敏感），
+  // remote-isp / remote-region 展开为 ipresolve(...)，其余非简单标识符按表达式原样使用。
+  function extraFieldExpr(field) {
+    const s = String(field || '').trim();
+    const ext = EXTRA_ALIAS[s.toLowerCase()];
+    if (ext && hasRemoteAddrColumn()) return ext.expr();
+    return s;
+  }
+
+  // 值字面量：数字类字段的数字值不加引号（避免 bigint 与 varchar 比较报错），
+  // timestamp/date 字段的日期值用带类型的关键字，其余作为普通字符串。
+  function extraFilterLiteral(v, type) {
+    const s = String(v);
+    if (/^(bigint|integer|int|smallint|tinyint|double|real|decimal|numeric)/.test(type)
+      && /^-?\d+(\.\d+)?$/.test(s)) {
+      return s;
+    }
+    if (/^timestamp/.test(type)
+      && /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/.test(s)) {
+      return "TIMESTAMP '" + s.replace('T', ' ').replace(/'/g, "''") + "'";
+    }
+    if (type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      return "DATE '" + s.replace(/'/g, "''") + "'";
+    }
+    return sqlStr(s);
+  }
+
+  // 把追加筛选行转换成 WHERE 条件；字段或值为空的行直接忽略
+  function extraFilterConds() {
+    const conds = [];
+    extraFilterRows().forEach((row) => {
+      const fieldEl = row.querySelector('.ef-field');
+      const opEl = row.querySelector('.ef-op');
+      const valEl = row.querySelector('.ef-val');
+      if (!fieldEl || !opEl || !valEl) return;
+      const field = fieldEl.value.trim();
+      const valRaw = valEl.value.trim();
+      if (!field || !valRaw) return;
+      const expr = extraFieldExpr(field);
+      const type = columnTypeOf(field);
+      const vals = splitCommaList(valRaw);
+      if (!vals.length) return;
+      const op = opEl.value;
+      if (op === 'in' || op === 'not in') {
+        conds.push(expr + ' ' + op.toUpperCase() + ' ('
+          + vals.map((v) => extraFilterLiteral(v, type)).join(', ') + ')');
+      } else {
+        // = / != 只取第一个值
+        conds.push(expr + ' ' + op + ' ' + extraFilterLiteral(vals[0], type));
+      }
+    });
     return conds;
+  }
+
+  // 追加一行筛选条件（字段 / 比较 / 值 / 删除）
+  function addExtraFilterRow() {
+    const list = $('extraFilterList');
+    if (!list) return;
+    const row = document.createElement('div');
+    row.className = 'row extra-filter-row';
+    row.innerHTML = '<div class="ef-field-box">'
+      + '<label class="fl">字段</label>'
+      + '<input type="text" class="ef-field" list="extraFilterFieldList" placeholder="字段名" autocomplete="off">'
+      + '</div>'
+      + '<div class="ef-op-box">'
+      + '<label class="fl">比较</label>'
+      + '<select class="ef-op">'
+      + '<option value="=">=</option>'
+      + '<option value="!=">!=</option>'
+      + '<option value="in">in</option>'
+      + '<option value="not in">not in</option>'
+      + '</select>'
+      + '</div>'
+      + '<div class="ef-val-box">'
+      + '<label class="fl">值</label>'
+      + '<input type="text" class="ef-val" placeholder="多值用逗号分隔" autocomplete="off">'
+      + '</div>'
+      + '<div class="ef-del-box">'
+      + '<button class="ghost ef-del" type="button" title="删除该筛选条件">×</button>'
+      + '</div>';
+    list.appendChild(row);
+
+    row.querySelectorAll('input, select').forEach((el) => {
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', buildSQL);
+    });
+    const del = row.querySelector('.ef-del');
+    del.addEventListener('click', () => {
+      row.remove();
+      buildSQL();
+    });
+    return row;
   }
 
   /* ---------------- 聚合（GROUP BY） ---------------- */
@@ -1537,6 +1728,75 @@
     return { expr, alias: aliasInput || autoAlias, percentable, missingField };
   }
 
+  /* ---------------- 提取流 id（从 request 正则提取后按流聚合） ---------------- */
+
+  // 正则元字符转义：bucket 名可能含 . - 等字符
+  function escapeRegex(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // 提取路径的正则：bucket 列表作为路径前缀的候选（aa|bbb），为空则匹配任意 bucket。
+  // Trino 字符串字面量不处理反斜杠转义，'\\.' 会原样传给正则引擎。
+  function streamExtractPattern(apps) {
+    const prefix = apps.length ? '(?:' + apps.map(escapeRegex).join('|') + ')/' : '';
+    return '/' + prefix + '([^/?]+)\\.(?:flv|m3u8)';
+  }
+
+  // 提取流 id 模式：WITH data AS (SELECT 正则提取的 streamname ...) SELECT streamname, cnt, percentage
+  function buildStreamExtractSQL(catalog, schema, table) {
+    const appOp = $('fAppOp').value;
+    // 只有正向筛选（= / in）时才能用 bucket 列表拼正则前缀；not in / != 时匹配任意 bucket
+    const apps = (appOp === '=' || appOp === 'in') ? splitCommaList($('fApp').value) : [];
+    const pattern = streamExtractPattern(apps);
+
+    const parts = [];
+    if (catalog) parts.push(ident(catalog));
+    if (schema) parts.push(ident(schema));
+    parts.push(ident(table));
+
+    const conds = buildFlowdConds();
+
+    const lines = [];
+    lines.push('WITH data AS (');
+    lines.push('  SELECT');
+    lines.push('    REGEXP_EXTRACT(');
+    lines.push('      request,');
+    lines.push('      ' + sqlStr(pattern) + ',');
+    lines.push('      1');
+    lines.push('    ) AS streamname');
+    lines.push('  FROM ' + parts.join('.'));
+    if (conds.length) {
+      lines.push('  WHERE 1 = 1');
+      conds.forEach((c) => lines.push('    AND ' + c));
+    }
+    lines.push(')');
+    lines.push('SELECT');
+    lines.push('  streamname,');
+    lines.push('  COUNT(*) AS cnt,');
+    lines.push('  ROUND(');
+    lines.push('    COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0),');
+    lines.push('    2');
+    lines.push('  ) AS percentage');
+    lines.push('FROM data');
+    lines.push('WHERE streamname IS NOT NULL');
+    lines.push('GROUP BY streamname');
+
+    // 外层只能引用 streamname / cnt / percentage，其余排序字段回落到 cnt
+    const outerNames = ['streamname', 'cnt', 'percentage'];
+    const orderBy = $('fOrderBy').value.trim();
+    const dir = $('fOrderDir').value;
+    if (orderBy && outerNames.indexOf(orderBy.toLowerCase()) >= 0) {
+      lines.push('ORDER BY ' + orderBy + (dir ? ' ' + dir : ''));
+    } else {
+      lines.push('ORDER BY cnt DESC');
+    }
+
+    const limit = parseInt($('fLimit').value, 10);
+    if (!isNaN(limit) && limit > 0) lines.push('LIMIT ' + limit);
+
+    $('sqlBox').value = lines.join('\n');
+  }
+
   // 聚合模式下：分组 + 计数 + 可选百分比的 SQL
   function buildAggSQL(catalog, schema, table) {
     const groups = parseGroupFields();
@@ -1655,6 +1915,12 @@
 
     if (currentIsNarrow()) {
       buildNarrowSQL(catalog, schema, table);
+      return;
+    }
+
+    // 提取流 id 模式：从 request 正则提取流名后按流分组统计（优先于聚合面板）
+    if ($('fExtractStream').checked) {
+      buildStreamExtractSQL(catalog, schema, table);
       return;
     }
 
@@ -2383,9 +2649,9 @@
   function bindInputs() {
     const autoIds = ['fStream', 'fApp', 'fAppOp', 'fNodeId', 'fNodeIdOp', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
       'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
-      'fHttpCodeOp', 'fStatus', 'fStatusOp',
+      'fHttpCodeOp', 'fStatus', 'fStatusOp', 'fErrDetail', 'fErrDetailOp',
       'fOdsBody', 'fOdsDay', 'fOdsMinute', 'fOdsMinuteEnd',
-      'fRemoteIsp', 'fRemoteRegion',
+      'fRemoteIsp', 'fRemoteRegion', 'fExtractStream',
       'fCustomerSource', 'fTimeSelect', 'fOrderBy', 'fOrderDir', 'fLimit'];
     autoIds.forEach((id) => {
       const el = $(id);
@@ -2568,6 +2834,11 @@
 
     $('btnRebuild').addEventListener('click', buildSQL);
     $('btnRebuild2').addEventListener('click', buildSQL);
+    // 追加筛选：可重复追加多行（字段 + 比较 + 值）
+    $('btnAddExtraFilter').addEventListener('click', () => {
+      addExtraFilterRow();
+      buildSQL();
+    });
     $('btnRun').addEventListener('click', runQuery);
     $('btnStop').addEventListener('click', stopQuery);
     $('btnCopySQL').addEventListener('click', copySQL);
@@ -2847,6 +3118,8 @@
     bindInputs();
     syncRangeInputs();
     syncAggInputs();
+    // 预置一条空白追加筛选行，避免用户不知道可以自己加条件
+    if ($('extraFilterList') && !extraFilterRows().length) addExtraFilterRow();
     buildSQL();
     await loadCatalogs();
     await loadSchemas($('catalog').value.trim() || 'hive_miku');
