@@ -56,12 +56,13 @@
     color: #007bff; transition: transform .15s ease;
   }
   .section-body.collapsed { display: none; }
-  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  /* align-items:flex-end —— label 换行时（如多行说明）同一行的输入框/下拉仍底部对齐 */
+  .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; }
   .row > div { flex: 1; min-width: 0; }
-  label.fl { display: block; font-size: 12px; color: #666; margin-bottom: 3px; }
+  label.fl { display: block; font-size: 12px; color: #666; margin-bottom: 3px; line-height: 16px; }
   input[type=text], input[type=number], select {
     width: 100%; padding: 6px 8px; border: 1px solid #ddd;
-    border-radius: 4px; font-size: 13px;
+    border-radius: 4px; font-size: 13px; height: 30px;
   }
   input[type=text]:focus, input[type=number]:focus, select:focus {
     outline: none; border-color: #007bff;
@@ -458,9 +459,20 @@
         <label class="fl">流 id (streamname)</label>
         <input type="text" id="fStream" placeholder="流 id">
       </div>
+    </div>
+    <div class="row">
       <div>
         <label class="fl">bucket id (appname)</label>
-        <input type="text" id="fApp" placeholder="bucket id">
+        <input type="text" id="fApp" placeholder="如 aaa；多值用逗号分隔">
+      </div>
+      <div style="flex:0 0 74px">
+        <label class="fl">比较</label>
+        <select id="fAppOp">
+          <option value="=">=</option>
+          <option value="!=">!=</option>
+          <option value="in">in</option>
+          <option value="not in">not in</option>
+        </select>
       </div>
     </div>
     <div class="row">
@@ -576,8 +588,8 @@
     </div>
     <div class="row">
       <div>
-        <label class="fl">status（多值用逗号分隔）</label>
-        <input type="text" id="fStatus" placeholder="如 success 或 success,failed">
+        <label class="fl">status（多值用逗号分隔，值内可含空格）</label>
+        <input type="text" id="fStatus" placeholder="如 success 或 client closed connection,no players">
       </div>
       <div style="flex:0 0 74px">
         <label class="fl">比较</label>
@@ -1313,13 +1325,31 @@
     $('sqlBox').value = lines.join('\n');
   }
 
+  // 多值拆分：只按逗号分隔，并去掉每项首尾空白。
+  // 不能用 /[\s,]+/ 拆：status 等字段的取值本身带空格（如 "client closed connection"）。
+  function splitCommaList(raw) {
+    return String(raw || '').split(',').map((v) => v.trim()).filter(Boolean);
+  }
+
   // 宽表 WHERE 条件
   function buildFlowdConds() {
     const conds = [];
     const stream = $('fStream').value.trim();
     if (stream) conds.push('streamname = ' + sqlStr(stream));
     const app = $('fApp').value.trim();
-    if (app) conds.push('appname = ' + sqlStr(app));
+    if (app) {
+      // 支持多值：逗号分隔；in / not in 生成括号列表
+      const apps = splitCommaList(app);
+      const op = $('fAppOp').value;
+      if (apps.length) {
+        if (op === 'in' || op === 'not in') {
+          conds.push('appname ' + op.toUpperCase() + ' (' + apps.map(sqlStr).join(', ') + ')');
+        } else {
+          // = / != 只取第一个值
+          conds.push('appname ' + op + ' ' + sqlStr(apps[0]));
+        }
+      }
+    }
     const nodeid = $('fNodeId').value.trim();
     if (nodeid) {
       // 支持多值：逗号/空格分隔；in / not in 生成括号列表
@@ -1367,8 +1397,8 @@
     if (type) conds.push('type = ' + sqlStr(type));
     const status = $('fStatus').value.trim();
     if (status) {
-      // 支持多值：逗号/空格分隔；in / not in 生成括号列表
-      const statuses = status.split(/[\s,]+/).filter(Boolean);
+      // 只按逗号分隔：status 取值可含空格（如 "client closed connection"）
+      const statuses = splitCommaList(status);
       const op = $('fStatusOp').value;
       if (statuses.length) {
         if (op === 'in' || op === 'not in') {
@@ -2351,7 +2381,7 @@
 
   /* ---------------- 事件绑定 ---------------- */
   function bindInputs() {
-    const autoIds = ['fStream', 'fApp', 'fNodeId', 'fNodeIdOp', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
+    const autoIds = ['fStream', 'fApp', 'fAppOp', 'fNodeId', 'fNodeIdOp', 'fDay', 'fHour', 'fHourEnd', 'fMinute', 'fMinuteEnd', 'fProtocol',
       'fType', 'fRequestId', 'fRequest', 'fLocalIp', 'fRemoteIp', 'fHttpCode',
       'fHttpCodeOp', 'fStatus', 'fStatusOp',
       'fOdsBody', 'fOdsDay', 'fOdsMinute', 'fOdsMinuteEnd',
